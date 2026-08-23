@@ -55,6 +55,11 @@ predictable, bought with nothing.
 A field typed `enum` states its permitted values. Any other value is an error, which is the
 whole reason to type it `enum` rather than `string`.
 
+`enum` is for a closed set of bare tokens. A set whose members carry a definition of their own
+is not an enum — make it a type, so the definition lives in one file and everything references
+it by canonical name. Otherwise the definitions end up restated on every entry that uses one,
+or nowhere at all.
+
 ### R9 — Schema files have a fixed shape
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`

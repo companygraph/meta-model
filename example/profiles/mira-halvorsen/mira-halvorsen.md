@@ -3,9 +3,11 @@ email: mira@example.invalid
 location: Bergen
 skills:
   - skill: Java Programming
-    level: senior
+    level: Proficient
+    evidence: Owned the JVM services two other teams built on for four years, and was the one called when they stopped.
   - skill: Domain-Driven Design
-    level: medior
+    level: Competent
+    evidence: Split the billing domain into two bounded contexts; the seams have held under two years of change.
 ---
 
 # Mira Halvorsen

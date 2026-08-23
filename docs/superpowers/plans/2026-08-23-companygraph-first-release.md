@@ -2,9 +2,10 @@
 
 > **Historical record.** This is how the first release was built, not what shipped. Where this
 > plan and the files in the repository disagree, the files are authoritative — read them, not
-> the snippets quoted here. Two things moved during execution: `verify/check.mjs` gained
-> checks the plan never names, and `CONVENTIONS.md` gained rule text — including R0 under a
-> different heading — that the plan's version does not carry.
+> the snippets quoted here. Three things moved after execution: the schemas live in `core/`,
+> not `core/meta/`; `verify/check.mjs` gained checks the plan never names, and a fifth type,
+> `proficiency-level`, that replaced an enum; and `CONVENTIONS.md` gained rule text — including
+> R0 under a different heading and rules R10 and R11 — that the plan's version does not carry.
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 

@@ -16,9 +16,10 @@ named as such.
 ## What is here
 
 ```
-core/              one schema per type: profile, experience, skill, value
+core/              one schema per type: profile, experience, skill,
+                   proficiency-level, value
 CONVENTIONS.md     the portable rules that make the graph checkable
-example/           a fictional company, described in those four types
+example/           a fictional company, described in those five types
 verify/check.mjs   npm run verify — asserts this repo's own shape
 ```
 
@@ -45,7 +46,7 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
 ## Status
 
 The first release describes **one person completely** rather than thirteen types partially —
-`profile`, `experience`, `skill` and `value`, plus the conventions. The remaining core types
+`profile`, `experience`, `skill`, `proficiency-level` and `value`, plus the conventions. The remaining core types
 are named in the design and not yet written, no pack ships yet, and there is no validator
 beyond `npm run verify`, which checks this repository rather than yours.
 

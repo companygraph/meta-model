@@ -58,7 +58,7 @@ an empty folder implying it forgot.
 ```
 companygraph/                    ← GitHub org, companygraph.io
   meta-model/                    ← this repo
-    core/meta/*-schema.md        ← one schema per core type
+    core/*-schema.md             ← one schema per core type; core holds nothing else
     packs/<name>/                ← extra types and seed concepts per company type
     CONVENTIONS.md               ← the portable half of AGENTS.md (§6)
     example/                     ← a small synthetic instance, for reading
@@ -69,6 +69,12 @@ companygraph/                    ← GitHub org, companygraph.io
 robertblust/
   company/                       ← the reference instance: Robert Blust as a company
 ```
+
+**`core/` is flat; an instance keeps its schemas in `meta/`.** The `meta/` segment belongs to
+an instance's layout, where it separates a folder of schemas from the folders of entities
+beside it. Core holds nothing but schemas, so inside it that segment separates nothing — and
+worse, it was the only place the model said where an instance's schemas live, expressed as a
+path nobody had to read. `CONVENTIONS.md` R11 states it instead.
 
 **The repo is `meta-model`, not `core`.** The repo says what the project is; folders say
 how it is divided. `core` names the part of the vocabulary every company shares, and it
@@ -122,6 +128,7 @@ nothing can reference one.
 | Profile | `profile` | `profiles/<profile>/` | A folder: it owns experiences. The profile itself is `<profile>.md`. |
 | | `experience` | `profiles/<profile>/experiences/` | Owned by a profile. A bounded period. |
 | Capability | `skill` | `skills/` | Claimed by profiles, required by roles, owned by neither. |
+| | `proficiency-level` | `proficiency-levels/` | The scale a profile claims a skill at. Ranked, so a rung can be inserted. |
 | Identity | `value` | `values/` | One file per value, so a strategy or a role can reference one. |
 | | `brand-element` | `brand-elements/` | Tone of voice, visual identity. |
 | Direction | `strategy` | `strategies/` | |
@@ -217,6 +224,18 @@ that a profile can claim it and a role can require it, both by canonical name. A
 strings a skill is unverifiable; as an entity it is the thing cross-reference checking exists
 to check.
 
+`proficiency-level` is the third promotion, and the one that showed the pattern has a name. A
+level has a label, a rank and a definition, and many profiles claim the same few — so its
+definition belongs in one file that everything references, not restated on every assessment or
+left in a schema's prose where nothing can reach it. That was `level: senior` as an `enum`,
+which is why `enum` now ships with a rule saying what it is not for: a closed set of bare
+tokens, never a set whose members carry a definition of their own.
+
+The promotion paid twice. The checker had held the legal levels as a hardcoded list beside the
+schema's enum — the only mechanical enforcement R8 had anywhere, and a duplicate that could
+drift in both directions. As entities, levels are resolved by the same reference machinery as
+skills, and the duplicate is gone.
+
 `value` is promoted for the identical reason, and it is the change that removed the last
 singleton. Both instances keep their values in one document with a heading per value. A
 heading has no canonical name, so no strategy, role or process can cite the value it serves —
@@ -238,7 +257,7 @@ say *which type* owns the folder — `profiles/<profile>/experiences/` has to be
 to find out — the owned type's schema names its owner outright:
 
 ```
-core/meta/experience-schema.md
+core/experience-schema.md
 
 # Experience Schema
 > Required structure for experience files.
@@ -305,8 +324,8 @@ while its folder is plural, and it carries nested paths that are more than a plu
 Nothing derives a folder from a type name — though as it stands every folder *is* the regular
 plural of its type, because no folder is shortened for convenience (§4, Naming).
 
-Type vocabulary, closed for the first release: `string`, `date`, `array`, `object array`,
-`enum`, `ref → <type>`. A reference names one entity, so the type it points at is singular:
+Type vocabulary, closed for the first release: `string`, `number`, `date`, `array`,
+`object array`, `enum`, `ref → <type>`. A reference names one entity, so the type it points at is singular:
 `ref → skill`, never `ref → skills`.
 
 **The canonical name of an entity is its H1**, and everything references it by that exact
@@ -385,8 +404,8 @@ A vocabulary is only worth publishing once something has been said in it end to 
 person cluster is the half of the union that neither instance shares — so it is the half most
 likely to be wrong.
 
-1. `core/meta/` — `profile-schema.md`, `experience-schema.md`, `skill-schema.md`,
-   `value-schema.md`. Schema files are named for the type, so they are singular too. The four
+1. `core/` — `profile-schema.md`, `experience-schema.md`, `skill-schema.md`,
+   `proficiency-level-schema.md`, `value-schema.md`. Schema files are named for the type, so they are singular too. The four
    cover every shape the one mechanism has: an entity that is a folder (`profile`), an entity
    that is owned (`experience`), and two that are plain files (`skill`, `value`).
 2. `CONVENTIONS.md` — the portable half of `AGENTS.md`, extracted rule by rule (§6).
@@ -400,7 +419,7 @@ without making a promise the repository cannot keep.
 `experience` gets its own schema file even though it nests inside `profiles/` on disk. The
 `processes/<name>/` precedent buries phase files inside the process schema because a phase is
 not a type — it is a part of one. Experience is a type, and burying it would hide it from
-anyone reading `core/meta/` to learn what vocabulary exists.
+anyone reading `core/` to learn what vocabulary exists.
 
 **No pack ships in the first release.** The candidate was a bundle for companies that sell
 expertise rather than a product — `credentials`, `projects`, `community`, the three folders
@@ -434,6 +453,12 @@ and the remaining eleven core types.
 - **`gate`** — the multi-person instance keeps one gate checklist per process rather than a
   gate per file. Whether a gate is an entity or a section of the process is confirmed when
   `process` is built, not now.
+- **Who assessed a skill, and when it last moved** — a proficiency assessment currently
+  assumes self-assessment and records no date. If both self- and peer-assessment exist, the gap
+  between them is the useful output rather than either column alone, which argues for the
+  assessor being an attribute of the assessment. Likewise a level should move because something
+  moved it — a project, an outage — not on a review schedule, which argues for recording what
+  changed it. Deferred: with one profile there is no gap to measure.
 - **Skill grouping** — the company-of-one instance groups its skills into ten named
   categories. Core carries that as a free-text `group` field for now. Whether a skill group
   becomes an entity of its own is a question for the second instance, not the first: one more

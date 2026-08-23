@@ -20,13 +20,14 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const TYPES = [
   { type: "skill", folder: "skills" },
   { type: "value", folder: "values" },
+  { type: "proficiency-level", folder: "proficiency-levels" },
   { type: "profile", folder: "profiles/<profile>", owns: ["experience"] },
   { type: "experience", folder: "profiles/<profile>/experiences", owner: "profile" },
 ];
 
 // Spec §5: closed for the first release. `ref → <type>` is checked separately because its
 // target varies.
-export const TYPE_VOCABULARY = new Set(["string", "date", "array", "object array", "enum"]);
+export const TYPE_VOCABULARY = new Set(["string", "number", "date", "array", "object array", "enum"]);
 
 const failures = [];
 export const fail = (msg) => failures.push(msg);
@@ -325,17 +326,31 @@ const CHECKS = [
     rule: "R4",
     run() {
       const h1 = (rel) => read(rel)?.match(/^#\s+(.+?)\s*$/m)?.[1] ?? null;
-      const skillNames = new Set();
-      const skillDir = join(ROOT, "example/skills");
-      if (existsSync(skillDir))
-        for (const f of readdirSync(skillDir)) {
-          const name = h1(`example/skills/${f}`);
-          if (!name) fail(`example/skills/${f} has no H1`);
-          else if (skillNames.has(name)) fail(`two skills share the canonical name "${name}"`);
-          else skillNames.add(name);
-        }
 
-      const LEVELS = new Set(["beginner", "medior", "senior"]);
+      // Canonical names per referenced type, read from the example instance. Nothing here is
+      // a hardcoded list: a proficiency level is an entity like any other, so the set of legal
+      // levels is whatever proficiency-levels/ contains, and it cannot drift from the schema.
+      const folderOf = (type) => TYPES.find((t) => t.type === type).folder;
+      const namesOf = (type) => {
+        const folder = folderOf(type);
+        const names = new Set();
+        const dir = join(ROOT, `example/${folder}`);
+        if (!existsSync(dir)) return names;
+        for (const f of readdirSync(dir)) {
+          if (!f.endsWith(".md")) continue;
+          const name = h1(`example/${folder}/${f}`);
+          if (!name) fail(`example/${folder}/${f} has no H1`);
+          else if (names.has(name)) fail(`two ${type} files share the canonical name "${name}"`);
+          else names.add(name);
+        }
+        return names;
+      };
+
+      const NAMES = { skill: namesOf("skill"), "proficiency-level": namesOf("proficiency-level") };
+      const resolve = (child, type, value) => {
+        if (!NAMES[type].has(value))
+          fail(`${child}: ${type} "${value}" resolves to nothing in example/${folderOf(type)}/`);
+      };
       const walk = (rel) => {
         const p = join(ROOT, rel);
         if (!existsSync(p)) return;
@@ -345,17 +360,13 @@ const CHECKS = [
           else if (entry.endsWith(".md")) {
             const text = read(child) ?? "";
             for (const m of text.matchAll(/^\s*-\s+skill:\s*(.+?)\s*$/gm))
-              if (!skillNames.has(m[1]))
-                fail(`${child}: skill "${m[1]}" resolves to nothing in example/skills/`);
+              resolve(child, "skill", m[1]);
             for (const m of text.matchAll(/^\s*level:\s*(.+?)\s*$/gm))
-              if (!LEVELS.has(m[1]))
-                fail(`${child}: level "${m[1]}" is not beginner, medior or senior`);
+              resolve(child, "proficiency-level", m[1]);
             const bare = text.match(/^skills:\s*\[(.+?)\]\s*$/m);
             if (bare)
               for (const raw of bare[1].split(",")) {
-                const name = raw.trim().replace(/^["']|["']$/g, "");
-                if (!skillNames.has(name))
-                  fail(`${child}: skill "${name}" resolves to nothing in example/skills/`);
+                resolve(child, "skill", raw.trim().replace(/^["']|["']$/g, ""));
               }
           }
         }

@@ -18,12 +18,13 @@ operation and an orphaned experience is unrepresentable.
 | `location` | No | string | Where the person works from |
 | `skills` | No | object array | One entry per skill claimed. Keys below. |
 
-`skills` entries carry two keys:
+`skills` entries carry three keys:
 
 | Key | Required | Type | Description |
 | --- | --- | --- | --- |
 | `skill` | Yes | ref → skill | Must match the H1 of a file in `skills/` exactly |
-| `level` | Yes | enum | One of `beginner`, `medior`, `senior` |
+| `level` | Yes | ref → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
+| `evidence` | Yes | string | A concrete fact the level can be weighed against. Required, because the adjective on its own measures confidence rather than skill. |
 
 ## Sections
 
