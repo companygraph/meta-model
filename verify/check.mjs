@@ -16,7 +16,12 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 export const TYPES = [
   { type: "skill", folder: "skills" },
   { type: "value", folder: "values" },
+  { type: "profile", folder: "profiles/<profile>", owns: ["experience"] },
 ];
+
+// Spec §5: closed for the first release. `ref → <type>` is checked separately because its
+// target varies.
+export const TYPE_VOCABULARY = new Set(["string", "date", "array", "object array", "enum"]);
 
 const failures = [];
 export const fail = (msg) => failures.push(msg);
@@ -123,6 +128,31 @@ const CHECKS = [
         for (const row of sec?.rows ?? [])
           if (!["Yes", "No"].includes(row[1]))
             fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+      }
+    },
+  },
+  {
+    name: "type vocabulary",
+    rule: "R9",
+    run() {
+      const known = new Set(TYPES.map((t) => t.type));
+      for (const { type } of TYPES) {
+        const path = `core/meta/${type}-schema.md`;
+        const text = read(path);
+        if (text === null) continue;
+        const fm = tableOf((sectionsOf(text).get("Frontmatter") ?? "").trim());
+        for (const row of fm?.rows ?? []) {
+          const declared = row[2].replace(/`/g, "").trim();
+          const ref = declared.match(/^ref → (.+)$/);
+          if (ref) {
+            if (!known.has(ref[1]))
+              fail(`${path}: ${row[0]} points at unknown type "${ref[1]}"`);
+            if (ref[1].endsWith("s"))
+              fail(`${path}: ${row[0]} is "ref → ${ref[1]}"; a reference names one entity`);
+          } else if (!TYPE_VOCABULARY.has(declared)) {
+            fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
+          }
+        }
       }
     },
   },
