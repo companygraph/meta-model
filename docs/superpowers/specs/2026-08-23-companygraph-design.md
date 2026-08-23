@@ -70,11 +70,17 @@ robertblust/
   company/                       ← the reference instance: Robert Blust as a company
 ```
 
-**`core/` is flat; an instance keeps its schemas in `meta/`.** The `meta/` segment belongs to
-an instance's layout, where it separates a folder of schemas from the folders of entities
-beside it. Core holds nothing but schemas, so inside it that segment separates nothing — and
-worse, it was the only place the model said where an instance's schemas live, expressed as a
-path nobody had to read. `CONVENTIONS.md` R11 states it instead.
+**`core/` is flat.** It held `core/meta/` because the `meta/` segment belongs to an instance's
+layout, where it separates a folder of schemas from the folders of entities beside it. Core
+holds nothing but schemas, so inside it that segment separated nothing.
+
+A rule was briefly written to justify it — that an instance keeps its schemas in `meta/` — and
+then withdrawn. It was out of scope for a file whose subject is what makes a graph checkable,
+since where a vendored copy of the schemas sits does not affect that. Worse, it answered half
+of §10's open versioning question by assuming the answer is to copy them in at all. What
+survives is the part that is genuinely about checkability, now in R9: a schema is not an
+entity, so it never lives in a folder named for a type. Where it does live is the adopter's
+business, and stays that way until versioning is settled.
 
 **The repo is `meta-model`, not `core`.** The repo says what the project is; folders say
 how it is divided. `core` names the part of the vocabulary every company shares, and it

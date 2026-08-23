@@ -25,8 +25,9 @@ verify/check.mjs   npm run verify — asserts this repo's own shape
 
 ## Instantiating it
 
-Copy the schemas from `core/` into a `meta/` folder in a repository of your own and take
-`CONVENTIONS.md` with them. Create the folders the schemas name, and write one file per entity.
+Copy the schemas from `core/` into a repository of your own — wherever that repository keeps
+its schemas, so long as it is not inside a folder named for a type — and take `CONVENTIONS.md`
+with them. Create the folders the schemas name, and write one file per entity.
 The schemas are the contract; `CONVENTIONS.md` is what an agent checks the result against, so
 the two travel together. `example/` is there to be read, not copied.
 

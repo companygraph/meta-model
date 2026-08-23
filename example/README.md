@@ -19,5 +19,9 @@ profiles/mira-halvorsen/         mira-halvorsen.md
 ```
 
 `profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a
-folder of files because nothing owns a skill. There is no `meta/` here: this instance is read
-beside `core/`, and the schemas it is written against are the ones in `core/` (R11).
+folder of files because nothing owns a skill.
+
+There are no schemas here. This instance is read beside `core/` and is written against the
+schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away
+has no such neighbour and keeps a copy; where is theirs to decide, so long as it is not inside
+a folder named for a type.
