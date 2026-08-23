@@ -13,9 +13,10 @@ CompanyGraph is a **meta-model for operating a company** — the structure a com
 knowledge takes so that both people and agents can rely on it. It is a template you
 instantiate, not a product you run.
 
-It is the generalisation of a model that already works. `magic-mental-model` describes a
-26-person hospitality platform in 403 files; `rob-cv` describes a company of one in 142
-commits. Neither was written with the other in mind, and both arrived at the same shape:
+It is the generalisation of a model that already works. Two independent instances exist
+today: one describing a multi-person company across several hundred files, one describing a
+company of one. Neither was written with the other in mind, and both arrived at the same
+shape:
 **one Markdown file per entity, YAML frontmatter plus a Markdown body, in a folder named
 for its type, with a separate folder of schemas defining the structure.**
 
@@ -84,9 +85,9 @@ sitemaps, more conventions files and more chances to drift.
 product should not hold one person's real client and revenue data. `example/` covers
 the adopter's need instead: a small fictional company, honest about being fictional.
 
-**rob-cv is not touched.** The CV keeps building from its own `content/`. The end state —
-the CV becoming an output of the instance, the way job applications are already outputs of
-`content/` — is a later, separately scoped project. Naming it here keeps the duplication
+**The existing CV repository is not touched.** It keeps building from its own content. The
+end state — the CV becoming an output of the instance, the way job applications are already
+outputs of that content — is a later, separately scoped project. Naming it here keeps the duplication
 temporary by design rather than by neglect.
 
 ---
@@ -94,8 +95,8 @@ temporary by design rather than by neglect.
 ## 4. Types
 
 Marked **S** for singleton (one file) and **C** for collection (a folder of many). Both
-instances arrived at singletons independently — `rob-cv/content/profile.yaml`,
-`magic-mental-model/values.md` — so the meta-model has two schema shapes, not one.
+instances arrived at singletons independently — one keeps a single `profile` file, the other
+a single `values` file — so the meta-model has two schema shapes, not one.
 
 ### Core
 
@@ -125,21 +126,22 @@ instances arrived at singletons independently — `rob-cv/content/profile.yaml`,
 
 ### Notes on the shape
 
-**`profile` is a person, not the company.** Rob is an employee of a company and has a
-profile; the profile carries skills and experience. This is the type `magic-mental-model`
-has as thin `people/*.md` and `rob-cv` has as its entire content tree — the clearest case
-of the core being the *union* of two instances rather than one extended. A 26-person
-company never had to model a person's background; a company of one was forced to.
+**`profile` is a person, not the company.** A person is an employee of a company and has a
+profile; the profile carries skills and experience. The multi-person instance has this as a
+thin file per person — name, contact, roles. The company-of-one instance has it as the
+entire content tree. That is the clearest case of the core being the *union* of two
+instances rather than one extended: a company with a payroll never had to model a person's
+background, and a company of one was forced to.
 
-**`concepts` is the company's own domain vocabulary** — `booking`, `folio`, `door-access`
-at LIKE MAGIC; engagement, proposal, deliverable at a consultancy. Same schema, entirely
+**`concepts` is the company's own domain vocabulary** — a hotel operator models booking and
+folio; a consultancy models engagement, proposal and deliverable. Same schema, entirely
 different content. This is where company *type* actually varies, far more than in which
 types exist, which is why a pack may seed concepts as well as define types.
 
-**Volume runs inversely to genericness.** `values` is one file and `strategies` two; those
-are the most universal things a company has. `customers` is 105 files and `features` 72,
-and those are the most specific to what kind of company LIKE MAGIC is. File counts are not
-evidence of importance.
+**Volume runs inversely to genericness.** In the multi-person instance `values` is a single
+file and `strategies` barely more — and those are the most universal things a company has.
+The folders holding by far the most files are `customers` and `features`, which are the two
+most specific to what kind of company it is. File counts are not evidence of importance.
 
 ---
 
@@ -150,8 +152,9 @@ description) and a sections table. Validation is **agent-run**: `CONVENTIONS.md`
 what makes a graph checkable, and you invoke it in prose — *"check cross-references in this
 repository."*
 
-This is not a compromise pending real tooling. It is the working architecture at LIKE MAGIC
-across 403 files, and it is the position the talk this model comes from actually argues:
+This is not a compromise pending real tooling. It is the working architecture of the
+multi-person instance across several hundred files, and it is the position the talk this
+model comes from actually argues:
 *"Today AI understands natural language. With the right meta-model I describe the facts as
 Markdown."* A formal schema language would contradict the thesis the model is published
 under.
@@ -163,44 +166,43 @@ should arrive when someone other than the author has adopted the model and drift
 started to cost something.
 
 Deliberately rejected: a validator that *parses* the Markdown schemas as its source of
-truth. That makes prose load-bearing before anything enforces the prose's shape, and this
-codebase has two fresh examples of what that costs — a slide parser keyed on the literal
-string `<section class="slide`, and an attribute in the wrong position silently removing a
-slide from the build.
+truth. That makes prose load-bearing before anything enforces the prose's shape — a failure
+mode that costs a silent, invisible break rather than an error, every time.
 
 ---
 
-## 6. Splitting `AGENTS.md`
+## 6. Splitting the agent instructions
 
-The schemas are already isolated in `meta/`. The valuable extraction is `AGENTS.md`, where
-portable and company-specific are currently fused. Three kinds of rule sit in one table:
+The schemas are the easy half and are already isolated. The valuable extraction is the
+repository's agent-instruction file, where portable and company-specific rules currently sit
+in one table. Three kinds live there:
 
-| kind | example | goes to |
+| kind | shape of the rule | goes to |
 |---|---|---|
-| Modelling conventions | *"Cross-reference validation is always required before committing"*, *"Role names must match canonical definitions exactly"*, *"No internal markdown links — use canonical names"* | **`core/CONVENTIONS.md`** |
-| Operational rules | *"Always ask before creating a Jira work item"*, *"Use Atlassian MCP, never WebFetch"* | **Instance** — LIKE MAGIC's tools |
-| House style | The AI Output Style section, pointing at an internal AI Strategy | **Instance** |
+| Modelling conventions | Cross-reference validation is required before committing; names must match their canonical definitions exactly; no abbreviations; link by canonical name rather than by file path | **`CONVENTIONS.md`** |
+| Operational rules | Anything naming a particular issue tracker, wiki, chat tool or MCP server, and what to do in it | **Instance** |
+| House style | The company's own writing and output standards | **Instance** |
 
-The first group is what makes a graph of Markdown files checkable by an agent at all —
-exact name matching, no abbreviations, canonical names instead of links. It is genuinely
-vendor-neutral and it is the substance of the meta-model. The rest is what LIKE MAGIC
-happens to run on.
+The first group is what makes a graph of Markdown files checkable by an agent at all. Exact
+name matching is not a style preference — it is the only reason a cross-reference can be
+resolved without a database. That group is genuinely vendor-neutral and it is the substance
+of the meta-model. The rest describes whatever tools a particular company happens to run on,
+and does not survive contact with a second company.
 
 Doing this rule by rule is the main work of the first release. It is also the point where
 publishing goes wrong most easily: shipping a folder structure and calling it a standard,
-while the conventions that make it operable stay behind in a private repo.
-
----
+while the conventions that make it operable stay behind in a private repository.
 
 ## 7. Distribution: an instance ships as a skill
 
-`magic-mental-model` publishes itself as a loadable agent skill — `skill-README.md` carries
-name and description frontmatter, `.claude/commands/dist-skill.md` packages the tree into a
-ZIP. Consumption is not "read these files"; it is "load this company as context."
+The multi-person instance publishes itself as a loadable agent skill: a README carrying name
+and description frontmatter, and a command that packages the tree. Consumption is not "read
+these files"; it is "load this company as context."
 
 CompanyGraph should generalise that: **the core defines how an instance packages itself as
-a skill**, so any company's model is loadable by the same mechanism. This is the part of
-LIKE MAGIC's setup most worth generalising and the one with no equivalent in `rob-cv`.
+a skill**, so any company's model is loadable by the same mechanism. It is the part of the
+multi-person instance most worth generalising, and the one with no equivalent in the
+company-of-one instance.
 
 Open: whether the packaging script belongs in core (shared, versioned) or in each instance
 (copied, divergent). Leaning core.
@@ -236,12 +238,13 @@ and the company profile.
 - **`education`** — a person has degrees, a company has certifications. Generalise as
   `credentials` in core, or leave to a person pack?
 - **`projects`** — a distinct type, or the same thing as `experience` seen from the other
-  end? LIKE MAGIC would call these case studies.
+  end? A company would call these case studies.
 - **`community`** — talks and open source. Core, or wait for a second instance to ask?
 - **How skills and experience attach to a profile** — nested under the person
   (`profile/rob/experience/*.md`, the shape `processes/<name>/` already uses), or flat
-  collections keyed by a `person:` field. `rob-cv`'s flat `experience/` works only because
-  there is one person, so it is not evidence. Leaning nested.
+  collections keyed by a `person:` field. The company-of-one instance keeps `experience/`
+  flat, but that works only because there is one person, so it is not evidence. Leaning
+  nested.
 - **Skill packaging** — core or instance (§7).
 - **Versioning** — how a pack declares which core version it needs, and what an instance
   does when core moves. Not urgent with one instance; urgent on the first outside adopter.

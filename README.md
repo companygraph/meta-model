@@ -7,8 +7,8 @@ agents can rely on it — types, schemas, and the conventions that make a graph 
 files checkable.
 
 It is not invented. It is the generalisation of a model that already works in two places
-that never knew about each other: a 26-person hospitality platform, and a company of one.
-Both arrived at the same shape — one Markdown file per entity, YAML frontmatter and a
+that never knew about each other: a multi-person company, and a company of one. Both
+arrived at the same shape — one Markdown file per entity, YAML frontmatter and a
 Markdown body, in a folder named for its type, with a separate folder of schemas defining
 the structure. This repository is that shape, extracted, with the company-specific parts
 named as such.
