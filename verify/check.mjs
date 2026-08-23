@@ -10,8 +10,12 @@
 // to look for; a second table-valued section would need naming here. It does not validate
 // example/ against the schemas: no date is parsed, no file is checked for the sections its
 // schema requires, an unknown frontmatter field passes, and no file under example/values/ is
-// ever read. A file under example/profiles/ whose path matches no type's File Location has
-// its frontmatter left alone, because nothing declares what it may reference. Every check names the
+// ever read. A file under example/profiles/ whose folder matches no type's File Location has
+// its frontmatter left alone, because nothing declares what it may reference — and nothing
+// prevents such a file: "example structure" rejects an unknown folder at the top of example/
+// and states what a profile's folder must contain, not what else may sit inside it, so
+// example/profiles/<profile>/notes/x.md is reachable today and its frontmatter goes unread.
+// Failing on it would invent a rule CONVENTIONS.md does not state. Every check names the
 // CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing — so the
 // script and the prose cannot drift apart silently.
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -324,10 +328,15 @@ const CHECKS = [
         // Every typed table: the frontmatter fields, plus the column table of any section
         // whose content is a table. A qualified reference lives in the latter, so checking
         // only the former would leave the model's only `ref →` fields undeclared.
+        //
+        // A column table is the captioned block, and the sections table — which has no Type
+        // column — is the uncaptioned one. Selecting by caption says that; dropping the first
+        // block instead only worked because another check happens to enforce that the
+        // sections table comes first, which is the coupling the caption exists to remove.
         const s = sectionsOf(text);
         const typed = [
           tableOf((s.get("Frontmatter") ?? "").trim()),
-          ...tablesOf(s.get("Sections") ?? "").slice(1),
+          ...blocksOf(s.get("Sections") ?? "").filter((b) => b.section).map((b) => b.table),
         ];
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
