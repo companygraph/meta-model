@@ -84,18 +84,28 @@ with the sections table, whose columns are `Section | Required | Description`.
 
 A section whose content is itself a table declares that in the sections table: its Description
 begins with `Table.`, and a table naming that section's columns follows, with columns
-`Column | Required | Type | Description`, read on the same terms as the frontmatter table. The
-column table is introduced by a caption line naming its section — `` `## Skills` is a table
-with these columns: `` — and the caption, not the position, is what says which section the
-columns belong to. The sections table is then free to list its rows in whatever order reads
-best. A section marked `Table.` with no column table, and a column table for a section not
-marked `Table.`, are both errors: each half means nothing without the other.
+`Column | Required | Type | Description`, read on the same terms as the frontmatter table
+except for the list types below. The column table is introduced by a caption line naming its
+section — `` `## Skills` is a table with these columns: `` — and the caption, not the
+position, is what says which section the columns belong to. The sections table is then free
+to list its rows in whatever order reads best. A section marked `Table.` with no column
+table, and a column table for a section not marked `Table.`, are both errors: each half
+means nothing without the other.
 
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
 `array`, `enum`, `ref → <type>`, `array of ref → <type>`. A reference names one entity, so
-the type it points at is singular: `ref → skill`, never `ref → skills`. A table's separator
-row cells are plain dashes — `| --- |` — never alignment colons such as `:---`, `---:` or
-`:---:`.
+the type it points at is singular: `ref → skill`, never `ref → skills`.
+
+Where each form is legal follows from one distinction: **a frontmatter field may hold one
+value or a list; a table cell holds one value.** The whole vocabulary is therefore open to a
+frontmatter field, and both `ref → <type>` and `array of ref → <type>` there must resolve. In
+a column table the list types — `array` and `array of ref → <type>` — are an error, not
+something to be read leniently, because there is nothing for them to mean: a column that
+references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter
+field (R8); it never becomes a column.
+
+A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
+`:---`, `---:` or `:---:`.
 
 ### R10 — An owned type declares its owner
 

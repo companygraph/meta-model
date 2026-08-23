@@ -346,6 +346,14 @@ at is singular: `ref → skill`, never `ref → skills`.
 names, where a list of records would become a table in the body. Typing it that way is what
 lets a check find the field without being told its name.
 
+The three tables do not share that vocabulary equally, and the line between them is one
+sentence: a frontmatter field may hold one value or a list, and a table cell holds one value.
+`ref → <type>` and `array of ref → <type>` are both frontmatter forms, and both must resolve.
+A column table's type may not be a list at all — `array` and `array of ref → <type>` are
+errors there, and a column that references another entity is typed `ref → <type>`. Read
+leniently instead, a list type in a column passes the shape check and is then matched by
+nothing that resolves references: the column stops being checked and nothing fails.
+
 **The canonical name of an entity is its H1**, and everything references it by that exact
 string. The multi-person instance resolves a display name through a four-step fallback —
 nickname, then filename, then email prefix, then `full_name` — and a fallback chain is

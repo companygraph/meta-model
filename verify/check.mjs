@@ -6,12 +6,12 @@
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
 // resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
-// types `array of ref → <type>`. "## Skills" is the one body table it knows to look for; a
-// second table-valued section would need naming here. It does not validate example/ against
-// the schemas: no date is parsed, no file is checked for the sections its schema requires,
-// an unknown frontmatter field passes, and no file under example/values/ is ever read. A
-// file under example/profiles/ whose path matches no type's File Location has its frontmatter
-// left alone, because nothing declares what it may reference. Every check names the
+// types `ref → <type>` or `array of ref → <type>`. "## Skills" is the one body table it knows
+// to look for; a second table-valued section would need naming here. It does not validate
+// example/ against the schemas: no date is parsed, no file is checked for the sections its
+// schema requires, an unknown frontmatter field passes, and no file under example/values/ is
+// ever read. A file under example/profiles/ whose path matches no type's File Location has
+// its frontmatter left alone, because nothing declares what it may reference. Every check names the
 // CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing — so the
 // script and the prose cannot drift apart silently.
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -287,7 +287,22 @@ const CHECKS = [
               `${path}: ${where} has columns ${block.table.columns.join("|")}; must be Column|Required|Type|Description`,
             );
           else if (!block.table.rows.length) fail(`${path}: ${where} declares no columns`);
-          else requiredYesNo(block.table, where);
+          else {
+            requiredYesNo(block.table, where);
+            // A cell holds one value, so a list type in a column table means nothing, and R9
+            // leaves `array` and `array of ref → <type>` to the frontmatter table. Rejecting
+            // it here is what makes the singular `ref → <type>` that "example references"
+            // reads off a column complete rather than partial: retyping a column
+            // `array of ref → proficiency-level` was accepted, and then matched by nothing,
+            // so the level column stopped being resolved and the run still said it passed.
+            for (const row of block.table.rows) {
+              const declared = (row[2] ?? "").replace(/`/g, "").trim();
+              if (/^array\b/.test(declared))
+                fail(
+                  `${path}: ${row[0]} in ${where} is typed "${declared}"; a column holds one value, so a column's type is never a list — a list belongs in "## Frontmatter"`,
+                );
+            }
+          }
         }
         for (const named of tableValued)
           if (!declared.has(named))
@@ -422,7 +437,7 @@ const CHECKS = [
       // Canonical names per referenced type, read from the example instance. Every list this
       // check works from is derived: the legal names of a type are whatever its folder
       // contains, the columns of a body table come from the schema's column table, and the
-      // frontmatter fields that hold references are the rows a schema types
+      // frontmatter fields that hold references are the rows a schema types `ref → <type>` or
       // `array of ref → <type>`. What is written down below is which schema and which section
       // to read — never a level, a column or a field name, all of which live in the schema.
       const folderOf = (type) => TYPES.find((t) => t.type === type)?.folder ?? null;
@@ -493,29 +508,38 @@ const CHECKS = [
         return null;
       };
 
-      // Frontmatter fields a schema types `array of ref → <type>`: the field name and what
-      // it points at, both read from the schema. A list of bare names is the one shape R8
-      // leaves in frontmatter, and this is what makes it machine-visible.
-      const listFieldsOf = (type) => {
+      // Frontmatter fields a schema types as a reference: the field name and what it points
+      // at, both read from the schema. Both forms count — a frontmatter field may hold one
+      // value (`ref → <type>`) or a list of them (`array of ref → <type>`, the one list
+      // shape R8 leaves in frontmatter) — and this is what makes either machine-visible.
+      // Matching only the list form left the commoner singular one inert.
+      const refFieldsOf = (type) => {
         const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
         return (fm?.rows ?? []).flatMap((r) => {
-          const target = r[2].replace(/`/g, "").trim().match(/^array of ref → (.+)$/)?.[1];
+          const target = r[2].replace(/`/g, "").trim().match(/^(?:array of )?ref → (.+)$/)?.[1];
           return target ? [{ field: r[0].replace(/`/g, "").trim(), ref: target }] : [];
         });
       };
-      const listFields = new Map(TYPES.map((t) => [t.type, listFieldsOf(t.type)]));
+      const refFields = new Map(TYPES.map((t) => [t.type, refFieldsOf(t.type)]));
 
-      // Both YAML forms of a list, because the schema types the field `array` and says
-      // nothing about which one an instance writes. Scoped to the frontmatter block, so a
-      // line in the body that happens to read like a field is not mistaken for one.
+      // Every value a field carries, whichever YAML shape it is written in: a scalar, a flow
+      // sequence `[A, B]`, or a block list of `- ` lines. The shape is read from the file
+      // rather than predicted from the declared type on purpose — a field written in a shape
+      // its type did not predict would otherwise go unread, which is the same silence this
+      // check exists to remove. Whatever comes back must resolve, singular or listed alike.
+      // Scoped to the frontmatter block, so a line in the body that happens to read like a
+      // field is not mistaken for one, and anchored at column 0, so a nested key of the same
+      // name is not either.
       const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? "";
-      const listValues = (fmText, field) => {
+      const refValues = (fmText, field) => {
         const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const out = [];
         for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*\\[(.*)\\][ \\t]*$`, "gm")))
           out.push(...m[1].split(","));
         for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*$\\n((?:[ \\t]*-[ \\t]*\\S.*(?:\\n|$))+)`, "gm")))
           out.push(...m[1].split("\n").map((l) => l.replace(/^[ \t]*-[ \t]*/, "")));
+        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*(?!\\[)(\\S.*?)[ \\t]*$`, "gm")))
+          out.push(m[1]);
         return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
       };
 
@@ -549,8 +573,8 @@ const CHECKS = [
                   });
             }
             const fmText = frontmatterOf(text);
-            for (const { field, ref } of listFields.get(typeOfFile(child)) ?? [])
-              for (const value of listValues(fmText, field)) resolve(child, ref, value);
+            for (const { field, ref } of refFields.get(typeOfFile(child)) ?? [])
+              for (const value of refValues(fmText, field)) resolve(child, ref, value);
           }
         }
       };
