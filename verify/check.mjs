@@ -15,6 +15,7 @@ const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 // The slice this release ships. Mirrors spec §4; the folder is stated, never derived.
 export const TYPES = [
   { type: "skill", folder: "skills" },
+  { type: "value", folder: "values" },
 ];
 
 const failures = [];
@@ -99,20 +100,29 @@ const CHECKS = [
         if (order.join(">") !== want.join(">"))
           fail(`${path}: sections are ${order.join(", ")}; must be exactly ${want.join(", ")}`);
 
-        const fm = tableOf(s.get("Frontmatter") ?? "");
-        if (!fm) fail(`${path}: "## Frontmatter" has no table`);
-        else if (fm.columns.join("|") !== "Field|Required|Type|Description")
-          fail(`${path}: frontmatter columns are ${fm.columns.join("|")}`);
+        const fmBody = (s.get("Frontmatter") ?? "").trim();
+        if (fmBody === "No YAML frontmatter.") {
+          // A type with no fields says so in one sanctioned sentence, so that "no table"
+          // and "forgot the table" stay distinguishable.
+        } else {
+          const fm = tableOf(fmBody);
+          if (!fm) fail(`${path}: "## Frontmatter" has no table and does not say "No YAML frontmatter."`);
+          else if (fm.columns.join("|") !== "Field|Required|Type|Description")
+            fail(`${path}: frontmatter columns are ${fm.columns.join("|")}`);
+          else
+            for (const row of fm.rows)
+              if (!["Yes", "No"].includes(row[1]))
+                fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+        }
 
         const sec = tableOf(s.get("Sections") ?? "");
         if (!sec) fail(`${path}: "## Sections" has no table`);
         else if (sec.columns.join("|") !== "Section|Required|Description")
           fail(`${path}: sections columns are ${sec.columns.join("|")}`);
 
-        for (const t of [fm, sec])
-          for (const row of t?.rows ?? [])
-            if (!["Yes", "No"].includes(row[1]))
-              fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+        for (const row of sec?.rows ?? [])
+          if (!["Yes", "No"].includes(row[1]))
+            fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
       }
     },
   },
