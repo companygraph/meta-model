@@ -2,10 +2,14 @@
 // files themselves. No dependencies, no build step: node verify/check.mjs
 //
 // This is NOT the validator the design defers (spec §5). It never reads a schema as truth
-// about somebody's instance. It asserts exactly two things: that this repository's own
-// schema files match the fixed shape, and that example/ obeys the conventions. Every check
-// names the CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing —
-// so the script and the prose cannot drift apart silently.
+// about somebody's instance, and it checks far less than CONVENTIONS.md states. It asserts
+// that this repository's own schema files match the fixed shape, that example/ has the
+// folder and filename shape the types imply, and that the `skill:` values under
+// example/profiles/ resolve. It does not validate example/ against the schemas: no date is
+// parsed, no file is checked for the sections its schema requires, an unknown frontmatter
+// field passes, and no file under example/values/ is ever read. Every check names the
+// CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing — so the
+// script and the prose cannot drift apart silently.
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
@@ -61,15 +65,38 @@ export function tableOf(body) {
   if (start === -1) return null;
   let end = start;
   while (end < lines.length && lines[end].trim().startsWith("|")) end++;
-  const block = lines.slice(start, end);
+  return parseTable(lines.slice(start, end));
+}
+
+// Parse EVERY contiguous pipe block in a chunk of text, in document order. `## Frontmatter`
+// holds more than one whenever a field is typed `object array`: a second table describes
+// that field's keys, and it carries the only `ref →` and `enum` this release ships. A block
+// that is not a valid table comes back as `null` rather than being dropped, so "malformed"
+// and "absent" stay distinguishable at the call site.
+export function tablesOf(body) {
+  const lines = body.split("\n");
+  const out = [];
+  let i = 0;
+  while (i < lines.length) {
+    if (!lines[i].trim().startsWith("|")) {
+      i++;
+      continue;
+    }
+    let end = i;
+    while (end < lines.length && lines[end].trim().startsWith("|")) end++;
+    out.push(parseTable(lines.slice(i, end)));
+    i = end;
+  }
+  return out;
+}
+
+// Turn one contiguous pipe block into columns and rows. Rejects a block missing a valid GFM
+// separator row (the second line must contain only dashes and pipes).
+function parseTable(block) {
   if (block.length < 2) return null;
-
-  // Validate that the second line is a GFM separator row (contains only dashes)
-  const separatorCells = block[1].trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
-  if (!separatorCells.every((cell) => /^-+$/.test(cell))) return null;
-
   const cells = (l) =>
     l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  if (!cells(block[1]).every((cell) => /^-+$/.test(cell))) return null;
   return { columns: cells(block[0]), rows: block.slice(2).map(cells) };
 }
 
@@ -87,7 +114,7 @@ const CHECKS = [
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type, owner } of TYPES) {
+      for (const { type, owner, folder } of TYPES) {
         const path = `core/meta/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
@@ -137,19 +164,39 @@ const CHECKS = [
         if (order.join(">") !== want.join(">"))
           fail(`${path}: sections are ${order.join(", ")}; must be exactly ${want.join(", ")}`);
 
+        // The schema's own "## File Location" and the manifest's folder are two statements
+        // of the same fact, and nothing else compares them. Without this, a schema could
+        // name `skill/*.md` while TYPES says `skills` and every message quoting "the File
+        // Location" would still be quoting TYPES.
+        const stated = (s.get("File Location") ?? "").match(/`([^`]+)`/)?.[1];
+        if (!stated) fail(`${path}: "## File Location" states no path in backticks`);
+        else if (!stated.startsWith(`${folder}/`))
+          fail(
+            `${path}: "## File Location" says \`${stated}\`, which does not start with "${folder}/" — the folder declared for ${type}`,
+          );
+
         const fmBody = (s.get("Frontmatter") ?? "").trim();
         if (fmBody === "No YAML frontmatter.") {
           // A type with no fields says so in one sanctioned sentence, so that "no table"
           // and "forgot the table" stay distinguishable.
         } else {
-          const fm = tableOf(fmBody);
-          if (!fm) fail(`${path}: "## Frontmatter" has no table and does not say "No YAML frontmatter."`);
-          else if (fm.columns.join("|") !== "Field|Required|Type|Description")
-            fail(`${path}: frontmatter columns are ${fm.columns.join("|")}`);
-          else
-            for (const row of fm.rows)
-              if (!["Yes", "No"].includes(row[1]))
-                fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+          // Every table under the heading, not just the first: the keys table that follows
+          // an `object array` field is where the only `ref →` and `enum` live.
+          const tables = tablesOf(fmBody);
+          if (!tables.length)
+            fail(`${path}: "## Frontmatter" has no table and does not say "No YAML frontmatter."`);
+          tables.forEach((fm, n) => {
+            if (!fm) return fail(`${path}: frontmatter table ${n + 1} is not a table`);
+            const [first, ...rest] = fm.columns;
+            if (!["Field", "Key"].includes(first) || rest.join("|") !== "Required|Type|Description")
+              fail(
+                `${path}: frontmatter table ${n + 1} columns are ${fm.columns.join("|")}; must be Field or Key, then Required|Type|Description`,
+              );
+            else
+              for (const row of fm.rows)
+                if (!["Yes", "No"].includes(row[1]))
+                  fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+          });
         }
 
         const sec = tableOf(s.get("Sections") ?? "");
@@ -172,19 +219,22 @@ const CHECKS = [
         const path = `core/meta/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
-        const fm = tableOf((sectionsOf(text).get("Frontmatter") ?? "").trim());
-        for (const row of fm?.rows ?? []) {
-          const declared = row[2].replace(/`/g, "").trim();
-          const ref = declared.match(/^ref → (.+)$/);
-          if (ref) {
-            if (!known.has(ref[1]))
-              fail(`${path}: ${row[0]} points at unknown type "${ref[1]}"`);
-            if (ref[1].endsWith("s"))
-              fail(`${path}: ${row[0]} is "ref → ${ref[1]}"; a reference names one entity`);
-          } else if (!TYPE_VOCABULARY.has(declared)) {
-            fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
+        // Every table under "## Frontmatter", because the keys table of an `object array`
+        // field is the only place a `ref →` or an `enum` is declared.
+        const tables = tablesOf((sectionsOf(text).get("Frontmatter") ?? "").trim());
+        for (const fm of tables)
+          for (const row of fm?.rows ?? []) {
+            const declared = row[2].replace(/`/g, "").trim();
+            const ref = declared.match(/^ref → (.+)$/);
+            if (ref) {
+              if (!known.has(ref[1]))
+                fail(`${path}: ${row[0]} points at unknown type "${ref[1]}"`);
+              if (ref[1].endsWith("s"))
+                fail(`${path}: ${row[0]} is "ref → ${ref[1]}"; a reference names one entity`);
+            } else if (!TYPE_VOCABULARY.has(declared)) {
+              fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
+            }
           }
-        }
       }
     },
   },
@@ -206,12 +256,16 @@ const CHECKS = [
         if (stated && !known.has(stated))
           fail(`${path}: Owner is "${stated}", which is not a type`);
 
-        // The Owner line and the path must agree: an owned type nests inside its owner's
-        // folder. The owner's folder is looked up, never derived by appending an "s" — that
-        // derivation is the one CONVENTIONS.md R7 exists to forbid.
+        // The Owner line and the declared folder must agree: an owned type nests inside its
+        // owner's folder. The owner's folder is looked up, never derived by appending an
+        // "s" — that derivation is the one CONVENTIONS.md R7 exists to forbid. `folder`
+        // comes from TYPES, not from the file, so the messages below blame TYPES; that the
+        // file's own "## File Location" agrees with it is checked in "schema fixed shape".
         const ownerFolder = owner && TYPES.find((t) => t.type === owner)?.folder;
         if (ownerFolder && !folder.startsWith(`${ownerFolder}/`))
-          fail(`${path}: File Location "${folder}" does not nest inside ${ownerFolder}/`);
+          fail(
+            `TYPES: the folder declared for ${type}, "${folder}", does not nest inside ${ownerFolder}/, which ${path} names as its owner`,
+          );
         // A placeholder naming the type itself is a folder entity — `profiles/<profile>/`
         // has one because a profile owns something, not because something owns it. Only a
         // placeholder naming a *different* type means this entity nests inside that one.
@@ -219,7 +273,9 @@ const CHECKS = [
           .map((m) => m[1])
           .filter((n) => n !== type);
         if (!owner && foreign.length)
-          fail(`${path}: File Location "${folder}" nests inside <${foreign[0]}> but declares no Owner`);
+          fail(
+            `TYPES: the folder declared for ${type}, "${folder}", nests inside <${foreign[0]}>, but ${path} declares no "**Owner:**" — one of the two is wrong`,
+          );
       }
     },
   },

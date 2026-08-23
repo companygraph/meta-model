@@ -56,9 +56,12 @@ whole reason to type it `enum` rather than `string`.
 ### R9 — Schema files have a fixed shape
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
-line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. Frontmatter
+line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
+`## File Location` is written in backticks and begins with the type's own folder. Frontmatter
 columns are `Field | Required | Type | Description`; sections columns are
-`Section | Required | Description`. Required is `Yes` or `No`. Types come from the closed
+`Section | Required | Description`. A field typed `object array` is followed by a second table
+describing that field's keys, with columns `Key | Required | Type | Description`, read on the
+same terms as the first. Required is `Yes` or `No`. Types come from the closed
 vocabulary: `string`, `date`, `array`, `object array`, `enum`, `ref → <type>`. A reference
 names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
