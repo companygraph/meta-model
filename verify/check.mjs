@@ -5,12 +5,13 @@
 // about somebody's instance, and it checks far less than CONVENTIONS.md states. It asserts
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
-// resolve — both the columns a schema marks `ref → <type>` in a body table and the
-// frontmatter fields it types `array of ref → <type>`. It does not validate example/ against
+// resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
+// types `array of ref → <type>`. "## Skills" is the one body table it knows to look for; a
+// second table-valued section would need naming here. It does not validate example/ against
 // the schemas: no date is parsed, no file is checked for the sections its schema requires,
 // an unknown frontmatter field passes, and no file under example/values/ is ever read. A
-// file under example/profiles/ whose path matches no type's File Location is not reached at
-// all — nothing declares what it may reference. Every check names the
+// file under example/profiles/ whose path matches no type's File Location has its frontmatter
+// left alone, because nothing declares what it may reference. Every check names the
 // CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing — so the
 // script and the prose cannot drift apart silently.
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -418,11 +419,12 @@ const CHECKS = [
     run() {
       const h1 = (rel) => read(rel)?.match(/^#\s+(.+?)\s*$/m)?.[1] ?? null;
 
-      // Canonical names per referenced type, read from the example instance. The lists this
-      // check works from are all derived: the legal names of a type are whatever its folder
+      // Canonical names per referenced type, read from the example instance. Every list this
+      // check works from is derived: the legal names of a type are whatever its folder
       // contains, the columns of a body table come from the schema's column table, and the
       // frontmatter fields that hold references are the rows a schema types
-      // `array of ref → <type>`. No field name, level or column is written down here.
+      // `array of ref → <type>`. What is written down below is which schema and which section
+      // to read — never a level, a column or a field name, all of which live in the schema.
       const folderOf = (type) => TYPES.find((t) => t.type === type)?.folder ?? null;
       const namesOf = (type) => {
         const folder = folderOf(type);
@@ -506,7 +508,7 @@ const CHECKS = [
       // Both YAML forms of a list, because the schema types the field `array` and says
       // nothing about which one an instance writes. Scoped to the frontmatter block, so a
       // line in the body that happens to read like a field is not mistaken for one.
-      const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---\s*$/m)?.[1] ?? "";
+      const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? "";
       const listValues = (fmText, field) => {
         const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const out = [];
