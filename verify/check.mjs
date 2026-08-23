@@ -87,17 +87,48 @@ const CHECKS = [
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type } of TYPES) {
+      for (const { type, owner } of TYPES) {
         const path = `core/meta/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
 
         const title = type.replace(/(^|-)(\w)/g, (_, d, c) => (d ? " " : "") + c.toUpperCase());
-        if (!text.startsWith(`# ${title} Schema\n`))
-          fail(`${path}: first line must be "# ${title} Schema"`);
-        if (!/\n>\s+\S/.test(text)) fail(`${path}: missing the "> " tagline`);
-
         const s = sectionsOf(text);
+
+        // The header region — everything before the first "## " heading — must contain,
+        // in order: the H1, the "> " tagline (one or more lines), and, for an owned type
+        // only, the "**Owner:**" line. Nothing else belongs there but blank lines. This is
+        // the one check that validates POSITION; "ownership declared" validates the Owner
+        // line's VALUE.
+        const header = (s.get("") ?? "").split("\n");
+        let i = 0;
+        const skipBlank = () => {
+          while (i < header.length && header[i].trim() === "") i++;
+        };
+
+        skipBlank();
+        if (header[i] === `# ${title} Schema`) i++;
+        else fail(`${path}: first line must be "# ${title} Schema"`);
+
+        skipBlank();
+        let sawTagline = false;
+        while (i < header.length && /^>\s+\S/.test(header[i])) {
+          sawTagline = true;
+          i++;
+        }
+        if (!sawTagline)
+          fail(`${path}: missing the "> " tagline between the title and what follows`);
+
+        skipBlank();
+        if (owner) {
+          if (i < header.length && /^\*\*Owner:\*\*/.test(header[i])) i++;
+          else fail(`${path}: missing "**Owner:**" line after the tagline`);
+          skipBlank();
+        }
+
+        const stray = header.slice(i).find((l) => l.trim() !== "");
+        if (stray) fail(`${path}: unexpected "${stray.trim()}" before the first "## " heading`);
+
         for (const heading of ["File Location", "Frontmatter", "Sections"])
           if (!s.has(heading)) fail(`${path}: missing "## ${heading}"`);
 
