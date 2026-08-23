@@ -65,19 +65,37 @@ wearing YAML: put it in the body as a Markdown table and declare its columns in 
 renders where a reader looks, it has no quoting hazard, and it is checkable on identical terms.
 Frontmatter is for short facts.
 
+So a list of *bare names* stays in frontmatter, typed `array of ref → <type>`; a list of
+*records* becomes a table in the body. The same reference therefore appears in both places and
+that is not an inconsistency — an experience naming the skills it used is a list of names and
+nothing more, while a profile's claim on a skill carries a level and its evidence. What decides
+the shape is whether the edge has attributes of its own.
+
 ### R9 — Schema files have a fixed shape
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
-`## File Location` is written in backticks and begins with the type's own folder. Frontmatter
-columns are `Field | Required | Type | Description`; sections columns are
-`Section | Required | Description`. A section whose content is itself a table is followed by a
-table declaring that table's columns, with columns `Column | Required | Type | Description`,
-read on the same terms as the frontmatter table. Required is `Yes` or `No`. Types come from the
-closed vocabulary: `string`, `number`, `date`, `array`, `enum`, `ref → <type>`. A reference
-names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
-A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
-`:---`, `---:` or `:---:`.
+`## File Location` is written in backticks and begins with the type's own folder.
+
+`## Frontmatter` holds one table and only one — a field is a row in it — with columns
+`Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.`
+instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens
+with the sections table, whose columns are `Section | Required | Description`.
+
+A section whose content is itself a table declares that in the sections table: its Description
+begins with `Table.`, and a table naming that section's columns follows, with columns
+`Column | Required | Type | Description`, read on the same terms as the frontmatter table. The
+column table is introduced by a caption line naming its section — `` `## Skills` is a table
+with these columns: `` — and the caption, not the position, is what says which section the
+columns belong to. The sections table is then free to list its rows in whatever order reads
+best. A section marked `Table.` with no column table, and a column table for a section not
+marked `Table.`, are both errors: each half means nothing without the other.
+
+Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
+`array`, `enum`, `ref → <type>`, `array of ref → <type>`. A reference names one entity, so
+the type it points at is singular: `ref → skill`, never `ref → skills`. A table's separator
+row cells are plain dashes — `| --- |` — never alignment colons such as `:---`, `---:` or
+`:---:`.
 
 ### R10 — An owned type declares its owner
 

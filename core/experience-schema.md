@@ -20,7 +20,7 @@ Filenames are prefixed with the start year so the folder sorts chronologically:
 | `start` | Yes | date | `YYYY-MM`, when the period began |
 | `end` | No | date | `YYYY-MM`. Absent means the period is ongoing. |
 | `organisation` | No | string | Where the period was spent |
-| `skills` | No | array | Each entry is a `ref → skill`: the H1 of a file in `skills/` |
+| `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
 
 ## Sections
 

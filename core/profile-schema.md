@@ -23,7 +23,7 @@ operation and an orphaned experience is unrepresentable.
 | --- | --- | --- |
 | `# [Name]` | Yes | The person's canonical name. Everything references the profile by this exact string. |
 | `> [Tagline]` | Yes | Single-line summary of the person |
-| `## Skills` | No | A table, one row per skill claimed. Columns below. |
+| `## Skills` | No | Table. One row per skill claimed; its columns are declared below. |
 | `## Summary` | No | A paragraph of context |
 
 `## Skills` is a table with these columns:

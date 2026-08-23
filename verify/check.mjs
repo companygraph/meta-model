@@ -4,10 +4,13 @@
 // This is NOT the validator the design defers (spec §5). It never reads a schema as truth
 // about somebody's instance, and it checks far less than CONVENTIONS.md states. It asserts
 // that this repository's own schema files match the fixed shape, that example/ has the
-// folder and filename shape the types imply, and that the `skill:` values under
-// example/profiles/ resolve. It does not validate example/ against the schemas: no date is
-// parsed, no file is checked for the sections its schema requires, an unknown frontmatter
-// field passes, and no file under example/values/ is ever read. Every check names the
+// folder and filename shape the types imply, and that the references under example/profiles/
+// resolve — both the columns a schema marks `ref → <type>` in a body table and the
+// frontmatter fields it types `array of ref → <type>`. It does not validate example/ against
+// the schemas: no date is parsed, no file is checked for the sections its schema requires,
+// an unknown frontmatter field passes, and no file under example/values/ is ever read. A
+// file under example/profiles/ whose path matches no type's File Location is not reached at
+// all — nothing declares what it may reference. Every check names the
 // CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing — so the
 // script and the prose cannot drift apart silently.
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
@@ -25,8 +28,8 @@ export const TYPES = [
   { type: "experience", folder: "profiles/<profile>/experiences", owner: "profile" },
 ];
 
-// Spec §5: closed for the first release. `ref → <type>` is checked separately because its
-// target varies.
+// Spec §5: closed for the first release. `ref → <type>` and `array of ref → <type>` are
+// checked separately because their target varies.
 export const TYPE_VOCABULARY = new Set(["string", "number", "date", "array", "enum"]);
 
 const failures = [];
@@ -56,10 +59,11 @@ export function sectionsOf(text) {
 }
 
 // Parse the FIRST contiguous Markdown pipe table in a chunk of text, and stop at the blank
-// line after it. A section may hold more than one table — profile-schema's object-array keys
-// sit under ## Frontmatter — and swallowing the second one's header as a data row is exactly
-// the kind of silent nonsense this script exists to catch. Rejects tables missing a valid
-// GFM separator row (the second line must contain only dashes and pipes).
+// line after it. A section may hold more than one table — `## Sections` holds a column table
+// for every section whose content is itself a table — and swallowing the next one's header
+// as a data row is exactly the kind of silent nonsense this script exists to catch. Rejects
+// tables missing a valid GFM separator row (the second line must contain only dashes and
+// pipes).
 export function tableOf(body) {
   const lines = body.split("\n");
   const start = lines.findIndex((l) => l.trim().startsWith("|"));
@@ -69,12 +73,24 @@ export function tableOf(body) {
   return parseTable(lines.slice(start, end));
 }
 
-// Parse EVERY contiguous pipe block in a chunk of text, in document order. `## Sections`
-// holds more than one whenever a section's content is itself a table: the sections table
-// comes first, then one column table per such section, and those carry the only `ref →`
-// fields this release ships. A block that is not a valid table comes back as `null` rather
-// than being dropped, so "malformed" and "absent" stay distinguishable at the call site.
-export function tablesOf(body) {
+// The one sanctioned way to introduce a column table: a line naming its section in
+// backticks. R9 fixes this wording, and "schema fixed shape" enforces it both ways.
+export const COLUMN_CAPTION = /^`##\s+(.+?)`\s+is a table with these columns:$/;
+
+// Parse EVERY contiguous pipe block in a chunk of text, in document order, each tagged with
+// the section named by the caption line directly above it (`null` when there is none).
+// `## Sections` holds more than one block whenever a section's content is itself a table:
+// the sections table comes first, uncaptioned, then one column table per such section, and
+// those carry the only `ref →` fields this release ships.
+//
+// The caption is how a column table is ADDRESSED. Position is not, and cannot be: the
+// sections table lists `## Skills` alongside rows for the H1 and the tagline, in whatever
+// order the document reads best, so "the nth table" and "the nth section" line up only by
+// accident. Reordering two rows used to hand back another section's columns, or none.
+//
+// A block that is not a valid table comes back as `table: null` rather than being dropped,
+// so "malformed" and "absent" stay distinguishable at the call site.
+export function blocksOf(body) {
   const lines = body.split("\n");
   const out = [];
   let i = 0;
@@ -85,11 +101,21 @@ export function tablesOf(body) {
     }
     let end = i;
     while (end < lines.length && lines[end].trim().startsWith("|")) end++;
-    out.push(parseTable(lines.slice(i, end)));
+    let above = i - 1;
+    while (above >= 0 && lines[above].trim() === "") above--;
+    const caption = above >= 0 ? lines[above].trim().match(COLUMN_CAPTION) : null;
+    out.push({
+      section: caption ? caption[1].trim() : null,
+      table: parseTable(lines.slice(i, end)),
+    });
     i = end;
   }
   return out;
 }
+
+// Every block's table, caption discarded — for callers that want coverage of all of them
+// rather than one addressed by name.
+export const tablesOf = (body) => blocksOf(body).map((b) => b.table);
 
 // Turn one contiguous pipe block into columns and rows. Rejects a block missing a valid GFM
 // separator row (the second line must contain only dashes and pipes).
@@ -181,7 +207,15 @@ const CHECKS = [
           // A type with no fields says so in one sanctioned sentence, so that "no table"
           // and "forgot the table" stay distinguishable.
         } else {
-          const fm = tableOf(fmBody);
+          // Every table here, not just the first: R9 permits exactly one, so a second is
+          // rejected for existing rather than validated. Reading only the first left one
+          // with any columns it liked, and any word in its Required cells, unread.
+          const fmTables = tablesOf(fmBody);
+          const fm = fmTables[0];
+          if (fmTables.length > 1)
+            fail(
+              `${path}: "## Frontmatter" holds ${fmTables.length} tables; R9 permits one — a field is a row in it`,
+            );
           if (!fm)
             fail(`${path}: "## Frontmatter" has no table and does not say "No YAML frontmatter."`);
           else if (fm.columns.join("|") !== "Field|Required|Type|Description")
@@ -193,22 +227,72 @@ const CHECKS = [
         }
 
         // "## Sections" holds the sections table, and then one column table for every
-        // section whose content is itself a table. That is where a qualified reference now
-        // lives — a body table's columns need declaring exactly as a frontmatter field does.
-        const secTables = tablesOf(s.get("Sections") ?? "");
-        if (!secTables.length) fail(`${path}: "## Sections" has no table`);
-        secTables.forEach((tbl, n) => {
-          if (!tbl) return fail(`${path}: sections table ${n + 1} is not a table`);
-          const want = n === 0 ? "Section|Required|Description" : "Column|Required|Type|Description";
-          if (tbl.columns.join("|") !== want)
+        // section the sections table marks table-valued. That is where a qualified reference
+        // now lives — a body table's columns need declaring exactly as a frontmatter field
+        // does — so the two halves are checked against each other in both directions: a
+        // marked section with no column table fails, and a column table for a section that
+        // is not marked fails. Neither degrades to silence, because "example references"
+        // reads the column table as its only statement of what a "## Skills" table must hold.
+        const requiredYesNo = (tbl, where) => {
+          for (const row of tbl.rows)
+            if (!["Yes", "No"].includes(row[1]))
+              fail(`${path}: Required is "${row[1]}" in ${where}; must be Yes or No`);
+        };
+
+        const blocks = blocksOf(s.get("Sections") ?? "");
+        const [sections, ...columnTables] = blocks;
+        if (!blocks.length) fail(`${path}: "## Sections" has no table`);
+        else if (!sections.table) fail(`${path}: the first block under "## Sections" is not a table`);
+        else if (sections.section)
+          fail(
+            `${path}: the sections table is captioned "\`## ${sections.section}\` is a table with these columns:"; that caption introduces a column table, and the sections table comes first`,
+          );
+        else if (sections.table.columns.join("|") !== "Section|Required|Description")
+          fail(
+            `${path}: sections table columns are ${sections.table.columns.join("|")}; must be Section|Required|Description`,
+          );
+        else requiredYesNo(sections.table, "the sections table");
+
+        // A row declares itself table-valued by starting its Description with "Table." —
+        // one fixed token, not prose about what the section contains. R9 states it, so a
+        // schema cannot leave the column table implicit and nothing notice.
+        const tableValued = new Set();
+        for (const row of sections?.table?.rows ?? []) {
+          if (!/^Table\./.test((row[2] ?? "").trim())) continue;
+          const named = (row[0] ?? "").replace(/`/g, "").trim().match(/^##\s+(.+)$/)?.[1];
+          if (!named)
+            fail(`${path}: "${row[0]}" says "Table." but is not a "## " section, so it holds no table`);
+          else tableValued.add(named);
+        }
+
+        const declared = new Set();
+        for (const block of columnTables) {
+          if (!block.section) {
             fail(
-              `${path}: sections table ${n + 1} columns are ${tbl.columns.join("|")}; must be ${want}`,
+              `${path}: a table under "## Sections" has no caption; a column table is introduced by "\`## <Section>\` is a table with these columns:"`,
             );
-          else
-            for (const row of tbl.rows)
-              if (!["Yes", "No"].includes(row[1]))
-                fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
-        });
+            continue;
+          }
+          const where = `the column table for "## ${block.section}"`;
+          if (!tableValued.has(block.section))
+            fail(
+              `${path}: ${where} declares columns, but the sections table does not mark "## ${block.section}" table-valued — its Description must begin "Table."`,
+            );
+          if (declared.has(block.section)) fail(`${path}: "## ${block.section}" has two column tables`);
+          declared.add(block.section);
+          if (!block.table) fail(`${path}: ${where} is not a table`);
+          else if (block.table.columns.join("|") !== "Column|Required|Type|Description")
+            fail(
+              `${path}: ${where} has columns ${block.table.columns.join("|")}; must be Column|Required|Type|Description`,
+            );
+          else if (!block.table.rows.length) fail(`${path}: ${where} declares no columns`);
+          else requiredYesNo(block.table, where);
+        }
+        for (const named of tableValued)
+          if (!declared.has(named))
+            fail(
+              `${path}: "## ${named}" is marked table-valued, but no table under "## Sections" is captioned "\`## ${named}\` is a table with these columns:"`,
+            );
       }
     },
   },
@@ -232,12 +316,13 @@ const CHECKS = [
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = row[2].replace(/`/g, "").trim();
-            const ref = declared.match(/^ref → (.+)$/);
+            const ref = declared.match(/^(array of )?ref → (.+)$/);
             if (ref) {
-              if (!known.has(ref[1]))
-                fail(`${path}: ${row[0]} points at unknown type "${ref[1]}"`);
-              if (ref[1].endsWith("s"))
-                fail(`${path}: ${row[0]} is "ref → ${ref[1]}"; a reference names one entity`);
+              const [, many, target] = ref;
+              if (!known.has(target))
+                fail(`${path}: ${row[0]} points at unknown type "${target}"`);
+              if (target.endsWith("s"))
+                fail(`${path}: ${row[0]} is "${many ?? ""}ref → ${target}"; a reference names one entity`);
             } else if (!TYPE_VOCABULARY.has(declared)) {
               fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
             }
@@ -333,10 +418,12 @@ const CHECKS = [
     run() {
       const h1 = (rel) => read(rel)?.match(/^#\s+(.+?)\s*$/m)?.[1] ?? null;
 
-      // Canonical names per referenced type, read from the example instance. Nothing here is
-      // a hardcoded list: a proficiency level is an entity like any other, so the set of legal
-      // levels is whatever proficiency-levels/ contains, and it cannot drift from the schema.
-      const folderOf = (type) => TYPES.find((t) => t.type === type).folder;
+      // Canonical names per referenced type, read from the example instance. The lists this
+      // check works from are all derived: the legal names of a type are whatever its folder
+      // contains, the columns of a body table come from the schema's column table, and the
+      // frontmatter fields that hold references are the rows a schema types
+      // `array of ref → <type>`. No field name, level or column is written down here.
+      const folderOf = (type) => TYPES.find((t) => t.type === type)?.folder ?? null;
       const namesOf = (type) => {
         const folder = folderOf(type);
         const names = new Set();
@@ -357,26 +444,79 @@ const CHECKS = [
         if (!cache.has(type)) cache.set(type, namesOf(type));
         return cache.get(type);
       };
+      // The target type comes out of schema text, so it can name something that is not a
+      // type at all. That is a failure like any other: throwing would abandon every finding
+      // already recorded and print a stack trace in their place.
       const resolve = (child, type, value) => {
+        if (!folderOf(type))
+          return fail(`${child}: reference to "${value}" targets "${type}", which is not a type`);
         if (!namesFor(type).has(value))
           fail(`${child}: ${type} "${value}" resolves to nothing in example/${folderOf(type)}/`);
       };
 
       // The profile schema declares the columns of its "## Skills" table, so read them from
-      // there rather than restating them here. A duplicated list of legal levels is exactly
-      // what this check used to carry, and it was free to drift from the schema it mirrored.
+      // there rather than restating them here. The column table is addressed by the caption
+      // naming its section — never by counting tables, which lined up with the sections
+      // table's rows only by accident and handed back another section's columns, or none,
+      // as soon as a row moved.
       const columnsOf = (type, section) => {
-        const s = sectionsOf(read(`core/${type}-schema.md`) ?? "");
-        const sectionRows = tablesOf(s.get("Sections") ?? "")[0]?.rows ?? [];
-        const nth = sectionRows.filter((r) => r[0].includes("## ")).findIndex((r) => r[0].includes(section));
-        const table = tablesOf(s.get("Sections") ?? "").slice(1)[nth < 0 ? 0 : nth];
-        return (table?.rows ?? []).map((r) => ({
+        const path = `core/${type}-schema.md`;
+        const block = blocksOf(sectionsOf(read(path) ?? "").get("Sections") ?? "").find(
+          (b) => b.section === section,
+        );
+        const rows = block?.table?.rows ?? [];
+        // Every route to an empty list — no caption, a malformed table, a table with no
+        // rows — is a schema that cannot say what its own body table must contain. Checking
+        // nothing would then pass a "## ${section}" table holding anything at all.
+        if (!rows.length)
+          fail(`${path}: nothing declares the columns of "## ${section}", so no "## ${section}" table can be checked`);
+        return rows.map((r) => ({
           name: r[0].replace(/`/g, "").trim(),
           required: r[1] === "Yes",
           ref: r[2].replace(/`/g, "").trim().match(/^ref → (.+)$/)?.[1] ?? null,
         }));
       };
       const SKILL_COLUMNS = columnsOf("profile", "Skills");
+
+      // Which type a file under example/ is, by matching its folder against the File
+      // Location each type declares; `<placeholder>` matches one segment. A file that
+      // matches nothing has no schema, so nothing declares what it may reference.
+      const typeOfFile = (rel) => {
+        const dir = rel.split("/").slice(1, -1);
+        for (const { type, folder } of TYPES) {
+          const want = folder.split("/");
+          if (want.length !== dir.length) continue;
+          if (want.every((seg, n) => (/^<.+>$/.test(seg) ? true : seg === dir[n]))) return type;
+        }
+        return null;
+      };
+
+      // Frontmatter fields a schema types `array of ref → <type>`: the field name and what
+      // it points at, both read from the schema. A list of bare names is the one shape R8
+      // leaves in frontmatter, and this is what makes it machine-visible.
+      const listFieldsOf = (type) => {
+        const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
+        return (fm?.rows ?? []).flatMap((r) => {
+          const target = r[2].replace(/`/g, "").trim().match(/^array of ref → (.+)$/)?.[1];
+          return target ? [{ field: r[0].replace(/`/g, "").trim(), ref: target }] : [];
+        });
+      };
+      const listFields = new Map(TYPES.map((t) => [t.type, listFieldsOf(t.type)]));
+
+      // Both YAML forms of a list, because the schema types the field `array` and says
+      // nothing about which one an instance writes. Scoped to the frontmatter block, so a
+      // line in the body that happens to read like a field is not mistaken for one.
+      const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---\s*$/m)?.[1] ?? "";
+      const listValues = (fmText, field) => {
+        const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+        const out = [];
+        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*\\[(.*)\\][ \\t]*$`, "gm")))
+          out.push(...m[1].split(","));
+        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*$\\n((?:[ \\t]*-[ \\t]*\\S.*(?:\\n|$))+)`, "gm")))
+          out.push(...m[1].split("\n").map((l) => l.replace(/^[ \t]*-[ \t]*/, "")));
+        return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+      };
+
       const walk = (rel) => {
         const p = join(ROOT, rel);
         if (!existsSync(p)) return;
@@ -386,7 +526,9 @@ const CHECKS = [
           else if (entry.endsWith(".md")) {
             const text = read(child) ?? "";
             // A "## Skills" body table: one row per assessment. Which columns it must have,
-            // which are required and which are references is read from the schema above.
+            // which are required and which are references is read from the schema above. An
+            // empty SKILL_COLUMNS is not a reason to skip — it has already failed, in
+            // columnsOf, and the run cannot pass from here.
             const skills = tableOf(sectionsOf(text).get("Skills") ?? "");
             if (skills && SKILL_COLUMNS.length) {
               const want = SKILL_COLUMNS.map((c) => c.name).join("|");
@@ -404,11 +546,9 @@ const CHECKS = [
                     }
                   });
             }
-            const bare = text.match(/^skills:\s*\[(.+?)\]\s*$/m);
-            if (bare)
-              for (const raw of bare[1].split(",")) {
-                resolve(child, "skill", raw.trim().replace(/^["']|["']$/g, ""));
-              }
+            const fmText = frontmatterOf(text);
+            for (const { field, ref } of listFields.get(typeOfFile(child)) ?? [])
+              for (const value of listValues(fmText, field)) resolve(child, ref, value);
           }
         }
       };
