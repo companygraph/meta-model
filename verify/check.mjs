@@ -531,11 +531,18 @@ const CHECKS = [
       };
       const refFields = new Map(TYPES.map((t) => [t.type, refFieldsOf(t.type)]));
 
-      // Every value a field carries, whichever YAML shape it is written in: a scalar, a flow
-      // sequence `[A, B]`, or a block list of `- ` lines. The shape is read from the file
-      // rather than predicted from the declared type on purpose — a field written in a shape
-      // its type did not predict would otherwise go unread, which is the same silence this
-      // check exists to remove. Whatever comes back must resolve, singular or listed alike.
+      // The values a field carries, in three YAML shapes: a scalar on the key's own line, a
+      // flow sequence `[A, B]` written on one line, and a block list of `- ` lines directly
+      // under the key. Read from the file rather than predicted from the declared type on
+      // purpose — a field written in a shape its type did not predict would otherwise go
+      // unread, which is the same silence this check exists to remove.
+      //
+      // Three shapes, not every shape. A blank line or a comment between the key and its
+      // items, a flow sequence wrapped across lines, and a trailing `# comment` are all legal
+      // YAML this drops silently. That is a real limit and it is stated here rather than
+      // implied away: nothing in `example/` uses those forms, and a full YAML parser is a
+      // dependency this script does not take. Whatever does come back must resolve, singular
+      // and listed alike.
       // Scoped to the frontmatter block, so a line in the body that happens to read like a
       // field is not mistaken for one, and anchored at column 0, so a nested key of the same
       // name is not either.
