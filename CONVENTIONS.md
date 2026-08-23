@@ -59,9 +59,10 @@ Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. Frontmatter
 columns are `Field | Required | Type | Description`; sections columns are
 `Section | Required | Description`. Required is `Yes` or `No`. Types come from the closed
-vocabulary: `string`, `date`, `array`, `object array`, `enum`, `ref → <type>`. A table's
-separator row cells are plain dashes — `| --- |` — never alignment colons such as `:---`,
-`---:` or `:---:`.
+vocabulary: `string`, `date`, `array`, `object array`, `enum`, `ref → <type>`. A reference
+names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
+`:---`, `---:` or `:---:`.
 
 ### R10 — An owned type declares its owner
 
@@ -71,7 +72,7 @@ the owned thing.
 
 ## Working
 
-### R0 — Cross-reference validation runs before committing
+### R0 — Validation runs before committing
 
 Every rule above is checkable. Run `npm run verify` for the mechanical subset and an agent
 pass for the rest — whether a schema's prose is portable, and whether a rule that has crept in
