@@ -46,7 +46,8 @@ export function sectionsOf(text) {
 // Parse the FIRST contiguous Markdown pipe table in a chunk of text, and stop at the blank
 // line after it. A section may hold more than one table — profile-schema's object-array keys
 // sit under ## Frontmatter — and swallowing the second one's header as a data row is exactly
-// the kind of silent nonsense this script exists to catch.
+// the kind of silent nonsense this script exists to catch. Rejects tables missing a valid
+// GFM separator row (the second line must contain only dashes and pipes).
 export function tableOf(body) {
   const lines = body.split("\n");
   const start = lines.findIndex((l) => l.trim().startsWith("|"));
@@ -55,6 +56,11 @@ export function tableOf(body) {
   while (end < lines.length && lines[end].trim().startsWith("|")) end++;
   const block = lines.slice(start, end);
   if (block.length < 2) return null;
+
+  // Validate that the second line is a GFM separator row (contains only dashes)
+  const separatorCells = block[1].trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
+  if (!separatorCells.every((cell) => /^-+$/.test(cell))) return null;
+
   const cells = (l) =>
     l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
   return { columns: cells(block[0]), rows: block.slice(2).map(cells) };
