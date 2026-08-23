@@ -1,0 +1,19 @@
+name: CI
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+
+jobs:
+  verify:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      # No install step: verify/check.mjs has no dependencies, and there is no
+      # lockfile to install from. `npm ci` here would fail, not pass emptily.
+      - name: Check the repository's own shape
+        run: npm run verify
