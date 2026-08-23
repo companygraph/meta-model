@@ -255,7 +255,7 @@ a role requires one, and it outlives both.
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
-| `group` | No | string | Free-text grouping, e.g. `Cloud & Platform Engineering`. Whether a group becomes an entity of its own is deliberately open. |
+| `group` | No | string | Free-text grouping, e.g. `Testing`. Whether a group becomes an entity of its own is deliberately open. |
 
 ## Sections
 
@@ -945,7 +945,7 @@ Create `example/skills/java-programming.md`:
 
 ```markdown
 ---
-group: Languages & Frameworks
+group: Programming Languages
 ---
 
 # Java Programming
@@ -962,7 +962,7 @@ Create `example/skills/domain-driven-design.md`:
 
 ```markdown
 ---
-group: Architecture
+group: Software Design
 ---
 
 # Domain-Driven Design

@@ -1,5 +1,5 @@
 ---
-group: Languages & Frameworks
+group: Programming Languages
 ---
 
 # Java Programming

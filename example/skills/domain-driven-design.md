@@ -1,5 +1,5 @@
 ---
-group: Architecture
+group: Software Design
 ---
 
 # Domain-Driven Design

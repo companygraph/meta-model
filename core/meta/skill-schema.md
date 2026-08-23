@@ -13,7 +13,7 @@ a role requires one, and it outlives both.
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
-| `group` | No | string | Free-text grouping, e.g. `Cloud & Platform Engineering`. Whether a group becomes an entity of its own is deliberately open. |
+| `group` | No | string | Free-text grouping, e.g. `Testing`. Whether a group becomes an entity of its own is deliberately open. |
 
 ## Sections
 
