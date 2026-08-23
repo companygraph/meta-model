@@ -52,3 +52,14 @@ remaining core types are named in the design and not yet written, no pack ships 
 is no validator beyond `npm run verify`, which checks this repository rather than yours.
 
 See [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md).
+
+## Licence
+
+[Apache 2.0](LICENSE) — the meta-model is open source and stays that way. Tooling and
+consulting come later and are separate products.
+
+Copying `core/` into a repository of your own is the intended use, and Apache 2.0's conditions
+attach to distribution: if you publish that repository, carry the licence and its attribution
+alongside the schema files you took. This project claims no interest in the company content you
+write against them — that is your work, and describing it in this vocabulary does not change
+whose it is.
