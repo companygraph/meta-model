@@ -17,6 +17,7 @@ export const TYPES = [
   { type: "skill", folder: "skills" },
   { type: "value", folder: "values" },
   { type: "profile", folder: "profiles/<profile>", owns: ["experience"] },
+  { type: "experience", folder: "profiles/<profile>/experiences", owner: "profile" },
 ];
 
 // Spec §5: closed for the first release. `ref → <type>` is checked separately because its
@@ -153,6 +154,41 @@ const CHECKS = [
             fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
           }
         }
+      }
+    },
+  },
+  {
+    name: "ownership declared",
+    rule: "R10",
+    run() {
+      const known = new Set(TYPES.map((t) => t.type));
+      for (const { type, owner, folder } of TYPES) {
+        const path = `core/meta/${type}-schema.md`;
+        const text = read(path);
+        if (text === null) continue;
+        const stated = text.match(/^\*\*Owner:\*\*\s+(\S+)\s*$/m)?.[1];
+
+        if (owner && stated !== owner)
+          fail(`${path}: must declare "**Owner:** ${owner}"; found ${stated ?? "no Owner line"}`);
+        if (!owner && stated)
+          fail(`${path}: declares "**Owner:** ${stated}" but nothing owns a ${type}`);
+        if (stated && !known.has(stated))
+          fail(`${path}: Owner is "${stated}", which is not a type`);
+
+        // The Owner line and the path must agree: an owned type nests inside its owner's
+        // folder. The owner's folder is looked up, never derived by appending an "s" — that
+        // derivation is the one CONVENTIONS.md R7 exists to forbid.
+        const ownerFolder = owner && TYPES.find((t) => t.type === owner)?.folder;
+        if (ownerFolder && !folder.startsWith(`${ownerFolder}/`))
+          fail(`${path}: File Location "${folder}" does not nest inside ${ownerFolder}/`);
+        // A placeholder naming the type itself is a folder entity — `profiles/<profile>/`
+        // has one because a profile owns something, not because something owns it. Only a
+        // placeholder naming a *different* type means this entity nests inside that one.
+        const foreign = [...folder.matchAll(/<([\w-]+)>/g)]
+          .map((m) => m[1])
+          .filter((n) => n !== type);
+        if (!owner && foreign.length)
+          fail(`${path}: File Location "${folder}" nests inside <${foreign[0]}> but declares no Owner`);
       }
     },
   },
