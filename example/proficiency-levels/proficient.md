@@ -8,5 +8,5 @@ rank: 30
 
 ## What it means
 
-I make judgment calls in it and can explain why the alternatives are worse. Other people bring
-me their questions.
+Someone at this level makes judgment calls in it and can explain why the alternatives are
+worse. Other people bring them their questions.

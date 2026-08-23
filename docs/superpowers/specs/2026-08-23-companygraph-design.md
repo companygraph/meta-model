@@ -317,7 +317,21 @@ then a sections table, in that order, with these columns and no others:
 ```
 Frontmatter table:  | Field   | Required | Type | Description |
 Sections table:     | Section | Required | Description |
+Column table:       | Column  | Required | Type | Description |
 ```
+
+There are three tables, not two. A section whose content is itself a table needs its columns
+declared exactly as a frontmatter field does, so it says so in the sections table — its
+Description begins `Table.` — and a column table follows, introduced by a caption naming the
+section it belongs to:
+
+```
+`## Skills` is a table with these columns:
+```
+
+The caption is what addresses the column table. Counting tables would tie the sections table's
+reading order to the order the column tables happen to appear in, and nothing about a section's
+position in a document says anything about its content.
 
 `## File Location` is load-bearing, not decorative: it is what lets a type be named singular
 while its folder is plural, and it carries nested paths that are more than a pluralisation.
@@ -325,8 +339,12 @@ Nothing derives a folder from a type name — though as it stands every folder *
 plural of its type, because no folder is shortened for convenience (§4, Naming).
 
 Type vocabulary, closed for the first release: `string`, `number`, `date`, `array`, `enum`,
-`ref → <type>`. A reference names one entity, so the type it points at is singular:
-`ref → skill`, never `ref → skills`.
+`ref → <type>`, `array of ref → <type>`. A reference names one entity, so the type it points
+at is singular: `ref → skill`, never `ref → skills`.
+
+`array of ref → <type>` is the one list shape R8 leaves in frontmatter — a list of bare
+names, where a list of records would become a table in the body. Typing it that way is what
+lets a check find the field without being told its name.
 
 **The canonical name of an entity is its H1**, and everything references it by that exact
 string. The multi-person instance resolves a display name through a four-step fallback —
@@ -416,9 +434,10 @@ person cluster is the half of the union that neither instance shares — so it i
 likely to be wrong.
 
 1. `core/` — `profile-schema.md`, `experience-schema.md`, `skill-schema.md`,
-   `proficiency-level-schema.md`, `value-schema.md`. Schema files are named for the type, so they are singular too. The four
-   cover every shape the one mechanism has: an entity that is a folder (`profile`), an entity
-   that is owned (`experience`), and two that are plain files (`skill`, `value`).
+   `proficiency-level-schema.md`, `value-schema.md`. Schema files are named for the type, so
+   they are singular too. The five cover every shape the one mechanism has: an entity that is
+   a folder (`profile`), an entity that is owned (`experience`), and three that are plain
+   files (`skill`, `proficiency-level`, `value`).
 2. `CONVENTIONS.md` — the portable half of `AGENTS.md`, extracted rule by rule (§6).
 3. `example/` — a small synthetic instance that reads end to end.
 4. `README.md` — what it is, how to instantiate, what a pack is.

@@ -46,8 +46,8 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
 ## Status
 
 The first release describes **one person completely** rather than thirteen types partially —
-`profile`, `experience`, `skill`, `proficiency-level` and `value`, plus the conventions. The remaining core types
-are named in the design and not yet written, no pack ships yet, and there is no validator
-beyond `npm run verify`, which checks this repository rather than yours.
+`profile`, `experience`, `skill`, `proficiency-level` and `value`, plus the conventions. The
+remaining core types are named in the design and not yet written, no pack ships yet, and there
+is no validator beyond `npm run verify`, which checks this repository rather than yours.
 
 See [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md).

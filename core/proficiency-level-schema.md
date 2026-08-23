@@ -1,6 +1,6 @@
 # Proficiency Level Schema
 
-> Required structure for proficiency level files in this repository.
+> Required structure for proficiency level files.
 
 ## File Location
 

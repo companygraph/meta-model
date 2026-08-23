@@ -8,5 +8,5 @@ rank: 20
 
 ## What it means
 
-I work with it unsupervised and the result is predictable. I recognise the common failure modes
-because I have run into them.
+Someone at this level works with it unsupervised and the result is predictable. They recognise
+the common failure modes, having run into them.

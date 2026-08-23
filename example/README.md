@@ -6,15 +6,18 @@ Northwind Atelier and Beacon Systems do not exist, and neither does Mira Halvors
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
-It uses four core types — `profile`, `experience`, `skill`, `value` — and declares no packs.
-That is the first release of the model, not a claim that four types describe a company.
+It uses five core types — `profile`, `experience`, `skill`, `proficiency-level`, `value` —
+and declares no packs. That is the first release of the model, not a claim that five types
+describe a company.
 
 ```
 values/                          say-the-hard-thing.md, craftsmanship.md
 skills/                          java-programming.md, domain-driven-design.md
+proficiency-levels/              familiar.md, competent.md, proficient.md, expert.md
 profiles/mira-halvorsen/         mira-halvorsen.md
   experiences/                   2018-northwind-atelier.md, 2022-beacon-systems.md
 ```
 
 `profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a
-folder of files because nothing owns a skill.
+folder of files because nothing owns a skill. There is no `meta/` here: this instance is read
+beside `core/`, and the schemas it is written against are the ones in `core/` (R11).
