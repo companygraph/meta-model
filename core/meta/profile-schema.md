@@ -1,6 +1,6 @@
 # Profile Schema
 
-> Required structure for profile files in this repository.
+> Required structure for profile files.
 
 ## File Location
 

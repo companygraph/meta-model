@@ -5,7 +5,9 @@
 > not here.
 
 Validation is agent-run. Invoke it in prose — *"check cross-references in this repository"* —
-and the rules below are what is being checked. `npm run verify` covers the mechanical subset.
+and the rules below are what is being checked. Some of them can also be checked by a script,
+but whether such a script exists is a property of the repository, not of these rules. R0 says
+which ones the CompanyGraph repository checks that way.
 
 ## Structure
 
@@ -77,6 +79,20 @@ the owned thing.
 
 ### R0 — Validation runs before committing
 
-Every rule above is checkable. Run `npm run verify` for the mechanical subset and an agent
-pass for the rest — whether a schema's prose is portable, and whether a rule that has crept in
-is really about modelling rather than about one company's tooling.
+Nothing is committed without a validation pass over the rules above. The pass is an agent
+reading the files against these rules. A repository may also own a script that checks some of
+them; nothing here depends on having one.
+
+Which rules that script reaches is worth stating plainly. In the CompanyGraph repository,
+`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9 and
+R10 against this repository's own files, plus a meta-check under R0 that fails if any check
+cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of their
+own; where a check happens to touch one, it is incidental to the rule that check cites. Treat
+all six as agent-enforced — which is by design, not by omission: the claim this model ships
+under is that schemas written as prose are enforceable by agents.
+
+That script is this repository's own harness. Copying `CONVENTIONS.md` into a company brings
+the rules and not the script — there is no `verify` script there, and this one checks the
+files here. The agent pass is the portable part, and it is the only thing that covers what no
+script reaches: whether a schema's prose is portable, and whether a rule that has crept in is
+really about modelling rather than about one company's tooling.

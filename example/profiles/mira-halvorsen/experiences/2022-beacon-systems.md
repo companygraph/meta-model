@@ -6,8 +6,7 @@ skills: [Java Programming, Domain-Driven Design]
 
 # Splitting the billing domain
 
-> Ongoing. Taking one service that three teams edited and making it two that one team each
-> owns.
+> Ongoing. Taking one service that three teams edited and making it two, each owned by one team.
 
 ## What changed
 

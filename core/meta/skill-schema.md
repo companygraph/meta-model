@@ -1,6 +1,6 @@
 # Skill Schema
 
-> Required structure for skill files in this repository.
+> Required structure for skill files.
 
 ## File Location
 

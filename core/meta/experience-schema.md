@@ -1,6 +1,6 @@
 # Experience Schema
 
-> Required structure for experience files in this repository.
+> Required structure for experience files.
 
 **Owner:** profile
 

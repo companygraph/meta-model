@@ -1,6 +1,6 @@
 # Value Schema
 
-> Required structure for value files in this repository.
+> Required structure for value files.
 
 ## File Location
 
