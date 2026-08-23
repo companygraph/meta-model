@@ -223,6 +223,18 @@ const CHECKS = [
       }
     },
   },
+  {
+    name: "rules are written down",
+    rule: "R0",
+    run() {
+      const text = read("CONVENTIONS.md");
+      if (text === null) return fail("CONVENTIONS.md is missing");
+      const defined = new Set([...text.matchAll(/^###\s+(R\d+)\s+—/gm)].map((m) => m[1]));
+      for (const check of CHECKS)
+        if (!defined.has(check.rule))
+          fail(`check "${check.name}" enforces ${check.rule}, which CONVENTIONS.md does not define`);
+    },
+  },
 ];
 
 for (const check of CHECKS) check.run();
