@@ -1,5 +1,11 @@
 # CompanyGraph First Release Implementation Plan
 
+> **Historical record.** This is how the first release was built, not what shipped. Where this
+> plan and the files in the repository disagree, the files are authoritative — read them, not
+> the snippets quoted here. Two things moved during execution: `verify/check.mjs` gained
+> checks the plan never names, and `CONVENTIONS.md` gained rule text — including R0 under a
+> different heading — that the plan's version does not carry.
+
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
 **Goal:** Ship the first release of the CompanyGraph meta-model — four core schemas
