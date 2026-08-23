@@ -16,7 +16,7 @@ named as such.
 ## What is here
 
 ```
-core/meta/         one schema per type: profile, experience, skill, value
+core/              one schema per type: profile, experience, skill, value
 CONVENTIONS.md     the portable rules that make the graph checkable
 example/           a fictional company, described in those four types
 verify/check.mjs   npm run verify — asserts this repo's own shape
@@ -24,10 +24,10 @@ verify/check.mjs   npm run verify — asserts this repo's own shape
 
 ## Instantiating it
 
-Copy `core/meta/` and `CONVENTIONS.md` into a repository of your own, create the folders the
-schemas name, and write one file per entity. The schemas are the contract; `CONVENTIONS.md` is
-what an agent checks the result against, so the two travel together. `example/` is there to be
-read, not copied.
+Copy the schemas from `core/` into a `meta/` folder in a repository of your own and take
+`CONVENTIONS.md` with them. Create the folders the schemas name, and write one file per entity.
+The schemas are the contract; `CONVENTIONS.md` is what an agent checks the result against, so
+the two travel together. `example/` is there to be read, not copied.
 
 ## Packs
 

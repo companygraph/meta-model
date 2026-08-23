@@ -9,8 +9,9 @@ skills: [Java Programming]
 
 > Four years replacing a nightly batch with something that ran when the order did.
 
-## What changed
+## Achievements
 
-Orders that used to be visible the next morning were visible in seconds, which turned out to
-matter less than expected — and the reason it mattered less became the argument for the next
-piece of work.
+- Replaced a nightly batch with a pipeline that ran when the order did, taking visibility from
+  the next morning to seconds.
+- Established that the speed-up mattered less than anyone expected, and why — which set the
+  direction for the work that followed.

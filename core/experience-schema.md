@@ -28,4 +28,4 @@ Filenames are prefixed with the start year so the folder sorts chronologically:
 | --- | --- | --- |
 | `# [Title]` | Yes | The canonical name of this period |
 | `> [Tagline]` | Yes | Single-line summary of the period |
-| `## What changed` | No | What was different afterwards |
+| `## Achievements` | No | What was accomplished in this period |

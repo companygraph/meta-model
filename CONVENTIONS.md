@@ -75,6 +75,13 @@ One `**Owner:**` line in the owned type's schema, and the File Location nests in
 owner. The declaration goes on the owned type because "what does this belong to?" is asked of
 the owned thing.
 
+### R11 — Schemas live in `meta/`
+
+An instance keeps its schemas together in `meta/`, beside the type folders they describe. Core
+ships them flat in `core/`, because core holds nothing but schemas and a folder inside it would
+separate nothing; copying them into an instance puts them in `meta/`, where a folder of schemas
+and a folder of entities cannot be mistaken for one another.
+
 ## Working
 
 ### R0 — Validation runs before committing

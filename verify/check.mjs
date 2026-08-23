@@ -106,8 +106,8 @@ const CHECKS = [
     rule: "R9",
     run() {
       for (const { type } of TYPES)
-        if (read(`core/meta/${type}-schema.md`) === null)
-          fail(`core/meta/${type}-schema.md is missing`);
+        if (read(`core/${type}-schema.md`) === null)
+          fail(`core/${type}-schema.md is missing`);
     },
   },
   {
@@ -115,7 +115,7 @@ const CHECKS = [
     rule: "R9",
     run() {
       for (const { type, owner, folder } of TYPES) {
-        const path = `core/meta/${type}-schema.md`;
+        const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
 
@@ -216,7 +216,7 @@ const CHECKS = [
     run() {
       const known = new Set(TYPES.map((t) => t.type));
       for (const { type } of TYPES) {
-        const path = `core/meta/${type}-schema.md`;
+        const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
         // Every table under "## Frontmatter", because the keys table of an `object array`
@@ -244,7 +244,7 @@ const CHECKS = [
     run() {
       const known = new Set(TYPES.map((t) => t.type));
       for (const { type, owner, folder } of TYPES) {
-        const path = `core/meta/${type}-schema.md`;
+        const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
         const stated = text.match(/^\*\*Owner:\*\*\s+(\S+)\s*$/m)?.[1];
