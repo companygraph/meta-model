@@ -6,7 +6,7 @@
 // schema files match the fixed shape, and that example/ obeys the conventions. Every check
 // names the CONVENTIONS.md rule it enforces, and a meta-check fails if that rule is missing —
 // so the script and the prose cannot drift apart silently.
-import { readFileSync, existsSync } from "node:fs";
+import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 
@@ -221,6 +221,90 @@ const CHECKS = [
         if (!owner && foreign.length)
           fail(`${path}: File Location "${folder}" nests inside <${foreign[0]}> but declares no Owner`);
       }
+    },
+  },
+  {
+    name: "example structure",
+    rule: "R6",
+    run() {
+      const ls = (rel) => {
+        const p = join(ROOT, rel);
+        return existsSync(p) ? readdirSync(p) : null;
+      };
+      const top = ls("example");
+      if (top === null) return fail("example/ is missing");
+
+      const rootFolders = TYPES.filter((t) => !t.folder.includes("/")).map((t) => t.folder);
+      const ownerFolders = TYPES.filter((t) => t.owns).map((t) => t.folder.split("/")[0]);
+      const allowed = new Set([...rootFolders, ...ownerFolders, "README.md"]);
+      for (const entry of top)
+        if (!allowed.has(entry))
+          fail(`example/${entry} is not a folder of any type (expected one of ${[...allowed].join(", ")})`);
+
+      for (const { type, folder, owns } of TYPES) {
+        if (folder.includes("/") && !owns) continue; // owned types are reached via their owner
+        const base = folder.split("/")[0];
+        for (const name of ls(`example/${base}`) ?? []) {
+          if (!owns) {
+            if (!name.endsWith(".md")) fail(`example/${base}/${name} should be a .md file`);
+            continue;
+          }
+          // A folder entity: its own file is named for it, and it owns folders beside it.
+          const inside = ls(`example/${base}/${name}`) ?? [];
+          if (!inside.includes(`${name}.md`))
+            fail(`example/${base}/${name}/ must contain ${name}.md, not ${inside.join(", ")}`);
+          for (const owned of owns) {
+            const ownedFolder = TYPES.find((t) => t.type === owned).folder.split("/").pop();
+            if (!inside.includes(ownedFolder))
+              fail(`example/${base}/${name}/ is missing ${ownedFolder}/`);
+          }
+          if (inside.includes("README.md"))
+            fail(`example/${base}/${name}/README.md — an entity's file is named for the entity`);
+        }
+      }
+    },
+  },
+  {
+    name: "example references",
+    rule: "R4",
+    run() {
+      const h1 = (rel) => read(rel)?.match(/^#\s+(.+?)\s*$/m)?.[1] ?? null;
+      const skillNames = new Set();
+      const skillDir = join(ROOT, "example/skills");
+      if (existsSync(skillDir))
+        for (const f of readdirSync(skillDir)) {
+          const name = h1(`example/skills/${f}`);
+          if (!name) fail(`example/skills/${f} has no H1`);
+          else if (skillNames.has(name)) fail(`two skills share the canonical name "${name}"`);
+          else skillNames.add(name);
+        }
+
+      const LEVELS = new Set(["beginner", "medior", "senior"]);
+      const walk = (rel) => {
+        const p = join(ROOT, rel);
+        if (!existsSync(p)) return;
+        for (const entry of readdirSync(p)) {
+          const child = `${rel}/${entry}`;
+          if (statSync(join(ROOT, child)).isDirectory()) walk(child);
+          else if (entry.endsWith(".md")) {
+            const text = read(child) ?? "";
+            for (const m of text.matchAll(/^\s*-\s+skill:\s*(.+?)\s*$/gm))
+              if (!skillNames.has(m[1]))
+                fail(`${child}: skill "${m[1]}" resolves to nothing in example/skills/`);
+            for (const m of text.matchAll(/^\s*level:\s*(.+?)\s*$/gm))
+              if (!LEVELS.has(m[1]))
+                fail(`${child}: level "${m[1]}" is not beginner, medior or senior`);
+            const bare = text.match(/^skills:\s*\[(.+?)\]\s*$/m);
+            if (bare)
+              for (const raw of bare[1].split(",")) {
+                const name = raw.trim().replace(/^["']|["']$/g, "");
+                if (!skillNames.has(name))
+                  fail(`${child}: skill "${name}" resolves to nothing in example/skills/`);
+              }
+          }
+        }
+      };
+      walk("example/profiles");
     },
   },
   {
