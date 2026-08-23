@@ -16,15 +16,6 @@ operation and an orphaned experience is unrepresentable.
 | --- | --- | --- | --- |
 | `email` | No | string | Contact address |
 | `location` | No | string | Where the person works from |
-| `skills` | No | object array | One entry per skill claimed. Keys below. |
-
-`skills` entries carry three keys:
-
-| Key | Required | Type | Description |
-| --- | --- | --- | --- |
-| `skill` | Yes | ref → skill | Must match the H1 of a file in `skills/` exactly |
-| `level` | Yes | ref → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
-| `evidence` | Yes | string | A concrete fact the level can be weighed against. Required, because the adjective on its own measures confidence rather than skill. |
 
 ## Sections
 
@@ -32,4 +23,17 @@ operation and an orphaned experience is unrepresentable.
 | --- | --- | --- |
 | `# [Name]` | Yes | The person's canonical name. Everything references the profile by this exact string. |
 | `> [Tagline]` | Yes | Single-line summary of the person |
+| `## Skills` | No | A table, one row per skill claimed. Columns below. |
 | `## Summary` | No | A paragraph of context |
+
+`## Skills` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Skill` | Yes | ref → skill | Must match the H1 of a file in `skills/` exactly |
+| `Level` | Yes | ref → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
+| `Evidence` | Yes | string | A concrete fact the level can be weighed against. Required, because the adjective on its own measures confidence rather than skill. |
+
+An assessment is a table row rather than a frontmatter field because it is a claim with prose
+attached, not a short fact. A table renders where a reader looks, has no quoting hazard around
+a colon or a wrapped line, and declares its columns here exactly as a frontmatter field does.

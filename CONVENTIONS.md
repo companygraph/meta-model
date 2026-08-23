@@ -60,16 +60,21 @@ is not an enum — make it a type, so the definition lives in one file and every
 it by canonical name. Otherwise the definitions end up restated on every entry that uses one,
 or nowhere at all.
 
+The same test applies to frontmatter. A field whose value is a list of records is a table
+wearing YAML: put it in the body as a Markdown table and declare its columns in the schema. It
+renders where a reader looks, it has no quoting hazard, and it is checkable on identical terms.
+Frontmatter is for short facts.
+
 ### R9 — Schema files have a fixed shape
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
 `## File Location` is written in backticks and begins with the type's own folder. Frontmatter
 columns are `Field | Required | Type | Description`; sections columns are
-`Section | Required | Description`. A field typed `object array` is followed by a second table
-describing that field's keys, with columns `Key | Required | Type | Description`, read on the
-same terms as the first. Required is `Yes` or `No`. Types come from the closed
-vocabulary: `string`, `date`, `array`, `object array`, `enum`, `ref → <type>`. A reference
+`Section | Required | Description`. A section whose content is itself a table is followed by a
+table declaring that table's columns, with columns `Column | Required | Type | Description`,
+read on the same terms as the frontmatter table. Required is `Yes` or `No`. Types come from the
+closed vocabulary: `string`, `number`, `date`, `array`, `enum`, `ref → <type>`. A reference
 names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
 `:---`, `---:` or `:---:`.

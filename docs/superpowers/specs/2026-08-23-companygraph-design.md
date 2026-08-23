@@ -324,8 +324,8 @@ while its folder is plural, and it carries nested paths that are more than a plu
 Nothing derives a folder from a type name — though as it stands every folder *is* the regular
 plural of its type, because no folder is shortened for convenience (§4, Naming).
 
-Type vocabulary, closed for the first release: `string`, `number`, `date`, `array`,
-`object array`, `enum`, `ref → <type>`. A reference names one entity, so the type it points at is singular:
+Type vocabulary, closed for the first release: `string`, `number`, `date`, `array`, `enum`,
+`ref → <type>`. A reference names one entity, so the type it points at is singular:
 `ref → skill`, never `ref → skills`.
 
 **The canonical name of an entity is its H1**, and everything references it by that exact
@@ -334,10 +334,21 @@ nickname, then filename, then email prefix, then `full_name` — and a fallback 
 precisely what makes a reference unresolvable without running code. Core drops it, which also
 removes the `name` frontmatter field that would otherwise duplicate the heading.
 
-`object array` is the one entry neither source instance needed. A person's skill carries a
-proficiency, so the edge itself has an attribute — the first reference in the model that is
-not a bare name. The alternatives misplace it: a level on the skill file is wrong because a
-level is per person, and a level in the Markdown body is where nothing can check it.
+`object array` was invented here and has since been removed, which is worth recording because
+the reasoning was wrong in an instructive way. A person's skill carries a proficiency and its
+evidence, so the edge has attributes — a list of records. That was expressed as a frontmatter
+`object array` with a second table declaring its keys, because "a level in the Markdown body is
+where nothing can check it."
+
+That objection stopped being true once the fixed shape existed. A body table with declared
+columns is checkable on identical terms to a frontmatter field, and it renders where a reader
+actually looks, with no quoting hazard around a colon or a wrapped line. So the assessment is a
+Markdown table under `## Skills`, its columns declared in the schema's own `## Sections`, and
+`object array` leaves the vocabulary along with the frontmatter keys-table rule that existed
+only to serve it.
+
+The lesson generalises and is now a rule: a frontmatter field whose value is a list of records
+is a table wearing YAML. Frontmatter is for short facts.
 
 **Write the tables to a fixed shape from the first commit** — same columns, same type
 vocabulary, same word for "required" — so a validator can be built against them later

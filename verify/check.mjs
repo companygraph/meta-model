@@ -27,7 +27,7 @@ export const TYPES = [
 
 // Spec §5: closed for the first release. `ref → <type>` is checked separately because its
 // target varies.
-export const TYPE_VOCABULARY = new Set(["string", "number", "date", "array", "object array", "enum"]);
+export const TYPE_VOCABULARY = new Set(["string", "number", "date", "array", "enum"]);
 
 const failures = [];
 export const fail = (msg) => failures.push(msg);
@@ -69,11 +69,11 @@ export function tableOf(body) {
   return parseTable(lines.slice(start, end));
 }
 
-// Parse EVERY contiguous pipe block in a chunk of text, in document order. `## Frontmatter`
-// holds more than one whenever a field is typed `object array`: a second table describes
-// that field's keys, and it carries the only `ref →` and `enum` this release ships. A block
-// that is not a valid table comes back as `null` rather than being dropped, so "malformed"
-// and "absent" stay distinguishable at the call site.
+// Parse EVERY contiguous pipe block in a chunk of text, in document order. `## Sections`
+// holds more than one whenever a section's content is itself a table: the sections table
+// comes first, then one column table per such section, and those carry the only `ref →`
+// fields this release ships. A block that is not a valid table comes back as `null` rather
+// than being dropped, so "malformed" and "absent" stay distinguishable at the call site.
 export function tablesOf(body) {
   const lines = body.split("\n");
   const out = [];
@@ -181,33 +181,34 @@ const CHECKS = [
           // A type with no fields says so in one sanctioned sentence, so that "no table"
           // and "forgot the table" stay distinguishable.
         } else {
-          // Every table under the heading, not just the first: the keys table that follows
-          // an `object array` field is where the only `ref →` and `enum` live.
-          const tables = tablesOf(fmBody);
-          if (!tables.length)
+          const fm = tableOf(fmBody);
+          if (!fm)
             fail(`${path}: "## Frontmatter" has no table and does not say "No YAML frontmatter."`);
-          tables.forEach((fm, n) => {
-            if (!fm) return fail(`${path}: frontmatter table ${n + 1} is not a table`);
-            const [first, ...rest] = fm.columns;
-            if (!["Field", "Key"].includes(first) || rest.join("|") !== "Required|Type|Description")
-              fail(
-                `${path}: frontmatter table ${n + 1} columns are ${fm.columns.join("|")}; must be Field or Key, then Required|Type|Description`,
-              );
-            else
-              for (const row of fm.rows)
-                if (!["Yes", "No"].includes(row[1]))
-                  fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
-          });
+          else if (fm.columns.join("|") !== "Field|Required|Type|Description")
+            fail(`${path}: frontmatter columns are ${fm.columns.join("|")}`);
+          else
+            for (const row of fm.rows)
+              if (!["Yes", "No"].includes(row[1]))
+                fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
         }
 
-        const sec = tableOf(s.get("Sections") ?? "");
-        if (!sec) fail(`${path}: "## Sections" has no table`);
-        else if (sec.columns.join("|") !== "Section|Required|Description")
-          fail(`${path}: sections columns are ${sec.columns.join("|")}`);
-
-        for (const row of sec?.rows ?? [])
-          if (!["Yes", "No"].includes(row[1]))
-            fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+        // "## Sections" holds the sections table, and then one column table for every
+        // section whose content is itself a table. That is where a qualified reference now
+        // lives — a body table's columns need declaring exactly as a frontmatter field does.
+        const secTables = tablesOf(s.get("Sections") ?? "");
+        if (!secTables.length) fail(`${path}: "## Sections" has no table`);
+        secTables.forEach((tbl, n) => {
+          if (!tbl) return fail(`${path}: sections table ${n + 1} is not a table`);
+          const want = n === 0 ? "Section|Required|Description" : "Column|Required|Type|Description";
+          if (tbl.columns.join("|") !== want)
+            fail(
+              `${path}: sections table ${n + 1} columns are ${tbl.columns.join("|")}; must be ${want}`,
+            );
+          else
+            for (const row of tbl.rows)
+              if (!["Yes", "No"].includes(row[1]))
+                fail(`${path}: Required is "${row[1]}"; must be Yes or No`);
+        });
       }
     },
   },
@@ -220,10 +221,15 @@ const CHECKS = [
         const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
-        // Every table under "## Frontmatter", because the keys table of an `object array`
-        // field is the only place a `ref →` or an `enum` is declared.
-        const tables = tablesOf((sectionsOf(text).get("Frontmatter") ?? "").trim());
-        for (const fm of tables)
+        // Every typed table: the frontmatter fields, plus the column table of any section
+        // whose content is a table. A qualified reference lives in the latter, so checking
+        // only the former would leave the model's only `ref →` fields undeclared.
+        const s = sectionsOf(text);
+        const typed = [
+          tableOf((s.get("Frontmatter") ?? "").trim()),
+          ...tablesOf(s.get("Sections") ?? "").slice(1),
+        ];
+        for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = row[2].replace(/`/g, "").trim();
             const ref = declared.match(/^ref → (.+)$/);
@@ -346,11 +352,31 @@ const CHECKS = [
         return names;
       };
 
-      const NAMES = { skill: namesOf("skill"), "proficiency-level": namesOf("proficiency-level") };
+      const cache = new Map();
+      const namesFor = (type) => {
+        if (!cache.has(type)) cache.set(type, namesOf(type));
+        return cache.get(type);
+      };
       const resolve = (child, type, value) => {
-        if (!NAMES[type].has(value))
+        if (!namesFor(type).has(value))
           fail(`${child}: ${type} "${value}" resolves to nothing in example/${folderOf(type)}/`);
       };
+
+      // The profile schema declares the columns of its "## Skills" table, so read them from
+      // there rather than restating them here. A duplicated list of legal levels is exactly
+      // what this check used to carry, and it was free to drift from the schema it mirrored.
+      const columnsOf = (type, section) => {
+        const s = sectionsOf(read(`core/${type}-schema.md`) ?? "");
+        const sectionRows = tablesOf(s.get("Sections") ?? "")[0]?.rows ?? [];
+        const nth = sectionRows.filter((r) => r[0].includes("## ")).findIndex((r) => r[0].includes(section));
+        const table = tablesOf(s.get("Sections") ?? "").slice(1)[nth < 0 ? 0 : nth];
+        return (table?.rows ?? []).map((r) => ({
+          name: r[0].replace(/`/g, "").trim(),
+          required: r[1] === "Yes",
+          ref: r[2].replace(/`/g, "").trim().match(/^ref → (.+)$/)?.[1] ?? null,
+        }));
+      };
+      const SKILL_COLUMNS = columnsOf("profile", "Skills");
       const walk = (rel) => {
         const p = join(ROOT, rel);
         if (!existsSync(p)) return;
@@ -359,10 +385,25 @@ const CHECKS = [
           if (statSync(join(ROOT, child)).isDirectory()) walk(child);
           else if (entry.endsWith(".md")) {
             const text = read(child) ?? "";
-            for (const m of text.matchAll(/^\s*-\s+skill:\s*(.+?)\s*$/gm))
-              resolve(child, "skill", m[1]);
-            for (const m of text.matchAll(/^\s*level:\s*(.+?)\s*$/gm))
-              resolve(child, "proficiency-level", m[1]);
+            // A "## Skills" body table: one row per assessment. Which columns it must have,
+            // which are required and which are references is read from the schema above.
+            const skills = tableOf(sectionsOf(text).get("Skills") ?? "");
+            if (skills && SKILL_COLUMNS.length) {
+              const want = SKILL_COLUMNS.map((c) => c.name).join("|");
+              if (skills.columns.join("|") !== want)
+                fail(`${child}: "## Skills" columns are ${skills.columns.join("|")}; the schema declares ${want}`);
+              else
+                for (const row of skills.rows)
+                  SKILL_COLUMNS.forEach((col, n) => {
+                    const cell = (row[n] ?? "").trim();
+                    if (!cell) {
+                      if (col.required)
+                        fail(`${child}: a "## Skills" row has no ${col.name.toLowerCase()}`);
+                    } else if (col.ref) {
+                      resolve(child, col.ref, cell);
+                    }
+                  });
+            }
             const bare = text.match(/^skills:\s*\[(.+?)\]\s*$/m);
             if (bare)
               for (const raw of bare[1].split(",")) {
