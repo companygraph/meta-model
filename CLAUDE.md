@@ -17,7 +17,7 @@ same shape.
 **The core is the union of the two, not one extended to fit the other.** A company with a
 payroll never had to model a person's background — it keeps a thin file per person and puts
 the rest on a website. A company of one was forced to model it properly, and that is where
-`profile`, `skills` and `experience` come from. A proposal built by reading only the larger
+`profile`, `skill` and `experience` come from. A proposal built by reading only the larger
 model will miss half the vocabulary.
 
 Both source repositories are local and **not in this workspace**. Their paths are in
@@ -51,7 +51,7 @@ neither.
   Rejected in the spec, §5. It makes prose load-bearing before anything enforces the
   prose's shape, and it fails silently rather than loudly.
 - **Core defines a type; it does not oblige you to populate it.** A company of one has no
-  `groups`; the type stays in core, unused.
+  `group`; the type stays in core, unused.
 - **A pack adds vocabulary only some kinds of company need at all** — types that are
   *absent*, not types that are optional.
 - **The repo is `meta-model`; `core` is a folder inside it.** The repo says what the
@@ -61,5 +61,5 @@ neither.
 ## Process
 
 - Commits happen when the user asks; suggest a message, don't auto-commit.
-- Nothing here is built yet. Resist scaffolding folders the spec has not settled — §10
-  lists five questions still open, including how skills and experience attach to a profile.
+- Nothing here is built yet. Resist scaffolding folders the spec has not settled — §10 still
+  lists seven open questions, and §9 deliberately limits the first release to four types.
