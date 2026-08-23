@@ -56,8 +56,8 @@ an empty folder implying it forgot.
 
 ```
 companygraph/                    ← GitHub org, companygraph.io
-  core/                          ← this repo: the meta-model
-    meta/*-schema.md             ← one schema per core type
+  meta-model/                    ← this repo
+    core/meta/*-schema.md        ← one schema per core type
     packs/<name>/                ← extra types and seed concepts per company type
     CONVENTIONS.md               ← the portable half of AGENTS.md (§6)
     example/                     ← a small synthetic instance, for reading
@@ -68,6 +68,11 @@ robertblust/
   company/                       ← the reference instance: Robert Blust as a company
 ```
 
+**The repo is `meta-model`, not `core`.** The repo says what the project is; folders say
+how it is divided. `core` names the part of the vocabulary every company shares, and it
+sits beside `packs/` — so a repo called `core` would hold non-core things from the first
+release onward.
+
 Follows the GuestGraph topology: an org, a `.github.io` repo carrying the CNAME, content
 repos beside it.
 
@@ -76,7 +81,7 @@ gets its own release cycle or its own maintainer. Until then separate repos mean
 sitemaps, more conventions files and more chances to drift.
 
 **The reference instance lives under `robertblust`, not in the org.** An org named for a
-product should not hold one person's real client and revenue data. `core/example/` covers
+product should not hold one person's real client and revenue data. `example/` covers
 the adopter's need instead: a small fictional company, honest about being fictional.
 
 **rob-cv is not touched.** The CV keeps building from its own `content/`. The end state —
@@ -212,10 +217,10 @@ agent validating the instance can tell an intentionally absent type from a forgo
 
 ## 9. First release
 
-1. `core/` with `meta/` schemas for every core type, singleton and collection shapes marked.
+1. `core/meta/` — schemas for every core type, singleton and collection shapes marked.
 2. `CONVENTIONS.md` — the portable half of `AGENTS.md`, extracted rule by rule.
 3. `packs/product/` — the first pack, three types.
-4. `core/example/` — a small synthetic instance that reads end to end.
+4. `example/` — a small synthetic instance that reads end to end.
 5. `README.md` — what it is, how to instantiate, what a pack is.
 
 The reference instance under `robertblust/company` follows once the core exists, and is the
