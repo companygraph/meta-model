@@ -27,23 +27,26 @@ verify/check.mjs   npm run verify — asserts this repo's own shape
 
 ```mermaid
 flowchart TB
-    subgraph commercial["Commercial — later, separate products"]
-        TOOL["Tooling · consulting"]
+    subgraph commercial["Commercial — consulting, time and material"]
+        CONS["Consulting — help building one"]
     end
-    subgraph oss["Open source — Apache 2.0 (this repo)"]
+    subgraph oss["Open source — Apache 2.0, forever"]
+        TOOL["Tooling — scaffolding, checks, upgrades"]
         PACK["Pack — vocabulary only some kinds of company need"]
         CORE["Core — types, schemas, CONVENTIONS.md"]
     end
     INST["Instance — a company's own content, in its own repository"]
 
-    TOOL -.-> INST
-    INST --> PACK & CORE
+    CONS -.-> INST
+    TOOL --> CORE
+    INST --> TOOL & PACK & CORE
     PACK --> CORE
 ```
 
-An arrow points at what a thing depends on. CompanyGraph owns core and the packs; the company
-owns its content and the repository holding it. The commercial layer is dotted because it does
-not exist: nothing in it is required to use any of the rest.
+An arrow points at what a thing depends on. CompanyGraph owns core, the packs and whatever
+tooling gets built for them — all of it Apache 2.0 and staying that way. The company owns its
+content and the repository holding it. Consulting is dotted because nothing in it is required
+to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
 
 ## Status
 
@@ -113,8 +116,9 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
 
 ## Licence
 
-[Apache 2.0](LICENSE) — the meta-model is open source and stays that way. Tooling and
-consulting come later and are separate products.
+[Apache 2.0](LICENSE) — the meta-model is open source and stays that way, and so is any
+tooling built for it. Consulting is the one thing that costs money; what it costs and how it
+is billed is on [companygraph.io/billing](https://companygraph.io/billing/).
 
 Copying `core/` into a repository of your own is the intended use, and Apache 2.0's conditions
 attach to distribution: if you publish that repository, carry the licence and its attribution
