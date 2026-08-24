@@ -1,4 +1,4 @@
-# CompanyGraph
+# CompanyGraph — Meta Model
 
 > A meta-model for operating a company: a blueprint you instantiate, published open source.
 
