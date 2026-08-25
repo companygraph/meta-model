@@ -14,6 +14,7 @@ a role requires one, and it outlives both.
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
+| `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `group` | No | string | Free-text grouping, e.g. `Testing`. Whether a group becomes an entity of its own is deliberately open. |
 
 ## Sections

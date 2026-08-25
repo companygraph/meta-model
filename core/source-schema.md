@@ -10,7 +10,8 @@ A source is where a page's facts come from: the repository itself, or a system t
 already runs that a sync writes from. One file per source, so a page can name where it was
 mastered by canonical name rather than restating a system's name and address on every entry.
 Nothing owns a source and a source owns nothing. Every other core type carries a required
-`source` field naming one, so no page is of unknown origin.
+`source` field naming one, so no page is of unknown origin, and an optional `source-id` —
+the page's identifier inside that source — so a sync can find it again.
 
 ## Frontmatter
 
