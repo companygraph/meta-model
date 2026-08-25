@@ -1,2 +1,2 @@
 # Local, untracked: paths that must not be published.
-LOCAL.md
+/LOCAL.md
