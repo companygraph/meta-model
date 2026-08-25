@@ -15,6 +15,7 @@ could cite the value it serves, which is the one thing a company's values are fo
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
+| `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 
 ## Sections
 
