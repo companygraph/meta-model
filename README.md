@@ -56,11 +56,14 @@ was rejected and why, is in
 
 ## Instantiating it
 
-Copy the schemas from `core/` into a repository of your own — wherever that repository keeps
-its schemas, so long as it is not inside a folder named for a type — and take `CONVENTIONS.md`
-with them. Create the folders the schemas name, and write one file per entity.
-The schemas are the contract; `CONVENTIONS.md` is what an agent checks the result against, so
-the two travel together. `example/` is there to be read, not copied.
+An instance is a repository of your own: the schemas from `core/` kept somewhere that is not
+a folder named for a type, `CONVENTIONS.md` beside them, the folders the schemas name, and
+one file per entity. The schemas are the contract; `CONVENTIONS.md` is what an agent checks
+the result against, so the two travel together. `example/` is there to be read, not copied —
+[companygraph.io/example](https://companygraph.io/example/) draws it.
+
+Setting that up and keeping it current is the tooling's job — roadmap item 5, designed and
+not yet built. Until it ships, the layout above is the whole recipe.
 
 ## Packs
 
@@ -103,16 +106,20 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    organisation, operation, market, obligation, domain.
 4. **Packs** — the mechanism above, deliberately undesigned until a second kind of company
    asks for one.
-5. **Tooling** — copying `core/` and `CONVENTIONS.md` into a repository of your own is the
-   method rather than a stopgap: the schemas are Markdown and an agent enforces them, so there
-   is nothing to install. What is missing is the mechanical half — scaffolding the folders a
-   schema names, wiring the agent commands, and upgrading an instance in place when core
-   moves. The likely shape is a CLI in the manner of
-   [spec-kit](https://github.com/github/spec-kit); the upgrade half is an open question in the
-   design, not a solved one.
+5. **Tooling** — designed, not built:
+   [`docs/superpowers/specs/2026-08-25-companygraph-tooling-design.md`](docs/superpowers/specs/2026-08-25-companygraph-tooling-design.md).
+   A separate repository, `companygraph/tooling`, Node with no dependencies, run as
+   `npx companygraph` in the manner of [spec-kit](https://github.com/github/spec-kit):
+   `init` scaffolds an instance from a bundled or fetched release of this repository,
+   `add` writes an entity from its schema, `check` runs the mechanical part of the
+   conventions, `upgrade` brings a vendored core to a newer release — and it installs the
+   agent skills for validating, adding and exporting an instance as a loadable skill. Its
+   half of the contract lives here: `core/manifest.json` naming a version and a shape, and
+   a tag on every release.
 6. **The validator** — deferred, and when it arrives it will not be one that parses these
-   Markdown schemas as its source of truth. Today `npm run verify` checks this repository's
-   own shape, not yours.
+   Markdown schemas as its source of truth. The tooling's `check` is deliberately not it: it
+   reads the fixed shape and the H1s, never a description. Today `npm run verify` checks this
+   repository's own shape, not yours.
 
 ## Licence
 
