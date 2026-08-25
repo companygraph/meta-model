@@ -17,9 +17,9 @@ named as such.
 
 ```
 core/              one schema per type: profile, experience, skill,
-                   proficiency-level, value
+                   proficiency-level, value, source
 CONVENTIONS.md     the portable rules that make the graph checkable
-example/           a fictional company, described in those five types
+example/           a fictional company, described in those six types
 verify/check.mjs   npm run verify — asserts this repo's own shape
 ```
 
