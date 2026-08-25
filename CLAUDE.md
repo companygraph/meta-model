@@ -6,7 +6,8 @@ make a graph of Markdown files checkable. What it is and why lives in
 changing anything here** — it records what was decided and, more usefully, what was
 rejected and why.
 
-**Status: design agreed, nothing built.** The spec is the only substantive file.
+**Status: first release out** — the person cluster in `core/`, `CONVENTIONS.md`, `example/` and
+`verify/check.mjs`. The README's roadmap says what comes next; the spec says why.
 
 ## This is an extraction, not an invention
 
@@ -78,5 +79,5 @@ neither.
   global default stays `rob@likemagic.tech`, which is right for `~/git/likemagic-tech` and
   `~/git/3ap-ag`. A clone made outside those three directories gets the global default and
   no warning, so check `git config user.email` before the first commit in a fresh clone.
-- Nothing here is built yet. Resist scaffolding folders the spec has not settled — §10 still
-  lists seven open questions, and §9 deliberately limits the first release to four types.
+- Resist scaffolding folders the spec has not settled — §10 still lists open questions, and
+  the roadmap adds types one slice at a time. `packs/` does not exist until a pack does.
