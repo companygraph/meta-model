@@ -29,6 +29,7 @@ export const TYPES = [
   { type: "skill", folder: "skills" },
   { type: "value", folder: "values" },
   { type: "proficiency-level", folder: "proficiency-levels" },
+  { type: "source", folder: "sources" },
   { type: "profile", folder: "profiles/<profile>", owns: ["experience"] },
   { type: "experience", folder: "profiles/<profile>/experiences", owner: "profile" },
 ];

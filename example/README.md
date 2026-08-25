@@ -6,12 +6,13 @@ Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
-It uses five core types — `profile`, `experience`, `skill`, `proficiency-level`, `value` —
-and declares no packs. That is the first release of the model, not a claim that five types
+It uses six core types — `profile`, `experience`, `skill`, `proficiency-level`, `value`,
+`source` — and declares no packs. That is the first release of the model, not a claim that six types
 describe a company.
 
 ```
 values/                          say-the-hard-thing.md, craftsmanship.md
+sources/                         local.md, google-workspace.md
 skills/                          java-programming.md, domain-driven-design.md,
                                  product-discovery.md
 proficiency-levels/              familiar.md, competent.md, proficient.md, expert.md
