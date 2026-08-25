@@ -2,7 +2,7 @@
 
 > A fictional company, described in CompanyGraph. Nothing here is real.
 
-Northwind Atelier and Beacon Systems do not exist, and neither does Mira Halvorsen. The
+Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen and Tomas Reyes. The
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
@@ -12,10 +12,13 @@ describe a company.
 
 ```
 values/                          say-the-hard-thing.md, craftsmanship.md
-skills/                          java-programming.md, domain-driven-design.md
+skills/                          java-programming.md, domain-driven-design.md,
+                                 product-discovery.md
 proficiency-levels/              familiar.md, competent.md, proficient.md, expert.md
 profiles/mira-halvorsen/         mira-halvorsen.md
   experiences/                   2018-northwind-atelier.md, 2022-beacon-systems.md
+profiles/tomas-reyes/            tomas-reyes.md
+  experiences/                   2019-northwind-atelier.md, 2022-beacon-systems.md
 ```
 
 `profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a
