@@ -149,7 +149,7 @@ nothing can reference one.
 | Market | `customer` | `customers/` | |
 | Obligation | `legal-document` | `legal-documents/` | Terms, policies, agreements. |
 | Domain | `concept` | `concepts/` | Always present, always the company's own vocabulary. |
-| Provenance | `source` | `sources/` | Where a page's facts are mastered: the repository itself, or a system a sync writes from. Added after the first release, when syncing became a design concern. |
+| Provenance | `source` | `sources/` | Where a page's facts are mastered: the repository itself, or a system a sync writes from. Added after the first release, when syncing became a design concern. Every other core type carries a required `source` field. |
 
 ### Pack: `product`
 

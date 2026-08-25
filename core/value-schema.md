@@ -12,7 +12,9 @@ could cite the value it serves, which is the one thing a company's values are fo
 
 ## Frontmatter
 
-No YAML frontmatter.
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 
 ## Sections
 
