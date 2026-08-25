@@ -1,0 +1,15 @@
+# GitHub Actions only, and that is the whole of it. package.json here declares no
+# dependencies of any kind — `verify/check.mjs` runs on the standard library, there is no
+# lockfile, and ci.yml deliberately skips `npm ci` because it would fail rather than pass
+# emptily. An npm block would be a permanent no-op that reads like coverage, so there
+# isn't one. Add it the day this repository grows a dependency, not before.
+version: 2
+updates:
+  - package-ecosystem: "github-actions"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      actions:
+        patterns:
+          - "*"
