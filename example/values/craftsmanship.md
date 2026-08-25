@@ -1,3 +1,7 @@
+---
+source: Local
+---
+
 # Craftsmanship
 
 > We would rather ship one thing that holds up than three that need watching.

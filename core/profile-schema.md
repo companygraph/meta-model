@@ -14,6 +14,7 @@ operation and an orphaned experience is unrepresentable.
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `email` | No | string | Contact address |
 | `location` | No | string | Where the person works from |
 

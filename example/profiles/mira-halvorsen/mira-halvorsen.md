@@ -1,4 +1,5 @@
 ---
+source: Google Workspace
 email: mira@example.invalid
 location: Bergen
 ---

@@ -14,6 +14,7 @@ is then one edit, in one file.
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `rank` | Yes | number | Position on the ladder. Spaced in tens so a rung can be added without renumbering the others. |
 
 ## Sections

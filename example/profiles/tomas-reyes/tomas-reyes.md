@@ -1,4 +1,5 @@
 ---
+source: Google Workspace
 email: tomas@example.invalid
 location: Lisbon
 ---

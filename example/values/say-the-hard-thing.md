@@ -1,3 +1,7 @@
+---
+source: Local
+---
+
 # Say The Hard Thing
 
 > Disagreement that arrives after the decision is not disagreement, it is commentary.

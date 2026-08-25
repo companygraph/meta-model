@@ -17,6 +17,7 @@ Filenames are prefixed with the start year so the folder sorts chronologically:
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `start` | Yes | date | `YYYY-MM`, when the period began |
 | `end` | No | date | `YYYY-MM`. Absent means the period is ongoing. |
 | `organisation` | No | string | Where the period was spent |
