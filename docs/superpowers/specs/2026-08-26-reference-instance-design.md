@@ -4,9 +4,9 @@
 > the tooling will lay one out. It is the first thing that can show the extraction was wrong,
 > and the first thing that can show the tooling design is wrong — before either is built on.
 
-Status: design agreed, nothing built. The instance is a new repository,
-`robertblust/mental-model`; this spec lives here because the findings it produces are about
-core and the tooling, not about one person's CV.
+Status: built. Findings in §7; each is a follow-up, not a change made here. The instance is a
+new repository, `robertblust/mental-model`; this spec lives here because the findings it
+produces are about core and the tooling, not about one person's CV.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §6
 (splitting the agent instructions), §7 (an instance ships as a skill), §9 (the first slice) —
@@ -296,4 +296,51 @@ Known before the first file is written:
 - **Core, `date`** — the CV keeps years; the schema wants months. The coercion to `-01` is a
   false precision the model now asserts.
 
-The rest is written as it is found.
+Found in the building:
+
+- **Core, `experience`, `end`** — an absent `end` means the period is ongoing, and six of the
+  twenty entries are not periods at all: two conference talks, a certification, a published
+  case study and two projects the CV dates by year alone. No end date was invented for them,
+  so a talk given in 2022 now reads as still running. The field is honest about roles and
+  silently wrong about events.
+- **Core, `profile`, the Skills table** — the skill list was cut twice and neither pass removed
+  anything. Twenty-three capabilities were drawn up from the CV's groups, twenty-three earned an
+  evidenced row in the profile's table, and twenty-three were named by at least one experience;
+  the table ended with twenty-three rows. What the two passes did produce, on review, was a
+  skill moved off one experience and onto another, and two levels lowered from Proficient to
+  Competent for resting on a single role. The cut caught nothing because the list came from a
+  source that had already been cut; the judgement it was built to apply landed on the level and
+  the placement instead. Where evidence lives is what the second pass actually tests.
+- **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
+  own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
+  cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:
+  `profiles/<profile>/experiences/*.md`. The walk over all six schemas at `v0.1.0` found nothing
+  else — heading order, the single frontmatter table, the `Table.` section and its column table,
+  the closed type vocabulary and the plain-dash separators all hold.
+- **Tooling §5 and §6, what a validation pass cannot reach** — `companygraph-validate` reported
+  no failure on R1 through R10 over 54 entities and then named what it had not touched. Three of
+  those matter beyond this instance: core declares no `enum` field anywhere, so R8 passed with
+  nothing to exercise it; no `source-id` was resolved, because the source it points into has no
+  address this repository can reach, which makes the field a pointer for a person and unchecked
+  by anything; and the bodies of twenty-three skills and twenty experiences were read for shape,
+  not for sense. §6 has `check` end by naming the rules it did not reach. On an agent pass the
+  useful list is longer than a list of rule numbers, and the things on it are not rules.
+- **Tooling §4, `init` against `add`** — the layout `init` writes is eighteen files and eight
+  sha256 hashes, wholly mechanical, and it was one commit. The fifty-four entity files `add`
+  would have shelled took five, and two further commits went to review fixes that changed no
+  shape at all. `add` writes the frontmatter keys, the headings and a table's header row; every
+  reference it would leave empty is the half that took the time. The command saves the shell, not
+  the work — which is the right split, and worth stating so the command is not measured against
+  the wrong thing.
+- **Tooling §6, `check` as one implementation** — the disposable greps written during the build
+  got mechanical rules wrong twice, in the same way both times: one walked a type folder with a
+  glob that swept in the `README.md` the rules define out of it, and one piped an empty
+  `grep -E` into a negated `grep -Evq`, read the vacuous truth as a match and flagged six
+  correct files. A third, in this pass, was a section extractor whose lookahead matched a literal
+  `Z` and truncated the profile's table at the word "Zeebe". Three throwaway implementations of
+  checks `check` is specified to own, three wrong, none of them wrong in a way that failed loudly.
+- **Tooling §5, `companygraph-export`** — the consolidated `model/<type>.md` separates entities
+  with a line holding `---`, and every entity's YAML frontmatter opens and closes with the same
+  line. `model/skills.md` carries sixty-nine of them for twenty-three skills, and nothing in the
+  file says which three are a boundary. The counts in `SKILL.md` are the only thing that tells a
+  reader how many entities the file holds.
