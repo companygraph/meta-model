@@ -21,6 +21,7 @@
 import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
+import { execFileSync } from "node:child_process";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 
@@ -599,6 +600,29 @@ const CHECKS = [
     },
   },
   {
+    // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
+    // program reads. `version` must be the tag when there is one, so a tag can never point at
+    // a commit that claims a different version. No tag is fine — every commit between
+    // releases has none.
+    name: "release manifest",
+    rule: null,
+    run() {
+      const raw = read("core/manifest.json");
+      if (raw === null) return fail("core/manifest.json is missing");
+      let m;
+      try { m = JSON.parse(raw); } catch (e) { return fail(`core/manifest.json: ${e.message}`); }
+      if (typeof m.version !== "string" || !/^\d+\.\d+\.\d+$/.test(m.version))
+        fail(`core/manifest.json: version must be MAJOR.MINOR.PATCH, got ${JSON.stringify(m.version)}`);
+      if (!Number.isInteger(m.shape) || m.shape < 1)
+        fail(`core/manifest.json: shape must be a positive integer, got ${JSON.stringify(m.shape)}`);
+      const tags = execFileSync("git", ["tag", "--points-at", "HEAD", "v*"], { cwd: ROOT, encoding: "utf8" })
+        .split("\n").filter(Boolean);
+      for (const tag of tags)
+        if (tag !== `v${m.version}`)
+          fail(`tag ${tag} sits on HEAD but core/manifest.json says ${m.version}`);
+    },
+  },
+  {
     name: "rules are written down",
     rule: "R0",
     run() {
@@ -606,7 +630,7 @@ const CHECKS = [
       if (text === null) return fail("CONVENTIONS.md is missing");
       const defined = new Set([...text.matchAll(/^###\s+(R\d+)\s+—/gm)].map((m) => m[1]));
       for (const check of CHECKS)
-        if (!defined.has(check.rule))
+        if (check.rule !== null && !defined.has(check.rule))
           fail(`check "${check.name}" enforces ${check.rule}, which CONVENTIONS.md does not define`);
     },
   },
