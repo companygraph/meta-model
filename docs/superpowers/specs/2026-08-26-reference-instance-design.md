@@ -327,18 +327,21 @@ Found in the building:
   useful list is longer than a list of rule numbers, and the things on it are not rules.
 - **Tooling §4, `init` against `add`** — the layout `init` writes is eighteen files and eight
   sha256 hashes, wholly mechanical, and it was one commit. The fifty-four entity files `add`
-  would have shelled took five, and two further commits went to review fixes that changed no
+  would have shelled took five, and three further commits went to review fixes that changed no
   shape at all. `add` writes the frontmatter keys, the headings and a table's header row; every
   reference it would leave empty is the half that took the time. The command saves the shell, not
   the work — which is the right split, and worth stating so the command is not measured against
   the wrong thing.
-- **Tooling §6, `check` as one implementation** — the disposable greps written during the build
-  got mechanical rules wrong twice, in the same way both times: one walked a type folder with a
-  glob that swept in the `README.md` the rules define out of it, and one piped an empty
-  `grep -E` into a negated `grep -Evq`, read the vacuous truth as a match and flagged six
-  correct files. A third, in this pass, was a section extractor whose lookahead matched a literal
-  `Z` and truncated the profile's table at the word "Zeebe". Three throwaway implementations of
-  checks `check` is specified to own, three wrong, none of them wrong in a way that failed loudly.
+- **Tooling §6, `check` as one implementation** — three disposable checks written during the
+  build each got a mechanical rule wrong, in three unrelated ways: one walked a type folder with
+  a glob that swept in the `README.md` the rules define out of it; one piped an empty `grep -E`
+  into a negated `grep -Evq`, read the vacuous truth as a match and flagged six correct files;
+  one, in the validation pass itself, was a section extractor whose lookahead spelled `\Z` in a
+  language where that is the literal letter, so it stopped at the word "Zeebe" and read the
+  profile's twenty-three-row table as eighteen rows and one malformed one. The three mistakes
+  have nothing in common. What they share is that none of them failed — each returned something
+  shaped like an answer. These are checks §6 specifies `check` will own, implemented ad hoc three
+  times and wrong three times.
 - **Tooling §5, `companygraph-export`** — the consolidated `model/<type>.md` separates entities
   with a line holding `---`, and every entity's YAML frontmatter opens and closes with the same
   line. `model/skills.md` carries sixty-nine of them for twenty-three skills, and nothing in the
