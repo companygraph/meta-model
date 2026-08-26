@@ -22,7 +22,7 @@ finding (§7) rather than resolving it.
 **Owns:**
 
 - the first release of `meta-model` under the tooling spec's contract: `core/manifest.json`
-  and the tag `v1.0.0`
+  and the tag `v0.1.0`
 - one instance repository, `robertblust/mental-model`, in the exact layout the tooling spec's
   §3 says `init` produces — built by hand, so the layout is tested before the code exists
 - the complete professional portfolio of the company of one, as content: every core type
@@ -55,16 +55,18 @@ vendored, so the release comes first.
 - `core/manifest.json`:
 
   ```json
-  { "version": "1.0.0", "shape": 1 }
+  { "version": "0.1.0", "shape": 1 }
   ```
 
-  `shape: 1` is the R9 fixed shape and the six-type vocabulary as they stand. `1.0.0` because
-  the vocabulary is what two instances converged on and a third is about to be described in
-  it; a `0.x` would say it is still being guessed at.
+  `shape: 1` is the R9 fixed shape as it stands. `0.1.0`, not `1.0.0`: the six types are
+  usable — two instances run on them and a third is about to — but this very instance exists
+  to find out whether they are right, and roadmap item 3 adds types. Pre-1.0, every vocabulary
+  change bumps the minor, one per roadmap slice; `1.0.0` is for when the remaining clusters
+  are in and §7's findings are resolved. Not `0.0.1`, which would say nothing is usable yet.
 - `verify/check.mjs` gains the check the tooling spec promises: the manifest parses, `version`
   is a semantic version, `shape` is a positive integer, and — when `HEAD` carries a `v*` tag —
   the tag equals `v<version>`. No tag is not a failure; a tag that disagrees is.
-- Tag `v1.0.0` on the commit where the manifest says so, after the PR merges. No GitHub
+- Tag `v0.1.0` on the commit where the manifest says so, after the PR merges. No GitHub
   release object yet: the tooling spec's §8 leaves release notes open and nothing consumes
   them until `upgrade` exists.
 - `LOCAL.md`'s last line names the instance `robertblust/company`; it becomes
@@ -102,7 +104,7 @@ mental-model/
 
 Decisions inside that:
 
-- **`meta/` holds exactly the release tarball's content** — `core/*.md` at `v1.0.0`,
+- **`meta/` holds exactly the release tarball's content** — `core/*.md` at `v0.1.0`,
   `CONVENTIONS.md`, `LICENSE` — copied, never edited. Every file is hashed into the
   manifest so a later `upgrade` finds them untouched.
 - **The manifest** follows the tooling spec's shape with one value it did not foresee:
@@ -110,7 +112,7 @@ Decisions inside that:
   ```json
   {
     "tooling": "0.0.0",
-    "core": { "version": "1.0.0", "shape": 1, "source": "fetched:v1.0.0" },
+    "core": { "version": "0.1.0", "shape": 1, "source": "fetched:v0.1.0" },
     "schemas": "meta",
     "packs": [],
     "files": { "meta/CONVENTIONS.md": "sha256:…", "…": "…" }
@@ -255,7 +257,7 @@ The three skills follow the tooling spec's §5 descriptions:
 
 ## 6. Order of work and verification
 
-1. `meta-model`: manifest, verify check, `LOCAL.md`, PR, merge, tag `v1.0.0`.
+1. `meta-model`: manifest, verify check, `LOCAL.md`, PR, merge, tag `v0.1.0`.
 2. Create `robertblust/mental-model`; layout of §3 with `meta/` copied from the tag and the
    manifest hashed from what was copied.
 3. Content of §4 in the order that lets references resolve as they are written: sources,
