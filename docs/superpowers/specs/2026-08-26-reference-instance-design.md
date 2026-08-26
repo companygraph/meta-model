@@ -306,9 +306,12 @@ Found in the building:
 - **Core, `profile`, the Skills table** — the skill list was cut twice and neither pass removed
   anything. Twenty-three capabilities were drawn up from the CV's groups, twenty-three earned an
   evidenced row in the profile's table, and twenty-three were named by at least one experience;
-  the table ended with twenty-three rows. What the two passes did produce, on review, was a
-  skill moved off one experience and onto another, and two levels lowered from Proficient to
-  Competent for resting on a single role. The cut caught nothing because the list came from a
+  the table ended with twenty-three rows. What the two passes did produce, on review, was three
+  `skills:` changes across three experience files — not one skill relocated between two of
+  them: a skill swapped for a better fit on the experience that already carried it, that same
+  skill's replacement swapped onto a second experience, and the skill it displaced there moved
+  on to a third — and two levels lowered from Proficient to Competent for resting on a single
+  role. The cut caught nothing because the list came from a
   source that had already been cut; the judgement it was built to apply landed on the level and
   the placement instead. Where evidence lives is what the second pass actually tests.
 - **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
@@ -347,3 +350,8 @@ Found in the building:
   line. `model/skills.md` carries sixty-nine of them for twenty-three skills, and nothing in the
   file says which three are a boundary. The counts in `SKILL.md` are the only thing that tells a
   reader how many entities the file holds.
+- **Tooling §5, the export skill** — the procedure took `SKILL.md`'s `description` from the
+  README's `>` line as written, Markdown and all. That line held a link and a colon, and the
+  frontmatter built from it did not parse as YAML. §5 calls the export "uploadable as an
+  organization or personal skill"; a skill nobody can load is exactly what that promise was
+  made against.
