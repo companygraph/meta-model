@@ -103,7 +103,31 @@ level and an evidence cell, and in the experiences that list the skill.
 
 ---
 
-## 4. The other five, to be written
+## 4. A convention, not a writing rule: lists of references are block sequences
+
+Found while building the same instance. Three of its skill names contain a comma —
+`Software modeling (UML, SysML, C4)` — and in a YAML flow list, `skills: [A, B (C, D)]`, such a
+name splits into fragments with no parse error. R4 caught it only because the fragments
+resolved to nothing; the day `SysML` is a skill of its own, the fragments resolve and the
+claim is wrong with nothing to say so. Quoting the entry fixes one file and is a rule people
+forget. A block sequence has no quoting hazard at all:
+
+```yaml
+skills:
+  - API design
+  - Software modeling (UML, SysML, C4)
+```
+
+Proposed for `CONVENTIONS.md`, as a new rule under Schemas: **an `array` or `array of ref`
+frontmatter field is written as a block sequence, one entry per line; a flow list is an
+error.** It is a shape rule, so the tooling's `check` enforces it mechanically — any `[` after
+such a field — and the agent pass never reasons about commas. A diff then shows one line
+per reference added or removed, which is the other reason to want it. The reference
+instance already writes its lists this way.
+
+---
+
+## 5. The other five, to be written
 
 The instance's build reports carry the material for each; the texts are not drafted here so
 that each is written against its own evidence, not by analogy with `skill`:
@@ -125,10 +149,12 @@ that each is written against its own evidence, not by analogy with `skill`:
 
 ---
 
-## 5. What changes, and where
+## 6. What changes, and where
 
 - `CONVENTIONS.md` R9: add the two optional sections to the fixed shape, after `## Sections`
   and its tables, in that order, with those names.
+- `CONVENTIONS.md`: the block-sequence rule of §4, numbered after R10.
+- `example/`: its experiences' `skills:` lists rewritten as block sequences.
 - `core/*-schema.md`: each gains the two sections; `skill` from §3, the other five drafted
   against §4 and the instance's evidence.
 - `example/`: its three skills rewritten to the `skill` rules — the example is what adopters
@@ -142,7 +168,7 @@ that each is written against its own evidence, not by analogy with `skill`:
 
 ---
 
-## 6. Open
+## 7. Open
 
 - Whether `## Purpose` belongs in the schema or in the README of the type's folder that
   `init` writes. Here: the schema, because the schema is what gets vendored and versioned.
