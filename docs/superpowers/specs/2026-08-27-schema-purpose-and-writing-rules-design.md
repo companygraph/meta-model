@@ -161,10 +161,10 @@ that each is written against its own evidence, not by analogy with `skill`:
 - **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
   it means` is written so that two assessors would place the same person the same way; a
   rung is defined in the instance's own words; no external ladder is cited.
-- **`value`** — purpose: a value something can cite; rules: `## In practice` is written in the
-  imperative, like a skill's — "Scale the engineering organization on purpose …" — never
-  "Following it looks like …"; the breaking half is one concrete situation introduced by
-  `Not this:`; both halves are situations, not adjectives.
+- **`value`** — purpose: a value something can cite; rules: `## In practice` is two
+  paragraphs, `Follow:` and `Break:`, each one concrete situation in the imperative — "Follow:
+  write the decision down before the code …", "Break: ship a feature in a day and argue about
+  it for a quarter …" — never "Following it looks like …"; situations, not adjectives.
 - **`source`** — purpose: where a page's facts are mastered; rules: the description says what
   the source holds and whether anything syncs it.
 
