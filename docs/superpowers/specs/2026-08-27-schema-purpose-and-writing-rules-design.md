@@ -96,14 +96,10 @@ level and an evidence cell, and in the experiences that list the skill.
   only where a product is what the skill is done with. A product is not a skill.
 - One skill is distinct from its neighbours in what someone doing it does, not in which
   product they use. Two files that differ only by tool are one skill.
-- Where a public vocabulary names the same skill, cite it on one final line in the fixed
-  form `Reference: SFIA 9 <CODE> — <name> · ESCO <label> <URI>`, with `none` for a source
-  that has no match. A broader parent is not a match. Never reproduce the source's text.
+- Public vocabularies (SFIA, ESCO, O*NET, Lightcast) may be consulted to find the grain and
+  to check for gaps; none is cited or reproduced in a skill file. The vocabulary is the
+  instance's own.
 ```
-
-The reference line is a writing rule and not a field because the meta-model has not decided
-what a skill is anchored to — `group` is still "deliberately open". When it decides, the line
-becomes fields and the rule says so; the fixed form is what makes that a mechanical change.
 
 ---
 
@@ -121,7 +117,7 @@ that each is written against its own evidence, not by analogy with `skill`:
   `end` and the tagline says it was one.
 - **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
   it means` is written so that two assessors would place the same person the same way; a
-  rung may name the levels of an external ladder it spans, never reproduce their text.
+  rung is defined in the instance's own words; no external ladder is cited.
 - **`value`** — purpose: a value something can cite; rules: the two halves, following and
   breaking, are both concrete situations, not adjectives.
 - **`source`** — purpose: where a page's facts are mastered; rules: the description says what
