@@ -161,10 +161,11 @@ that each is written against its own evidence, not by analogy with `skill`:
 - **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
   it means` is written so that two assessors would place the same person the same way; a
   rung is defined in the instance's own words; no external ladder is cited.
-- **`value`** — purpose: a value something can cite; rules: `## In practice` is written in the
-  second person, as behaviour — "You write the decision down before the code …" — the way a
-  culture memo addresses the reader; the following half is what you do, the breaking half is
-  one sentence beginning "You never …"; both are concrete situations, not adjectives.
+- **`value`** — purpose: a value something can cite; rules: `## In practice` speaks in the
+  instance's own first person — "I" for a company of one, "We" for a company — as behaviour:
+  "I write the decision down before the code …". Never at the reader ("You …") and never as an
+  instruction. The following half is what I/we do; the breaking half is one sentence
+  beginning "I never …" / "We never …"; both are concrete situations, not adjectives.
 - **`source`** — purpose: where a page's facts are mastered; rules: the description says what
   the source holds and whether anything syncs it.
 
