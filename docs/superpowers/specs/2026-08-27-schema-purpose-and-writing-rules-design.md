@@ -125,6 +125,25 @@ such a field — and the agent pass never reasons about commas. A diff then show
 per reference added or removed, which is the other reason to want it. The reference
 instance already writes its lists this way.
 
+### Filenames: one derivation, written down
+
+The same instance filed `Data protection (GDPR)` as `data-protection-gdpr.md` and `CI/CD` as
+`ci-cd.md`. Three documents say "the filename is the kebab-case of the H1" — the tooling spec's
+`add`, the instance's spec, the validate skill, which asserts it — and none says what
+kebab-case does to a parenthesis, a slash, an ampersand, an umlaut or a comma. R2 and R3
+rightly make the filename *not* the name; but once `add` computes it and `check` verifies the
+folder form ("an entity's own file is named for its folder"), the derivation must be exact or
+two tools disagree about the same file.
+
+Proposed, as the one definition, in the tooling spec's `add` with `CONVENTIONS.md` pointing to
+it: **the filename is the H1 lower-cased, with every run of characters outside `a–z` and `0–9`
+replaced by a single `-`, and leading or trailing `-` removed; an experience is prefixed with
+its start year and `-`.** Examples: `Data protection (GDPR)` → `data-protection-gdpr`,
+`CI/CD` → `ci-cd`, `Software modeling (UML, SysML, C4)` → `software-modeling-uml-sysml-c4`,
+`Zürich office` → `z-rich-office` — the last is ugly and is the point: a non-ASCII letter
+drops rather than being transliterated, so two implementations cannot differ on how. Two H1s
+that derive to the same filename are an error, reported by `check`.
+
 ---
 
 ## 5. The other five, to be written
@@ -153,7 +172,8 @@ that each is written against its own evidence, not by analogy with `skill`:
 
 - `CONVENTIONS.md` R9: add the two optional sections to the fixed shape, after `## Sections`
   and its tables, in that order, with those names.
-- `CONVENTIONS.md`: the block-sequence rule of §4, numbered after R10.
+- `CONVENTIONS.md`: the block-sequence rule of §4, numbered after R10, and a pointer to the
+  filename derivation, which lives in the tooling spec's `add`.
 - `example/`: its experiences' `skills:` lists rewritten as block sequences.
 - `core/*-schema.md`: each gains the two sections; `skill` from §3, the other five drafted
   against §4 and the instance's evidence.
