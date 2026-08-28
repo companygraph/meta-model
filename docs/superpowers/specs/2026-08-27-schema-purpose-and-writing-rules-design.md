@@ -5,10 +5,11 @@
 > entities. This proposes one new section per schema, and writes the first one — for
 > `skill` — from the rules the instance settled.
 
-Status: agreed. §4 has landed as R11 and R12 in `v0.2.0`, with two corrections it needed and
-one placement reversed — see the note at the end of §4. The rest is being built one schema at
-a time; the instance that produced it (`robertblust/mental-model`) carries the `skill` rules in
-its own spec meanwhile.
+Status: done, in `v0.3.0`. §4 landed first as R11 and R12 in `v0.2.0`, with two corrections it
+needed and one placement reversed — the note at the end of §4. All six schemas then carried the
+pair, one PR each, written against their own evidence: of the five sketches in §5, one was
+right in every part, three gained rules the sketch did not have, and one had a rule reversed by
+the files it was written about.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) §5
 (schemas are Markdown, enforced by agents) and `CONVENTIONS.md` R9 (the fixed shape). It
@@ -224,16 +225,17 @@ that each is written against its own evidence, not by analogy with `skill`:
   against §5 and the instance's evidence.
 - ✅ `example/`: its three skills rewritten to the `skill` rules — the example is what adopters
   copy.
-- `verify/check.mjs`: asserts the two sections, where a schema carries them, sit in that order
-  after the tables, and that `## Writing rules` is a list. It requires them of every core
-  schema only once all six are written — until then a missing pair is work not yet done, not a
-  failure. Either way it does not read the rules; that is the agent's.
+- ✅ `verify/check.mjs`: asserts the two sections sit in that order after the tables, and that
+  `## Writing rules` is a list. Required of every core schema as of `0.3.0` — until all six
+  were written a missing pair was work not yet done; from here it is a pair that was lost. It
+  does not read the rules; that is the agent's.
 - `.claude/skills/companygraph-validate` (in the tooling spec §5): reads `## Writing rules`
-  per type and reports per rule, the same way it reports R1–R10.
-- Release: a MINOR bump per the tooling spec's §2 rule — `example/`'s skills are rewritten and
-  every core schema grows required prose, so an instance vendoring core has files to change.
-  `0.2.0` went to §4; this is `0.3.0`, cut once all six schemas carry the sections rather than
-  once per schema.
+  per type and reports per rule, the same way it reports R1–R12. Not done: the skill lives in
+  the instance and in a tooling repository that does not exist yet.
+- ✅ Release: a MINOR bump per the tooling spec's §2 rule — `example/` is rewritten in three
+  types and every core schema grows required prose, so an instance vendoring core has files to
+  change. `0.2.0` went to §4; this is `0.3.0`, cut once all six schemas carried the sections
+  rather than once per schema.
 
 ---
 

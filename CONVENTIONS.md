@@ -119,7 +119,8 @@ not theirs.
 
 They come as a pair or not at all: writing rules with no purpose is the same half-a-thing as a
 `Table.` section with no column table, since the rules are how the purpose is met. Both are
-optional in the shape and neither is optional in core, which is what gets copied. The
+optional in the shape and neither is optional in core, which is what gets copied — a schema
+you write for a type of your own may leave them out, and every schema in `core/` has them. The
 reader that checks the shape stops at the tables, so nothing that reads a schema mechanically
 sees them; the agent pass does, which is the point of putting them in the schema rather than
 in a document beside it.
