@@ -3,7 +3,8 @@ source: Local
 start: 2018-03
 end: 2022-01
 organisation: Northwind Atelier
-skills: [Java Programming]
+skills:
+  - Java Programming
 ---
 
 # Rebuilding the order pipeline

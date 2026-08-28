@@ -6,8 +6,9 @@
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
 // resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
-// types `ref → <type>` or `array of ref → <type>`. "## Skills" is the one body table it knows
-// to look for; a second table-valued section would need naming here. It does not validate
+// types `ref → <type>` or `array of ref → <type>`, and that a list-valued field is written as
+// a block sequence. "## Skills" is the one body table it knows to look for; a second
+// table-valued section would need naming here. It does not validate
 // example/ against the schemas: no date is parsed, no file is checked for the sections its
 // schema requires, an unknown frontmatter field passes, and no file under example/values/ is
 // ever read. A file under example/profiles/ whose folder matches no type's File Location has
@@ -132,6 +133,43 @@ function parseTable(block) {
     l.trim().replace(/^\|/, "").replace(/\|$/, "").split("|").map((c) => c.trim());
   if (!cells(block[1]).every((cell) => /^-+$/.test(cell))) return null;
   return { columns: cells(block[0]), rows: block.slice(2).map(cells) };
+}
+
+// Which type a file under example/ is, by matching its folder against the File Location each
+// type declares; `<placeholder>` matches one segment. A file that matches nothing has no
+// schema, so nothing declares what it may reference or how its fields are shaped.
+function typeOfFile(rel) {
+  const dir = rel.split("/").slice(1, -1);
+  for (const { type, folder } of TYPES) {
+    const want = folder.split("/");
+    if (want.length !== dir.length) continue;
+    if (want.every((seg, n) => (/^<.+>$/.test(seg) ? true : seg === dir[n]))) return type;
+  }
+  return null;
+}
+
+// The frontmatter block alone. Scoped so a line in the body that happens to read like a field
+// is not mistaken for one.
+const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? "";
+
+// Every Markdown file under a folder, depth first, with its text.
+function walkMd(rel, visit) {
+  const p = join(ROOT, rel);
+  if (!existsSync(p)) return;
+  for (const entry of readdirSync(p)) {
+    const child = `${rel}/${entry}`;
+    if (statSync(join(ROOT, child)).isDirectory()) walkMd(child, visit);
+    else if (entry.endsWith(".md")) visit(child, read(child) ?? "");
+  }
+}
+
+// The frontmatter fields a schema declares, as name and declared type, in table order.
+function fieldsOf(type) {
+  const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
+  return (fm?.rows ?? []).map((r) => ({
+    field: r[0].replace(/`/g, "").trim(),
+    declared: r[2].replace(/`/g, "").trim(),
+  }));
 }
 
 const CHECKS = [
@@ -506,31 +544,16 @@ const CHECKS = [
       };
       const SKILL_COLUMNS = columnsOf("profile", "Skills");
 
-      // Which type a file under example/ is, by matching its folder against the File
-      // Location each type declares; `<placeholder>` matches one segment. A file that
-      // matches nothing has no schema, so nothing declares what it may reference.
-      const typeOfFile = (rel) => {
-        const dir = rel.split("/").slice(1, -1);
-        for (const { type, folder } of TYPES) {
-          const want = folder.split("/");
-          if (want.length !== dir.length) continue;
-          if (want.every((seg, n) => (/^<.+>$/.test(seg) ? true : seg === dir[n]))) return type;
-        }
-        return null;
-      };
-
       // Frontmatter fields a schema types as a reference: the field name and what it points
       // at, both read from the schema. Both forms count — a frontmatter field may hold one
       // value (`ref → <type>`) or a list of them (`array of ref → <type>`, the one list
       // shape R8 leaves in frontmatter) — and this is what makes either machine-visible.
       // Matching only the list form left the commoner singular one inert.
-      const refFieldsOf = (type) => {
-        const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
-        return (fm?.rows ?? []).flatMap((r) => {
-          const target = r[2].replace(/`/g, "").trim().match(/^(?:array of )?ref → (.+)$/)?.[1];
-          return target ? [{ field: r[0].replace(/`/g, "").trim(), ref: target }] : [];
+      const refFieldsOf = (type) =>
+        fieldsOf(type).flatMap(({ field, declared }) => {
+          const target = declared.match(/^(?:array of )?ref → (.+)$/)?.[1];
+          return target ? [{ field, ref: target }] : [];
         });
-      };
       const refFields = new Map(TYPES.map((t) => [t.type, refFieldsOf(t.type)]));
 
       // The values a field carries, in three YAML shapes: a scalar on the key's own line, a
@@ -545,10 +568,8 @@ const CHECKS = [
       // implied away: nothing in `example/` uses those forms, and a full YAML parser is a
       // dependency this script does not take. Whatever does come back must resolve, singular
       // and listed alike.
-      // Scoped to the frontmatter block, so a line in the body that happens to read like a
-      // field is not mistaken for one, and anchored at column 0, so a nested key of the same
-      // name is not either.
-      const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? "";
+      // `frontmatterOf` scopes the read to the frontmatter block; every pattern below is
+      // anchored at column 0, so a nested key of the same name is not read as a field either.
       const refValues = (fmText, field) => {
         const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
         const out = [];
@@ -561,14 +582,7 @@ const CHECKS = [
         return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
       };
 
-      const walk = (rel) => {
-        const p = join(ROOT, rel);
-        if (!existsSync(p)) return;
-        for (const entry of readdirSync(p)) {
-          const child = `${rel}/${entry}`;
-          if (statSync(join(ROOT, child)).isDirectory()) walk(child);
-          else if (entry.endsWith(".md")) {
-            const text = read(child) ?? "";
+      walkMd("example/profiles", (child, text) => {
             // A "## Skills" body table: one row per assessment. Which columns it must have,
             // which are required and which are references is read from the schema above. An
             // empty SKILL_COLUMNS is not a reason to skip — it has already failed, in
@@ -590,13 +604,36 @@ const CHECKS = [
                     }
                   });
             }
-            const fmText = frontmatterOf(text);
-            for (const { field, ref } of refFields.get(typeOfFile(child)) ?? [])
-              for (const value of refValues(fmText, field)) resolve(child, ref, value);
-          }
+        const fmText = frontmatterOf(text);
+        for (const { field, ref } of refFields.get(typeOfFile(child)) ?? [])
+          for (const value of refValues(fmText, field)) resolve(child, ref, value);
+      });
+    },
+  },
+  {
+    // R11 is mechanical in the one direction that matters: a flow sequence is visible as a
+    // `[` where a list field's value begins. What a block sequence holds is not read here —
+    // resolving the entries is "example references" above, and this check exists so that
+    // check is never handed a line YAML has already split on a comma inside an entry.
+    name: "list fields are block sequences",
+    rule: "R11",
+    run() {
+      const listFields = new Map(
+        TYPES.map((t) => [
+          t.type,
+          fieldsOf(t.type)
+            .filter(({ declared }) => declared === "array" || declared.startsWith("array of "))
+            .map(({ field }) => field),
+        ]),
+      );
+      walkMd("example/profiles", (child, text) => {
+        const fmText = frontmatterOf(text);
+        for (const field of listFields.get(typeOfFile(child)) ?? []) {
+          const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          if (new RegExp(`^${name}:[ \\t]*\\[`, "m").test(fmText))
+            fail(`${child}: \`${field}\` is a flow sequence; R11 wants one entry per line`);
         }
-      };
-      walk("example/profiles");
+      });
     },
   },
   {

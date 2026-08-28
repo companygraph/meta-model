@@ -3,7 +3,8 @@ source: Local
 start: 2019-06
 end: 2022-01
 organisation: Northwind Atelier
-skills: [Product Discovery]
+skills:
+  - Product Discovery
 ---
 
 # Finding out what the order pipeline was for

@@ -126,6 +126,26 @@ owned type satisfies both: `experience` is owned by `profile`, its folder is `ex
 and its path is `profiles/<profile>/experiences/*.md`. An earlier wording of R9 had the path
 *begin* with the type's own folder, which no owned type could satisfy.
 
+### R11 — A list-valued frontmatter field is a block sequence
+
+A field typed `array` or `array of ref → <type>` is written one entry per line:
+
+```yaml
+skills:
+  - API design
+  - Software modeling (UML, SysML, C4)
+```
+
+A flow sequence — `skills: [API design, Software modeling (UML, SysML, C4)]` — is an error,
+because an entry may contain a comma and nothing there is malformed when it does. That line
+holds three fragments, no parser complains, and R4 catches it only for as long as the
+fragments resolve to nothing: the day `SysML` is a skill of its own, the claim is wrong and
+every check agrees it is fine. Quoting the entry fixes one file and is a rule people forget;
+a block sequence has no quoting hazard to remember. It also gives a diff one line per
+reference added or removed, which is the other reason to want it.
+
+A field holding one value stays on the key's own line. This is about lists.
+
 ## Working
 
 ### R0 — Validation runs before committing
@@ -135,9 +155,9 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules that script reaches is worth stating plainly. In the CompanyGraph repository,
-`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9 and
-R10 against this repository's own files, plus a meta-check under R0 that fails if any check
-cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of
+`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10
+and R11 against this repository's own files, plus a meta-check under R0 that fails if any
+check cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of
 their own; where a check happens to touch one, it is incidental to the rule that check cites.
 Treat all six as agent-enforced — which is by design, not by omission: the claim this model
 ships under is that schemas written as prose are enforceable by agents.
