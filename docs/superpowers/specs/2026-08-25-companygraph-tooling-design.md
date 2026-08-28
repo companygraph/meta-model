@@ -67,8 +67,26 @@ The one thing another program reads:
   ```
 
   `version` equals the git tag. `shape` is the version of the R9 fixed shape and the closed
-  type vocabulary — the only thing the tooling depends on. Bumping `shape` is a MAJOR release of
-  the meta-model; `version` bumps on every vocabulary change.
+  type vocabulary — the only thing the tooling depends on.
+
+  Which number moves is decided by one question: **what must an instance do about it?**
+
+  | | the release | an instance must |
+  | --- | --- | --- |
+  | MAJOR | the fixed shape changes, and `shape` with it | be read by a newer tooling |
+  | MINOR | a type added or removed, a required field or section added, a rule that makes an entity that was valid invalid | change files |
+  | PATCH | an optional field or section added, a rule clarified or corrected, prose fixed | do nothing |
+
+  This is `upgrade`'s question, not a taste in numbering. §4 has it print the release notes
+  between two core versions and walk the entities a schema change affects; a PATCH is the
+  release where it has nothing to walk, and it can only know that if the number says so. A
+  policy applied per release by judgement makes `upgrade` undecidable and the number
+  decorative.
+
+  Pre-1.0 the same three apply — the earlier "every vocabulary change bumps the minor, one per
+  roadmap slice" is superseded, having been written before there was a release that asked an
+  instance for nothing. `1.0.0` is still for when the remaining clusters are in and the
+  reference instance's findings are resolved.
 - The tag `vX.Y.Z` sits on the commit where `manifest.json` says `X.Y.Z`. `verify/check.mjs`
   gains a check that the two agree.
 - A release tarball contains `core/`, `CONVENTIONS.md` and `LICENSE`. Nothing else is consumed.
