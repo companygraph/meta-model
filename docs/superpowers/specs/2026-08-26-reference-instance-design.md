@@ -245,15 +245,19 @@ someone else wrote for you is not yet yours.
 
 The three skills follow the tooling spec's §5 descriptions:
 
-- `companygraph-validate` — reads `meta/CONVENTIONS.md`, walks the graph, reports per rule
-  R1–R10, names what it did not check. Says at the top that `companygraph check` is absent
-  and the mechanical rules are therefore its own to do.
+- `companygraph-validate` — reads `meta/CONVENTIONS.md`, walks the graph, reports per rule and
+  names what it did not check. Per rule, not per a range written down here: the vendored
+  `CONVENTIONS.md` is what says which rules exist, and it has gained two since this was
+  written. It also reads each schema's `## Writing rules` and reports those the same way. Says
+  at the top that `companygraph check` is absent and the mechanical rules are therefore its own
+  to do.
 - `companygraph-add-entity` — reads the type's schema by the fixed shape, writes the shell
   `add` would write (H1, every field, every required section), fills the body from the
   prompt, then runs validate. Never invents a referenced entity; offers to add it.
 - `companygraph-export` — produces `dist/mental-model-skill.zip`: `SKILL.md` with name and
   description from the manifest and entity counts computed at export time, one
-  `model/<type>.md` per root type (README first, entries separated by `---`), `model/meta.md`.
+  `model/<type>.md` per root type (README first, each entity preceded by its boundary comment),
+  `model/meta.md`.
   `export/SKILL-intro.md` is spliced in when present; the instance ships one, because a
   company of one is exactly the case where the persona text matters.
 
