@@ -162,9 +162,15 @@ Both halves landed in `v0.2.0`, and building them corrected the proposal twice.
   The tooling spec points at R12 instead.
 - **An `experience` does not derive from its H1**, which the derivation above assumes of
   everything. `example/` files `2018-northwind-atelier.md` under the H1
-  `Rebuilding the order pipeline` — the name is the start year and the organisation, so the
-  folder sorts chronologically. R12 therefore defines the *slug*, states the H1 as the
-  default, and lets a type declare its own derivation in its own schema.
+  `Rebuilding the order pipeline`. R12 therefore defines the *slug*, states the H1 as the
+  default, and lets a type state its own naming in its own schema.
+
+  R12 first said an experience's name derived from its start year and its `organisation`, read
+  off `example/`'s five files, where it happens to. The reference instance's twenty-one say
+  otherwise and every one of them failed the rule: `organisation` is optional, so a required
+  filename cannot come from it — a career break has none — and one organisation covers several
+  periods, so it does not identify one. Corrected in `0.3.1`: an experience's name is *chosen*,
+  and what is checked is its form.
 - **A collision is per folder, not per type.** Scoping it to the type, as this proposed,
   failed the repository's own example: two profiles each hold a 2022 experience at Beacon
   Systems and both files are correctly named.

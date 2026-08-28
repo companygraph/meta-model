@@ -10,10 +10,14 @@
 
 An experience is owned by a profile and cannot exist without it, so it nests inside the
 profile's folder rather than sitting at the root with a `profile:` field pointing back.
-The filename is not the slug of the H1, which is what R12 does by default: it is the start
-year, then a `-`, then the slug of the organisation, so the folder sorts chronologically and a
-reader recognises the period before opening it. `2018-northwind-atelier.md` for an experience
-whose H1 is `Rebuilding the order pipeline`.
+The filename is not the slug of the H1, which is what R12 does by default. It is the start
+year, then a `-`, then a slug naming the period — chosen, not derived: the H1 says what happened
+and makes a long name that neither sorts nor scans, `organisation` is optional so a required
+filename cannot come from it, and one organisation covers several periods anyway. Whoever writes
+the file picks the shortest thing that identifies it — `2018-northwind-atelier.md`,
+`2010-ubs-architect.md`, `2026-career-break.md` — and the folder then sorts chronologically and
+reads as a career. The year must be the year in `start`, the rest must be a slug by R12, and the
+two together must be unique in the folder.
 
 ## Frontmatter
 
