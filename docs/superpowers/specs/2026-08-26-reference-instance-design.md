@@ -61,9 +61,12 @@ vendored, so the release comes first.
 
   `shape: 1` is the R9 fixed shape as it stands. `0.1.0`, not `1.0.0`: the six types are
   usable — two instances run on them and a third is about to — but this very instance exists
-  to find out whether they are right, and roadmap item 3 adds types. Pre-1.0, every vocabulary
-  change bumps the minor, one per roadmap slice; `1.0.0` is for when the remaining clusters
-  are in and §7's findings are resolved. Not `0.0.1`, which would say nothing is usable yet.
+  to find out whether they are right, and roadmap item 3 adds types. `1.0.0` is for when the
+  remaining clusters are in and §7's findings are resolved. Not `0.0.1`, which would say
+  nothing is usable yet. (This bullet also said every pre-1.0 vocabulary change bumps the
+  minor, one per roadmap slice. The tooling spec's §2 now decides it by what an instance must
+  do about a release, which this spec's own findings produced two of: an optional `## Ending`
+  asks an instance for nothing.)
 - `verify/check.mjs` gains the check the tooling spec promises: the manifest parses, `version`
   is a semantic version, `shape` is a positive integer, and — when `HEAD` carries a `v*` tag —
   the tag equals `v<version>`. No tag is not a failure; a tag that disagrees is.
@@ -359,7 +362,9 @@ Found in the building:
 - **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
   own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
   cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:
-  `profiles/<profile>/experiences/*.md`. The walk over all six schemas at `v0.1.0` found nothing
+  `profiles/<profile>/experiences/*.md` — which is also what `verify/check.mjs` had always
+  enforced, so the contradiction was in the prose alone. R9 has since been reworded to say
+  that the *last* folder in the path is the type's own. The walk over all six schemas at `v0.1.0` found nothing
   else — heading order, the single frontmatter table, the `Table.` section and its column table,
   the closed type vocabulary and the plain-dash separators all hold.
 - **Tooling §5 and §6, what a validation pass cannot reach** — `companygraph-validate` reported

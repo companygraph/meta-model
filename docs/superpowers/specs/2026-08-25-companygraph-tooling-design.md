@@ -67,8 +67,26 @@ The one thing another program reads:
   ```
 
   `version` equals the git tag. `shape` is the version of the R9 fixed shape and the closed
-  type vocabulary — the only thing the tooling depends on. Bumping `shape` is a MAJOR release of
-  the meta-model; `version` bumps on every vocabulary change.
+  type vocabulary — the only thing the tooling depends on.
+
+  Which number moves is decided by one question: **what must an instance do about it?**
+
+  | | the release | an instance must |
+  | --- | --- | --- |
+  | MAJOR | the fixed shape changes, and `shape` with it | be read by a newer tooling |
+  | MINOR | a type added or removed, a required field or section added, a rule that makes an entity that was valid invalid | change files |
+  | PATCH | an optional field or section added, a rule clarified or corrected, prose fixed | do nothing |
+
+  This is `upgrade`'s question, not a taste in numbering. §4 has it print the release notes
+  between two core versions and walk the entities a schema change affects; a PATCH is the
+  release where it has nothing to walk, and it can only know that if the number says so. A
+  policy applied per release by judgement makes `upgrade` undecidable and the number
+  decorative.
+
+  Pre-1.0 the same three apply — the earlier "every vocabulary change bumps the minor, one per
+  roadmap slice" is superseded, having been written before there was a release that asked an
+  instance for nothing. `1.0.0` is still for when the remaining clusters are in and the
+  reference instance's findings are resolved.
 - The tag `vX.Y.Z` sits on the commit where `manifest.json` says `X.Y.Z`. `verify/check.mjs`
   gains a check that the two agree.
 - A release tarball contains `core/`, `CONVENTIONS.md` and `LICENSE`. Nothing else is consumed.
@@ -165,7 +183,10 @@ left behind. Interactive only for the instance name when `--name` is absent.
 
 Reads `meta/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
 
-- H1 is the name exactly as given; the filename is its kebab-case. The H1 stays canonical (R2).
+- H1 is the name exactly as given; the filename is derived by R12 — the slug of the H1, or
+  whatever the type's own schema states instead, as `experience` does. Three documents said
+  "kebab-case of the H1", none said what that does to a parenthesis, a slash or an umlaut, and
+  one type does not derive from the H1 at all. The H1 stays canonical (R2).
 - Frontmatter carries every field the schema declares: required ones present and empty,
   optional ones present as YAML comments.
 - Every required section as a heading; a section marked `Table.` gets its header row from the
@@ -189,6 +210,10 @@ Fails on:
 | a root folder no schema names, or a schema whose root folder is missing | R6, R7 |
 | in the folder form, an entity whose own file is not named for its folder | R6 |
 | a frontmatter `ref → <type>` or `array of ref → <type>` value that resolves to no H1 of that type | R4 |
+| a list-valued frontmatter field written as a flow sequence | R11 |
+| a filename that does not derive from its entity, or two in one folder that derive alike | R12 |
+| a list-valued frontmatter field written as a flow sequence | R11 |
+| two H1s of one type that derive to the same filename | R12 |
 | a schema that does not match the fixed shape | R9 |
 
 Reports without failing: a vendored file whose hash differs from the manifest (that is

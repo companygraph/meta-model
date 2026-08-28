@@ -75,7 +75,10 @@ the shape is whether the edge has attributes of its own.
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
-`## File Location` is written in backticks and begins with the type's own folder.
+`## File Location` is written in backticks, and the last folder it names is the type's own.
+What comes before that folder is where the folder sits: nothing, for a type nothing owns;
+the owner's path, for a type that is owned (R10). So `skills/*.md`, and
+`profiles/<profile>/experiences/*.md`.
 
 `## Frontmatter` holds one table and only one — a field is a row in it — with columns
 `Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.`
@@ -118,6 +121,66 @@ One `**Owner:**` line in the owned type's schema, and the File Location nests in
 owner. The declaration goes on the owned type because "what does this belong to?" is asked of
 the owned thing.
 
+R9 says the path ends with the type's own folder and this says where that folder sits, so an
+owned type satisfies both: `experience` is owned by `profile`, its folder is `experiences`,
+and its path is `profiles/<profile>/experiences/*.md`. An earlier wording of R9 had the path
+*begin* with the type's own folder, which no owned type could satisfy.
+
+### R11 — A list-valued frontmatter field is a block sequence
+
+A field typed `array` or `array of ref → <type>` is written one entry per line:
+
+```yaml
+skills:
+  - API design
+  - Software modeling (UML, SysML, C4)
+```
+
+A flow sequence — `skills: [API design, Software modeling (UML, SysML, C4)]` — is an error,
+because an entry may contain a comma and nothing there is malformed when it does. That line
+holds three fragments, no parser complains, and R4 catches it only for as long as the
+fragments resolve to nothing: the day `SysML` is a skill of its own, the claim is wrong and
+every check agrees it is fine. Quoting the entry fixes one file and is a rule people forget;
+a block sequence has no quoting hazard to remember. It also gives a diff one line per
+reference added or removed, which is the other reason to want it.
+
+A field holding one value stays on the key's own line. This is about lists.
+
+### R12 — A filename is derived, and the derivation is stated
+
+**Slugging a string means: lower-case it, replace every run of characters outside `a–z` and
+`0–9` with a single `-`, and drop any leading or trailing `-`.**
+
+| string | slug |
+| --- | --- |
+| `Data protection (GDPR)` | `data-protection-gdpr` |
+| `CI/CD` | `ci-cd` |
+| `Software modeling (UML, SysML, C4)` | `software-modeling-uml-sysml-c4` |
+| `Zürich office` | `z-rich-office` |
+
+The last is ugly and that is the point. A non-ASCII letter drops rather than being
+transliterated, because transliteration is where two implementations differ — `ü` becomes `ue`
+in one and `u` in another — and then whatever writes the file and whatever checks it disagree
+about the same file. Dropping is the rule nobody has to look up. An instance that dislikes the
+result renames the entity, which is the honest fix: R2 makes the H1 canonical and R3 keeps the
+filename out of every reference, so a filename is free to be ugly.
+
+**By default a file is named for the slug of its H1**, and a folder entity's folder likewise
+(R6). A type whose folder wants another order says so in its own schema, and one does:
+`experience` is named for its start year and then its organisation, so the folder sorts
+chronologically — `2018-northwind-atelier.md` for an experience whose H1 is
+`Rebuilding the order pipeline`. What may vary is which strings go into the name; the slug is
+the same everywhere.
+
+Two entities in one folder whose names derive to the same filename are an error. The folder,
+not the type: an owned type shares a folder only with its owner's other entities, so two
+profiles may each hold an experience at the same organisation in the same year, and both files
+are correctly named.
+
+This is here rather than in a tooling document because a filename is written by whoever writes
+the file, and the first instance was written by hand. A rule only a program can consult is not
+a convention.
+
 ## Working
 
 ### R0 — Validation runs before committing
@@ -127,9 +190,9 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules that script reaches is worth stating plainly. In the CompanyGraph repository,
-`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9 and
-R10 against this repository's own files, plus a meta-check under R0 that fails if any check
-cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of
+`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10,
+R11 and R12 against this repository's own files, plus a meta-check under R0 that fails if any
+check cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of
 their own; where a check happens to touch one, it is incidental to the rule that check cites.
 Treat all six as agent-enforced — which is by design, not by omission: the claim this model
 ships under is that schemas written as prose are enforceable by agents.
