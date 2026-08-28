@@ -250,17 +250,16 @@ const CHECKS = [
 
         // Three sections carry the shape, and two more carry the prose the shape cannot: they
         // come last, after every table, so a reader that stops at the tables is unaffected —
-        // which is the whole reason they are allowed to exist in a fixed shape. Both or
-        // neither: writing rules with no purpose is the same half-a-thing as a `Table.`
-        // section with no column table.
+        // which is the whole reason they are allowed to exist in a fixed shape.
+        //
+        // R9 makes the pair optional in the shape and not optional in core, and this script
+        // only ever reads core, so here it is required. Until every schema had them a missing
+        // pair was work not yet done; all six carry them as of 0.3.0, and from here a schema
+        // that loses one has lost it rather than not written it yet.
         const order = [...s.keys()].filter((k) => k);
-        const shape = ["File Location", "Frontmatter", "Sections"];
-        const prose = ["Purpose", "Writing rules"];
-        const legal = [shape.join(">"), [...shape, ...prose].join(">")];
-        if (!legal.includes(order.join(">")))
-          fail(
-            `${path}: sections are ${order.join(", ")}; must be ${shape.join(", ")}, optionally followed by ${prose.join(" then ")}`,
-          );
+        const want = ["File Location", "Frontmatter", "Sections", "Purpose", "Writing rules"];
+        if (order.join(">") !== want.join(">"))
+          fail(`${path}: sections are ${order.join(", ")}; must be exactly ${want.join(", ")}`);
 
         // What the rules say is an agent's business. That there are rules to read, and that
         // they are separable one from another, is this one's: a rule nothing can cite
