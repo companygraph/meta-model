@@ -8,8 +8,7 @@ source: Local
 
 ## In practice
 
-Following it looks like refusing a deadline that can only be met by leaving something
-half-built, and saying so early enough that the date can move.
+We refuse a deadline that can only be met by leaving something half-built, and we say so early
+enough that the date can still move.
 
-Breaking it looks like shipping on time and privately knowing which part will be rewritten
-within the quarter.
+We never ship on time while knowing privately which part will be rewritten within the quarter.

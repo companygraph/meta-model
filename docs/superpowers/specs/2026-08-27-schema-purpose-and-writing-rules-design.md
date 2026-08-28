@@ -192,11 +192,15 @@ that each is written against its own evidence, not by analogy with `skill`:
 - **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
   it means` is written so that two assessors would place the same person the same way; a
   rung is defined in the instance's own words; no external ladder is cited.
-- **`value`** — purpose: a value something can cite; rules: `## In practice` speaks in the
-  instance's own first person — "I" for a company of one, "We" for a company — as behaviour:
-  "I write the decision down before the code …". Never at the reader ("You …") and never as an
-  instruction. The following half is what I/we do; the breaking half is one sentence
-  beginning "I never …" / "We never …"; both are concrete situations, not adjectives.
+- ✅ **`value`** — written, and the only one of the five this sketch got right in every part;
+  it needed no correcting. Two things it did not have. The statement rule: a statement is a
+  sentence someone could disagree with, which is what separates a value from a slogan. And a
+  finding — `example/` disagreed with the instance on form and with itself. Its statement line
+  read "**We** would rather ship one thing that holds up", while its body dropped the pronoun
+  for "Following it looks like … / Breaking it looks like …". That form describes a value
+  instead of committing to one, and nothing can be held to a description. Both example values
+  are rewritten to the first person the rule states, in the "We" a company of more than one
+  uses.
 - **`source`** — purpose: where a page's facts are mastered; rules: the description says what
   the source holds and whether anything syncs it.
 

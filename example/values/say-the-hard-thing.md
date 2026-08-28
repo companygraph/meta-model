@@ -8,8 +8,7 @@ source: Local
 
 ## In practice
 
-Following it looks like naming the objection in the room where the choice is being made, once
-and plainly, and then committing to whatever is decided.
+We name the objection in the room where the choice is being made, once and plainly, and then
+commit to whatever is decided.
 
-Breaking it looks like agreeing in the meeting and reopening the question in a side channel
-afterwards.
+We never agree in the meeting and reopen the question in a side channel afterwards.
