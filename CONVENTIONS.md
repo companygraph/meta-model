@@ -75,7 +75,10 @@ the shape is whether the edge has attributes of its own.
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
-`## File Location` is written in backticks and begins with the type's own folder.
+`## File Location` is written in backticks, and the last folder it names is the type's own.
+What comes before that folder is where the folder sits: nothing, for a type nothing owns;
+the owner's path, for a type that is owned (R10). So `skills/*.md`, and
+`profiles/<profile>/experiences/*.md`.
 
 `## Frontmatter` holds one table and only one — a field is a row in it — with columns
 `Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.`
@@ -117,6 +120,11 @@ only where they cannot.
 One `**Owner:**` line in the owned type's schema, and the File Location nests inside that
 owner. The declaration goes on the owned type because "what does this belong to?" is asked of
 the owned thing.
+
+R9 says the path ends with the type's own folder and this says where that folder sits, so an
+owned type satisfies both: `experience` is owned by `profile`, its folder is `experiences`,
+and its path is `profiles/<profile>/experiences/*.md`. An earlier wording of R9 had the path
+*begin* with the type's own folder, which no owned type could satisfy.
 
 ## Working
 

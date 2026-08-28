@@ -359,7 +359,9 @@ Found in the building:
 - **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
   own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
   cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:
-  `profiles/<profile>/experiences/*.md`. The walk over all six schemas at `v0.1.0` found nothing
+  `profiles/<profile>/experiences/*.md` — which is also what `verify/check.mjs` had always
+  enforced, so the contradiction was in the prose alone. R9 has since been reworded to say
+  that the *last* folder in the path is the type's own. The walk over all six schemas at `v0.1.0` found nothing
   else — heading order, the single frontmatter table, the `Table.` section and its column table,
   the closed type vocabulary and the plain-dash separators all hold.
 - **Tooling §5 and §6, what a validation pass cannot reach** — `companygraph-validate` reported
