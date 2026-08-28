@@ -146,6 +146,41 @@ reference added or removed, which is the other reason to want it.
 
 A field holding one value stays on the key's own line. This is about lists.
 
+### R12 — A filename is derived, and the derivation is stated
+
+**Slugging a string means: lower-case it, replace every run of characters outside `a–z` and
+`0–9` with a single `-`, and drop any leading or trailing `-`.**
+
+| string | slug |
+| --- | --- |
+| `Data protection (GDPR)` | `data-protection-gdpr` |
+| `CI/CD` | `ci-cd` |
+| `Software modeling (UML, SysML, C4)` | `software-modeling-uml-sysml-c4` |
+| `Zürich office` | `z-rich-office` |
+
+The last is ugly and that is the point. A non-ASCII letter drops rather than being
+transliterated, because transliteration is where two implementations differ — `ü` becomes `ue`
+in one and `u` in another — and then whatever writes the file and whatever checks it disagree
+about the same file. Dropping is the rule nobody has to look up. An instance that dislikes the
+result renames the entity, which is the honest fix: R2 makes the H1 canonical and R3 keeps the
+filename out of every reference, so a filename is free to be ugly.
+
+**By default a file is named for the slug of its H1**, and a folder entity's folder likewise
+(R6). A type whose folder wants another order says so in its own schema, and one does:
+`experience` is named for its start year and then its organisation, so the folder sorts
+chronologically — `2018-northwind-atelier.md` for an experience whose H1 is
+`Rebuilding the order pipeline`. What may vary is which strings go into the name; the slug is
+the same everywhere.
+
+Two entities in one folder whose names derive to the same filename are an error. The folder,
+not the type: an owned type shares a folder only with its owner's other entities, so two
+profiles may each hold an experience at the same organisation in the same year, and both files
+are correctly named.
+
+This is here rather than in a tooling document because a filename is written by whoever writes
+the file, and the first instance was written by hand. A rule only a program can consult is not
+a convention.
+
 ## Working
 
 ### R0 — Validation runs before committing
@@ -155,8 +190,8 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules that script reaches is worth stating plainly. In the CompanyGraph repository,
-`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10
-and R11 against this repository's own files, plus a meta-check under R0 that fails if any
+`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10,
+R11 and R12 against this repository's own files, plus a meta-check under R0 that fails if any
 check cites a rule this document does not define. R1, R2, R3, R5, R7 and R8 have no check of
 their own; where a check happens to touch one, it is incidental to the rule that check cites.
 Treat all six as agent-enforced — which is by design, not by omission: the claim this model

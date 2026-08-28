@@ -165,7 +165,10 @@ left behind. Interactive only for the instance name when `--name` is absent.
 
 Reads `meta/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
 
-- H1 is the name exactly as given; the filename is its kebab-case. The H1 stays canonical (R2).
+- H1 is the name exactly as given; the filename is derived by R12 — the slug of the H1, or
+  whatever the type's own schema states instead, as `experience` does. Three documents said
+  "kebab-case of the H1", none said what that does to a parenthesis, a slash or an umlaut, and
+  one type does not derive from the H1 at all. The H1 stays canonical (R2).
 - Frontmatter carries every field the schema declares: required ones present and empty,
   optional ones present as YAML comments.
 - Every required section as a heading; a section marked `Table.` gets its header row from the
@@ -189,6 +192,10 @@ Fails on:
 | a root folder no schema names, or a schema whose root folder is missing | R6, R7 |
 | in the folder form, an entity whose own file is not named for its folder | R6 |
 | a frontmatter `ref → <type>` or `array of ref → <type>` value that resolves to no H1 of that type | R4 |
+| a list-valued frontmatter field written as a flow sequence | R11 |
+| a filename that does not derive from its entity, or two in one folder that derive alike | R12 |
+| a list-valued frontmatter field written as a flow sequence | R11 |
+| two H1s of one type that derive to the same filename | R12 |
 | a schema that does not match the fixed shape | R9 |
 
 Reports without failing: a vendored file whose hash differs from the manifest (that is
