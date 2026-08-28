@@ -9,5 +9,6 @@ group: Programming Languages
 
 ## In practice
 
-Writing services that other teams depend on, and being the person who reads the stack trace
-when one of them stops.
+Write services other teams depend on, and keep them running once they do. Read the stack trace
+when one stops. Know the runtime well enough to tell a slow query from a slow collector, and to
+say which of the two a graph is showing. Typical tools: the JDK, a build tool, a profiler.

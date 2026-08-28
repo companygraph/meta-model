@@ -74,7 +74,8 @@ the shape is whether the edge has attributes of its own.
 ### R9 — Schema files have a fixed shape
 
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
-line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`. The path under
+line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then
+`## Purpose` and `## Writing rules` where the type has them. The path under
 `## File Location` is written in backticks, and the last folder it names is the type's own.
 What comes before that folder is where the folder sits: nothing, for a type nothing owns;
 the owner's path, for a type that is owned (R10). So `skills/*.md`, and
@@ -106,6 +107,22 @@ a column table the list types — `array` and `array of ref → <type>` — are 
 something to be read leniently, because there is nothing for them to mean: a column that
 references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter
 field (R8); it never becomes a column.
+
+`## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
+cannot: what the type is *for*, and what separates a good entity of it from one that merely
+has the shape. Purpose is one paragraph — the sentence someone needs before writing their
+first entity of the type, not the rationale for the design. Writing rules are a list, one
+sentence each, and each one has to be checkable by an agent reading an entity: "person-neutral:
+no name, employer, date or number from any profile" can fail, and "write well" cannot. They are
+about what goes *in* a field or section; whether a field is required is the table's business,
+not theirs.
+
+They come as a pair or not at all: writing rules with no purpose is the same half-a-thing as a
+`Table.` section with no column table, since the rules are how the purpose is met. Both are
+optional in the shape and neither is optional in core, which is what gets copied. The
+reader that checks the shape stops at the tables, so nothing that reads a schema mechanically
+sees them; the agent pass does, which is the point of putting them in the schema rather than
+in a document beside it.
 
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
 `:---`, `---:` or `:---:`.

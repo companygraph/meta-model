@@ -358,7 +358,8 @@ Found in the building:
   that is already written.
 - **Meta-model, `example/`** — its three skills are written the first-cut way, one person's
   history and all. The example is what adopters copy, so it needs the same rewrite as soon as
-  core says what the rule is.
+  core says what the rule is. Core has since gained `## Purpose` and `## Writing rules` on
+  `skill`, and the three are rewritten to them.
 - **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
   own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
   cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:

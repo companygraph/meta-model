@@ -248,10 +248,26 @@ const CHECKS = [
         for (const heading of ["File Location", "Frontmatter", "Sections"])
           if (!s.has(heading)) fail(`${path}: missing "## ${heading}"`);
 
+        // Three sections carry the shape, and two more carry the prose the shape cannot: they
+        // come last, after every table, so a reader that stops at the tables is unaffected —
+        // which is the whole reason they are allowed to exist in a fixed shape. Both or
+        // neither: writing rules with no purpose is the same half-a-thing as a `Table.`
+        // section with no column table.
         const order = [...s.keys()].filter((k) => k);
-        const want = ["File Location", "Frontmatter", "Sections"];
-        if (order.join(">") !== want.join(">"))
-          fail(`${path}: sections are ${order.join(", ")}; must be exactly ${want.join(", ")}`);
+        const shape = ["File Location", "Frontmatter", "Sections"];
+        const prose = ["Purpose", "Writing rules"];
+        const legal = [shape.join(">"), [...shape, ...prose].join(">")];
+        if (!legal.includes(order.join(">")))
+          fail(
+            `${path}: sections are ${order.join(", ")}; must be ${shape.join(", ")}, optionally followed by ${prose.join(" then ")}`,
+          );
+
+        // What the rules say is an agent's business. That there are rules to read, and that
+        // they are separable one from another, is this one's: a rule nothing can cite
+        // separately is a paragraph wearing a heading.
+        const rules = (s.get("Writing rules") ?? "").trim();
+        if (rules && !rules.split("\n").some((l) => /^[-*]\s+\S/.test(l)))
+          fail(`${path}: "## Writing rules" is not a list`);
 
         // The schema's own "## File Location" and the manifest's folder are two statements
         // of the same fact, and nothing else compares them. Without this, a schema could
