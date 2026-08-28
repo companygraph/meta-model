@@ -99,9 +99,10 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
 1. ✅ **The person cluster** — `profile`, `experience`, `skill`, `proficiency-level` and
    `value`, the conventions that make them checkable, and a worked example. One person
    described completely, rather than every type partially.
-2. **The reference instance** — a real company described in this vocabulary. It is the first
-   thing that can show the extraction was wrong, which is why it comes before more types
-   rather than after them.
+2. ✅ **The reference instance** — a real company described in this vocabulary:
+   [`robertblust/mental-model`](https://github.com/robertblust/mental-model), a company of
+   one, laid out by hand as the tooling will lay one out. What it taught is §7 of
+   [its spec](docs/superpowers/specs/2026-08-26-reference-instance-design.md).
 3. **The rest of core** — the remaining types the design names: identity, direction,
    organisation, operation, market, obligation, domain.
 4. **Packs** — the mechanism above, deliberately undesigned until a second kind of company

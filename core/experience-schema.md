@@ -31,3 +31,16 @@ Filenames are prefixed with the start year so the folder sorts chronologically:
 | `# [Title]` | Yes | The canonical name of this period |
 | `> [Tagline]` | Yes | Single-line summary of the period |
 | `## Achievements` | No | What was accomplished in this period |
+| `## Ending` | No | Why the period ended, where a bare `end` date would otherwise be read into. One or two sentences. |
+
+An `end` date with nothing beside it is read anyway: the reader supplies a reason, and usually a
+worse one than the truth. The section is optional because most periods need none — a talk ends
+when it has been given — and a required one would manufacture noise, or invent. It is only
+meaningful where `end` is set; an ongoing period has not ended.
+
+It is prose rather than a frontmatter field because a reason is a sentence: it wraps, it may
+carry a colon, and R8 keeps frontmatter for short facts. It is deliberately not an enum either.
+A closed set of endings — resigned, redundancy, contract end — flattens the one thing that
+carries the meaning, does not survive the move between employment cultures, and would be the
+most sensitive field in the model to filter on. What is worth recording here is a sentence
+someone wrote on purpose, not a token someone selected.
