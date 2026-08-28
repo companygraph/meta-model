@@ -295,7 +295,9 @@ Known before the first file is written:
   leaned core for the export mechanism on the same reasoning.
 - **Core, `experience`** — a degree, a certification, a board seat and a conference talk are
   each a dated period with an organisation, and the type holds them, but "Achievements" is
-  the wrong heading for a talk and `organisation` is a stretch for a conference. The remaining
+  the wrong heading for a talk and `organisation` is a stretch for a conference. Core has since
+  written the stretch down rather than removed it: `organisation` for a one-off is whoever
+  hosted, awarded or published it, because the alternative — leaving it empty — says less. The remaining
   clusters (identity, direction, …) may or may not be where these belong.
 - **Core, `experience` — how a period ends** — a period carries `end` and nothing that says why
   it ended. The date is read into regardless: the reader supplies a reason, and the model's
@@ -311,7 +313,11 @@ Found in the building:
   twenty entries are not periods at all: two conference talks, a certification, a published
   case study and two projects the CV dates by year alone. No end date was invented for them,
   so a talk given in 2022 now reads as still running. The field is honest about roles and
-  silently wrong about events.
+  silently wrong about events. The instance has since settled both halves in its own files —
+  a one-off carries `end` equal to `start`, and a period still running says "Ongoing." in its
+  tagline rather than relying on a reader noticing an absent field — and core has since made
+  both writing rules on `experience`. What stays open is whether a talk or a certification is
+  an `experience` at all; the remaining clusters may say otherwise.
 - **Core, `profile`, the Skills table** — the skill list was cut twice and neither pass removed
   anything. Twenty-three capabilities were drawn up from the CV's groups, twenty-three earned an
   evidenced row in the profile's table, and twenty-three were named by at least one experience;
