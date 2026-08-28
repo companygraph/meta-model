@@ -197,14 +197,14 @@ that each is written against its own evidence, not by analogy with `skill`:
 
 ## 6. What changes, and where
 
-- `CONVENTIONS.md` R9: add the two optional sections to the fixed shape, after `## Sections`
-  and its tables, in that order, with those names.
+- ✅ `CONVENTIONS.md` R9: the two sections added to the fixed shape, after `## Sections` and
+  its tables, in that order, with those names — as a pair or not at all.
 - ✅ `CONVENTIONS.md`: the block-sequence rule of §4 as R11, and the filename derivation as
   R12 — in `CONVENTIONS.md`, not the tooling spec.
 - ✅ `example/`: its experiences' `skills:` lists rewritten as block sequences.
-- `core/*-schema.md`: each gains the two sections; `skill` from §3, the other five drafted
-  against §4 and the instance's evidence.
-- `example/`: its three skills rewritten to the `skill` rules — the example is what adopters
+- `core/*-schema.md`: each gains the two sections; `skill` from §3 ✅, the other five drafted
+  against §5 and the instance's evidence.
+- ✅ `example/`: its three skills rewritten to the `skill` rules — the example is what adopters
   copy.
 - `verify/check.mjs`: asserts the two sections, where a schema carries them, sit in that order
   after the tables, and that `## Writing rules` is a list. It requires them of every core
@@ -214,7 +214,8 @@ that each is written against its own evidence, not by analogy with `skill`:
   per type and reports per rule, the same way it reports R1–R10.
 - Release: a MINOR bump per the tooling spec's §2 rule — `example/`'s skills are rewritten and
   every core schema grows required prose, so an instance vendoring core has files to change.
-  `0.2.0` went to §4; this is `0.3.0`.
+  `0.2.0` went to §4; this is `0.3.0`, cut once all six schemas carry the sections rather than
+  once per schema.
 
 ---
 
