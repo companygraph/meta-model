@@ -6,8 +6,8 @@
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
 // resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
-// types `ref → <type>` or `array of ref → <type>`, and that a list-valued field is written as
-// a block sequence. "## Skills" is the one body table it knows to look for; a second
+// types `ref → <type>` or `array of ref → <type>`, that a list-valued field is written as a
+// block sequence, and that every filename derives from the entity in it. "## Skills" is the one body table it knows to look for; a second
 // table-valued section would need naming here. It does not validate
 // example/ against the schemas: no date is parsed, no file is checked for the sections its
 // schema requires, an unknown frontmatter field passes, and no file under example/values/ is
@@ -33,8 +33,20 @@ export const TYPES = [
   { type: "proficiency-level", folder: "proficiency-levels" },
   { type: "source", folder: "sources" },
   { type: "profile", folder: "profiles/<profile>", owns: ["experience"] },
-  { type: "experience", folder: "profiles/<profile>/experiences", owner: "profile" },
+  {
+    type: "experience",
+    folder: "profiles/<profile>/experiences",
+    owner: "profile",
+    // R12's default is the slug of the H1; a type whose folder wants another order says so in
+    // its own schema, and this one does — the start year, then the organisation, so the folder
+    // sorts chronologically. Stated here for the same reason `folder` is: never derived.
+    filename: { year: "start", from: ["organisation"] },
+  },
 ];
+
+// R12's slug. One definition, used for a file, a folder and the collision test alike.
+export const slug = (s) =>
+  s.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "");
 
 // Spec §5: closed for the first release. `ref → <type>` and `array of ref → <type>` are
 // checked separately because their target varies.
@@ -151,6 +163,11 @@ function typeOfFile(rel) {
 // The frontmatter block alone. Scoped so a line in the body that happens to read like a field
 // is not mistaken for one.
 const frontmatterOf = (text) => text.match(/^---\n([\s\S]*?)\n---(?:\n|$)/)?.[1] ?? "";
+
+// One frontmatter scalar, by field name, anchored at column 0 so a nested key of the same name
+// is not read as a field. A list-valued field is not this function's business.
+const fmScalar = (fmText, field) =>
+  fmText.match(new RegExp(`^${field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}:[ \\t]*(\\S.*?)[ \\t]*$`, "m"))?.[1] ?? null;
 
 // Every Markdown file under a folder, depth first, with its text.
 function walkMd(rel, visit) {
@@ -633,6 +650,60 @@ const CHECKS = [
           if (new RegExp(`^${name}:[ \\t]*\\[`, "m").test(fmText))
             fail(`${child}: \`${field}\` is a flow sequence; R11 wants one entry per line`);
         }
+      });
+    },
+  },
+  {
+    // R12 in the one direction a script can take: derive the name and compare it. What it
+    // cannot say is whether the H1 is the right name — that is R2's, and an agent's.
+    //
+    // `README.md` is never an entity (R6), so it is the one file skipped. A file whose folder
+    // matches no type has no derivation to check, the same silence "example references" keeps
+    // and for the same reason: nothing declares what it is.
+    name: "filenames derive from their entity",
+    rule: "R12",
+    run() {
+      const seen = new Map();
+      walkMd("example", (child, text) => {
+        const base = child.split("/").pop();
+        if (base === "README.md") return;
+        const type = typeOfFile(child);
+        if (!type) return;
+        const spec = TYPES.find((t) => t.type === type);
+        const h1 = text.match(/^#\s+(.+?)\s*$/m)?.[1];
+        if (!h1) return fail(`${child}: no H1, so nothing derives a filename (R2)`);
+
+        let want;
+        if (!spec.filename) want = slug(h1);
+        else {
+          const fmText = frontmatterOf(text);
+          const parts = [];
+          if (spec.filename.year) {
+            const v = fmScalar(fmText, spec.filename.year);
+            if (!v) return fail(`${child}: no \`${spec.filename.year}\`, which its filename derives from`);
+            parts.push(v.slice(0, 4));
+          }
+          for (const field of spec.filename.from) {
+            const v = fmScalar(fmText, field);
+            if (!v) return fail(`${child}: no \`${field}\`, which its filename derives from`);
+            parts.push(slug(v));
+          }
+          want = parts.join("-");
+        }
+
+        // A folder entity's own file is named for its folder, which "example structure"
+        // already checks under R6; what this adds is that the folder itself derives.
+        const own = child.split("/").slice(0, -1).pop();
+        const named = base === `${own}.md` ? own : base.replace(/\.md$/, "");
+        if (named !== want)
+          fail(`${child}: derives to "${want}.md" from ${spec.filename ? "its frontmatter" : `its H1 "${h1}"`}`);
+
+        // Scoped to the folder, not the type: two profiles may each have an experience at
+        // the same organisation in the same year, and they do here. What cannot collide is
+        // two files in one directory, which is also the only collision that loses a file.
+        const key = `${child.split("/").slice(0, -1).join("/")}/${want}`;
+        if (seen.has(key)) fail(`${child} and ${seen.get(key)} both derive to "${want}.md"`);
+        else seen.set(key, child);
       });
     },
   },

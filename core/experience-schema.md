@@ -10,8 +10,10 @@
 
 An experience is owned by a profile and cannot exist without it, so it nests inside the
 profile's folder rather than sitting at the root with a `profile:` field pointing back.
-Filenames are prefixed with the start year so the folder sorts chronologically:
-`2018-northwind-atelier.md`.
+The filename is not the slug of the H1, which is what R12 does by default: it is the start
+year, then a `-`, then the slug of the organisation, so the folder sorts chronologically and a
+reader recognises the period before opening it. `2018-northwind-atelier.md` for an experience
+whose H1 is `Rebuilding the order pipeline`.
 
 ## Frontmatter
 
