@@ -73,7 +73,9 @@ Decisions inside that:
 
 ## 3. The first one: `skill`
 
-Written from what `robertblust/mental-model` settled and reviewed row by row over 60 skills.
+Written from what `robertblust/mental-model` settled in re-cutting its 23 skills to 75, and
+reviewed row by row over all of them. The instance's findings are recorded in
+[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7.
 
 ```markdown
 ## Purpose
