@@ -255,10 +255,38 @@ Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded b
   does not exist; offers to add it.
 - **`companygraph-export`** — §7 of the older spec, generalised from the multi-person instance's
   distribution command. Produces `dist/<instance>-skill.zip` containing `SKILL.md` and one
-  `model/<type>.md` per root type — the folder's README first, entries separated by `---` — plus
+  `model/<type>.md` per root type — the folder's README first, then its entities — plus
   `model/meta.md`. Name and description come from the manifest; entity counts are computed at
   export time. An optional instance-owned `export/SKILL-intro.md` is spliced into `SKILL.md`
   when present, which is where the instance's persona and personalisation text lives.
+
+  **Each entity is preceded by a boundary comment naming the file it came from:**
+
+  ```markdown
+  <!-- entity: skills/api-design.md -->
+  ---
+  source: Local
+  ---
+
+  # API design
+  ```
+
+  Not a line holding `---`, which is what the reference instance's export used and what an
+  earlier draft of this said. Every entity's frontmatter opens and closes with that same line,
+  so a consolidated file of seventy-five skills holds over two hundred of them and nothing says
+  which are boundaries; the entity counts in `SKILL.md` were the only thing telling a reader how
+  many entities the file held. An entity whose body contains a horizontal rule is
+  indistinguishable from a boundary, and no program can split the file at all. `<!--` cannot
+  collide with YAML or with Markdown's own rule, the comment does not render, and naming the
+  path restores the provenance the consolidation throws away.
+
+  **`description` is written as a quoted YAML scalar**, whatever it came from. The reference
+  instance built one from a Markdown tagline holding a link and a colon, and the frontmatter did
+  not parse — a skill nobody can load, which is exactly what "uploadable as an organization or
+  personal skill" is a promise against. Markdown is reduced to plain text first (a link becomes
+  its link text, emphasis markers drop), then the result is emitted double-quoted with inner
+  quotes escaped. A description arriving from the manifest is already plain text and still needs
+  the quoting: a colon is enough.
 - **`companygraph-upgrade`** — wraps the `upgrade` command and then does what the script cannot:
   reads the release notes, walks the entities a schema change affects, and proposes the edits.
   This is where "upgrade an instance in place when core moves" actually lives; the command only
@@ -334,3 +362,43 @@ become that validator by accretion.
   learns a pack's types all wait for the first pack, as the older spec decided.
 - **The R9 reader as a package.** If a third consumer appears, the vendored single file becomes
   an npm package. Not before.
+
+---
+
+## 9. Findings from the reference instance
+
+Building `robertblust/mental-model` by hand tested this design before any of it was written,
+and §7 of
+[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) records
+what it found. The entries bearing on this document, so that whoever builds it reads them here
+rather than rediscovering them:
+
+- **§5, the export format and the description** — both fixed above rather than left as findings.
+- **§3, the manifest has no value for a hand-built instance.** `tooling: "0.0.0"` was the
+  placeholder. Whether the field allows `null`, a `"manual"` token, or whether `init --here`
+  learns to adopt a hand-built instance, is open.
+- **§5, whether the skills belong here at all.** Three of the four work as prose with no CLI
+  behind them. Either they belong in `meta-model` — portable prose, versioned with the schemas
+  they enforce — with the tooling only installing them, or "owned and upgraded by the tooling"
+  is right and the reference instance is carrying copies it will have to give back.
+- **§4, `init` against `add`.** The layout `init` writes was eighteen files and eight hashes,
+  wholly mechanical, and one commit. The fifty-four entity files `add` would have shelled took
+  five commits, and three more went to review fixes that changed no shape at all. `add` writes
+  the frontmatter keys, the headings and a table's header row; every reference it leaves empty
+  is the half that takes the time. The command saves the shell, not the work — which is the
+  right split, worth stating so the command is not measured against the wrong thing.
+- **§6, `check` implemented ad hoc is `check` implemented wrong.** Three disposable checks
+  written during that build each got a mechanical rule wrong, in three unrelated ways, and none
+  of the three *failed* — each returned something shaped like an answer. A glob swept in the
+  `README.md` the rules define out; an empty `grep -E` piped into a negated `grep -Evq` read a
+  vacuous truth as a match and flagged six correct files; a section extractor spelled its
+  lookahead `\Z` in a language where that is the literal letter, stopped at the word "Zeebe",
+  and read a twenty-three-row table as eighteen rows and one malformed one. These are checks §6
+  specifies `check` will own.
+- **§6, what a validation pass cannot reach.** `check` ending by naming the rules it did not
+  reach is necessary and not sufficient. On the agent pass the useful list is longer than a list
+  of rule numbers and the things on it are not rules: core declares no `enum` anywhere, so R8
+  passes with nothing to exercise it; a `source-id` resolves against nothing this repository can
+  reach, so the field is a pointer for a person; and entity bodies are read for shape rather
+  than for sense. Core has since given every schema `## Writing rules`, which is what the agent
+  pass reads for the third of those.

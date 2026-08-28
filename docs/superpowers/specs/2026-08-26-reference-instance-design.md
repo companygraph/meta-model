@@ -413,13 +413,15 @@ Found in the building:
   have nothing in common. What they share is that none of them failed — each returned something
   shaped like an answer. These are checks §6 specifies `check` will own, implemented ad hoc three
   times and wrong three times.
-- **Tooling §5, `companygraph-export`** — the consolidated `model/<type>.md` separates entities
+- **Tooling §5, `companygraph-export`** — *fixed in the tooling spec; an entity is now preceded
+  by a boundary comment naming its file.* The consolidated `model/<type>.md` separated entities
   with a line holding `---`, and every entity's YAML frontmatter opens and closes with the same
   line. `model/skills.md` carries sixty-nine of them for twenty-three skills, and nothing in the
   file says which three are a boundary. The counts in `SKILL.md` are the only thing that tells a
   reader how many entities the file holds.
-- **Tooling §5, the export skill** — the procedure took `SKILL.md`'s `description` from the
-  README's `>` line as written, Markdown and all. That line held a link and a colon, and the
+- **Tooling §5, the export skill** — *fixed in the tooling spec; `description` is emitted as a
+  quoted YAML scalar, whatever it came from.* The procedure took `SKILL.md`'s `description` from
+  the README's `>` line as written, Markdown and all. That line held a link and a colon, and the
   frontmatter built from it did not parse as YAML. §5 calls the export "uploadable as an
   organization or personal skill"; a skill nobody can load is exactly what that promise was
   made against.
