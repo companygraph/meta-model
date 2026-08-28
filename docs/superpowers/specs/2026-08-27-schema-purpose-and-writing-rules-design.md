@@ -5,8 +5,10 @@
 > entities. This proposes one new section per schema, and writes the first one — for
 > `skill` — from the rules the instance settled.
 
-Status: proposal. Nothing in core changes until this is agreed; the instance that produced
-it (`robertblust/mental-model`) carries the rules in its own spec meanwhile.
+Status: agreed. §4 has landed as R11 and R12 in `v0.2.0`, with two corrections it needed and
+one placement reversed — see the note at the end of §4. The rest is being built one schema at
+a time; the instance that produced it (`robertblust/mental-model`) carries the `skill` rules in
+its own spec meanwhile.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) §5
 (schemas are Markdown, enforced by agents) and `CONVENTIONS.md` R9 (the fixed shape). It
@@ -148,6 +150,26 @@ that derive to the same filename are an error, reported by `check`.
 
 ---
 
+### What §4 became
+
+Both halves landed in `v0.2.0`, and building them corrected the proposal twice.
+
+- **R11** is the block-sequence rule as proposed, enforced mechanically by `verify/check.mjs`.
+- **R12** is the filename derivation, and it is in `CONVENTIONS.md` rather than the tooling
+  spec's `add` as proposed here. A filename is written by whoever writes the file, and the
+  first instance was written by hand: a rule only a program can consult is not a convention.
+  The tooling spec points at R12 instead.
+- **An `experience` does not derive from its H1**, which the derivation above assumes of
+  everything. `example/` files `2018-northwind-atelier.md` under the H1
+  `Rebuilding the order pipeline` — the name is the start year and the organisation, so the
+  folder sorts chronologically. R12 therefore defines the *slug*, states the H1 as the
+  default, and lets a type declare its own derivation in its own schema.
+- **A collision is per folder, not per type.** Scoping it to the type, as this proposed,
+  failed the repository's own example: two profiles each hold a 2022 experience at Beacon
+  Systems and both files are correctly named.
+
+---
+
 ## 5. The other five, to be written
 
 The instance's build reports carry the material for each; the texts are not drafted here so
@@ -177,19 +199,22 @@ that each is written against its own evidence, not by analogy with `skill`:
 
 - `CONVENTIONS.md` R9: add the two optional sections to the fixed shape, after `## Sections`
   and its tables, in that order, with those names.
-- `CONVENTIONS.md`: the block-sequence rule of §4, numbered after R10, and a pointer to the
-  filename derivation, which lives in the tooling spec's `add`.
-- `example/`: its experiences' `skills:` lists rewritten as block sequences.
+- ✅ `CONVENTIONS.md`: the block-sequence rule of §4 as R11, and the filename derivation as
+  R12 — in `CONVENTIONS.md`, not the tooling spec.
+- ✅ `example/`: its experiences' `skills:` lists rewritten as block sequences.
 - `core/*-schema.md`: each gains the two sections; `skill` from §3, the other five drafted
   against §4 and the instance's evidence.
 - `example/`: its three skills rewritten to the `skill` rules — the example is what adopters
   copy.
-- `verify/check.mjs`: asserts the two sections exist on every core schema, in order, after
-  the tables, and that `## Writing rules` is a list. Does not read the rules — that is the
-  agent's.
+- `verify/check.mjs`: asserts the two sections, where a schema carries them, sit in that order
+  after the tables, and that `## Writing rules` is a list. It requires them of every core
+  schema only once all six are written — until then a missing pair is work not yet done, not a
+  failure. Either way it does not read the rules; that is the agent's.
 - `.claude/skills/companygraph-validate` (in the tooling spec §5): reads `## Writing rules`
   per type and reports per rule, the same way it reports R1–R10.
-- Release: `0.2.0` — a vocabulary change, minor bump, per the release policy.
+- Release: a MINOR bump per the tooling spec's §2 rule — `example/`'s skills are rewritten and
+  every core schema grows required prose, so an instance vendoring core has files to change.
+  `0.2.0` went to §4; this is `0.3.0`.
 
 ---
 
