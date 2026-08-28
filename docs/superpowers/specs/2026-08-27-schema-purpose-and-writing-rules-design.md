@@ -189,9 +189,12 @@ that each is written against its own evidence, not by analogy with `skill`:
   a period *still running* says "Ongoing." there, because an absent field is not something a
   reader sees. `example/` gains a talk, since a rule its example never shows is a rule adopters
   get wrong.
-- **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
-  it means` is written so that two assessors would place the same person the same way; a
-  rung is defined in the instance's own words; no external ladder is cited.
+- ✅ **`proficiency-level`** — written. All three sketched rules held. Two came from reading the
+  four rungs themselves: every one is written about "it" rather than about a skill, which is
+  what lets one ladder serve every claim — and, incidentally, what would let it serve a type
+  that is not `skill` at all. And each rung names what it has that the rung below does not,
+  which is the difference between a ladder and four adjectives. Added: a rung is about
+  capability and never about seniority, tenure or title.
 - ✅ **`value`** — written, and the only one of the five this sketch got right in every part;
   it needed no correcting. Two things it did not have. The statement rule: a statement is a
   sentence someone could disagree with, which is what separates a value from a slogan. And a
@@ -201,8 +204,12 @@ that each is written against its own evidence, not by analogy with `skill`:
   instead of committing to one, and nothing can be held to a description. Both example values
   are rewritten to the first person the rule states, in the "We" a company of more than one
   uses.
-- **`source`** — purpose: where a page's facts are mastered; rules: the description says what
-  the source holds and whether anything syncs it.
+- ✅ **`source`** — written. The sketched rule held and three joined it, one of them answering
+  a §7 finding. §7 records that a `source-id` "makes the field a pointer for a person and
+  unchecked by anything". Nothing can check it — but the source can say what one *is*, and the
+  instance's `rob-cv` already does: "`source-id` is the entry's `id` in its `content/` folder".
+  That is now a rule, and `example/`'s Google Workspace source failed it — two profiles carry a
+  `source-id` there and nothing said what the number was.
 
 ---
 
