@@ -4,9 +4,10 @@
 > the tooling will lay one out. It is the first thing that can show the extraction was wrong,
 > and the first thing that can show the tooling design is wrong — before either is built on.
 
-Status: built. Findings in §7; each is a follow-up, not a change made here. The instance is a
-new repository, `robertblust/mental-model`; this spec lives here because the findings it
-produces are about core and the tooling, not about one person's CV.
+Status: built, and still moving — §7 records what it taught, including what it taught after
+the first pass. Each finding is a follow-up unless its entry says core has already acted. The
+instance is a new repository, `robertblust/mental-model`; this spec lives here because the
+findings it produces are about core and the tooling, not about one person's CV.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §6
 (splitting the agent instructions), §7 (an instance ships as a skill), §9 (the first slice) —
@@ -316,9 +317,45 @@ Found in the building:
   them: a skill swapped for a better fit on the experience that already carried it, that same
   skill's replacement swapped onto a second experience, and the skill it displaced there moved
   on to a third — and two levels lowered from Proficient to Competent for resting on a single
-  role. The cut caught nothing because the list came from a
-  source that had already been cut; the judgement it was built to apply landed on the level and
-  the placement instead. Where evidence lives is what the second pass actually tests.
+  role. Where evidence lives is what a second pass over the table actually tests. It cannot
+  test whether the list itself is right, because every input to it — the CV's groups, the
+  table, the experiences — is the same source read again. What was wrong with the list needed
+  a check from outside it, and got one; that is the next entry.
+- **Core, `skill`, the grain and the person** — the twenty-three were cut from the CV's tag
+  cloud by feel, and every `## In practice` read the schema's "what someone using this skill
+  actually does" as *what this person did*: employers, years and numbers, in a file many
+  profiles are meant to claim. Two defects with one cause. A skill file must be person-neutral
+  to be claimable at all — the history belongs in the profile's Skills table, which already
+  holds the level and the evidence. And the grain was arbitrary: "Database design and
+  operation" is two skills to anyone who has hired for either, and nothing existed to check a
+  cut against. The instance re-cut them against four public vocabularies compared row by row —
+  SFIA 9, ESCO v1.2, O\*NET, Lightcast Open Skills — and adopted none of them: SFIA names the
+  leadership, architecture and governance skills at the right grain and has no modern layer at
+  all, ESCO covers about half the rows and generically, Lightcast has the market grain under a
+  licence that is not open, and O\*NET is products. The vocabulary is therefore the instance's
+  own, written in its own words at the grain a job posting names — seventy-five skills where
+  there were twenty-three. Nothing is cited, quoted or vendored, and the licence question
+  disappears with the copying. The schema had nowhere to say any of this, which is the next
+  entry but one.
+- **Core, every schema** — a schema says the *shape* of an entity and nothing about its
+  *purpose* or how to write one. Shape alone does not produce usable entities: all twenty-three
+  first-cut skills satisfied `skill-schema.md` in every particular and all twenty-three were
+  wrong. The rules that make a good one — person-neutral, imperative without a subject, the
+  definition starting with the thing itself, products only in a closing `Typical tools:` clause
+  — are writing rules, and the R9 fixed shape has no section that holds them. Proposed
+  separately as `2026-08-27-schema-purpose-and-writing-rules-design.md`.
+- **Core, the type set, products** — PostgreSQL, Camunda, Claude Code are not skills, and the
+  model has no type for them. They survive here as prose in a `Typical tools:` clause. Whether
+  a product becomes a type of its own is a pack question, unasked so far.
+- **Core, the type set, domain knowledge** — half of what makes a person hireable is the domain
+  they know: hospitality technology, financial services, insurance, real estate, for this
+  profile. It is not a skill — there is no "In practice" for knowing how a hotel works — and no
+  core type holds it. Roadmap item 3 names `domain`; until it exists the instance holds its
+  domains back rather than force them into `skill`, so the missing type is blocking content
+  that is already written.
+- **Meta-model, `example/`** — its three skills are written the first-cut way, one person's
+  history and all. The example is what adopters copy, so it needs the same rewrite as soon as
+  core says what the rule is.
 - **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
   own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
   cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:
@@ -330,7 +367,7 @@ Found in the building:
   those matter beyond this instance: core declares no `enum` field anywhere, so R8 passed with
   nothing to exercise it; no `source-id` was resolved, because the source it points into has no
   address this repository can reach, which makes the field a pointer for a person and unchecked
-  by anything; and the bodies of twenty-three skills and twenty experiences were read for shape,
+  by anything; and the skill and experience bodies it walked were read for shape,
   not for sense. §6 has `check` end by naming the rules it did not reach. On an agent pass the
   useful list is longer than a list of rule numbers, and the things on it are not rules.
 - **Tooling §4, `init` against `add`** — the layout `init` writes is eighteen files and eight
