@@ -61,9 +61,12 @@ vendored, so the release comes first.
 
   `shape: 1` is the R9 fixed shape as it stands. `0.1.0`, not `1.0.0`: the six types are
   usable — two instances run on them and a third is about to — but this very instance exists
-  to find out whether they are right, and roadmap item 3 adds types. Pre-1.0, every vocabulary
-  change bumps the minor, one per roadmap slice; `1.0.0` is for when the remaining clusters
-  are in and §7's findings are resolved. Not `0.0.1`, which would say nothing is usable yet.
+  to find out whether they are right, and roadmap item 3 adds types. `1.0.0` is for when the
+  remaining clusters are in and §7's findings are resolved. Not `0.0.1`, which would say
+  nothing is usable yet. (This bullet also said every pre-1.0 vocabulary change bumps the
+  minor, one per roadmap slice. The tooling spec's §2 now decides it by what an instance must
+  do about a release, which this spec's own findings produced two of: an optional `## Ending`
+  asks an instance for nothing.)
 - `verify/check.mjs` gains the check the tooling spec promises: the manifest parses, `version`
   is a semantic version, `shape` is a positive integer, and — when `HEAD` carries a `v*` tag —
   the tag equals `v<version>`. No tag is not a failure; a tag that disagrees is.
