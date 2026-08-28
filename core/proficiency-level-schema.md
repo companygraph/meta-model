@@ -25,3 +25,26 @@ is then one edit, in one file.
 | `# [Label]` | Yes | The canonical name. Every assessment references this exact string. |
 | `> [Summary]` | Yes | Single-line summary of what the level claims |
 | `## What it means` | Yes | What someone at this level can actually do |
+
+## Purpose
+
+A proficiency level is one rung of the single ladder every claim in the instance is made
+against. It answers "what does this word mean when someone claims a skill at it?" — for the
+person making the claim, and for the person weighing it. Its whole value is that the definition
+sits in one file: two assessments at the same rung mean the same thing, and changing what a
+rung means is one edit rather than a hundred.
+
+## Writing rules
+
+- `## What it means` is written so that two assessors reading it would place the same person on
+  the same rung. A rung that cannot do that is not yet a rung.
+- It describes what someone at this level does with *it* — the thing being claimed — and never
+  what that thing is. Every rung is claimed against every skill, so anything specific to one
+  skill does not belong on a rung.
+- A rung names what it has that the rung below does not. Working unsupervised, choosing between
+  alternatives, knowing where the thing breaks down: each rung earns its place by a difference
+  someone could observe, or the ladder has fewer rungs than it claims.
+- The ladder is the instance's own, in its own words. No external scale — SFIA, Dreyfus, a
+  set of HR bands — is cited or reproduced, for the same reason a skill cites none.
+- A rung is about capability, never about seniority, tenure or job title. Those are the
+  organisation's business and they move for reasons that have nothing to do with the claim.
