@@ -293,6 +293,11 @@ Known before the first file is written:
   each a dated period with an organisation, and the type holds them, but "Achievements" is
   the wrong heading for a talk and `organisation` is a stretch for a conference. The remaining
   clusters (identity, direction, …) may or may not be where these belong.
+- **Core, `experience` — how a period ends** — a period carries `end` and nothing that says why
+  it ended. The date is read into regardless: the reader supplies a reason, and the model's
+  silence is not neutral. The first instance hit this on a founder's departure, where the honest
+  sentence had nowhere to go and `## Achievements` was the only section that would hold it — and
+  a departure is not an achievement. Core has since gained an optional `## Ending`.
 - **Core, `date`** — the CV keeps years; the schema wants months. The coercion to `-01` is a
   false precision the model now asserts.
 
