@@ -353,9 +353,23 @@ Found in the building:
 - **Core, the type set, domain knowledge** — half of what makes a person hireable is the domain
   they know: hospitality technology, financial services, insurance, real estate, for this
   profile. It is not a skill — there is no "In practice" for knowing how a hotel works — and no
-  core type holds it. Roadmap item 3 names `domain`; until it exists the instance holds its
-  domains back rather than force them into `skill`, so the missing type is blocking content
-  that is already written.
+  core type holds it. The instance holds its domains back rather than force them into `skill`,
+  so this is the one finding here that is blocking content already written.
+
+  It will not arrive with the roadmap's Domain cluster, which this entry first assumed. That
+  cluster holds one type, `concept`, and the design spec is explicit about what it is: the
+  company's *own* vocabulary — a hotel operator models booking and folio, a consultancy models
+  engagement and deliverable. Company-scoped, seeded per company type, and the place where
+  company type actually varies. An industry a person has worked in is the opposite of that:
+  external, shared between companies, and unchanged by who is describing it. Widening `concept`
+  to hold both would put two things in one schema that share no field and no reader, so
+  `concept` stays as designed and this needs a type of its own.
+
+  Deferred, and not for want of a design. CLAUDE.md has core as the union of the two instances
+  rather than one extended to fit the other, and only the company of one has asked for this.
+  The multi-person instance decides it: if it turns out to carry industry knowledge in some
+  shape of its own, that shape is evidence and the type gets designed against both. If it does
+  not, one instance wanting a type is what a pack is for.
 - **Meta-model, `example/`** — its three skills are written the first-cut way, one person's
   history and all. The example is what adopters copy, so it needs the same rewrite as soon as
   core says what the rule is. Core has since gained `## Purpose` and `## Writing rules` on
