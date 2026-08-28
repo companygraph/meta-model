@@ -16,3 +16,8 @@ skills: [Java Programming]
   the next morning to seconds.
 - Established that the speed-up mattered less than anyone expected, and why — which set the
   direction for the work that followed.
+
+## Ending
+
+Left in January 2022 when the pipeline work was done and the next problem worth four years was
+somewhere else.
