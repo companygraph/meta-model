@@ -175,10 +175,13 @@ Both halves landed in `v0.2.0`, and building them corrected the proposal twice.
 The instance's build reports carry the material for each; the texts are not drafted here so
 that each is written against its own evidence, not by analogy with `skill`:
 
-- **`profile`** — purpose: the one page that says who this is and what they claim; rules:
-  Evidence is a concrete fact (a number, a system, a named outcome) and never the level
-  restated; a level follows a stated rubric; the summary is the person's, not the
-  organisation's.
+- ✅ **`profile`** — written. The three sketched here held, and the instance's table added
+  three the sketch did not have: a level is weighed against the evidence beside it rather than
+  against how long the person has done it (two of the instance's levels came down for resting
+  on a single role); a skill with no evidence has no row, because the table *is* the claim;
+  and the person-neutrality of `skill` has a matching half here — the history lives in this
+  table and nowhere else. `example/`'s two profiles already satisfied all six, which the three
+  skills did not.
 - **`experience`** — purpose: one dated period evidencing skills; rules: every skill listed
   is one the bullets show; bullets state outcomes, one idea each; a one-off (a talk) has no
   `end` and the tagline says it was one.

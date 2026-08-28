@@ -39,3 +39,28 @@ operation and an orphaned experience is unrepresentable.
 An assessment is a table row rather than a frontmatter field because it is a claim with prose
 attached, not a short fact. A table renders where a reader looks, has no quoting hazard around
 a colon or a wrapped line, and declares its columns here exactly as a frontmatter field does.
+
+## Purpose
+
+A profile is the one page that says who a person is and what they claim — the entity every
+experience is owned by and every skill claim is made from. It answers "who is this, what can
+they do, and what is that judgement resting on?" for someone deciding whether to work with
+them. It is not a curriculum vitae: what happened, when and where lives in the experiences the
+profile owns, and what a capability *is* lives in the skill. What only the profile can hold is
+the claim — this person, this skill, at this level, on this evidence.
+
+## Writing rules
+
+- The tagline and `## Summary` are the person's own, in their own voice: what they do and what
+  runs through it. Not their employer's description of the role, and not a job advertisement.
+- An Evidence cell states a fact that can be checked — a system, an organisation, a number, a
+  named outcome. "Extensive experience" and "deep knowledge" are not evidence.
+- Evidence never restates the level. If removing the Level column would lose nothing, the
+  evidence is describing confidence rather than the work.
+- A level is weighed against the evidence beside it and the rung's own definition, not against
+  how long the person has done it. Evidence that names one engagement supports a lower rung
+  than evidence that names three.
+- One row per skill claimed. A skill the person can name but not evidence has no row: the
+  table is the claim, and a claim needs something under it.
+- The Skills table is where a person's history with a skill lives. The skill file stays
+  person-neutral, so nothing here belongs there and nothing there belongs here.
