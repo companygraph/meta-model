@@ -184,16 +184,21 @@ result renames the entity, which is the honest fix: R2 makes the H1 canonical an
 filename out of every reference, so a filename is free to be ugly.
 
 **By default a file is named for the slug of its H1**, and a folder entity's folder likewise
-(R6). A type whose folder wants another order says so in its own schema, and one does:
-`experience` is named for its start year and then its organisation, so the folder sorts
-chronologically — `2018-northwind-atelier.md` for an experience whose H1 is
-`Rebuilding the order pipeline`. What may vary is which strings go into the name; the slug is
-the same everywhere.
+(R6). A type whose files are named some other way says so in its own schema, and one is:
+`experience` is named for its start year, a `-`, and a slug the author chooses to identify the
+period — `2018-northwind-atelier.md` for an experience whose H1 is
+`Rebuilding the order pipeline`.
 
-Two entities in one folder whose names derive to the same filename are an error. The folder,
-not the type: an owned type shares a folder only with its owner's other entities, so two
-profiles may each hold an experience at the same organisation in the same year, and both files
-are correctly named.
+That one is *chosen* rather than derived, and the schema says so rather than naming a field to
+derive it from. An experience's H1 says what happened, which neither sorts nor scans in a
+folder listing; `organisation` is optional, so it cannot be what a required filename comes
+from; and the same organisation recurs across periods, so it does not identify one anyway. What
+a stated form still fixes is everything worth fixing: the prefix is the year in `start`, the
+rest is a slug by the definition above, and the whole is unique in its folder.
+
+Two entities in one folder that end up with the same filename are an error. The folder, not the
+type: an owned type shares a folder only with its owner's other entities, so two profiles may
+each hold an experience named the same way and both files are correctly named.
 
 This is here rather than in a tooling document because a filename is written by whoever writes
 the file, and the first instance was written by hand. A rule only a program can consult is not

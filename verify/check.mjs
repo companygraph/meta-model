@@ -7,7 +7,8 @@
 // folder and filename shape the types imply, and that the references under example/profiles/
 // resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
 // types `ref → <type>` or `array of ref → <type>`, that a list-valued field is written as a
-// block sequence, and that every filename derives from the entity in it. "## Skills" is the one body table it knows to look for; a second
+// block sequence, and that every filename derives from the entity in it, or has the form its
+// schema states. "## Skills" is the one body table it knows to look for; a second
 // table-valued section would need naming here. It does not validate
 // example/ against the schemas: no date is parsed, no file is checked for the sections its
 // schema requires, an unknown frontmatter field passes, and no file under example/values/ is
@@ -37,10 +38,11 @@ export const TYPES = [
     type: "experience",
     folder: "profiles/<profile>/experiences",
     owner: "profile",
-    // R12's default is the slug of the H1; a type whose folder wants another order says so in
-    // its own schema, and this one does — the start year, then the organisation, so the folder
-    // sorts chronologically. Stated here for the same reason `folder` is: never derived.
-    filename: { year: "start", from: ["organisation"] },
+    // R12's default is the slug of the H1; a type named some other way says so in its own
+    // schema, and this one does — the start year, then a slug the author chooses. Chosen, not
+    // derived, so what is checkable is the form: the year prefix must be the year in `start`
+    // and the rest must be a slug. Stated here for the same reason `folder` is.
+    filename: { year: "start", rest: "chosen" },
   },
 ];
 
@@ -675,7 +677,7 @@ const CHECKS = [
     // `README.md` is never an entity (R6), so it is the one file skipped. A file whose folder
     // matches no type has no derivation to check, the same silence "example references" keeps
     // and for the same reason: nothing declares what it is.
-    name: "filenames derive from their entity",
+    name: "filenames derive, or take the form their schema states",
     rule: "R12",
     run() {
       const seen = new Map();
@@ -688,30 +690,30 @@ const CHECKS = [
         const h1 = text.match(/^#\s+(.+?)\s*$/m)?.[1];
         if (!h1) return fail(`${child}: no H1, so nothing derives a filename (R2)`);
 
-        let want;
-        if (!spec.filename) want = slug(h1);
-        else {
-          const fmText = frontmatterOf(text);
-          const parts = [];
-          if (spec.filename.year) {
-            const v = fmScalar(fmText, spec.filename.year);
-            if (!v) return fail(`${child}: no \`${spec.filename.year}\`, which its filename derives from`);
-            parts.push(v.slice(0, 4));
-          }
-          for (const field of spec.filename.from) {
-            const v = fmScalar(fmText, field);
-            if (!v) return fail(`${child}: no \`${field}\`, which its filename derives from`);
-            parts.push(slug(v));
-          }
-          want = parts.join("-");
-        }
-
         // A folder entity's own file is named for its folder, which "example structure"
         // already checks under R6; what this adds is that the folder itself derives.
         const own = child.split("/").slice(0, -1).pop();
         const named = base === `${own}.md` ? own : base.replace(/\.md$/, "");
-        if (named !== want)
-          fail(`${child}: derives to "${want}.md" from ${spec.filename ? "its frontmatter" : `its H1 "${h1}"`}`);
+
+        let want = null;
+        if (!spec.filename) {
+          want = slug(h1);
+          if (named !== want) fail(`${child}: derives to "${want}.md" from its H1 "${h1}"`);
+        } else {
+          // Chosen, not derived, so the name is checked against its stated form instead of
+          // against a string. A rule that guesses the author's label would fail every file
+          // whose label is the period rather than the place — which is most of them.
+          const year = fmScalar(frontmatterOf(text), spec.filename.year);
+          if (!year) return fail(`${child}: no \`${spec.filename.year}\`, which its filename begins with`);
+          const m = named.match(/^(\d{4})-(.+)$/);
+          if (!m) fail(`${child}: must be named "<year>-<slug>.md", per ${type}-schema.md`);
+          else {
+            if (m[1] !== year.slice(0, 4))
+              fail(`${child}: begins with ${m[1]} but \`${spec.filename.year}\` says ${year}`);
+            if (slug(m[2]) !== m[2]) fail(`${child}: "${m[2]}" is not a slug, per R12`);
+          }
+          want = named;
+        }
 
         // Scoped to the folder, not the type: two profiles may each have an experience at
         // the same organisation in the same year, and they do here. What cannot collide is
