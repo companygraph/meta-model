@@ -250,6 +250,17 @@ Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded b
   script cannot reach: R1, R2, R3, R5, R7, R8, and whether prose that crept into the instance's
   rules is really about modelling. The generated `AGENTS.md` instructs that it runs before every
   commit.
+
+  It reads the rules rather than carrying a list of them. A skill naming `R1–R10` is wrong the
+  first time core adds a rule and says nothing about it — which happened, in the reference
+  instance, the day R11 and R12 shipped. The same holds for the modelling rules themselves: a
+  skill that restates what a filename derivation is becomes another place for it to disagree,
+  which is the failure R12 exists to end.
+
+  It also reads each type's `## Writing rules` from its schema and reports those per rule, the
+  same way. That is what the section is for, and it is the half no script reaches: whether an
+  Evidence cell is a fact, whether a skill's prose is person-neutral, whether a value commits
+  in the first person.
 - **`companygraph-add-entity`** — takes a prompt, runs `companygraph add` for the shell, fills the
   body from the prompt, then runs validate on the result. Never invents a referenced entity that
   does not exist; offers to add it.
