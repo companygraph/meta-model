@@ -182,9 +182,13 @@ that each is written against its own evidence, not by analogy with `skill`:
   and the person-neutrality of `skill` has a matching half here — the history lives in this
   table and nowhere else. `example/`'s two profiles already satisfied all six, which the three
   skills did not.
-- **`experience`** — purpose: one dated period evidencing skills; rules: every skill listed
-  is one the bullets show; bullets state outcomes, one idea each; a one-off (a talk) has no
-  `end` and the tagline says it was one.
+- ✅ **`experience`** — written. The first two sketched rules held. The third was wrong: the
+  instance gives a one-off `end` equal to `start` rather than leaving `end` absent, which is
+  the only thing that stops a talk reading as still running — a tagline saying it was a talk
+  does not reach the field a reader filters on. The tagline rule survives on the other side:
+  a period *still running* says "Ongoing." there, because an absent field is not something a
+  reader sees. `example/` gains a talk, since a rule its example never shows is a rule adopters
+  get wrong.
 - **`proficiency-level`** — purpose: one rung of a ladder every claim shares; rules: `## What
   it means` is written so that two assessors would place the same person the same way; a
   rung is defined in the instance's own words; no external ladder is cited.
