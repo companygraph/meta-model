@@ -4,9 +4,10 @@
 > the tooling will lay one out. It is the first thing that can show the extraction was wrong,
 > and the first thing that can show the tooling design is wrong — before either is built on.
 
-Status: design agreed, nothing built. The instance is a new repository,
-`robertblust/mental-model`; this spec lives here because the findings it produces are about
-core and the tooling, not about one person's CV.
+Status: built, and still moving — §7 records what it taught, including what it taught after
+the first pass. Each finding is a follow-up unless its entry says core has already acted. The
+instance is a new repository, `robertblust/mental-model`; this spec lives here because the
+findings it produces are about core and the tooling, not about one person's CV.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §6
 (splitting the agent instructions), §7 (an instance ships as a skill), §9 (the first slice) —
@@ -301,4 +302,98 @@ Known before the first file is written:
 - **Core, `date`** — the CV keeps years; the schema wants months. The coercion to `-01` is a
   false precision the model now asserts.
 
-The rest is written as it is found.
+Found in the building:
+
+- **Core, `experience`, `end`** — an absent `end` means the period is ongoing, and six of the
+  twenty entries are not periods at all: two conference talks, a certification, a published
+  case study and two projects the CV dates by year alone. No end date was invented for them,
+  so a talk given in 2022 now reads as still running. The field is honest about roles and
+  silently wrong about events.
+- **Core, `profile`, the Skills table** — the skill list was cut twice and neither pass removed
+  anything. Twenty-three capabilities were drawn up from the CV's groups, twenty-three earned an
+  evidenced row in the profile's table, and twenty-three were named by at least one experience;
+  the table ended with twenty-three rows. What the two passes did produce, on review, was three
+  `skills:` changes across three experience files — not one skill relocated between two of
+  them: a skill swapped for a better fit on the experience that already carried it, that same
+  skill's replacement swapped onto a second experience, and the skill it displaced there moved
+  on to a third — and two levels lowered from Proficient to Competent for resting on a single
+  role. Where evidence lives is what a second pass over the table actually tests. It cannot
+  test whether the list itself is right, because every input to it — the CV's groups, the
+  table, the experiences — is the same source read again. What was wrong with the list needed
+  a check from outside it, and got one; that is the next entry.
+- **Core, `skill`, the grain and the person** — the twenty-three were cut from the CV's tag
+  cloud by feel, and every `## In practice` read the schema's "what someone using this skill
+  actually does" as *what this person did*: employers, years and numbers, in a file many
+  profiles are meant to claim. Two defects with one cause. A skill file must be person-neutral
+  to be claimable at all — the history belongs in the profile's Skills table, which already
+  holds the level and the evidence. And the grain was arbitrary: "Database design and
+  operation" is two skills to anyone who has hired for either, and nothing existed to check a
+  cut against. The instance re-cut them against four public vocabularies compared row by row —
+  SFIA 9, ESCO v1.2, O\*NET, Lightcast Open Skills — and adopted none of them: SFIA names the
+  leadership, architecture and governance skills at the right grain and has no modern layer at
+  all, ESCO covers about half the rows and generically, Lightcast has the market grain under a
+  licence that is not open, and O\*NET is products. The vocabulary is therefore the instance's
+  own, written in its own words at the grain a job posting names — seventy-five skills where
+  there were twenty-three. Nothing is cited, quoted or vendored, and the licence question
+  disappears with the copying. The schema had nowhere to say any of this, which is the next
+  entry but one.
+- **Core, every schema** — a schema says the *shape* of an entity and nothing about its
+  *purpose* or how to write one. Shape alone does not produce usable entities: all twenty-three
+  first-cut skills satisfied `skill-schema.md` in every particular and all twenty-three were
+  wrong. The rules that make a good one — person-neutral, imperative without a subject, the
+  definition starting with the thing itself, products only in a closing `Typical tools:` clause
+  — are writing rules, and the R9 fixed shape has no section that holds them. Proposed
+  separately as `2026-08-27-schema-purpose-and-writing-rules-design.md`.
+- **Core, the type set, products** — PostgreSQL, Camunda, Claude Code are not skills, and the
+  model has no type for them. They survive here as prose in a `Typical tools:` clause. Whether
+  a product becomes a type of its own is a pack question, unasked so far.
+- **Core, the type set, domain knowledge** — half of what makes a person hireable is the domain
+  they know: hospitality technology, financial services, insurance, real estate, for this
+  profile. It is not a skill — there is no "In practice" for knowing how a hotel works — and no
+  core type holds it. Roadmap item 3 names `domain`; until it exists the instance holds its
+  domains back rather than force them into `skill`, so the missing type is blocking content
+  that is already written.
+- **Meta-model, `example/`** — its three skills are written the first-cut way, one person's
+  history and all. The example is what adopters copy, so it needs the same rewrite as soon as
+  core says what the rule is.
+- **Core, R9 against R10** — R9 says the path under `## File Location` "begins with the type's
+  own folder"; R10 says an owned type's File Location nests inside its owner. `experience`
+  cannot satisfy both, and the vendored `experience-schema.md` satisfies R10:
+  `profiles/<profile>/experiences/*.md`. The walk over all six schemas at `v0.1.0` found nothing
+  else — heading order, the single frontmatter table, the `Table.` section and its column table,
+  the closed type vocabulary and the plain-dash separators all hold.
+- **Tooling §5 and §6, what a validation pass cannot reach** — `companygraph-validate` reported
+  no failure on R1 through R10 over 54 entities and then named what it had not touched. Three of
+  those matter beyond this instance: core declares no `enum` field anywhere, so R8 passed with
+  nothing to exercise it; no `source-id` was resolved, because the source it points into has no
+  address this repository can reach, which makes the field a pointer for a person and unchecked
+  by anything; and the skill and experience bodies it walked were read for shape,
+  not for sense. §6 has `check` end by naming the rules it did not reach. On an agent pass the
+  useful list is longer than a list of rule numbers, and the things on it are not rules.
+- **Tooling §4, `init` against `add`** — the layout `init` writes is eighteen files and eight
+  sha256 hashes, wholly mechanical, and it was one commit. The fifty-four entity files `add`
+  would have shelled took five, and three further commits went to review fixes that changed no
+  shape at all. `add` writes the frontmatter keys, the headings and a table's header row; every
+  reference it would leave empty is the half that took the time. The command saves the shell, not
+  the work — which is the right split, and worth stating so the command is not measured against
+  the wrong thing.
+- **Tooling §6, `check` as one implementation** — three disposable checks written during the
+  build each got a mechanical rule wrong, in three unrelated ways: one walked a type folder with
+  a glob that swept in the `README.md` the rules define out of it; one piped an empty `grep -E`
+  into a negated `grep -Evq`, read the vacuous truth as a match and flagged six correct files;
+  one, in the validation pass itself, was a section extractor whose lookahead spelled `\Z` in a
+  language where that is the literal letter, so it stopped at the word "Zeebe" and read the
+  profile's twenty-three-row table as eighteen rows and one malformed one. The three mistakes
+  have nothing in common. What they share is that none of them failed — each returned something
+  shaped like an answer. These are checks §6 specifies `check` will own, implemented ad hoc three
+  times and wrong three times.
+- **Tooling §5, `companygraph-export`** — the consolidated `model/<type>.md` separates entities
+  with a line holding `---`, and every entity's YAML frontmatter opens and closes with the same
+  line. `model/skills.md` carries sixty-nine of them for twenty-three skills, and nothing in the
+  file says which three are a boundary. The counts in `SKILL.md` are the only thing that tells a
+  reader how many entities the file holds.
+- **Tooling §5, the export skill** — the procedure took `SKILL.md`'s `description` from the
+  README's `>` line as written, Markdown and all. That line held a link and a colon, and the
+  frontmatter built from it did not parse as YAML. §5 calls the export "uploadable as an
+  organization or personal skill"; a skill nobody can load is exactly what that promise was
+  made against.
