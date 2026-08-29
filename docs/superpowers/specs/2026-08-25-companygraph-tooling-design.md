@@ -146,7 +146,12 @@ Decisions inside that:
   `.companygraph/` exists, and otherwise only adds. It never renames or moves existing folders.
 - **Declared packs** is a manifest field from day one so an agent can tell an intentionally
   absent type from a forgotten one (§8 of the older spec). It is an empty list until the first
-  pack exists; `init --pack` and a `meta/packs/` layout wait for that.
+  pack exists; `init --pack` waits for that. The layout does not: core 0.4.0 vendors each unit
+  as `meta/<unit>/`, so a pack is a sibling of `core` named for itself rather than nested under
+  a `packs/` folder. A directory named for a category rather than for its contents is an
+  indirection that buys nothing — `node_modules/lodash`, not `node_modules/packages/lodash` —
+  and settling it at 0.4.0 costs nothing because that release moves the schemas anyway. `core`
+  is a reserved unit name. What a pack *is* remains undesigned, as decided.
 
 ### The manifest
 
@@ -369,8 +374,9 @@ become that validator by accretion.
   it by hand.
 - **A non-Claude export.** A plain zip of `model/` without `SKILL.md` is cheap; whether anyone
   wants it is unknown.
-- **Packs.** The manifest has the field. `init --pack`, `meta/packs/<name>/` and how `check`
-  learns a pack's types all wait for the first pack, as the older spec decided.
+- **Packs.** The manifest has the field, and 0.4.0 settles where a pack lands —
+  `meta/<name>/`, a sibling of `meta/core/`. `init --pack` and how `check` learns a pack's types
+  still wait for the first pack, as the older spec decided.
 - **The R9 reader as a package.** If a third consumer appears, the vendored single file becomes
   an npm package. Not before.
 

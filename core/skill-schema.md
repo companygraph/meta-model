@@ -4,7 +4,7 @@
 
 ## File Location
 
-`skills/*.md`
+`model/skills/*.md`
 
 A skill owns nothing, so it is a file. Nothing owns a skill either: a profile claims one and
 a role requires one, and it outlives both.

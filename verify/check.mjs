@@ -44,7 +44,19 @@ export const TYPES = [
     // and the rest must be a slug. Stated here for the same reason `folder` is.
     filename: { year: "start", rest: "chosen" },
   },
+  // R6, R13: one entity, so a file in the container rather than a folder. `file` instead of
+  // `folder` is what tells every check below which shape to expect.
+  { type: "identity", file: "identity.md" },
+  { type: "vision", file: "vision.md" },
 ];
+
+export const SINGULAR = TYPES.filter((t) => t.file);
+export const PLURAL = TYPES.filter((t) => t.folder);
+
+// R13: every entity lives under the container and nothing else does. Stated once, so that
+// every path this script builds goes through it.
+export const MODEL = "model";
+const EX = `example/${MODEL}`;
 
 // R12's slug. One definition, used for a file, a folder and the collision test alike.
 export const slug = (s) =>
@@ -153,8 +165,16 @@ function parseTable(block) {
 // type declares; `<placeholder>` matches one segment. A file that matches nothing has no
 // schema, so nothing declares what it may reference or how its fields are shaped.
 function typeOfFile(rel) {
-  const dir = rel.split("/").slice(1, -1);
-  for (const { type, folder } of TYPES) {
+  // Paths arrive as example/model/<...>: the two leading segments are the example and the
+  // container, and every File Location is written from the container down.
+  const parts = rel.split("/");
+  const dir = parts.slice(2, -1);
+  const base = parts[parts.length - 1];
+  if (dir.length === 0) {
+    const singular = SINGULAR.find((s) => s.file === base);
+    return singular ? singular.type : null;
+  }
+  for (const { type, folder } of PLURAL) {
     const want = folder.split("/");
     if (want.length !== dir.length) continue;
     if (want.every((seg, n) => (/^<.+>$/.test(seg) ? true : seg === dir[n]))) return type;
@@ -205,7 +225,7 @@ const CHECKS = [
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type, owner, folder } of TYPES) {
+      for (const { type, owner, folder, file } of TYPES) {
         const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
@@ -275,10 +295,11 @@ const CHECKS = [
         // name `skill/*.md` while TYPES says `skills` and every message quoting "the File
         // Location" would still be quoting TYPES.
         const stated = (s.get("File Location") ?? "").match(/`([^`]+)`/)?.[1];
+        const wantPath = file ? `${MODEL}/${file}` : `${MODEL}/${folder}/`;
         if (!stated) fail(`${path}: "## File Location" states no path in backticks`);
-        else if (!stated.startsWith(`${folder}/`))
+        else if (file ? stated !== wantPath : !stated.startsWith(wantPath))
           fail(
-            `${path}: "## File Location" says \`${stated}\`, which does not start with "${folder}/" — the folder declared for ${type}`,
+            `${path}: "## File Location" says \`${stated}\`, which does not ${file ? "equal" : "start with"} "${wantPath}" — declared for ${type}`,
           );
 
         const fmBody = (s.get("Frontmatter") ?? "").trim();
@@ -434,7 +455,7 @@ const CHECKS = [
     rule: "R10",
     run() {
       const known = new Set(TYPES.map((t) => t.type));
-      for (const { type, owner, folder } of TYPES) {
+      for (const { type, owner, folder, file } of TYPES) {
         const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
@@ -452,6 +473,9 @@ const CHECKS = [
         // "s" — that derivation is the one CONVENTIONS.md R7 exists to forbid. `folder`
         // comes from TYPES, not from the file, so the messages below blame TYPES; that the
         // file's own "## File Location" agrees with it is checked in "schema fixed shape".
+        // A singular type is a file in the container (R6, R13): no folder to nest, and
+        // nothing can own it, so the two folder-shaped checks below have nothing to read.
+        if (file) continue;
         const ownerFolder = owner && TYPES.find((t) => t.type === owner)?.folder;
         if (ownerFolder && !folder.startsWith(`${ownerFolder}/`))
           fail(
@@ -478,35 +502,42 @@ const CHECKS = [
         const p = join(ROOT, rel);
         return existsSync(p) ? readdirSync(p) : null;
       };
-      const top = ls("example");
-      if (top === null) return fail("example/ is missing");
+      const top = ls(EX);
+      if (top === null) return fail(`${EX}/ is missing`);
 
-      const rootFolders = TYPES.filter((t) => !t.folder.includes("/")).map((t) => t.folder);
-      const ownerFolders = TYPES.filter((t) => t.owns).map((t) => t.folder.split("/")[0]);
-      const allowed = new Set([...rootFolders, ...ownerFolders, "README.md"]);
+      // R13: what may sit directly in the container is a type's folder, a singular type's
+      // file, or the README that is never an entity (R6). Nothing else — which is the whole
+      // point of the container: the list is derived from the types, never enumerated.
+      const rootFolders = PLURAL.filter((t) => !t.folder.includes("/")).map((t) => t.folder);
+      const ownerFolders = PLURAL.filter((t) => t.owns).map((t) => t.folder.split("/")[0]);
+      const singularFiles = SINGULAR.map((t) => t.file);
+      const allowed = new Set([...rootFolders, ...ownerFolders, ...singularFiles, "README.md"]);
       for (const entry of top)
         if (!allowed.has(entry))
-          fail(`example/${entry} is not a folder of any type (expected one of ${[...allowed].join(", ")})`);
+          fail(`${EX}/${entry} is not a folder of any type (expected one of ${[...allowed].join(", ")})`);
 
-      for (const { type, folder, owns } of TYPES) {
+      for (const { file } of SINGULAR)
+        if (!top.includes(file)) fail(`${EX}/${file} is missing — a singular type's entity`);
+
+      for (const { type, folder, owns } of PLURAL) {
         if (folder.includes("/") && !owns) continue; // owned types are reached via their owner
         const base = folder.split("/")[0];
-        for (const name of ls(`example/${base}`) ?? []) {
+        for (const name of ls(`${EX}/${base}`) ?? []) {
           if (!owns) {
-            if (!name.endsWith(".md")) fail(`example/${base}/${name} should be a .md file`);
+            if (!name.endsWith(".md")) fail(`${EX}/${base}/${name} should be a .md file`);
             continue;
           }
           // A folder entity: its own file is named for it, and it owns folders beside it.
-          const inside = ls(`example/${base}/${name}`) ?? [];
+          const inside = ls(`${EX}/${base}/${name}`) ?? [];
           if (!inside.includes(`${name}.md`))
-            fail(`example/${base}/${name}/ must contain ${name}.md, not ${inside.join(", ")}`);
+            fail(`${EX}/${base}/${name}/ must contain ${name}.md, not ${inside.join(", ")}`);
           for (const owned of owns) {
             const ownedFolder = TYPES.find((t) => t.type === owned).folder.split("/").pop();
             if (!inside.includes(ownedFolder))
-              fail(`example/${base}/${name}/ is missing ${ownedFolder}/`);
+              fail(`${EX}/${base}/${name}/ is missing ${ownedFolder}/`);
           }
           if (inside.includes("README.md"))
-            fail(`example/${base}/${name}/README.md — an entity's file is named for the entity`);
+            fail(`${EX}/${base}/${name}/README.md — an entity's file is named for the entity`);
         }
       }
     },
@@ -527,11 +558,11 @@ const CHECKS = [
       const namesOf = (type) => {
         const folder = folderOf(type);
         const names = new Set();
-        const dir = join(ROOT, `example/${folder}`);
+        const dir = join(ROOT, `${EX}/${folder}`);
         if (!existsSync(dir)) return names;
         for (const f of readdirSync(dir)) {
           if (!f.endsWith(".md")) continue;
-          const name = h1(`example/${folder}/${f}`);
+          const name = h1(`${EX}/${folder}/${f}`);
           if (!name) fail(`example/${folder}/${f} has no H1`);
           else if (names.has(name)) fail(`two ${type} files share the canonical name "${name}"`);
           else names.add(name);
@@ -616,7 +647,7 @@ const CHECKS = [
         return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
       };
 
-      walkMd("example/profiles", (child, text) => {
+      walkMd(`${EX}/profiles`, (child, text) => {
             // A "## Skills" body table: one row per assessment. Which columns it must have,
             // which are required and which are references is read from the schema above. An
             // empty SKILL_COLUMNS is not a reason to skip — it has already failed, in
@@ -660,7 +691,7 @@ const CHECKS = [
             .map(({ field }) => field),
         ]),
       );
-      walkMd("example/profiles", (child, text) => {
+      walkMd(`${EX}/profiles`, (child, text) => {
         const fmText = frontmatterOf(text);
         for (const field of listFields.get(typeOfFile(child)) ?? []) {
           const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
@@ -681,7 +712,7 @@ const CHECKS = [
     rule: "R12",
     run() {
       const seen = new Map();
-      walkMd("example", (child, text) => {
+      walkMd(EX, (child, text) => {
         const base = child.split("/").pop();
         if (base === "README.md") return;
         const type = typeOfFile(child);
@@ -696,7 +727,12 @@ const CHECKS = [
         const named = base === `${own}.md` ? own : base.replace(/\.md$/, "");
 
         let want = null;
-        if (!spec.filename) {
+        if (spec.file) {
+          // R12: a singular type's file is named for the type, which is what leaves its H1
+          // free to be a company's name or a sentence. Nothing to derive — the name is the
+          // one its schema states, and "example structure" has already found it.
+          want = spec.file.replace(/\.md$/, "");
+        } else if (!spec.filename) {
           want = slug(h1);
           if (named !== want) fail(`${child}: derives to "${want}.md" from its H1 "${h1}"`);
         } else {
@@ -751,8 +787,8 @@ const CHECKS = [
     name: "rules are written down",
     rule: "R0",
     run() {
-      const text = read("CONVENTIONS.md");
-      if (text === null) return fail("CONVENTIONS.md is missing");
+      const text = read("core/CONVENTIONS.md");
+      if (text === null) return fail("core/CONVENTIONS.md is missing");
       const defined = new Set([...text.matchAll(/^###\s+(R\d+)\s+—/gm)].map((m) => m[1]));
       for (const check of CHECKS)
         if (check.rule !== null && !defined.has(check.rule))

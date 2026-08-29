@@ -6,7 +6,7 @@
 
 ## File Location
 
-`profiles/<profile>/experiences/*.md`
+`model/profiles/<profile>/experiences/*.md`
 
 An experience is owned by a profile and cannot exist without it, so it nests inside the
 profile's folder rather than sitting at the root with a `profile:` field pointing back.

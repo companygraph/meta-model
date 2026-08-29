@@ -4,7 +4,7 @@
 
 ## File Location
 
-`proficiency-levels/*.md`
+`model/proficiency-levels/*.md`
 
 A level owns nothing and nothing owns it: many profiles claim the same few, and the definition
 of each lives here rather than being restated on every assessment. Changing what a level means

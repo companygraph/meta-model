@@ -4,7 +4,7 @@
 
 ## File Location
 
-`sources/*.md`
+`model/sources/*.md`
 
 A source is where a page's facts come from: the repository itself, or a system the company
 already runs that a sync writes from. One file per source, so a page can name where it was
