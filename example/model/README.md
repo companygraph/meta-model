@@ -6,11 +6,13 @@ Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
-It uses six core types — `profile`, `experience`, `skill`, `proficiency-level`, `value`,
-`source` — and declares no packs. That is the first release of the model, not a claim that six types
-describe a company.
+It uses eight core types — `identity`, `vision`, `profile`, `experience`, `skill`,
+`proficiency-level`, `value`, `source` — and declares no packs. That is what core ships, not a
+claim that eight types describe a company.
 
 ```
+identity.md                      Beacon Systems — the company all of this is about
+vision.md                        billing nobody has to explain
 values/                          say-the-hard-thing.md, craftsmanship.md
 sources/                         local.md, google-workspace.md
 skills/                          java-programming.md, domain-driven-design.md,
@@ -24,7 +26,12 @@ profiles/tomas-reyes/            tomas-reyes.md
 ```
 
 `profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a
-folder of files because nothing owns a skill.
+folder of files because nothing owns a skill. `identity.md` and `vision.md` are files directly
+in the container because a company has one of each: the filesystem carries the cardinality, so
+no rule has to state it (R6, R13).
+
+Everything here sits under `model/`. What an instance keeps beside it — the vendored `meta/`,
+its tooling, its working documents — is not content and is never walked as content.
 
 There are no schemas here. This instance is read beside `core/` and is written against the
 schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away

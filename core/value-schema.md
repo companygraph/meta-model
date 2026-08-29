@@ -4,7 +4,7 @@
 
 ## File Location
 
-`values/*.md`
+`model/values/*.md`
 
 One file per value. Both source instances kept their values in a single document with a
 heading per value, and a heading has no canonical name — so no strategy, role or process

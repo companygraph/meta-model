@@ -16,12 +16,18 @@ named as such.
 ## What is here
 
 ```
-core/              one schema per type: profile, experience, skill,
-                   proficiency-level, value, source
-CONVENTIONS.md     the portable rules that make the graph checkable
-example/           a fictional company, described in those six types
+core/              the shipped unit, copied whole into an instance
+  CONVENTIONS.md   the portable rules that make the graph checkable
+  *-schema.md      one per type: identity, vision, profile, experience,
+                   skill, proficiency-level, value, source
+  manifest.json    the release this unit is
+  LICENSE          Apache 2.0, travelling with what it covers
+example/           a fictional company, described in those eight types
 verify/check.mjs   npm run verify — asserts this repo's own shape
 ```
+
+Everything a unit ships lives inside it, so vendoring is a copy rather than a recipe. There is
+no file outside `core/` that an instance also needs.
 
 ## How it fits together
 
@@ -56,11 +62,23 @@ was rejected and why, is in
 
 ## Instantiating it
 
-An instance is a repository of your own: the schemas from `core/` kept somewhere that is not
-a folder named for a type, `CONVENTIONS.md` beside them, the folders the schemas name, and
-one file per entity. The schemas are the contract; `CONVENTIONS.md` is what an agent checks
-the result against, so the two travel together. `example/` is there to be read, not copied —
-[companygraph.io/example](https://companygraph.io/example/) draws it.
+An instance is a repository of your own, in two halves:
+
+```
+meta/core/         core, copied whole at the release you chose
+meta/<pack>/       one folder per pack you declare, the same way
+model/             your company: identity.md, vision.md, and the folders the schemas name
+```
+
+`model/` is the container and everything in it is an entity (R13). What sits beside it — the
+vendored metamodel, your tooling, your working documents — is not content, which is why
+nothing walking an instance needs a list of folders to ignore. `meta/` holds one folder per
+vendored unit, named for the unit; `core` is the one always present, and a pack is a sibling
+rather than a nested special case.
+
+The schemas are the contract; `CONVENTIONS.md` is what an agent checks the result against, and
+both are inside `core/` so neither can be left behind. `example/` is there to be read, not
+copied — [companygraph.io/example](https://companygraph.io/example/) draws it.
 
 Setting that up and keeping it current is the tooling's job — roadmap item 5, designed and
 not yet built. Until it ships, the layout above is the whole recipe.

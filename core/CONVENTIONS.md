@@ -42,11 +42,34 @@ The folder is named for the entity, holds the entity's own file — also named f
 and one folder per owned type beside it. An entity that owns nothing is a file. `README.md`
 is never an entity's file.
 
+A type with exactly one entity is a file too, sitting directly in the container: a company has
+one identity and one vision, and a folder that will never hold a second entity is a plural that
+never arrives. The filesystem then enforces the cardinality — there is nowhere to put a second
+one — which is a constraint no rule has to state and nobody can forget.
+
 ### R7 — Folders are the plural of the type
 
 The type is singular because it says what one entity is. No folder is shortened for
 readability: an abbreviated folder is an exception to the one rule that makes the two names
 predictable, bought with nothing.
+
+A singular type has no folder at all (R6), so there is nothing to pluralise.
+
+### R13 — The instance's content lives in one container
+
+Every entity lives under `model/`, and nothing else does. What sits beside it — the vendored
+metamodel, the tooling, the working documents, the packaging — is not content and is never
+walked as content.
+
+The container is what makes the rule closed. Without it, whatever walks an instance needs a list
+of folders that are *not* content, and such a list is an enumeration: it goes stale the first
+time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe.
+With it, "is this an entity?" is answered by where the file is.
+
+A folder directly under `model/` is a type's folder and is named by a schema — core's, or any
+pack the instance declares. A file directly under `model/` is a singular type's entity (R6).
+Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs
+here.
 
 ## Schemas
 
@@ -76,10 +99,12 @@ the shape is whether the edge has attributes of its own.
 Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
 line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then
 `## Purpose` and `## Writing rules` where the type has them. The path under
-`## File Location` is written in backticks, and the last folder it names is the type's own.
-What comes before that folder is where the folder sits: nothing, for a type nothing owns;
-the owner's path, for a type that is owned (R10). So `skills/*.md`, and
-`profiles/<profile>/experiences/*.md`.
+`## File Location` is written in backticks and begins at the container, `model/` (R13). For a
+type with many entities the last folder it names is the type's own, and what comes before it is
+where that folder sits: `model/` alone, for a type nothing owns; the owner's path, for a type
+that is owned (R10). So `model/skills/*.md`, and
+`model/profiles/<profile>/experiences/*.md`. A singular type names its file instead, directly
+in the container: `model/vision.md`.
 
 `## Frontmatter` holds one table and only one — a field is a row in it — with columns
 `Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.`
@@ -184,7 +209,8 @@ result renames the entity, which is the honest fix: R2 makes the H1 canonical an
 filename out of every reference, so a filename is free to be ugly.
 
 **By default a file is named for the slug of its H1**, and a folder entity's folder likewise
-(R6). A type whose files are named some other way says so in its own schema, and one is:
+(R6). A singular type's file is named for the type — `vision.md`, `identity.md` — which leaves
+its H1 free to be a sentence. A type whose files are named some other way says so in its own schema, and one is:
 `experience` is named for its start year, a `-`, and a slug the author chooses to identify the
 period — `2018-northwind-atelier.md` for an experience whose H1 is
 `Rebuilding the order pipeline`.

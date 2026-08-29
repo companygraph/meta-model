@@ -4,7 +4,7 @@
 
 ## File Location
 
-`profiles/<profile>/<profile>.md`
+`model/profiles/<profile>/<profile>.md`
 
 A profile owns experiences, so it is a folder rather than a file: `profiles/<profile>/` holds
 the profile's own file and an `experiences/` folder beside it. Removing a person is then one
