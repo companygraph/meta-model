@@ -21,6 +21,22 @@ collection: a heading has no canonical name, so nothing can reference it.
 Not the filename, not a frontmatter field, and not the first of several fallbacks. A fallback
 chain is what makes a reference unresolvable without running code.
 
+A name identifies an entity within its type, not across the instance. Two entities of one type
+may not share a name; two of different types may. Every schema declares its references as
+`ref → <type>`, so a reference carries a type as well as a name, and the pair is what resolves
+— which is why R4 fails a name that exists under a type other than the one asked for.
+
+The case that requires this is a company of one, where the company and the only person in it
+are the same human and are called the same thing. A name unique across the whole instance
+would force one of them to be called something nobody calls it, and the graph would then
+describe a naming workaround rather than the company.
+
+A tool that resolves by name alone — one that recognises a reference by the value happening to
+be a canonical name, rather than by reading the schema that declares it — cannot use the type
+to choose between two entities sharing one. It refuses rather than guesses: such a name is an
+error where it is used, naming the types it was found under. Resolving to the first match, or
+to the one in the nearest folder, is the failure this makes impossible.
+
 ### R3 — Every reference is by canonical name
 
 Never by file path and never by filename. Paths move; a canonical name is the entity.
