@@ -188,15 +188,49 @@ Each site pins an exact tag: `"companygraph-meta-model": "github:companygraph/me
 never a SHA, never a `#semver:` range. Each gains a Dependabot group for it, so a meta-model
 bump arrives on its own and is read rather than merged on sight.
 
-## Deferred, and recorded so it is not lost
+That rule is about **this npm dependency** and nothing else. The commit SHA each site carries
+in `source.json` is a different mechanism answering a different question — see *Deliberate,
+not deferred* below before touching it.
 
-**Both sites pin meta-model's *data* by commit SHA.** `build/model.mjs` and `build/build.mjs`
-fetch `core/` and `example/` from the GitHub API at a pinned commit. The house rule is a tag
-and never a SHA, precisely because Dependabot's version detection rejects a SHA — so a change
-here reaches both sites today with **no tripwire at all**. That is the larger half of this gap
-and it is out of scope: it changes how both sites *build their pages*, so a mistake shows up
-as wrong page content rather than a failed import, and it needs its own proof that generated
-output is byte-identical. It gets its own pass, and `core/` joins `files` when it happens.
+## Deliberate, not deferred
+
+An earlier draft of this section called the model pins "the larger half of this gap" and put
+them down for a later pass. That was wrong twice over, and the correction matters more than
+the original claim, because a reader of a plan goes and fixes what the plan calls a gap.
+
+**First, the fact.** Only one site pins *this repository's* data. `companygraph.io/source.json`
+names `companygraph/meta-model` at a commit; `blust.ch/source.json` names
+`robertblust/mental-model` at a commit. blust.ch's only reference to this repository is the
+package pin above, and that one is a tag.
+
+**Second, the intent. A SHA in `source.json` is a person's decision, not a stale pin.** It says
+*this* state of the model is what the page publishes. Moving it is an editorial act — it
+changes what a visitor reads — and it is made by someone who has looked at what changed, which
+is exactly what happened when blust.ch's pin moved to pick up a corrected chronology. Handing
+that to Dependabot would be a machine editing published content on a weekly schedule.
+
+The house rule — *a tag, never a SHA, because Dependabot's version detection rejects a SHA* —
+governs **npm dependencies**, where the goal is to be told that an upstream release exists.
+These are not npm dependencies: they are API fetches, with no `package.json` line to bump even
+if they were tagged. Applying the rule here reads the words and misses what the rule is for.
+
+So `core/` does **not** join `files` on a later pass. It stays outside the tarball because the
+sites read it over the API or vendor it, which is the same reason given above.
+
+**And the vendored copy is a third case, also deliberate.** `robertblust/mental-model` carries
+`meta/core/` and declares it in `.companygraph/manifest.json`:
+
+```json
+{ "tooling": "0.0.0",
+  "core": { "version": "0.4.1", "shape": 1, "source": "fetched:v0.4.1" },
+  "files": { "meta/core/CONVENTIONS.md": "sha256:8c2f34c7…", … } }
+```
+
+An instance is built on a **version** of core and sits on it. A version number behind this
+repository's `core/` is the design working, not decay — and the copy is hash-pinned per file,
+so what it holds is checkable today. The `tooling` slot is the open question, and it is an
+open question on purpose: whether what reads this manifest ends up being an mjs check, a
+GitHub mechanism or Dependabot is settled when that tooling is built, not now.
 
 ## Success criteria
 
