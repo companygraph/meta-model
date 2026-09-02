@@ -2,10 +2,15 @@
 // small maps of path → Markdown, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, ROOT_LABEL, parseSchemas, CORE_LABEL } from "../lib/instance.mjs";
+import { parseInstance, parseSchemas, CORE_LABEL } from "../lib/instance.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
+  // R6, R13: the container's root, a singular type's file. It carries no frontmatter, so it
+  // contributes no edges and leaves every assertion below about edges untouched — in
+  // particular the scalar-vs-list test, which adds a `sources/` folder that a `source:` field
+  // here would resolve into a second, alphabetically earlier edge.
+  ["identity.md", "# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n"],
   ["values/craftsmanship.md", "# Craftsmanship\n\n> We ship one thing.\n\n## In practice\n\nRefusing a deadline.\n"],
   ["skills/java-programming.md", "---\ngroup: Programming Languages\n---\n\n# Java Programming\n\n> JVM services.\n\n## In practice\n\nReading the stack trace.\n"],
   ["proficiency-levels/proficient.md", "---\nrank: 30\n---\n\n# Proficient\n\n> Exercises judgment.\n\n## What it means\n\nMakes calls.\n"],
@@ -15,15 +20,28 @@ const valid = new Map([
    "---\nstart: 2022-02\norganisation: Beacon Systems\nskills: [Java Programming]\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
 ]);
 
-test("the root label is the one invented string", () => {
-  assert.equal(parseInstance(valid).root, ROOT_LABEL);
-  assert.equal(ROOT_LABEL, "Fictional Company");
+test("the root is the identity entity, by name and by id", () => {
+  const { root, rootId } = parseInstance(valid);
+  assert.equal(root, "Beacon Systems");
+  assert.equal(rootId, "identity");
+});
+
+// The root used to fall back to the string "Fictional Company" when an instance carried no
+// identity, and the test here asserted that literal — which is what made a dead branch look
+// load-bearing. An instance without an identity is not a valid instance (R6: a company has
+// one, and check.mjs fails when the file is missing), and this parser throws on the
+// malformations it can see rather than naming the company after the example.
+test("an instance with no identity has no root, and that is an R6 error", () => {
+  const rootless = new Map(valid);
+  rootless.delete("identity.md");
+  assert.throws(() => parseInstance(rootless), /^Error: R6: .*identity/);
 });
 
 test("types come from folders, singular by R7, with their owner", () => {
   const { types } = parseInstance(valid);
   assert.deepEqual(types, [
     { type: "experience", folder: "experiences", owner: "profile", singular: false },
+    { type: "identity", folder: null, owner: null, singular: true },
     { type: "proficiency-level", folder: "proficiency-levels", owner: null, singular: false },
     { type: "profile", folder: "profiles", owner: null, singular: false },
     { type: "skill", folder: "skills", owner: null, singular: false },
@@ -33,7 +51,7 @@ test("types come from folders, singular by R7, with their owner", () => {
 
 test("an entity is its H1, tagline, fields, sections and path; a README is not one", () => {
   const { entities } = parseInstance(valid);
-  assert.equal(entities.length, 5);
+  assert.equal(entities.length, 6);
   const java = entities.find(e => e.id === "skills/java-programming");
   assert.deepEqual(java, {
     id: "skills/java-programming", type: "skill", name: "Java Programming",

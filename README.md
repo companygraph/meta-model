@@ -34,7 +34,7 @@ Everything a unit ships lives inside it, so vendoring is a copy rather than a re
 no file outside `core/` that an instance also needs.
 
 The npm package ships `lib/` and nothing else. A site reads an instance with
-`import { parseInstance, parseSchemas, ROOT_LABEL, CORE_LABEL } from "companygraph-meta-model/instance"`
+`import { parseInstance, parseSchemas, CORE_LABEL } from "companygraph-meta-model/instance"`
 — `parseInstance` turns a map of path → Markdown into the graph and `parseSchemas` does the
 same for the schemas, both pure: no filesystem, no network. `core/` is deliberately outside
 the tarball, because the rules are copied into an instance or read over the GitHub API, never
