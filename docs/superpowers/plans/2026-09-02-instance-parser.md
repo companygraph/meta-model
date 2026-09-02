@@ -224,8 +224,14 @@ In `verify/instance.test.mjs`, the `valid` fixture has **no `identity.md`**, so 
 built on it now throws. Add one to the fixture, as the container's own file (R6, R13):
 
 ```js
-  ["identity.md", "---\nsource: Local\n---\n\n# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n"],
+  ["identity.md", "# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n"],
 ```
+
+**No frontmatter, deliberately.** A `source: Local` field would look truer to the schema and
+would break a test two screens away: `a scalar frontmatter value that names an entity becomes
+an edge` extends `valid` with a `sources/local.md`, and the identity's `source` would then
+resolve into a second edge — sorting before the profile's, so that test's `edges.find` would
+return the wrong one. A fixture with no fields contributes no edges and perturbs nothing.
 
 Then repair what that changes, and nothing else:
 
@@ -239,11 +245,9 @@ Then repair what that changes, and nothing else:
 - the entity-count assertion goes from 5 to 6.
 - the R2 and cross-type tests already carry an `identity.md`; leave them alone.
 
-Two things worth knowing before you start: the fixture's `source: Local` resolves to nothing
-because `valid` has no `sources/`, and that is fine — an unresolved scalar stays a fact rather
-than becoming an edge, which the scalar-vs-list test already pins. And the R7 fixture still
-throws R7, because the type walk runs before the root is chosen; check that the R7 test's
-assertion is unchanged rather than assuming it.
+One more thing before you start: the R7 fixture still throws R7, because the type walk runs
+before the root is chosen. Check that the R7 test's assertion is unchanged rather than
+assuming it.
 
 Run `npm run test:instance`: 22 tests, 22 pass, 0 skipped.
 
