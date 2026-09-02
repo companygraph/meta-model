@@ -7,6 +7,11 @@
 // folder into a type. This suite is R0 extended to that second surface, and nothing more.
 // While the parser and the rules lived in different repositories no such check was possible,
 // which is the reason the parser moved here rather than into the design package.
+//
+// What it guarantees is that the heading is there, not that the rule is still stated: gut R7's
+// body and leave `### R7 —` standing and this stays green. That is inherent to a syntactic
+// check and verify/check.mjs has it identically, so it is not drift — and what no script
+// reaches is exactly what R0 gives to the agent pass.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
