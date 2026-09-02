@@ -141,6 +141,18 @@ Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `num
 `array`, `enum`, `ref → <type>`, `array of ref → <type>`. A reference names one entity, so
 the type it points at is singular: `ref → skill`, never `ref → skills`.
 
+`date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
+states and never at more; an author may deliberately record less. A shorter form is an
+interval, not a point: `2002` is the whole year, and a comparison takes its earliest instant,
+so `2002` orders before `2002-03`.
+
+The form is stated here rather than in the description of whichever field happens to use it,
+because a type in a closed vocabulary that means different things in two schemas is not closed.
+`date` was the only member whose lexical form was never written down, and while it went unsaid
+one schema's description fixed it at `YYYY-MM` — which made an instance invent a month for a
+diploma that states a year, and left a talk's known day in prose because no field could hold
+it. A rule that forces both an invention and a discard is the wrong rule.
+
 Where each form is legal follows from one distinction: **a frontmatter field may hold one
 value or a list; a table cell holds one value.** The whole vocabulary is therefore open to a
 frontmatter field, and both `ref → <type>` and `array of ref → <type>` there must resolve. In

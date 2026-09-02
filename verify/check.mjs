@@ -703,6 +703,35 @@ const CHECKS = [
     },
   },
   {
+    // R9 states one lexical form for `date`, so a field declared `date` can be checked against
+    // it. What no script reaches is the half of the rule that matters — "never more precision
+    // than its source states" is a fact about a document nobody here has, so a well-formed
+    // invention passes this exactly as `2002-01` passed the `YYYY-MM` form it replaced. That
+    // half is the agent pass's, and R0 says so.
+    name: "date fields carry a date in one of the three forms",
+    rule: "R9",
+    run() {
+      const DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+      const dateFields = new Map(
+        TYPES.map((t) => [
+          t.type,
+          fieldsOf(t.type).filter(({ declared }) => declared === "date").map(({ field }) => field),
+        ]),
+      );
+      walkMd(EX, (child, text) => {
+        const fields = dateFields.get(typeOfFile(child)) ?? [];
+        if (!fields.length) return;
+        const fmText = frontmatterOf(text);
+        for (const field of fields) {
+          const value = fmScalar(fmText, field);
+          if (value === null || value === undefined || value === "") continue;
+          if (!DATE.test(value))
+            fail(`${child}: \`${field}\` is "${value}"; R9 wants YYYY, YYYY-MM or YYYY-MM-DD`);
+        }
+      });
+    },
+  },
+  {
     // R12 in the one direction a script can take: derive the name and compare it. What it
     // cannot say is whether the H1 is the right name — that is R2's, and an agent's.
     //
