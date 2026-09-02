@@ -25,8 +25,8 @@ two together must be unique in the folder.
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
-| `start` | Yes | date | `YYYY-MM`, when the period began |
-| `end` | No | date | `YYYY-MM`. Absent means the period is ongoing. |
+| `start` | Yes | date | When the period began |
+| `end` | No | date | Absent means the period is ongoing. |
 | `kind` | Yes | ref → experience-kind | What sort of period this is — the H1 of a file in `experience-kinds/` |
 | `organisation` | No | string | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. |
 | `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
@@ -71,7 +71,11 @@ is what happened, when, and what it evidences.
   does not see an absent field.
 - A one-off is not a period: a talk, a certification, an award or a publication sets `end`
   equal to `start`. Left absent it would read as still running, and no other field says
-  otherwise.
+  otherwise. The two being equal is what makes it a one-off, and the interval that shared
+  value denotes is how precisely it is placed: `2012-05-04 .. 2012-05-04` is a day,
+  `2016-10 .. 2016-10` a month, `2002 .. 2002` an event known only to its year. A period that
+  genuinely ran a whole year is not written `2002 .. 2002` — it takes the months it ran,
+  `2002-01 .. 2002-12`, which is also the only way to tell the two apart.
 - For a one-off, `organisation` is whoever hosted, awarded or published it. The field is a
   stretch there and the alternative — leaving it empty — says less.
 - `## Ending` is written in the person's own voice and looks forward: what the period had
