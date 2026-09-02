@@ -29,7 +29,10 @@ this plan — the parser is pure, and meta-model has no lockfile and no install 
 - **Every new gate is proven red by mutation before it is trusted.** A test never seen to fail
   is not yet a gate. Assert behaviour, not source text: `Function.prototype.toString()` includes
   comments, and three tests in this family were defeated exactly that way.
-- **Sites pin an exact tag**, never a commit SHA, never a `#semver:` range.
+- **Sites pin this package by an exact tag**, never a commit SHA, never a `#semver:` range.
+  This is about the npm dependency only. Do not extend it to the commit SHA in each site's
+  `source.json` — that pin is editorial and deliberate; see *Deliberate, not deferred* in the
+  spec.
 - **Merge with `gh pr merge --merge`, never `--squash`.** Author is
   `robert.blust@flatland.ch`. Stage by name; never `git add -A`.
 - **Do not touch `verify/check.mjs` in meta-model.** It is a different program with a different
