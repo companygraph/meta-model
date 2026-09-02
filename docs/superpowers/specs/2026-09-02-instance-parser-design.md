@@ -26,7 +26,8 @@ the whole shared-system programme rests on.
 
 **Moves:** `build/instance.mjs` — 297 lines, four exports (`ROOT_LABEL`, `CORE_LABEL`,
 `parseInstance`, `parseSchemas`), byte-identical in both sites — and 21 of the 22 tests in
-`verify/instance.test.mjs`.
+`verify/instance.test.mjs`. Three of those four exports survive the move; see *The root label
+does not survive the move*.
 
 **Does not move: the 22nd test.** `verify/instance.test.mjs` is not purely the parser's tests.
 Its last test asserts that the vendored `d3.v7.min.js` is byte-identical to
@@ -108,6 +109,56 @@ This is the reason to move the parser here rather than anywhere else. Without it
 only deduplication; with it, the parser stops being able to drift from its own specification
 in silence.
 
+## The root label does not survive the move
+
+`ROOT_LABEL = "Fictional Company"` is a fallback: the root of an instance is its `identity`
+entity's H1, and this string is what `parseInstance` returns when there is no such entity.
+
+It is dead in both live instances. `mental-model/model/identity.md` has the H1 `Robert Blust`
+and `example/model/identity.md` has `Beacon Systems`, so both generated pages already carry a
+real name — `"root":"Robert Blust"` and `"root":"Beacon Systems"`. Nothing outside the parser
+and its own test imports the constant in any of the three repositories.
+
+**An instance without an identity is not a valid instance.** `identity` is a singular type:
+its schema says a company has one, R6 says a type with exactly one entity is a file directly
+in the container, and `verify/check.mjs` fails with `identity.md is missing — a singular
+type's entity`. So the fallback exists for a shape the conventions do not permit.
+
+The parser is deliberately not the validator, so it will be handed invalid instances. The
+question is what it should do with one, and everywhere else in the file it already answers:
+a name that resolves to nothing throws R4, a folder that is not a plural throws R7, a name
+carried by two types throws rather than guessing. A missing container root is the one
+malformation it papers over, and it papers over it with a plausible-looking company name.
+
+That silence is reachable. `robertblust/mental-model` has no CI and no `verify/` — its
+`meta/core/` is a vendored copy for reading, and nothing executes `check.mjs` against it —
+and blust.ch's `ci.yml` does not run `model:check`. Renaming or deleting `model/identity.md`
+would publish a graph whose root node reads **Fictional Company** over Robert Blust's mental
+model, and no gate in any of the three repositories would notice.
+
+So the fallback goes and the parser throws, in the register of the errors it already raises:
+
+```js
+const identity = entities.find((e) => e.type === "identity");
+if (!identity) throw new Error("R6: the instance has no identity entity to be its root");
+```
+
+`ROOT_LABEL` is deleted rather than kept unexported — an unreachable branch's constant has no
+reader. The published surface of `companygraph-meta-model/instance` becomes `parseInstance`,
+`parseSchemas` and `CORE_LABEL`. `CORE_LABEL` stays exported and stays a constant: it is not
+a fallback for a missing thing but the name of a thing that has no file, since nothing in
+`core/` names the vocabulary itself.
+
+Neither live instance changes: both resolve through `identity` today, so both pages are
+byte-identical across this change. That is what makes it safe to do now rather than after the
+sites adopt — and doing it now is what keeps a constant naming the fictional example out of
+v0.1.0's published surface, where removing it later would be a breaking change.
+
+The test moves with it. `the root label is the one invented string` asserted the literal
+`"Fictional Company"`, which is the assertion that made the fallback look load-bearing; it is
+replaced by one that asserts the behaviour — an instance with an identity roots at its H1, an
+instance without one throws.
+
 ## What each site keeps
 
 `build/instance.mjs` is deleted. `build/model.mjs` on blust.ch and `build/build.mjs` on
@@ -153,3 +204,9 @@ output is byte-identical. It gets its own pass, and `core/` joins `files` when i
    `verify/instance.test.mjs`, from 550.
 7. This repository still has zero dependencies, and `verify/check.mjs` is untouched.
 8. Both sites pin an exact tag and carry a Dependabot group for it.
+9. **`ROOT_LABEL` is gone and an identity-less instance throws** — proven by parsing a fixture
+   with no `identity.md` and seeing the R6 error, and by `grep` finding no `ROOT_LABEL` in
+   any of the three repositories. The published surface is `parseInstance`, `parseSchemas`
+   and `CORE_LABEL`.
+10. **Both generated pages are byte-identical across this change**, which is what makes it a
+    safe thing to do before the sites adopt rather than after.

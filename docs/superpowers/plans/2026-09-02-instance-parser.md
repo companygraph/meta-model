@@ -54,14 +54,18 @@ this plan — the parser is pure, and meta-model has no lockfile and no install 
 
 ```js
 // companygraph-meta-model/instance
-export const ROOT_LABEL          // "Fictional Company"
 export const CORE_LABEL          // "Core"
-export function parseInstance(files)   // Map<path, markdown> -> the graph
+export function parseInstance(files)   // Map<path, markdown> -> the graph, or throws R6
 export function parseSchemas(files)    // Map<path, markdown> -> the schemas
 ```
 
 blust.ch imports `parseInstance` only. companygraph.io imports `parseInstance` and
 `parseSchemas`. Both currently import from `"./instance.mjs"`.
+
+`ROOT_LABEL` is **not** in that list. The parser as copied exports it as the root's fallback
+when an instance has no `identity`; Task 1 Step 8 removes it and throws instead. Step 1 still
+copies the parser verbatim — the removal is a separate, reviewable step on top, so that what
+changed from the two sites' copy is one diff and not buried in a 300-line paste.
 
 ---
 
@@ -72,7 +76,7 @@ blust.ch imports `parseInstance` only. companygraph.io imports `parseInstance` a
 - Modify: `package.json`, `.github/workflows/ci.yml`
 
 **Interfaces:**
-- Produces: the four exports above, at specifier `companygraph-meta-model/instance`.
+- Produces: the three exports above, at specifier `companygraph-meta-model/instance`.
 
 - [ ] **Step 1: Copy the parser verbatim**
 
@@ -182,6 +186,81 @@ step** — the comment in that file explains why there is none, and both new sui
 ```bash
 git add lib/instance.mjs verify/instance.test.mjs verify/rule-citations.test.mjs package.json .github/workflows/ci.yml
 git commit -m "The instance parser moves here, and its rule citations become checkable"
+```
+
+- [ ] **Step 8: Drop `ROOT_LABEL`; a missing identity becomes an error**
+
+The rationale is in the spec under *The root label does not survive the move*. In short: the
+root is the `identity` entity's H1, both live instances have one, the conventions require one
+(`check.mjs` fails `identity.md is missing — a singular type's entity`), and nothing outside
+the parser and its own test reads the constant. The fallback's only effect is to make an
+invalid instance render a plausible-looking wrong name instead of failing.
+
+Do it **before** v0.1.0. Publishing `ROOT_LABEL` and removing it later is a breaking change to
+a surface that never had a consumer.
+
+In `lib/instance.mjs`: delete the `ROOT_LABEL` export and the comment block above it, and
+replace the root expression at the end of `parseInstance`:
+
+```js
+  // The root of an instance is the company, and core 0.4.0 has an entity for it: `identity`.
+  // The page names the root after it and draws the two as one node, so `rootId` travels for
+  // the stage to find — which keeps the type's name here, where core's vocabulary is already
+  // known, rather than in a renderer that should not have to know it.
+  //
+  // R6: a company has one identity, so an instance with none has no root to name. This threw
+  // nothing before — it returned the string "Fictional Company", which reads as a real answer
+  // and is wrong on any instance that is not the example. The parser is not the validator, so
+  // it is handed invalid instances; it fails on them the way it fails on an unresolvable name.
+  const identity = entities.find((e) => e.type === "identity");
+  if (!identity) throw new Error("R6: the instance has no identity entity to be its root");
+  return { commit: null, root: identity.name, rootId: identity.id, types, entities, edges };
+```
+
+`R6` is already cited elsewhere in the file, so `test:rules` neither gains nor loses a
+citation — but run it anyway, because this step edits the surface that suite reads.
+
+In `verify/instance.test.mjs`, the `valid` fixture has **no `identity.md`**, so every test
+built on it now throws. Add one to the fixture, as the container's own file (R6, R13):
+
+```js
+  ["identity.md", "---\nsource: Local\n---\n\n# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n"],
+```
+
+Then repair what that changes, and nothing else:
+
+- `the root label is the one invented string` — **replace it**. Its assertion that
+  `ROOT_LABEL === "Fictional Company"` is exactly what made a dead fallback look load-bearing.
+  Two tests take its place: an instance with an identity roots at that entity's H1 and carries
+  its id as `rootId`, and an instance without one throws `/^Error: R6:/`. Build the second
+  from `valid` with `identity.md` deleted, so it cannot drift from the fixture.
+- the `types` deep-equal gains `{ type: "identity", folder: null, owner: null, singular: true }`
+  in sort order — between `experience` and `proficiency-level`.
+- the entity-count assertion goes from 5 to 6.
+- the R2 and cross-type tests already carry an `identity.md`; leave them alone.
+
+Two things worth knowing before you start: the fixture's `source: Local` resolves to nothing
+because `valid` has no `sources/`, and that is fine — an unresolved scalar stays a fact rather
+than becoming an edge, which the scalar-vs-list test already pins. And the R7 fixture still
+throws R7, because the type walk runs before the root is chosen; check that the R7 test's
+assertion is unchanged rather than assuming it.
+
+Run `npm run test:instance`: 22 tests, 22 pass, 0 skipped.
+
+- [ ] **Step 9: Prove the new error red, and prove the pages unchanged**
+
+1. Parse `valid` with `identity.md` removed — must throw `R6`, not return a root. That is the
+   new test; watch it fail by restoring the fallback, then restore the throw.
+2. `grep -rn "ROOT_LABEL" .` in all three repositories returns nothing outside the sites'
+   own copies of `build/instance.mjs`, which Tasks 3 and 4 delete.
+3. Regenerate both pages against this parser — `npm run model:check` on blust.ch and
+   `npm run example:check` on companygraph.io, pointed at this working copy — and confirm
+   `git status --porcelain` names no generated page. Both instances have an identity, so
+   byte-identical output is the expected result and anything else means this step is wrong.
+
+```bash
+git add lib/instance.mjs verify/instance.test.mjs
+git commit -m "A missing identity is an error, not a fictional company"
 ```
 
 ---
@@ -354,7 +433,7 @@ the card-harness spec and was caught only by a whole-branch review.
 
 - [ ] `npm run dupes` from blust.ch reports **0 duplicated lines** for `build/instance.mjs` and
       `verify/instance.test.mjs`, from 550.
-- [ ] meta-model: `verify`, `test:instance` (21 tests, 0 skipped) and `test:rules` all green in
+- [ ] meta-model: `verify`, `test:instance` (22 tests, 0 skipped) and `test:rules` all green in
       CI, with no install step in the workflow.
 - [ ] The tripwire has been seen red three ways: an undefined citation, a deleted rule, and a
       regex that matches nothing.
@@ -363,3 +442,5 @@ the card-harness spec and was caught only by a whole-branch review.
 - [ ] companygraph.io: `test:d3` still fails when the vendored copy and `node_modules/d3`
       differ — proven by making them differ.
 - [ ] meta-model still has zero dependencies and no lockfile.
+- [ ] `ROOT_LABEL` exists in no repository, the published surface is `parseInstance`,
+      `parseSchemas` and `CORE_LABEL`, and an identity-less instance throws R6 — seen red.
