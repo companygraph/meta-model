@@ -208,6 +208,9 @@ function fieldsOf(type) {
   const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
   return (fm?.rows ?? []).map((r) => ({
     field: r[0].replace(/`/g, "").trim(),
+    // The Required column was parsed nowhere and read nowhere, so a check written against it
+    // filtered on `undefined` and asserted nothing while reporting green.
+    required: r[1].replace(/`/g, "").trim() === "Yes",
     declared: r[2].replace(/`/g, "").trim(),
   }));
 }
@@ -698,6 +701,37 @@ const CHECKS = [
           const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           if (new RegExp(`^${name}:[ \\t]*\\[`, "m").test(fmText))
             fail(`${child}: \`${field}\` is a flow sequence; R11 wants one entry per line`);
+        }
+      });
+    },
+  },
+  {
+    // A schema's Required column said `Yes` and nothing read it. Every required field happens
+    // to be present today, so this check starts green — but it started green the way a gate
+    // does, not the way a passing test does: removing `start` from an experience failed only
+    // because R12 derives that filename from it, and on any type whose filename does not, a
+    // missing required field passed in silence.
+    //
+    // Presence is tested, never the value: `source: ` with nothing after it is a different
+    // defect and R4 already has it. The match is on the key alone so that a field which later
+    // becomes list-valued — none is today — does not quietly leave this check's reach.
+    name: "required frontmatter fields are present",
+    rule: "R9",
+    run() {
+      const requiredOf = new Map(
+        TYPES.map((t) => [
+          t.type,
+          fieldsOf(t.type).filter(({ required }) => required).map(({ field }) => field),
+        ]),
+      );
+      walkMd(EX, (child, text) => {
+        const fields = requiredOf.get(typeOfFile(child)) ?? [];
+        if (!fields.length) return;
+        const fmText = frontmatterOf(text);
+        for (const field of fields) {
+          const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          if (!new RegExp(`^${name}:`, "m").test(fmText))
+            fail(`${child}: no \`${field}\`, which ${typeOfFile(child)}-schema.md requires`);
         }
       });
     },
