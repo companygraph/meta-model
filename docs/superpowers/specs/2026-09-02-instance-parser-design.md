@@ -69,7 +69,8 @@ A consumable package, for the first time. It is already public and already carri
   "exports": { "./instance": "./lib/instance.mjs" },
   "scripts": {
     "verify": "node verify/check.mjs",
-    "test:instance": "node --test verify/instance.test.mjs"
+    "test:instance": "node --test verify/instance.test.mjs",
+    "test:rules": "node --test verify/rule-citations.test.mjs"
   }
 }
 ```
