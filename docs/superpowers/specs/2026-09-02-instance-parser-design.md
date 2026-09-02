@@ -63,7 +63,7 @@ A consumable package, for the first time. It is already public and already carri
 ```jsonc
 {
   "name": "companygraph-meta-model",
-  "version": "0.1.0",              // from 0.0.0
+  "version": "0.5.0",              // from 0.0.0 — see On the version number
   "type": "module",
   "engines": { "node": ">=22" },
   "files": ["lib"],
@@ -75,6 +75,16 @@ A consumable package, for the first time. It is already public and already carri
   }
 }
 ```
+
+**On the version number.** This said 0.1.0 while it was a plan, and 0.1.0 could not be
+tagged: `v0.1.0` already exists here as core 0.1.0, *the person cluster*, on a commit with no
+`lib/` in it. The `vX.Y.Z` line belongs to `core/manifest.json`, and `verify/check.mjs`
+enforces that a `v*` tag on HEAD matches it — so the package joins that line rather than
+opening a second one, and `core/manifest.json` goes to 0.5.0 with it. `core/` is unchanged in
+content at this version: the same vocabulary as 0.4.1, `shape` still 1. A prefixed namespace
+like `pkg-v0.1.0` would keep the two apart and was rejected because Dependabot's version
+detection would have to be proven to read it first — which is the failure the tag-never-a-SHA
+house rule exists to prevent.
 
 `"private": true` goes. It blocks nothing about a git install, but it states the opposite of
 what this repository now is.
@@ -152,7 +162,7 @@ a fallback for a missing thing but the name of a thing that has no file, since n
 Neither live instance changes: both resolve through `identity` today, so both pages are
 byte-identical across this change. That is what makes it safe to do now rather than after the
 sites adopt — and doing it now is what keeps a constant naming the fictional example out of
-v0.1.0's published surface, where removing it later would be a breaking change.
+v0.5.0's published surface, where removing it later would be a breaking change.
 
 The test moves with it. `the root label is the one invented string` asserted the literal
 `"Fictional Company"`, which is the assertion that made the fallback look load-bearing; it is
@@ -174,7 +184,7 @@ by a small file holding only the d3 vendoring test, under a name that says what 
 `instance.test.mjs` that tests d3 is how the Dependabot comment in that repository came to
 describe the wrong file.
 
-Each site pins an exact tag: `"companygraph-meta-model": "github:companygraph/meta-model#v0.1.0"`,
+Each site pins an exact tag: `"companygraph-meta-model": "github:companygraph/meta-model#v0.5.0"`,
 never a SHA, never a `#semver:` range. Each gains a Dependabot group for it, so a meta-model
 bump arrives on its own and is read rather than merged on sight.
 
@@ -193,7 +203,7 @@ output is byte-identical. It gets its own pass, and `core/` joins `files` when i
 1. **Both sites generate byte-identical output.** `npm run model:check` on blust.ch and
    `npm run example:check` on companygraph.io pass, and no generated page changes in either
    repository. Verified by `git status`, not by the check alone.
-2. This repository publishes **v0.1.0** as a tag and a GitHub Release with notes.
+2. This repository publishes **v0.5.0** as a tag and a GitHub Release with notes.
 3. **The rule-number tripwire exists and is proven red** — by adding a citation for a rule that
    does not exist, and separately by removing a rule from `CONVENTIONS.md`. A gate never seen
    to fail is not yet a gate.

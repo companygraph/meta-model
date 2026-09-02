@@ -7,7 +7,7 @@ that repository a consumable package, and bind the parser to the conventions it 
 a test that fails when a cited rule stops existing.
 
 **Architecture:** meta-model gains `lib/instance.mjs` and `verify/instance.test.mjs`, an
-`exports` map and a `files` allowlist, and publishes v0.1.0 as a tag. Both sites delete their
+`exports` map and a `files` allowlist, and publishes v0.5.0 as a tag. Both sites delete their
 copy and change one import. The 22nd test — a d3 vendoring check that is site infrastructure,
 not a parser assertion — stays in companygraph.io under an honest name and is deleted from
 blust.ch, where it can never run.
@@ -102,7 +102,7 @@ Run it: 21 tests, 21 pass, **0 skipped**. A skip here means the d3 test came alo
 ```json
 {
   "name": "companygraph-meta-model",
-  "version": "0.1.0",
+  "version": "0.5.0",
   "type": "module",
   "engines": { "node": ">=22" },
   "files": ["lib"],
@@ -196,7 +196,7 @@ root is the `identity` entity's H1, both live instances have one, the convention
 the parser and its own test reads the constant. The fallback's only effect is to make an
 invalid instance render a plausible-looking wrong name instead of failing.
 
-Do it **before** v0.1.0. Publishing `ROOT_LABEL` and removing it later is a breaking change to
+Do it **before** v0.5.0. Publishing `ROOT_LABEL` and removing it later is a breaking change to
 a surface that never had a consumer.
 
 In `lib/instance.mjs`: delete the `ROOT_LABEL` export and the comment block above it, and
@@ -269,14 +269,14 @@ git commit -m "A missing identity is an error, not a fictional company"
 
 ---
 
-### Task 2: Release v0.1.0
+### Task 2: Release v0.5.0
 
 - [ ] **Step 1:** `npm run verify`, `npm run test:instance`, `npm run test:rules` — all green.
 - [ ] **Step 2:** Confirm no dependencies and no lockfile were introduced.
 - [ ] **Step 3:** Confirm `npm pack --dry-run` ships `lib/` and not `core/`, `example/` or
       `verify/`.
 - [ ] **Step 4:** Open the PR, wait for green, merge with `--merge`.
-- [ ] **Step 5:** Tag `v0.1.0` and create a GitHub Release with notes. Not ceremony:
+- [ ] **Step 5:** Tag `v0.5.0` and create a GitHub Release with notes. Not ceremony:
       Dependabot renders the notes into the pull request in each site, and that pull request is
       the only thing telling a person in another repository what changed.
 
@@ -296,7 +296,7 @@ git commit -m "A missing identity is an error, not a fictional company"
 - [ ] **Step 2: Pin the tag.**
 
 ```bash
-npm install 'companygraph-meta-model@github:companygraph/meta-model#v0.1.0' --save-dev
+npm install 'companygraph-meta-model@github:companygraph/meta-model#v0.5.0' --save-dev
 ```
 
 Use this form, not `npm pkg set` followed by `npm install`. On this repository that reported
