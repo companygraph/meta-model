@@ -23,11 +23,22 @@ core/              the shipped unit, copied whole into an instance
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
 example/           a fictional company, described in those eight types
-verify/check.mjs   npm run verify — asserts this repo's own shape
+lib/instance.mjs   the instance parser — the one module this package ships
+verify/
+  check.mjs                npm run verify — asserts this repo's own shape
+  instance.test.mjs        npm run test:instance — the parser, against fixtures
+  rule-citations.test.mjs  npm run test:rules — every rule the parser cites is defined
 ```
 
 Everything a unit ships lives inside it, so vendoring is a copy rather than a recipe. There is
 no file outside `core/` that an instance also needs.
+
+The npm package ships `lib/` and nothing else. A site reads an instance with
+`import { parseInstance, parseSchemas, CORE_LABEL } from "companygraph-meta-model/instance"`
+— `parseInstance` turns a map of path → Markdown into the graph and `parseSchemas` does the
+same for the schemas, both pure: no filesystem, no network. `core/` is deliberately outside
+the tarball, because the rules are copied into an instance or read over the GitHub API, never
+resolved out of `node_modules`.
 
 ## How it fits together
 
