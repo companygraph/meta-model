@@ -1,5 +1,6 @@
 ---
 source: Local
+kind: Role
 start: 2022-02
 organisation: Beacon Systems
 skills:
