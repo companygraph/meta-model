@@ -27,7 +27,8 @@ two together must be unique in the folder.
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `start` | Yes | date | `YYYY-MM`, when the period began |
 | `end` | No | date | `YYYY-MM`. Absent means the period is ongoing. |
-| `organisation` | No | string | Where the period was spent |
+| `kind` | Yes | ref → experience-kind | What sort of period this is — the H1 of a file in `experience-kinds/` |
+| `organisation` | No | string | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. |
 | `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
 
 ## Sections

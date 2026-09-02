@@ -1,5 +1,6 @@
 ---
 source: Local
+kind: Community
 start: 2021-09
 end: 2021-09
 organisation: Orbit Conference
