@@ -1,9 +1,13 @@
 {
   "name": "companygraph-meta-model",
-  "version": "0.0.0",
-  "private": true,
+  "version": "0.1.0",
   "type": "module",
+  "engines": { "node": ">=22" },
+  "files": ["lib"],
+  "exports": { "./instance": "./lib/instance.mjs" },
   "scripts": {
-    "verify": "node verify/check.mjs"
+    "verify": "node verify/check.mjs",
+    "test:instance": "node --test verify/instance.test.mjs",
+    "test:rules": "node --test verify/rule-citations.test.mjs"
   }
 }

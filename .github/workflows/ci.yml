@@ -13,7 +13,12 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      # No install step: verify/check.mjs has no dependencies, and there is no
-      # lockfile to install from. `npm ci` here would fail, not pass emptily.
+      # No install step: nothing run below has a dependency — check.mjs reads this
+      # repository's own files, and the parser and its tests are pure, fed fixture maps —
+      # and there is no lockfile to install from. `npm ci` here would fail, not pass emptily.
       - name: Check the repository's own shape
         run: npm run verify
+      - name: The parser still parses
+        run: npm run test:instance
+      - name: Every rule the parser cites still exists
+        run: npm run test:rules
