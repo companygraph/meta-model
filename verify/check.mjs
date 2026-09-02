@@ -728,6 +728,21 @@ const CHECKS = [
           if (!DATE.test(value))
             fail(`${child}: \`${field}\` is "${value}"; R9 wants YYYY, YYYY-MM or YYYY-MM-DD`);
         }
+        // R9 makes a shorter date an interval, so an order check compares intervals and not
+        // strings: `end` is wrong only if the whole of it falls before the whole of `start`.
+        // Taking `end`'s latest instant against `start`'s earliest is what keeps
+        // `2002-03 .. 2002` legal — the year contains the month — while still catching a real
+        // inversion. The upper bound uses day 31 rather than the month's true length: it can
+        // only make this more lenient, which is the safe direction for a check whose false
+        // positives would land on correct data.
+        const from = (d) => (d.length === 4 ? `${d}-01-01` : d.length === 7 ? `${d}-01` : d);
+        const to = (d) => (d.length === 4 ? `${d}-12-31` : d.length === 7 ? `${d}-31` : d);
+        if (fields.includes("start") && fields.includes("end")) {
+          const start = fmScalar(fmText, "start");
+          const end = fmScalar(fmText, "end");
+          if (start && end && DATE.test(start) && DATE.test(end) && to(end) < from(start))
+            fail(`${child}: \`end\` is "${end}", which falls entirely before \`start\` "${start}"`);
+        }
       });
     },
   },

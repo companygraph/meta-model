@@ -71,7 +71,11 @@ is what happened, when, and what it evidences.
   does not see an absent field.
 - A one-off is not a period: a talk, a certification, an award or a publication sets `end`
   equal to `start`. Left absent it would read as still running, and no other field says
-  otherwise.
+  otherwise. The two being equal is what makes it a one-off, and the interval that shared
+  value denotes is how precisely it is placed: `2012-05-04 .. 2012-05-04` is a day,
+  `2016-10 .. 2016-10` a month, `2002 .. 2002` an event known only to its year. A period that
+  genuinely ran a whole year is not written `2002 .. 2002` — it takes the months it ran,
+  `2002-01 .. 2002-12`, which is also the only way to tell the two apart.
 - For a one-off, `organisation` is whoever hosted, awarded or published it. The field is a
   stretch there and the alternative — leaving it empty — says less.
 - `## Ending` is written in the person's own voice and looks forward: what the period had
