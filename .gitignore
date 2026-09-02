@@ -1,2 +1,5 @@
 # Local, untracked: paths that must not be published.
 /LOCAL.md
+
+# SDD scratch: ledgers, briefs and review packages for in-flight plans
+.superpowers/
