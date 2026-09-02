@@ -37,6 +37,34 @@ test("an instance with no identity has no root, and that is an R6 error", () => 
   assert.throws(() => parseInstance(rootless), /^Error: R6: .*identity/);
 });
 
+// The stamp exists so a renderer can place a period and a kind beside a node without knowing
+// which field names carry them — the same reason `rootId` is resolved here. These assert the
+// three shapes a period comes in, because a renderer draws each of them differently.
+test("an entity carries a stamp of its kind and period, and one without either carries none", () => {
+  const files = new Map(valid);
+  files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2022-02\nend: 2026-05\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n");
+  const { entities } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  assert.deepEqual(exp.stamp, { kind: "Role", start: "2022-02", end: "2026-05" });
+  // A skill has neither, so it keeps exactly the shape it had before the stamp existed.
+  assert.equal("stamp" in entities.find((e) => e.id === "skills/java-programming"), false);
+});
+
+test("an open period stamps a null end, and a one-off stamps end equal to start", () => {
+  const files = new Map(valid);
+  files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2026-06\n---\n\n# Still running\n\n> Ongoing.\n");
+  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+                   { kind: "Role", start: "2026-06", end: null });
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2012-05-04\nend: 2012-05-04\n---\n\n# A talk\n\n> One day.\n");
+  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+                   { kind: "Role", start: "2012-05-04", end: "2012-05-04" });
+});
+
 test("types come from folders, singular by R7, with their owner", () => {
   const { types } = parseInstance(valid);
   assert.deepEqual(types, [
