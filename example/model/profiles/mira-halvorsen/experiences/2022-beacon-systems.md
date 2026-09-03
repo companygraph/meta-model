@@ -17,3 +17,10 @@ skills:
 - Split one service that three teams edited into two that one team each owns, so the second
   team stopped waiting on the first to merge.
 - Not finished: the third team is still waiting.
+
+## References
+
+| What | URL |
+| --- | --- |
+| Commercial register entry | https://register.example/firm/4419 |
+| Product | https://beacon.example |
