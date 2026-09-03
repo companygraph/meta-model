@@ -3,6 +3,7 @@ source: Local
 kind: Community
 start: 2021-09
 end: 2021-09
+url: https://orbit.example/2021/talks/the-speed-up
 organisation: Orbit Conference
 skills:
   - Product Discovery
@@ -16,3 +17,9 @@ skills:
 
 - Told a room that had funded the same kind of rebuild what the Northwind conversations
   found: that visibility, not speed, was what the pipeline bought.
+
+## References
+
+| What | URL |
+| --- | --- |
+| Recording | https://orbit.example/2021/watch/the-speed-up |

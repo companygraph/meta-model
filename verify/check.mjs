@@ -208,6 +208,9 @@ function fieldsOf(type) {
   const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
   return (fm?.rows ?? []).map((r) => ({
     field: r[0].replace(/`/g, "").trim(),
+    // The Required column was parsed nowhere and read nowhere, so a check written against it
+    // filtered on `undefined` and asserted nothing while reporting green.
+    required: r[1].replace(/`/g, "").trim() === "Yes",
     declared: r[2].replace(/`/g, "").trim(),
   }));
 }
@@ -698,6 +701,81 @@ const CHECKS = [
           const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
           if (new RegExp(`^${name}:[ \\t]*\\[`, "m").test(fmText))
             fail(`${child}: \`${field}\` is a flow sequence; R11 wants one entry per line`);
+        }
+      });
+    },
+  },
+  {
+    // A schema's Required column said `Yes` and nothing read it. Every required field happens
+    // to be present today, so this check starts green — but it started green the way a gate
+    // does, not the way a passing test does: removing `start` from an experience failed only
+    // because R12 derives that filename from it, and on any type whose filename does not, a
+    // missing required field passed in silence.
+    //
+    // Presence is tested, never the value: `source: ` with nothing after it is a different
+    // defect and R4 already has it. The match is on the key alone so that a field which later
+    // becomes list-valued — none is today — does not quietly leave this check's reach.
+    name: "required frontmatter fields are present",
+    rule: "R9",
+    run() {
+      const requiredOf = new Map(
+        TYPES.map((t) => [
+          t.type,
+          fieldsOf(t.type).filter(({ required }) => required).map(({ field }) => field),
+        ]),
+      );
+      walkMd(EX, (child, text) => {
+        const fields = requiredOf.get(typeOfFile(child)) ?? [];
+        if (!fields.length) return;
+        const fmText = frontmatterOf(text);
+        for (const field of fields) {
+          const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+          if (!new RegExp(`^${name}:`, "m").test(fmText))
+            fail(`${child}: no \`${field}\`, which ${typeOfFile(child)}-schema.md requires`);
+        }
+      });
+    },
+  },
+  {
+    // R9 states one lexical form for `date`, so a field declared `date` can be checked against
+    // it. What no script reaches is the half of the rule that matters — "never more precision
+    // than its source states" is a fact about a document nobody here has, so a well-formed
+    // invention passes this exactly as `2002-01` passed the `YYYY-MM` form it replaced. That
+    // half is the agent pass's, and R0 says so.
+    name: "date fields carry a date in one of the three forms",
+    rule: "R9",
+    run() {
+      const DATE = /^\d{4}(-\d{2}(-\d{2})?)?$/;
+      const dateFields = new Map(
+        TYPES.map((t) => [
+          t.type,
+          fieldsOf(t.type).filter(({ declared }) => declared === "date").map(({ field }) => field),
+        ]),
+      );
+      walkMd(EX, (child, text) => {
+        const fields = dateFields.get(typeOfFile(child)) ?? [];
+        if (!fields.length) return;
+        const fmText = frontmatterOf(text);
+        for (const field of fields) {
+          const value = fmScalar(fmText, field);
+          if (value === null || value === undefined || value === "") continue;
+          if (!DATE.test(value))
+            fail(`${child}: \`${field}\` is "${value}"; R9 wants YYYY, YYYY-MM or YYYY-MM-DD`);
+        }
+        // R9 makes a shorter date an interval, so an order check compares intervals and not
+        // strings: `end` is wrong only if the whole of it falls before the whole of `start`.
+        // Taking `end`'s latest instant against `start`'s earliest is what keeps
+        // `2002-03 .. 2002` legal — the year contains the month — while still catching a real
+        // inversion. The upper bound uses day 31 rather than the month's true length: it can
+        // only make this more lenient, which is the safe direction for a check whose false
+        // positives would land on correct data.
+        const from = (d) => (d.length === 4 ? `${d}-01-01` : d.length === 7 ? `${d}-01` : d);
+        const to = (d) => (d.length === 4 ? `${d}-12-31` : d.length === 7 ? `${d}-31` : d);
+        if (fields.includes("start") && fields.includes("end")) {
+          const start = fmScalar(fmText, "start");
+          const end = fmScalar(fmText, "end");
+          if (start && end && DATE.test(start) && DATE.test(end) && to(end) < from(start))
+            fail(`${child}: \`end\` is "${end}", which falls entirely before \`start\` "${start}"`);
         }
       });
     },

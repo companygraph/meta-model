@@ -17,7 +17,7 @@ const valid = new Map([
   ["profiles/mira-halvorsen/mira-halvorsen.md",
    "---\nemail: mira@example.invalid\nlocation: Bergen\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned the JVM services. |\n\n## Summary\n\nEight years.\n"],
   ["profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
-   "---\nstart: 2022-02\norganisation: Beacon Systems\nskills: [Java Programming]\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
+   "---\nstart: 2022-02\norganisation: Beacon Systems\nskills:\n  - Java Programming\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
 ]);
 
 test("the root is the identity entity, by name and by id", () => {
@@ -35,6 +35,34 @@ test("an instance with no identity has no root, and that is an R6 error", () => 
   const rootless = new Map(valid);
   rootless.delete("identity.md");
   assert.throws(() => parseInstance(rootless), /^Error: R6: .*identity/);
+});
+
+// The stamp exists so a renderer can place a period and a kind beside a node without knowing
+// which field names carry them — the same reason `rootId` is resolved here. These assert the
+// three shapes a period comes in, because a renderer draws each of them differently.
+test("an entity carries a stamp of its kind and period, and one without either carries none", () => {
+  const files = new Map(valid);
+  files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2022-02\nend: 2026-05\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n");
+  const { entities } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  assert.deepEqual(exp.stamp, { kind: "Role", start: "2022-02", end: "2026-05" });
+  // A skill has neither, so it keeps exactly the shape it had before the stamp existed.
+  assert.equal("stamp" in entities.find((e) => e.id === "skills/java-programming"), false);
+});
+
+test("an open period stamps a null end, and a one-off stamps end equal to start", () => {
+  const files = new Map(valid);
+  files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2026-06\n---\n\n# Still running\n\n> Ongoing.\n");
+  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+                   { kind: "Role", start: "2026-06", end: null });
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nkind: Role\nstart: 2012-05-04\nend: 2012-05-04\n---\n\n# A talk\n\n> One day.\n");
+  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+                   { kind: "Role", start: "2012-05-04", end: "2012-05-04" });
 });
 
 test("types come from folders, singular by R7, with their owner", () => {
@@ -82,6 +110,31 @@ test("a table section is kept as rows, and its body text is empty", () => {
   assert.equal(skills.text, "");
 });
 
+// R11: a list-valued field is a block sequence, one entry per line, never a flow sequence in
+// brackets. The parser read only the bracketed form, so every conforming instance had its
+// lists silently dropped — `skills` arrived as the empty string and the `- entry` lines were
+// skipped as unparseable. Nothing caught it because every fixture in this file used the form
+// R11 forbids, which is the one the parser could read.
+test("a list is a block sequence, and each entry becomes an edge", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\nskills:\n  - Java Programming\n---\n\n# Splitting\n\n> x\n");
+  const { entities, edges } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  assert.deepEqual(exp.fields.skills, ["Java Programming"]);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via === "skills").length, 1);
+});
+
+// The parser threw on an unresolvable name from the day it was written, so a rule it can see
+// is a rule it enforces. Had it enforced this one, the fixtures above could not have used the
+// forbidden form and the dropped lists would have surfaced years earlier.
+test("a flow sequence is an R11 error, not a silently different shape", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\nskills: [Java Programming]\n---\n\n# Splitting\n\n> x\n");
+  assert.throws(() => parseInstance(files), /^Error: R11: `skills`/);
+});
+
 test("a frontmatter list that names entities becomes edges", () => {
   const { edges } = parseInstance(valid);
   const e = edges.find(x => x.via === "skills");
@@ -100,10 +153,44 @@ test("a table row's first resolving cell is the edge; other cells are attrs, res
   });
 });
 
+// R4 makes an unresolvable row an error so the page can never draw a line to nowhere. A table
+// of references to the outside world — a register entry, a recording — resolves to nothing at
+// all, and under that rule it could not exist.
+//
+// The decision moves from the row to the table: a table where nothing resolves anywhere draws
+// no edges and is data; a table where something resolves is a table of references, and there a
+// row that resolves to nothing is still the error it was.
+//
+// Worth being exact about what that preserves, because it is narrower than it first looks. R4
+// never caught a typo in one cell: the first *resolving* cell of a row becomes the edge, so a
+// misspelled skill beside a correct Level still resolves — on the Level. What it catches is a
+// row where nothing at all resolves, and that is what stays caught.
+test("a table whose rows resolve to nothing at all is data, not an R4 error", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## References\n\n" +
+    "| What | URL |\n| --- | --- |\n| Commercial register entry | https://example.invalid/firm/1 |\n" +
+    "| Recording | https://example.invalid/talk |\n");
+  const { entities, edges } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  const refs = exp.sections.find((s) => s.heading === "References");
+  assert.equal(refs.table.rows.length, 2);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via.startsWith("References")).length, 0);
+});
+
+test("a table where something resolves keeps R4 on every row", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned it. |\n" +
+    "| Jva Programming | Prficient | Nothing here resolves, so the row is an error. |\n");
+  assert.throws(() => parseInstance(files), /^Error: R4: row "Jva Programming"/);
+});
+
 test("a name that resolves to nothing is an R4 error", () => {
   const broken = new Map(valid);
   broken.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
-    "---\nstart: 2022-02\nskills: [Kotlin]\n---\n\n# Splitting\n\n> x\n");
+    "---\nstart: 2022-02\nskills:\n  - Kotlin\n---\n\n# Splitting\n\n> x\n");
   assert.throws(() => parseInstance(broken), /^Error: R4: .*Kotlin/);
 });
 
