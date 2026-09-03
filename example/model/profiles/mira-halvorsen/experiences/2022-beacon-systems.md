@@ -2,7 +2,7 @@
 source: Local
 kind: Role
 start: 2022-02
-organisation: Beacon Systems
+organization: Beacon Systems
 skills:
   - Java Programming
   - Domain-Driven Design

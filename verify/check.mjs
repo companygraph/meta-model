@@ -10,10 +10,11 @@
 // block sequence, and that every filename derives from the entity in it, or has the form its
 // schema states. "## Skills" is the one body table it knows to look for; a second
 // table-valued section would need naming here. It does not validate
-// example/ against the schemas: no date is parsed, no file is checked for the sections its
-// schema requires, an unknown frontmatter field passes, and no file under example/values/ is
-// ever read. A file under example/profiles/ whose folder matches no type's File Location has
-// its frontmatter left alone, because nothing declares what it may reference — and nothing
+// example/ against the schemas: no file is checked for the sections its schema requires. A
+// date field's form is checked (R9), and an unknown frontmatter field is an error (R15) —
+// which is also the first check to read example/values/, for its field names and nothing
+// else. A file under example/profiles/ whose folder matches no type's File Location has its
+// frontmatter left alone, because nothing declares what it may reference — and nothing
 // prevents such a file: "example structure" rejects an unknown folder at the top of example/
 // and states what a profile's folder must contain, not what else may sit inside it, so
 // example/profiles/<profile>/notes/x.md is reachable today and its frontmatter goes unread.
@@ -680,6 +681,35 @@ const CHECKS = [
     },
   },
   {
+    // R15. The failure this exists for is not an exotic one: a field left behind by a rename
+    // renders on the page under the old name while every other check reports green, because
+    // an undeclared field resolves nothing and is therefore asked nothing.
+    //
+    // It walks all of EX rather than example/profiles alone — every typed page has
+    // frontmatter, and example/values/, which no check read until now, is as typed as any
+    // other folder.
+    name: "frontmatter fields are declared",
+    rule: "R15",
+    run() {
+      const declared = new Map(
+        TYPES.map((t) => [t.type, new Set(fieldsOf(t.type).map(({ field }) => field))]),
+      );
+      walkMd(EX, (child, text) => {
+        // A file matching no File Location has no schema, so R15 does not bind it.
+        const type = typeOfFile(child);
+        if (!type) return;
+        const known = declared.get(type);
+        for (const line of frontmatterOf(text).split("\n")) {
+          // Anchored at column 0, so a nested key and a block sequence's `- entry` are not
+          // fields — the same read lib/instance.mjs does.
+          const m = line.match(/^([\w-]+):/);
+          if (m && !known.has(m[1]))
+            fail(`${child}: frontmatter field \`${m[1]}\` is not declared by the ${type} schema`);
+        }
+      });
+    },
+  },
+  {
     // R11 is mechanical in the one direction that matters: a flow sequence is visible as a
     // `[` where a list field's value begins. What a block sequence holds is not read here —
     // resolving the entries is "example references" above, and this check exists so that
@@ -831,7 +861,7 @@ const CHECKS = [
         }
 
         // Scoped to the folder, not the type: two profiles may each have an experience at
-        // the same organisation in the same year, and they do here. What cannot collide is
+        // the same organization in the same year, and they do here. What cannot collide is
         // two files in one directory, which is also the only collision that loses a file.
         const key = `${child.split("/").slice(0, -1).join("/")}/${want}`;
         if (seen.has(key)) fail(`${child} and ${seen.get(key)} both derive to "${want}.md"`);

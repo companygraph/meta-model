@@ -47,4 +47,4 @@ rung means is one edit rather than a hundred.
 - The ladder is the instance's own, in its own words. No external scale — SFIA, Dreyfus, a
   set of HR bands — is cited or reproduced, for the same reason a skill cites none.
 - A rung is about capability, never about seniority, tenure or job title. Those are the
-  organisation's business and they move for reasons that have nothing to do with the claim.
+  organization's business and they move for reasons that have nothing to do with the claim.

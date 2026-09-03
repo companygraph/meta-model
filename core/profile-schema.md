@@ -53,7 +53,7 @@ the claim — this person, this skill, at this level, on this evidence.
 
 - The tagline and `## Summary` are the person's own, in their own voice: what they do and what
   runs through it. Not their employer's description of the role, and not a job advertisement.
-- An Evidence cell states a fact that can be checked — a system, an organisation, a number, a
+- An Evidence cell states a fact that can be checked — a system, an organization, a number, a
   named outcome. "Extensive experience" and "deep knowledge" are not evidence.
 - Evidence never restates the level. If removing the Level column would lose nothing, the
   evidence is describing confidence rather than the work.

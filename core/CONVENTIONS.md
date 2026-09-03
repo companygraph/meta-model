@@ -31,7 +31,7 @@ are the same human and are called the same thing. A name unique across the whole
 would force one of them to be called something nobody calls it, and the graph would then
 describe a naming workaround rather than the company.
 
-A tool that resolves by name alone — one that recognises a reference by the value happening to
+A tool that resolves by name alone — one that recognizes a reference by the value happening to
 be a canonical name, rather than by reading the schema that declares it — cannot use the type
 to choose between two entities sharing one. It refuses rather than guesses: such a name is an
 error where it is used, naming the types it was found under. Resolving to the first match, or
@@ -86,6 +86,21 @@ A folder directly under `model/` is a type's folder and is named by a schema —
 pack the instance declares. A file directly under `model/` is a singular type's entity (R6).
 Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs
 here.
+
+### R14 — Names and prose are American English
+
+Every name this vocabulary chooses is spelled in American English — a field, a type, a folder,
+a section heading a schema declares — and so is the prose of `core/` and of an instance's
+content. `organization`, `modeling`, `license`, `recognize`.
+
+Excepted: proper nouns, quoted matter, and any name fixed by something outside this
+vocabulary — a product, a standard, a legal entity, a `LICENSE` file whose name is what the
+ecosystem reads. The rule governs what this vocabulary calls things, not what the world has
+already named.
+
+*A name is not prose* is the argument for leaving one British spelling in place, and it loses:
+a reader meets both in the same file, and a vocabulary that spells its fields one way and its
+sentences another has no rule at all, only a habit with an exception.
 
 ## Schemas
 
@@ -245,8 +260,8 @@ period — `2018-northwind-atelier.md` for an experience whose H1 is
 
 That one is *chosen* rather than derived, and the schema says so rather than naming a field to
 derive it from. An experience's H1 says what happened, which neither sorts nor scans in a
-folder listing; `organisation` is optional, so it cannot be what a required filename comes
-from; and the same organisation recurs across periods, so it does not identify one anyway. What
+folder listing; `organization` is optional, so it cannot be what a required filename comes
+from; and the same organization recurs across periods, so it does not identify one anyway. What
 a stated form still fixes is everything worth fixing: the prefix is the year in `start`, the
 rest is a slug by the definition above, and the whole is unique in its folder.
 
@@ -257,6 +272,17 @@ each hold an experience named the same way and both files are correctly named.
 This is here rather than in a tooling document because a filename is written by whoever writes
 the file, and the first instance was written by hand. A rule only a program can consult is not
 a convention.
+
+### R15 — A page's frontmatter fields are the ones its schema declares
+
+A frontmatter field its schema does not declare is an error. This binds a page whose folder
+matches a type's stated File Location; a file matching none has no schema, so nothing declares
+what its frontmatter may hold and nothing reads it.
+
+What the rule costs is the local field: an instance cannot carry one of its own. What it buys
+is that a rename cannot half-happen. An undeclared field resolves no reference and satisfies no
+requirement — but it still renders, which is how a field left behind by a rename survives on
+the page under the old name while every other check reports green.
 
 ## Working
 
@@ -281,5 +307,5 @@ Those scripts are this repository's own harness. Copying `CONVENTIONS.md` into a
 brings the rules and not the scripts — there is no `verify` script there, and what these run
 against is this repository's own files and its own parser, not yours. The agent pass is the
 portable part, and it is the only thing that covers what no script reaches: whether a schema's
-prose is portable, and whether a rule that has crept in is really about modelling rather than
+prose is portable, and whether a rule that has crept in is really about modeling rather than
 about one company's tooling.

@@ -3,7 +3,7 @@ source: Local
 kind: Role
 start: 2019-06
 end: 2022-01
-organisation: Northwind Atelier
+organization: Northwind Atelier
 skills:
   - Product Discovery
 ---
