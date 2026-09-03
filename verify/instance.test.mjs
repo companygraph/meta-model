@@ -85,15 +85,36 @@ test("an entity is its H1, tagline, fields, sections and path; a README is not o
     id: "skills/java-programming", type: "skill", name: "Java Programming",
     tagline: "JVM services.", fields: { group: "Programming Languages" },
     sections: [{ heading: "In practice", text: "Reading the stack trace.", tables: [] }],
-    owner: null, path: "example/model/skills/java-programming.md",
+    owner: null, path: "skills/java-programming.md",
   });
+});
+
+// `path` is what the page turns into a link to the file on GitHub, so it has to be the path in
+// the repository the files came from. It was hardcoded to "example/model/" — true of the
+// repository this example lives in and false of every other instance, so every file link on a
+// site whose model sits at `model/` was a 404. The caller knows the prefix; it already had it
+// in a constant of its own.
+test("an entity's path is its file's path in the repository it came from", () => {
+  const at = (sub) => parseInstance(valid, { sub }).entities.find((e) => e.id === "skills/java-programming").path;
+  assert.equal(at("model/"), "model/skills/java-programming.md");
+  assert.equal(at("example/model/"), "example/model/skills/java-programming.md");
+  // No prefix given: the path is the one the files were handed over with, and nothing is
+  // invented on the caller's behalf.
+  assert.equal(parseInstance(valid).entities.find((e) => e.id === "skills/java-programming").path,
+               "skills/java-programming.md");
+});
+
+test("a schema's path takes the prefix its caller passes too", () => {
+  assert.equal(parseSchemas(core, { sub: "core/" }).entities.find((e) => e.id === "core/skill").path,
+               "core/skill-schema.md");
+  assert.equal(parseSchemas(core).entities.find((e) => e.id === "core/skill").path, "skill-schema.md");
 });
 
 test("the folder form names the entity by its folder and owns what nests inside it", () => {
   const { entities } = parseInstance(valid);
   const mira = entities.find(e => e.name === "Mira Halvorsen");
   assert.equal(mira.id, "profiles/mira-halvorsen");
-  assert.equal(mira.path, "example/model/profiles/mira-halvorsen/mira-halvorsen.md");
+  assert.equal(mira.path, "profiles/mira-halvorsen/mira-halvorsen.md");
   const exp = entities.find(e => e.type === "experience");
   assert.equal(exp.owner, "profiles/mira-halvorsen");
   assert.equal(exp.id, "profiles/mira-halvorsen/experiences/2022-beacon-systems");
@@ -297,7 +318,7 @@ test("schemas become entities of one type in one folder, named by their H1", () 
   const exp = entities.find(e => e.id === "core/experience");
   assert.equal(exp.name, "Experience Schema");
   assert.equal(exp.fields.owner, "profile");
-  assert.equal(exp.path, "core/experience-schema.md");
+  assert.equal(exp.path, "experience-schema.md");
   assert.equal(exp.owner, null);
 });
 
