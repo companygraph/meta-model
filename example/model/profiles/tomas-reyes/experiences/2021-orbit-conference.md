@@ -17,3 +17,9 @@ skills:
 
 - Told a room that had funded the same kind of rebuild what the Northwind conversations
   found: that visibility, not speed, was what the pipeline bought.
+
+## References
+
+| What | URL |
+| --- | --- |
+| Recording | https://orbit.example/2021/watch/the-speed-up |
