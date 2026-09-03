@@ -5,7 +5,7 @@ group: Software Design
 
 # Domain-Driven Design
 
-> Modelling software around the language the business already speaks.
+> Modeling software around the language the business already speaks.
 
 ## In practice
 
