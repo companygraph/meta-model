@@ -17,7 +17,7 @@ const valid = new Map([
   ["profiles/mira-halvorsen/mira-halvorsen.md",
    "---\nemail: mira@example.invalid\nlocation: Bergen\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned the JVM services. |\n\n## Summary\n\nEight years.\n"],
   ["profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
-   "---\nstart: 2022-02\norganisation: Beacon Systems\nskills: [Java Programming]\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
+   "---\nstart: 2022-02\norganisation: Beacon Systems\nskills:\n  - Java Programming\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
 ]);
 
 test("the root is the identity entity, by name and by id", () => {
@@ -110,6 +110,31 @@ test("a table section is kept as rows, and its body text is empty", () => {
   assert.equal(skills.text, "");
 });
 
+// R11: a list-valued field is a block sequence, one entry per line, never a flow sequence in
+// brackets. The parser read only the bracketed form, so every conforming instance had its
+// lists silently dropped — `skills` arrived as the empty string and the `- entry` lines were
+// skipped as unparseable. Nothing caught it because every fixture in this file used the form
+// R11 forbids, which is the one the parser could read.
+test("a list is a block sequence, and each entry becomes an edge", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\nskills:\n  - Java Programming\n---\n\n# Splitting\n\n> x\n");
+  const { entities, edges } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  assert.deepEqual(exp.fields.skills, ["Java Programming"]);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via === "skills").length, 1);
+});
+
+// The parser threw on an unresolvable name from the day it was written, so a rule it can see
+// is a rule it enforces. Had it enforced this one, the fixtures above could not have used the
+// forbidden form and the dropped lists would have surfaced years earlier.
+test("a flow sequence is an R11 error, not a silently different shape", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\nskills: [Java Programming]\n---\n\n# Splitting\n\n> x\n");
+  assert.throws(() => parseInstance(files), /^Error: R11: `skills`/);
+});
+
 test("a frontmatter list that names entities becomes edges", () => {
   const { edges } = parseInstance(valid);
   const e = edges.find(x => x.via === "skills");
@@ -165,7 +190,7 @@ test("a table where something resolves keeps R4 on every row", () => {
 test("a name that resolves to nothing is an R4 error", () => {
   const broken = new Map(valid);
   broken.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
-    "---\nstart: 2022-02\nskills: [Kotlin]\n---\n\n# Splitting\n\n> x\n");
+    "---\nstart: 2022-02\nskills:\n  - Kotlin\n---\n\n# Splitting\n\n> x\n");
   assert.throws(() => parseInstance(broken), /^Error: R4: .*Kotlin/);
 });
 
