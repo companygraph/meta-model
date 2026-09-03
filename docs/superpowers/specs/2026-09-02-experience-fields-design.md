@@ -4,7 +4,45 @@
 > form that coerces a year into a month, a type that holds four different things without saying
 > which, and nowhere to put a link. One schema, one version.
 
-Status: proposed, nothing built. Changes `core/experience-schema.md` and one paragraph of
+> **Shipped, and this spec was wrong in two places. Both are recorded here rather than quietly
+> corrected, because a spec that acquires the conclusion it argued against is worth less than
+> one that shows where it missed.**
+>
+> | | proposed here | shipped |
+> |---|---|---|
+> | date precision | `YYYY` \| `YYYY-MM` \| `YYYY-MM-DD`, stated in R9 | **0.7.0**, as written |
+> | `kind` | a required bare-token **enum** | **0.6.0**, as a **type** — see below |
+> | references | `url` and a `## References` table | **0.9.0**, as written |
+> | *"no code"* | claimed for all three | **false for references** — see below |
+>
+> **`kind` is a type, not an enum.** The argument here against types — that they would put
+> `roles/`, `projects/`, `community/` and `educations/` inside the owner and spend the filename
+> rule's own reason — rejects the wrong alternative. One type with four entities is what
+> `proficiency-level` already is, and it leaves the experiences folder whole. R8's test points
+> the same way once looked at: these members carry a definition of their own, and each says
+> what `organisation` means under it. The deciding argument was neither of those: as an enum,
+> the fifth kind a real career turned out to need would have cost a core edit, a release and a
+> re-vendor landing on every instance on that version; as a type it cost one file in the
+> instance that wanted it.
+>
+> **References needed code, and this spec says they did not.** *"`lib/instance.mjs` parses
+> structure and validates neither a date form nor an enum value, so all three land inside what
+> is already agent-enforced"* — true of the first two and false of the third. Every table row
+> had to have one cell resolving to an entity or R4 threw, and a table of links to the outside
+> world resolves to nothing at all: the schema as specified broke the parser on the first
+> instance that used it. The rule moved from the row to the table in 0.9.0.
+>
+> Everything else held, including the two limits §7 states. Precision is unverifiable after the
+> fact — and an absent optional field is indistinguishable from a fact that does not exist,
+> which proved itself twice within a day: four links the mastering system states were missing
+> from the model entirely, and a fifth was copied into it wrong from a truncated listing. Both
+> were found by comparing field against master, which is still the thing nothing does
+> routinely.
+>
+> The one-line fix this spec noticed in passing — the filename rule illustrated with a real
+> employer's name, against this repository's own rule — shipped with 0.9.0.
+
+Status: proposed when written; shipped across 0.6.0, 0.7.0 and 0.9.0. Changes `core/experience-schema.md` and one paragraph of
 `CONVENTIONS.md`. The first two resolve findings recorded in
 [`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7; the
 third was found while resolving them.
