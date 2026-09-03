@@ -12,8 +12,8 @@ An experience is owned by a profile and cannot exist without it, so it nests ins
 profile's folder rather than sitting at the root with a `profile:` field pointing back.
 The filename is not the slug of the H1, which is what R12 does by default. It is the start
 year, then a `-`, then a slug naming the period — chosen, not derived: the H1 says what happened
-and makes a long name that neither sorts nor scans, `organisation` is optional so a required
-filename cannot come from it, and one organisation covers several periods anyway. Whoever writes
+and makes a long name that neither sorts nor scans, `organization` is optional so a required
+filename cannot come from it, and one organization covers several periods anyway. Whoever writes
 the file picks the shortest thing that identifies it — `2018-northwind-atelier.md`,
 `2019-orbit-conference.md`, `2026-career-break.md` — and the folder then sorts chronologically and
 reads as a career. The year must be the year in `start`, the rest must be a slug by R12, and the
@@ -28,7 +28,7 @@ two together must be unique in the folder.
 | `start` | Yes | date | When the period began |
 | `end` | No | date | Absent means the period is ongoing. |
 | `kind` | Yes | ref → experience-kind | What sort of period this is — the H1 of a file in `experience-kinds/` |
-| `organisation` | No | string | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. |
+| `organization` | No | string | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. |
 | `url` | No | string | The entry's own address on the web |
 | `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
 
@@ -65,7 +65,7 @@ someone wrote on purpose, not a token someone selected.
 
 An experience is one dated period in a profile's history, and the place a skill claim gets its
 evidence. It answers "what did this person do here, and what does that show?" — so it is
-written from the person's side, not the organisation's. What the organisation is, what a skill
+written from the person's side, not the organization's. What the organization is, what a skill
 means and how strongly the person claims it are all somewhere else; what only this file holds
 is what happened, when, and what it evidences.
 
@@ -90,7 +90,7 @@ is what happened, when, and what it evidences.
   entry's address; it is a reference, and it goes in the table.
 - `What` names the kind of document, not its significance. "Commercial register entry" is a
   fact about the link; "proof that the company existed" is a reading of it.
-- For a one-off, `organisation` is whoever hosted, awarded or published it. The field is a
+- For a one-off, `organization` is whoever hosted, awarded or published it. The field is a
   stretch there and the alternative — leaving it empty — says less.
 - `## Ending` is written in the person's own voice and looks forward: what the period had
   settled, and what it made the next thing. It is neither an achievement nor a grievance.

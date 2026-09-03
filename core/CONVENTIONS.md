@@ -260,8 +260,8 @@ period — `2018-northwind-atelier.md` for an experience whose H1 is
 
 That one is *chosen* rather than derived, and the schema says so rather than naming a field to
 derive it from. An experience's H1 says what happened, which neither sorts nor scans in a
-folder listing; `organisation` is optional, so it cannot be what a required filename comes
-from; and the same organisation recurs across periods, so it does not identify one anyway. What
+folder listing; `organization` is optional, so it cannot be what a required filename comes
+from; and the same organization recurs across periods, so it does not identify one anyway. What
 a stated form still fixes is everything worth fixing: the prefix is the year in `start`, the
 rest is a slug by the definition above, and the whole is unique in its folder.
 

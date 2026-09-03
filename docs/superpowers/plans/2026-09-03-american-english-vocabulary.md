@@ -92,6 +92,9 @@ the page under the old name while every other check reports green.
 `core/CONVENTIONS.md` line 34 reads `recognises` and line 284 reads `modelling`. Both are this
 vocabulary's own prose and both are now R14 violations:
 
+Both are whole words with no boundary ambiguity, so `sed` is safe here — but note that BSD
+`sed` does not understand `\b`, which is why every word-boundary rename below uses `perl`.
+
 ```bash
 sed -i '' 's/recognises/recognizes/; s/modelling/modeling/' core/CONVENTIONS.md
 grep -nowE "recognises|modelling" core/CONVENTIONS.md   # expect: no output
@@ -229,7 +232,7 @@ git commit -m "A frontmatter field no schema declares is an error"
 
 ```bash
 grep -rIl --exclude-dir=.git --exclude-dir=node_modules --exclude-dir=docs -w organisation . \
-  | xargs sed -i '' 's/\borganisation\b/organization/g'
+  | xargs perl -pi -e 's/\borganisation\b/organization/g'
 ```
 
 - [ ] **Step 2: Confirm the scope of what moved**
@@ -346,7 +349,7 @@ PY
 
 ```bash
 grep -rIl --exclude-dir=.git --exclude-dir=meta --exclude-dir=docs -w organisation . \
-  | xargs sed -i '' 's/\borganisation\b/organization/g'
+  | xargs perl -pi -e 's/\borganisation\b/organization/g'
 grep -rIl --exclude-dir=.git --exclude-dir=meta --exclude-dir=docs \
   -wE "licence|modelling|recognise" . | xargs sed -i '' \
   's/\blicence\b/license/g; s/\bmodelling\b/modeling/g; s/\brecognise\b/recognize/g'

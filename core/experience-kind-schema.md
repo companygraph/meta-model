@@ -51,5 +51,5 @@ read a date would make an absence mean two things and resolve it by a label.
 - A kind is about the sort of period, never about how it went, how long it lasted or how
   senior it was. Those belong to the period.
 - Name it for what the period *is*, not for the type it belongs to: `Role`, not `Experience`.
-- `organisation` means a different thing under each kind — an employer, a client, a host, an
+- `organization` means a different thing under each kind — an employer, a client, a host, an
   awarding body — and each kind says which one it means. That sentence has nowhere else to live.

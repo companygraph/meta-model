@@ -8,7 +8,7 @@ source: Local
 
 ## What it means
 
-A period whose output is a qualification rather than a delivery. `organisation` names the
+A period whose output is a qualification rather than a delivery. `organization` names the
 awarding body — the school, the certifying institute — which is the one case where the field
 does not name somewhere work was done.
 

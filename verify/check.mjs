@@ -861,7 +861,7 @@ const CHECKS = [
         }
 
         // Scoped to the folder, not the type: two profiles may each have an experience at
-        // the same organisation in the same year, and they do here. What cannot collide is
+        // the same organization in the same year, and they do here. What cannot collide is
         // two files in one directory, which is also the only collision that loses a file.
         const key = `${child.split("/").slice(0, -1).join("/")}/${want}`;
         if (seen.has(key)) fail(`${child} and ${seen.get(key)} both derive to "${want}.md"`);

@@ -134,7 +134,7 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    [its spec](docs/superpowers/specs/2026-08-26-reference-instance-design.md).
 3. **The rest of core** — `identity` and `vision` shipped in 0.4.0, which is what let an
    instance name the company it describes and say where it is going; the remaining types the
-   design names are direction, organisation, operation, market, obligation and domain.
+   design names are direction, organization, operation, market, obligation and domain.
 4. **Packs** — the mechanism above, deliberately undesigned until a second kind of company
    asks for one.
 5. **Tooling** — designed, not built:
