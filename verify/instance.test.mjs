@@ -128,6 +128,40 @@ test("a table row's first resolving cell is the edge; other cells are attrs, res
   });
 });
 
+// R4 makes an unresolvable row an error so the page can never draw a line to nowhere. A table
+// of references to the outside world — a register entry, a recording — resolves to nothing at
+// all, and under that rule it could not exist.
+//
+// The decision moves from the row to the table: a table where nothing resolves anywhere draws
+// no edges and is data; a table where something resolves is a table of references, and there a
+// row that resolves to nothing is still the error it was.
+//
+// Worth being exact about what that preserves, because it is narrower than it first looks. R4
+// never caught a typo in one cell: the first *resolving* cell of a row becomes the edge, so a
+// misspelled skill beside a correct Level still resolves — on the Level. What it catches is a
+// row where nothing at all resolves, and that is what stays caught.
+test("a table whose rows resolve to nothing at all is data, not an R4 error", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## References\n\n" +
+    "| What | URL |\n| --- | --- |\n| Commercial register entry | https://example.invalid/firm/1 |\n" +
+    "| Recording | https://example.invalid/talk |\n");
+  const { entities, edges } = parseInstance(files);
+  const exp = entities.find((e) => e.type === "experience");
+  const refs = exp.sections.find((s) => s.heading === "References");
+  assert.equal(refs.table.rows.length, 2);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via.startsWith("References")).length, 0);
+});
+
+test("a table where something resolves keeps R4 on every row", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned it. |\n" +
+    "| Jva Programming | Prficient | Nothing here resolves, so the row is an error. |\n");
+  assert.throws(() => parseInstance(files), /^Error: R4: row "Jva Programming"/);
+});
+
 test("a name that resolves to nothing is an R4 error", () => {
   const broken = new Map(valid);
   broken.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
