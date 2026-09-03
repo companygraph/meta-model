@@ -43,7 +43,7 @@ an evidence cell, and in the experiences that list the skill.
   "Engage …" — never "Someone doing this …" or "They …".
 - Products and tools appear only in a closing clause of the form `Typical tools: …`, and only
   where a product is what the skill is done with. A product is not a skill.
-- One skill is distinct from its neighbours in what someone doing it does, not in which product
+- One skill is distinct from its neighbors in what someone doing it does, not in which product
   they use. Two files that differ only by tool are one skill.
 - Public vocabularies (SFIA, ESCO, O*NET, Lightcast) may be consulted to find the grain and to
   check for gaps; none is cited or reproduced in a skill file. The vocabulary is the instance's

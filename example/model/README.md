@@ -35,5 +35,5 @@ its tooling, its working documents — is not content and is never walked as con
 
 There are no schemas here. This instance is read beside `core/` and is written against the
 schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away
-has no such neighbour and keeps a copy; where is theirs to decide, so long as it is not inside
+has no such neighbor and keeps a copy; where is theirs to decide, so long as it is not inside
 a folder named for a type.

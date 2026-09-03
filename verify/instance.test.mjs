@@ -17,7 +17,7 @@ const valid = new Map([
   ["profiles/mira-halvorsen/mira-halvorsen.md",
    "---\nemail: mira@example.invalid\nlocation: Bergen\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned the JVM services. |\n\n## Summary\n\nEight years.\n"],
   ["profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
-   "---\nstart: 2022-02\norganisation: Beacon Systems\nskills:\n  - Java Programming\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
+   "---\nstart: 2022-02\norganization: Beacon Systems\nskills:\n  - Java Programming\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
 ]);
 
 test("the root is the identity entity, by name and by id", () => {
@@ -400,7 +400,7 @@ test("a reference to a name carried by two types is an error where it is used", 
     ["profiles/robert-blust/robert-blust.md",
      "# Robert Blust\n\n> The person.\n\n## Summary\n\nText.\n"],
     ["profiles/robert-blust/experiences/2026-now.md",
-     "---\nstart: 2026-06\norganisation: Robert Blust\n---\n\n# Now\n\n> Ongoing.\n\n## Achievements\n\n- Text.\n"],
+     "---\nstart: 2026-06\norganization: Robert Blust\n---\n\n# Now\n\n> Ongoing.\n\n## Achievements\n\n- Text.\n"],
   ]);
   assert.throws(() => parseInstance(files), /carried by more than one type \(identity, profile\)/);
 });
