@@ -152,14 +152,14 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    reads the fixed shape and the H1s, never a description. Today `npm run verify` checks this
    repository's own shape, not yours.
 
-## Licence
+## License
 
 [Apache 2.0](LICENSE) — the meta-model is open source and stays that way, and so is any
 tooling built for it. Consulting is the one thing that costs money; what it costs and how it
 is billed is on [companygraph.io/billing](https://companygraph.io/billing/).
 
 Copying `core/` into a repository of your own is the intended use, and Apache 2.0's conditions
-attach to distribution: if you publish that repository, carry the licence and its attribution
+attach to distribution: if you publish that repository, carry the license and its attribution
 alongside the schema files you took. This project claims no interest in the company content you
 write against them — that is your work, and describing it in this vocabulary does not change
 whose it is.
