@@ -1,6 +1,6 @@
 {
   "name": "companygraph-meta-model",
-  "version": "0.13.1",
+  "version": "0.13.2",
   "type": "module",
   "engines": { "node": ">=22" },
   "files": ["lib"],
