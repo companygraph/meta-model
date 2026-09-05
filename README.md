@@ -6,7 +6,7 @@ CompanyGraph is the structure a company's own knowledge takes so that both peopl
 agents can rely on it — types, schemas, and the conventions that make a graph of Markdown
 files checkable.
 
-It is not invented. It is the generalisation of a model that already works in two places
+It is not invented. It is the generalization of a model that already works in two places
 that never knew about each other: a multi-person company, and a company of one. Both
 arrived at the same shape — one Markdown file per entity, YAML frontmatter and a
 Markdown body, in a folder named for its type, with a separate folder of schemas defining
