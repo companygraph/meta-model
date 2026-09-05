@@ -69,7 +69,7 @@ The type is singular because it says what one entity is. No folder is shortened 
 readability: an abbreviated folder is an exception to the one rule that makes the two names
 predictable, bought with nothing.
 
-A singular type has no folder at all (R6), so there is nothing to pluralise.
+A singular type has no folder at all (R6), so there is nothing to pluralize.
 
 ### R13 — The instance's content lives in one container
 
