@@ -67,9 +67,19 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 
 ## Status
 
-🚧 **Early.** One release out, and the model is built spec-first — the design, including what
-was rejected and why, is in
-[`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md).
+Past its first release and in use by a real instance, with the tooling and most of the
+remaining core types still ahead. The current release is 0.13.2, the seventeenth tag, and at
+that release core holds nine types, one schema each: identity, vision, profile, experience,
+experience-kind, skill, proficiency-level, value and source. The reference instance,
+[`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors core at
+that release and populates every one of those types for a company of one, and blust.ch builds
+its model pages from it with the parser this package ships. What is not there yet is the
+tooling, designed and not built, and the rest of the types the design names; the roadmap
+below says which.
+
+The model is built spec-first — the design, including what was rejected and why, is in
+[`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md),
+and the specs that followed sit beside it in `docs/superpowers/specs/`.
 
 ## Instantiating it
 
@@ -132,9 +142,10 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    [`robertblust/mental-model`](https://github.com/robertblust/mental-model), a company of
    one, laid out by hand as the tooling will lay one out. What it taught is §7 of
    [its spec](docs/superpowers/specs/2026-08-26-reference-instance-design.md).
-3. **The rest of core** — `identity` and `vision` shipped in 0.4.0, which is what let an
-   instance name the company it describes and say where it is going; the remaining types the
-   design names are direction, organization, operation, market, obligation and domain.
+3. **The rest of core** — `identity` and `vision` shipped in 0.4.1, which is what let an
+   instance name the company it describes and say where it is going, and `experience-kind`
+   in 0.6.0; the remaining types the design names are direction, organization, operation,
+   market, obligation and domain.
 4. **Packs** — the mechanism above, deliberately undesigned until a second kind of company
    asks for one.
 5. **Tooling** — designed, not built:
