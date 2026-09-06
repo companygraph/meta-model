@@ -27,6 +27,7 @@ operation and an orphaned experience is unrepresentable.
 | `> [Tagline]` | Yes | Single-line summary of the person |
 | `## Skills` | No | Table. One row per skill claimed; its columns are declared below. |
 | `## Summary` | No | A paragraph of context |
+| `## Also at` | No | Table. One row per presence the person maintains elsewhere; its columns are declared below. |
 
 `## Skills` is a table with these columns:
 
@@ -39,6 +40,17 @@ operation and an orphaned experience is unrepresentable.
 An assessment is a table row rather than a frontmatter field because it is a claim with prose
 attached, not a short fact. A table renders where a reader looks, has no quoting hazard around
 a colon or a wrapped line, and declares its columns here exactly as a frontmatter field does.
+
+`## Also at` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |
+| `URL` | Yes | string | The person's own page there |
+
+A presence is a place the person maintains a page on, named by the place and addressed by that
+page — never a single post, an article or a recording, which document an experience and belong
+in that experience's `## References`.
 
 ## Purpose
 
@@ -64,3 +76,7 @@ the claim — this person, this skill, at this level, on this evidence.
   table is the claim, and a claim needs something under it.
 - The Skills table is where a person's history with a skill lives. The skill file stays
   person-neutral, so nothing here belongs there and nothing there belongs here.
+- One row per place in `## Also at`, and a place the person no longer maintains has no row:
+  the table is what a reader will follow.
+- The URL in `## Also at` is the page that is the person's own on that place, not a search, a
+  feed or a post. What a reader lands on has to be the person.

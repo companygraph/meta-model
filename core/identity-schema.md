@@ -28,6 +28,18 @@ be the company's name.
 | `# [Name]` | Yes | The company's canonical name |
 | `> [Tagline]` | Yes | Single-line statement of what the company is |
 | `## What it is` | Yes | What the company does, and for whom |
+| `## Also at` | No | Table. One row per presence the company maintains elsewhere; its columns are declared below. |
+
+`## Also at` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn |
+| `URL` | Yes | string | The company's own page there |
+
+A presence is a place the company maintains a page on, named by the place and addressed by that
+page — never a single post, an article or a recording, which document an experience and belong
+in that experience's `## References`.
 
 ## Purpose
 
@@ -52,3 +64,7 @@ sent to it.
 - A fact lives in one place. Where identity and a profile would state the same thing —
   an address, a mail address — identity holds it, and the profile carries its own only where it
   differs.
+- One row per place in `## Also at`, and a place the company no longer maintains has no row:
+  the table is what a reader will follow.
+- The URL in `## Also at` is the page that is the company's own on that place, not a search, a
+  feed or a post. What a reader lands on has to be the company.
