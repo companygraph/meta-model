@@ -17,3 +17,9 @@ teams, one product, and a domain we are still splitting into the shapes it wants
 We sell to companies at the point where pricing has become a system rather than a page —
 usage, tiers, credits, corrections — and where getting an invoice wrong costs more than the
 invoice.
+
+## Also at
+
+| Where | URL |
+| --- | --- |
+| GitHub | https://github.example.invalid/beacon-systems |

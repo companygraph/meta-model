@@ -20,3 +20,9 @@ location: Bergen
 
 Eight years across two companies, both of them small enough that the boundary between
 building a thing and running it never really existed.
+
+## Also at
+
+| Where | URL |
+| --- | --- |
+| GitHub | https://github.example.invalid/mira-halvorsen |
