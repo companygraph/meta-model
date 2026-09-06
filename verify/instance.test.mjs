@@ -199,6 +199,30 @@ test("a table whose rows resolve to nothing at all is data, not an R4 error", ()
   assert.equal(edges.filter((x) => x.from === exp.id && x.via.startsWith("References")).length, 0);
 });
 
+// The spec for `## Also at` (docs/superpowers/specs/2026-09-06-also-at-design.md) leans on
+// the per-table rule above: a table of presences elsewhere resolves to nothing, so it is
+// data on both types that carry it. Pinned here so a later change to the rule is a red test
+// and not a surprise on the first instance that lists a GitHub account.
+test("an Also at table on the identity and on a profile is data: rows kept, no edge", () => {
+  const files = new Map(valid);
+  files.set("identity.md",
+    "# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n\n## Also at\n\n" +
+    "| Where | URL |\n| --- | --- |\n| GitHub | https://github.example.invalid/beacon-systems |\n");
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Summary\n\nEight years.\n\n## Also at\n\n" +
+    "| Where | URL |\n| --- | --- |\n| GitHub | https://github.example.invalid/mira |\n" +
+    "| LinkedIn | https://linkedin.example.invalid/in/mira |\n");
+  const { entities, edges } = parseInstance(files);
+  for (const name of ["Beacon Systems", "Mira Halvorsen"]) {
+    const e = entities.find((x) => x.name === name);
+    const also = e.sections.find((s) => s.heading === "Also at");
+    assert.deepEqual(also.table.columns, ["Where", "URL"]);
+    assert.ok(also.table.rows.length >= 1, `${name} keeps its rows`);
+    assert.equal(also.text, "");
+    assert.equal(edges.filter((x) => x.from === e.id && x.via.startsWith("Also at")).length, 0, `${name} draws no edge for it`);
+  }
+});
+
 test("a table where something resolves keeps R4 on every row", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/mira-halvorsen.md",
