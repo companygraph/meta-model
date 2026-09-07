@@ -159,11 +159,11 @@ Decisions inside that:
 {
   "tooling": "0.3.0",
   "core": { "version": "1.4.0", "shape": 1, "source": "bundled" },
-  "schemas": "meta",
+  "units": "meta",
   "packs": [],
   "files": {
-    "meta/CONVENTIONS.md": "sha256:…",
-    "meta/profile-schema.md": "sha256:…"
+    "meta/core/CONVENTIONS.md": "sha256:…",
+    "meta/core/profile-schema.md": "sha256:…"
   }
 }
 ```
@@ -186,7 +186,7 @@ left behind. Interactive only for the instance name when `--name` is absent.
 
 ### `add <type> <name> [--owner <name>]`
 
-Reads `meta/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
+Reads `meta/<unit>/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
 
 - H1 is the name exactly as given; the filename is derived by R12 — the slug of the H1, or
   whatever the type's own schema states instead, as `experience` does. Three documents said
@@ -250,7 +250,7 @@ A three-way merge is deliberately not attempted.
 
 Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded by the tooling:
 
-- **`companygraph-validate`** — the R0 agent pass. Reads `meta/CONVENTIONS.md`, walks the graph,
+- **`companygraph-validate`** — the R0 agent pass. Reads `meta/core/CONVENTIONS.md`, walks the graph,
   reports per rule. Runs `companygraph check` first so the agent's attention goes to what the
   script cannot reach: R1, R2, R3, R5, R7, R8, and whether prose that crept into the instance's
   rules is really about modelling. The generated `AGENTS.md` instructs that it runs before every
