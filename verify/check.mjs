@@ -5,12 +5,15 @@
 // about somebody's instance, and it checks far less than CONVENTIONS.md states. It asserts
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
-// resolve — the `ref →` columns of a "## Skills" table, and every frontmatter field a schema
-// types `ref → <type>` or `array of ref → <type>`, that a list-valued field is written as a
-// block sequence, and that every filename derives from the entity in it, or has the form its
-// schema states. "## Skills" is the one body table it knows to look for; a second
-// table-valued section would need naming here. It does not validate
-// example/ against the schemas: no file is checked for the sections its schema requires. A
+// resolve — every frontmatter field a schema types `ref → <type>` or `array of ref → <type>`,
+// that a list-valued field is written as a block sequence, and that every filename derives
+// from the entity in it, or has the form its schema states. It also holds example/ to what
+// core/ declares, field by field and column by column (R16): a declared reference resolves,
+// a field declared anything else does not, and a `number` is written as digits. A body table
+// is reached by the caption naming its section, so no table is named in this file — the
+// hardcoded "## Skills" that used to be the one body table it knew to look for is gone. What
+// is still not validated is a document's shape: no file is checked for the sections its
+// schema requires. A
 // date field's form is checked (R9), and an unknown frontmatter field is an error (R15) —
 // which is also the first check to read example/values/, for its field names and nothing
 // else. A file under example/profiles/ whose folder matches no type's File Location has its
@@ -204,6 +207,33 @@ function walkMd(rel, visit) {
   }
 }
 
+// The values a frontmatter field carries, in three YAML shapes: a scalar on the key's own
+// line, a flow sequence `[A, B]` written on one line, and a block list of `- ` lines directly
+// under the key. Read from the file rather than predicted from the declared type on purpose —
+// a field written in a shape its type did not predict would otherwise go unread, which is the
+// same silence the checks that call this exist to remove.
+//
+// Three shapes, not every shape. A blank line or a comment between the key and its items, a
+// flow sequence wrapped across lines, and a trailing `# comment` are all legal YAML this drops
+// silently. That is a real limit and it is stated here rather than implied away: nothing in
+// `example/` uses those forms, and a full YAML parser is a dependency this script does not
+// take. Whatever does come back is held to what the field's schema declares, singular and
+// listed alike.
+//
+// `frontmatterOf` scopes the read to the frontmatter block; every pattern below is anchored at
+// column 0, so a nested key of the same name is not read as a field either.
+function fieldValues(fmText, field) {
+  const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+  const out = [];
+  for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*\\[(.*)\\][ \\t]*$`, "gm")))
+    out.push(...m[1].split(","));
+  for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*$\\n((?:[ \\t]*-[ \\t]*\\S.*(?:\\n|$))+)`, "gm")))
+    out.push(...m[1].split("\n").map((l) => l.replace(/^[ \t]*-[ \t]*/, "")));
+  for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*(?!\\[)(\\S.*?)[ \\t]*$`, "gm")))
+    out.push(m[1]);
+  return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
+}
+
 // The frontmatter fields a schema declares, as name and declared type, in table order.
 function fieldsOf(type) {
   const fm = tableOf((sectionsOf(read(`core/${type}-schema.md`) ?? "").get("Frontmatter") ?? "").trim());
@@ -336,8 +366,9 @@ const CHECKS = [
         // now lives — a body table's columns need declaring exactly as a frontmatter field
         // does — so the two halves are checked against each other in both directions: a
         // marked section with no column table fails, and a column table for a section that
-        // is not marked fails. Neither degrades to silence, because "example references"
-        // reads the column table as its only statement of what a "## Skills" table must hold.
+        // is not marked fails. Neither degrades to silence, because "the example is held to
+        // what the schemas declare" reads a column table as the only statement of what the
+        // body table under that heading must hold.
         const requiredYesNo = (tbl, where) => {
           for (const row of tbl.rows)
             if (!["Yes", "No"].includes(row[1]))
@@ -395,8 +426,9 @@ const CHECKS = [
             requiredYesNo(block.table, where);
             // A cell holds one value, so a list type in a column table means nothing, and R9
             // leaves `array` and `array of ref → <type>` to the frontmatter table. Rejecting
-            // it here is what makes the singular `ref → <type>` that "example references"
-            // reads off a column complete rather than partial: retyping a column
+            // it here is what makes the singular `ref → <type>` that "the example is held to
+            // what the schemas declare" reads off a column complete rather than partial:
+            // retyping a column
             // `array of ref → proficiency-level` was accepted, and then matched by nothing,
             // so the level column stopped being resolved and the run still said it passed.
             for (const row of block.table.rows) {
@@ -597,30 +629,6 @@ const CHECKS = [
           fail(`${child}: ${type} "${value}" resolves to nothing in example/${folderOf(type)}/`);
       };
 
-      // The profile schema declares the columns of its "## Skills" table, so read them from
-      // there rather than restating them here. The column table is addressed by the caption
-      // naming its section — never by counting tables, which lined up with the sections
-      // table's rows only by accident and handed back another section's columns, or none,
-      // as soon as a row moved.
-      const columnsOf = (type, section) => {
-        const path = `core/${type}-schema.md`;
-        const block = blocksOf(sectionsOf(read(path) ?? "").get("Sections") ?? "").find(
-          (b) => b.section === section,
-        );
-        const rows = block?.table?.rows ?? [];
-        // Every route to an empty list — no caption, a malformed table, a table with no
-        // rows — is a schema that cannot say what its own body table must contain. Checking
-        // nothing would then pass a "## ${section}" table holding anything at all.
-        if (!rows.length)
-          fail(`${path}: nothing declares the columns of "## ${section}", so no "## ${section}" table can be checked`);
-        return rows.map((r) => ({
-          name: r[0].replace(/`/g, "").trim(),
-          required: r[1] === "Yes",
-          ref: r[2].replace(/`/g, "").trim().match(/^ref → (.+)$/)?.[1] ?? null,
-        }));
-      };
-      const SKILL_COLUMNS = columnsOf("profile", "Skills");
-
       // Frontmatter fields a schema types as a reference: the field name and what it points
       // at, both read from the schema. Both forms count — a frontmatter field may hold one
       // value (`ref → <type>`) or a list of them (`array of ref → <type>`, the one list
@@ -638,57 +646,152 @@ const CHECKS = [
         });
       const refFields = new Map(TYPES.map((t) => [t.type, refFieldsOf(t.type)]));
 
-      // The values a field carries, in three YAML shapes: a scalar on the key's own line, a
-      // flow sequence `[A, B]` written on one line, and a block list of `- ` lines directly
-      // under the key. Read from the file rather than predicted from the declared type on
-      // purpose — a field written in a shape its type did not predict would otherwise go
-      // unread, which is the same silence this check exists to remove.
-      //
-      // Three shapes, not every shape. A blank line or a comment between the key and its
-      // items, a flow sequence wrapped across lines, and a trailing `# comment` are all legal
-      // YAML this drops silently. That is a real limit and it is stated here rather than
-      // implied away: nothing in `example/` uses those forms, and a full YAML parser is a
-      // dependency this script does not take. Whatever does come back must resolve, singular
-      // and listed alike.
-      // `frontmatterOf` scopes the read to the frontmatter block; every pattern below is
-      // anchored at column 0, so a nested key of the same name is not read as a field either.
-      const refValues = (fmText, field) => {
-        const name = field.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
-        const out = [];
-        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*\\[(.*)\\][ \\t]*$`, "gm")))
-          out.push(...m[1].split(","));
-        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*$\\n((?:[ \\t]*-[ \\t]*\\S.*(?:\\n|$))+)`, "gm")))
-          out.push(...m[1].split("\n").map((l) => l.replace(/^[ \t]*-[ \t]*/, "")));
-        for (const m of fmText.matchAll(new RegExp(`^${name}:[ \\t]*(?!\\[)(\\S.*?)[ \\t]*$`, "gm")))
-          out.push(m[1]);
-        return out.map((v) => v.trim().replace(/^["']|["']$/g, "")).filter(Boolean);
-      };
-
+      // A body table's columns are not read here. "the example is held to what the schemas
+      // declare" reads every table-valued section of every type, addressed by the caption
+      // naming it, which is what retired the `columnsOf("profile", "Skills")` this check used
+      // to carry — one table, named in this file, out of the several the schemas declare.
       walkMd(`${EX}/profiles`, (child, text) => {
-            // A "## Skills" body table: one row per assessment. Which columns it must have,
-            // which are required and which are references is read from the schema above. An
-            // empty SKILL_COLUMNS is not a reason to skip — it has already failed, in
-            // columnsOf, and the run cannot pass from here.
-            const skills = tableOf(sectionsOf(text).get("Skills") ?? "");
-            if (skills && SKILL_COLUMNS.length) {
-              const want = SKILL_COLUMNS.map((c) => c.name).join("|");
-              if (skills.columns.join("|") !== want)
-                fail(`${child}: "## Skills" columns are ${skills.columns.join("|")}; the schema declares ${want}`);
-              else
-                for (const row of skills.rows)
-                  SKILL_COLUMNS.forEach((col, n) => {
-                    const cell = (row[n] ?? "").trim();
-                    if (!cell) {
-                      if (col.required)
-                        fail(`${child}: a "## Skills" row has no ${col.name.toLowerCase()}`);
-                    } else if (col.ref) {
-                      resolve(child, col.ref, cell);
-                    }
-                  });
-            }
         const fmText = frontmatterOf(text);
         for (const { field, ref } of refFields.get(typeOfFile(child)) ?? [])
-          for (const value of refValues(fmText, field)) resolve(child, ref, value);
+          for (const value of fieldValues(fmText, field)) resolve(child, ref, value);
+      });
+    },
+  },
+  {
+    // R16. `core/` declares a type system and, until this check, nothing held an instance to
+    // it. The parser says so in its own first lines — no schema is consulted — and this file
+    // said it from the other side, so the declarations and the graph agreed only where the
+    // parser's resolution rules happened to coincide with them. Three assertions close that:
+    // a declared reference is drawn, nothing else is, and a `number` is written as digits.
+    //
+    // This script imports no parser, so it cannot observe an edge. It does not have to. A
+    // scalar draws an edge exactly when it is the canonical name of some entity, and a table
+    // cell draws one exactly when it resolves — every resolving cell of a row, not the first
+    // alone, as of core 0.15.0. Both are facts about files this script already reads, so
+    // "draws an edge" and "matches an H1" are one question asked in two vocabularies. That
+    // equivalence is what these assertions rest on, and it holds only in that order: the
+    // parser's rule had to change before a file-level check could stand in for it.
+    //
+    // Every table is addressed by the caption naming its section, never by counting, and no
+    // section is named in this file: R9 makes the caption what says which section a column
+    // table belongs to, so the schemas say which body tables exist and this check reads them
+    // all. That is what retired the `columnsOf("profile", "Skills")` the R4 check carried —
+    // the one body table this script knew how to look for, out of the four now read.
+    name: "the example is held to what the schemas declare",
+    rule: "R16",
+    run() {
+      // Every canonical name in the example, and the types carrying it — the same index the
+      // parser builds, which resolves by name across all types rather than within one. A file
+      // matching no File Location has no schema and so declares nothing to be held to, the
+      // silence "example references" keeps and for the same reason; a file with no H1 is
+      // "filenames derive"'s finding, not this one's.
+      const typesByName = new Map();
+      walkMd(EX, (child, text) => {
+        const type = typeOfFile(child);
+        if (!type) return;
+        const name = text.match(/^#\s+(.+?)\s*$/m)?.[1];
+        if (!name) return;
+        if (!typesByName.has(name)) typesByName.set(name, new Set());
+        typesByName.get(name).add(type);
+      });
+      const carriers = (value) => [...(typesByName.get(value) ?? [])].sort().join(", ");
+
+      // `ref → <type>` requires the value to name a `<type>`, `array of ref → <type>` requires
+      // it of every entry, and `ref? → <type>` requires nothing of a value that names nothing.
+      // The `?` is about whether a value resolves, never about what it resolves to: an edge a
+      // `ref?` does draw lands on the declared type like any other.
+      const refOf = (declared) => {
+        const m = declared.match(/^(array of )?ref(\?)? → (.+)$/);
+        return m ? { optional: !!m[2], target: m[3] } : null;
+      };
+
+      // One written value against one declaration. `where` names the field or the column it
+      // was written in, so the three assertions read the same for both.
+      const held = (child, where, declared, value) => {
+        const found = typesByName.get(value);
+        const ref = refOf(declared);
+        if (!ref) {
+          // 2. Nothing else is drawn. A value that resolves becomes an edge whatever its
+          // field is declared, so a non-reference carrying a canonical name is a declaration
+          // and a graph that disagree — the finding this check was written for.
+          if (found)
+            fail(
+              `${child}: ${where} is declared \`${declared}\` and says "${value}", which is the canonical name of an entity of type ${carriers(value)}; R16 draws an edge from a value that resolves, so declare it \`ref? → <type>\` or write something that names nothing`,
+            );
+          return;
+        }
+        // 1. A declared reference is drawn.
+        if (found?.has(ref.target)) return;
+        if (!found) {
+          if (!ref.optional)
+            fail(`${child}: ${where} is declared \`${declared}\` and says "${value}", which names no entity in ${EX}/; R16 makes a declared reference an edge, so it must resolve`);
+          return;
+        }
+        fail(
+          `${child}: ${where} is declared \`${declared}\` and says "${value}", which names an entity of type ${carriers(value)}, not ${ref.target}; R16 lands a reference on the type it declares`,
+        );
+      };
+
+      // What every type declares about its body tables: one entry per table-valued section,
+      // addressed by the caption that names it. "schema fixed shape" has already failed a
+      // marked section with no column table, a column table for an unmarked section and a
+      // column table with no rows, so what reaches here is a schema that can say what its own
+      // body tables hold.
+      const columnTables = new Map(
+        TYPES.map((t) => [
+          t.type,
+          blocksOf(sectionsOf(read(`core/${t.type}-schema.md`) ?? "").get("Sections") ?? "")
+            .filter((b) => b.section && b.table)
+            .map((b) => ({
+              section: b.section,
+              columns: b.table.rows.map((r) => ({
+                name: r[0].replace(/`/g, "").trim(),
+                required: r[1].replace(/`/g, "").trim() === "Yes",
+                declared: r[2].replace(/`/g, "").trim(),
+              })),
+            })),
+        ]),
+      );
+
+      walkMd(EX, (child, text) => {
+        const type = typeOfFile(child);
+        if (!type) return;
+        const fmText = frontmatterOf(text);
+
+        for (const { field, declared } of fieldsOf(type)) {
+          for (const value of fieldValues(fmText, field)) held(child, `\`${field}\``, declared, value);
+          // 3. A number is digits. R16 makes `number` a statement about the written form and
+          // not a parsed type, because this is a model made of Markdown: every value in every
+          // file is text, and what a serializer turns that text into is its own business.
+          if (declared === "number") {
+            const value = fmScalar(fmText, field);
+            if (value !== null && !/^-?\d+$/.test(value))
+              fail(`${child}: \`${field}\` is declared \`number\` and says "${value}"; R16 wants it written as digits`);
+          }
+        }
+
+        const sections = sectionsOf(text);
+        for (const { section, columns } of columnTables.get(type) ?? []) {
+          // A table that is not there is the sections table's business — Required says whether
+          // the section must exist, and nothing reads it yet. What is held here is a table
+          // that IS there, against the columns declared for it.
+          const table = tableOf(sections.get(section) ?? "");
+          if (!table) continue;
+          const want = columns.map((c) => c.name).join("|");
+          if (table.columns.join("|") !== want) {
+            fail(`${child}: "## ${section}" columns are ${table.columns.join("|")}; the schema declares ${want}`);
+            continue;
+          }
+          for (const row of table.rows)
+            columns.forEach((col, n) => {
+              const cell = (row[n] ?? "").trim();
+              if (!cell) {
+                if (col.required) fail(`${child}: a "## ${section}" row has no ${col.name.toLowerCase()}`);
+                return;
+              }
+              held(child, `\`${col.name}\` in "## ${section}"`, col.declared, cell);
+            });
+        }
       });
     },
   },
