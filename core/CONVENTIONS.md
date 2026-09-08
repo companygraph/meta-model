@@ -324,10 +324,10 @@ Nothing is committed without a validation pass over the rules above. The pass is
 reading the files against these rules. A repository may also own a script that checks some of
 them; nothing here depends on having one.
 
-Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository,
-`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10,
-R11 and R12 against this repository's own files, plus a meta-check under R0 that fails if any
-check cites a rule this document does not define. `npm run test:instance` exercises the
+Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm
+run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10, R11,
+R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
+any check cites a rule this document does not define. `npm run test:instance` exercises the
 instance parser's implementation of the rules it cites — R2, R3, R4, R5, R6, R7, R9 and R13 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. No file is checked against R1, R2,

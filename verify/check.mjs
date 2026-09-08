@@ -681,10 +681,10 @@ const CHECKS = [
     rule: "R16",
     run() {
       // Every canonical name in the example, and the types carrying it — the same index the
-      // parser builds, which resolves by name across all types rather than within one. A file
-      // matching no File Location has no schema and so declares nothing to be held to, the
-      // silence "example references" keeps and for the same reason; a file with no H1 is
-      // "filenames derive"'s finding, not this one's.
+      // parser builds, which refuses to resolve a name carried by more than one type rather
+      // than guessing between them. A file matching no File Location has no schema and so
+      // declares nothing to be held to, the silence "example references" keeps and for the
+      // same reason; a file with no H1 is "filenames derive"'s finding, not this one's.
       const typesByName = new Map();
       walkMd(EX, (child, text) => {
         const type = typeOfFile(child);
