@@ -92,13 +92,32 @@ usually names a client rather than an entity.
 `organization` becomes `ref? → identity`, `Required: No`. The check reads `ref?` as permitting an edge rather
 than requiring one, and asserts that any edge it does produce lands on the declared type.
 
-This is the vocabulary's first addition. It earns the place because the behaviour already exists
-in the parser and on the page, and only the declaration was missing.
+This is the vocabulary's first addition, and the tooling spec's release table calls a change to
+the closed vocabulary a MAJOR that moves `shape` with it. **The release is a minor, 0.15.0, and
+`shape` moves to 2 anyway.** The two halves of that rule are separated here on purpose, once,
+for reasons that will not generalize.
+
+The version tier answers one question — what must an instance do about it? A MAJOR's answer is
+"be read by a newer tooling", and `companygraph/tooling` does not exist; nothing reads
+`manifest.json` at all. Both instances consume this repository through `parseInstance`, which
+never opens the manifest. So the honest answer today is that an instance must do nothing about
+the vocabulary, and a MAJOR would be a number with no consequence behind it — in a repository
+that reserves `1.0.0` for a different milestone and so has no obvious pre-1.0 number for one.
+
+`shape` is not that kind of number. It states which vocabulary a core uses, and the vocabulary
+changed. Left at 1, the first tooling built against `supportedShapes: [1]` would accept a core
+carrying a form it cannot read — a silent misread, which the tooling design forbids in the same
+breath as R4. So it moves, and the coupling in that table is what gives way.
+
+The addition earns its place because the behaviour already exists in the parser and on the page,
+and only the declaration was missing.
 
 ## 3. What each change touches
 
 ```
 core/CONVENTIONS.md          the ref? form, in the closed vocabulary; R16
+core/manifest.json           version 0.15.0, shape 2
+package.json                 version 0.15.0, which check.mjs holds against the tag
 core/experience-schema.md    organization becomes ref? → identity
 lib/instance.mjs             one edge per resolving cell in a table row
 verify/check.mjs             the three assertions
