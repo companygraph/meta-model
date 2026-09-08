@@ -480,13 +480,21 @@ const CHECKS = [
               fail(`${path}: ${row[0]} is "${declared}"; \`array of ref?\` is not a form — the \`?\` is about one value`);
               continue;
             }
-            const ref = declared.match(/^(array of )?ref(\?)? → (.+)$/);
+            // `array of qualifier` is refused for the same reason and separately, because a
+            // qualifier is about the one cell it sits in: a column holds one value (R8), so a
+            // list of qualifiers has nothing to qualify.
+            if (/^array of qualifier → /.test(declared)) {
+              fail(`${path}: ${row[0]} is "${declared}"; \`array of qualifier\` is not a form — a column holds one value`);
+              continue;
+            }
+            const ref = declared.match(/^(array of )?(ref\??|qualifier) → (.+)$/);
             if (ref) {
-              const [, many, optional, target] = ref;
+              const [, many, form, target] = ref;
+              if (many && form === "qualifier") continue;
               if (!known.has(target))
                 fail(`${path}: ${row[0]} points at unknown type "${target}"`);
               if (target.endsWith("s"))
-                fail(`${path}: ${row[0]} is "${many ?? ""}ref${optional ?? ""} → ${target}"; a reference names one entity`);
+                fail(`${path}: ${row[0]} is "${many ?? ""}${form} → ${target}"; a reference names one entity`);
             } else if (!TYPE_VOCABULARY.has(declared)) {
               fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
             }
@@ -700,9 +708,14 @@ const CHECKS = [
       // it of every entry, and `ref? → <type>` requires nothing of a value that names nothing.
       // The `?` is about whether a value resolves, never about what it resolves to: an edge a
       // `ref?` does draw lands on the declared type like any other.
+      // A qualifier resolves on the same terms and draws nothing: it qualifies the edge its
+      // own row drew. So it is read here as a reference that must land on its declared type,
+      // and `draws` is what separates the two everywhere the distinction matters.
       const refOf = (declared) => {
         const m = declared.match(/^(array of )?ref(\?)? → (.+)$/);
-        return m ? { optional: !!m[2], target: m[3] } : null;
+        if (m) return { optional: !!m[2], target: m[3], draws: true };
+        const q = declared.match(/^qualifier → (.+)$/);
+        return q ? { optional: false, target: q[1], draws: false } : null;
       };
 
       // One written value against one declaration. `where` names the field or the column it
@@ -724,7 +737,7 @@ const CHECKS = [
         if (found?.has(ref.target)) return;
         if (!found) {
           if (!ref.optional)
-            fail(`${child}: ${where} is declared \`${declared}\` and says "${value}", which names no entity in ${EX}/; R16 makes a declared reference an edge, so it must resolve`);
+            fail(`${child}: ${where} is declared \`${declared}\` and says "${value}", which names no entity in ${EX}/; R16 makes ${ref.draws ? "a declared reference an edge" : "a qualifier resolve like the reference it qualifies"}, so it must resolve`);
           return;
         }
         fail(
@@ -752,6 +765,26 @@ const CHECKS = [
             })),
         ]),
       );
+
+      // 4. A column table declares at most one drawing reference, and it stands first. The
+      // parser reads no schema — it takes the first cell of a row that resolves — so the
+      // declared reference is the edge only while nothing resolving precedes it. A qualifier
+      // listed first would quietly take its place, and the schema would then describe an edge
+      // the graph does not have. A table declaring no reference draws nothing and is data,
+      // which is a table's other legal shape.
+      for (const [type, tables] of columnTables)
+        for (const { section, columns } of tables) {
+          const draws = columns.filter((c) => refOf(c.declared)?.draws);
+          if (!draws.length) continue;
+          if (draws.length > 1)
+            fail(
+              `core/${type}-schema.md: "## ${section}" declares ${draws.length} references (${draws.map((c) => c.name).join(", ")}); a row draws one edge, so one column names what it points at and the rest qualify it`,
+            );
+          else if (columns[0] !== draws[0])
+            fail(
+              `core/${type}-schema.md: "## ${section}" declares \`${draws[0].name}\` as its reference but lists \`${columns[0].name}\` first; the parser takes the first cell that resolves, so the reference comes first`,
+            );
+        }
 
       walkMd(EX, (child, text) => {
         const type = typeOfFile(child);

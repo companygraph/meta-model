@@ -153,7 +153,8 @@ table, and a column table for a section not marked `Table.`, are both errors: ea
 means nothing without the other.
 
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
-`array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`. A reference names
+`array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`,
+`qualifier → <type>`. A reference names
 one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 
 Some fields name a thing that is sometimes an entity and sometimes not — an employer that is
@@ -188,6 +189,21 @@ field (R8); it never becomes a column.
 `ref? → <type>` is legal wherever `ref → <type>` is — a frontmatter field or a column — on the
 same terms. `array of ref?` is not a form: the `?` asks whether one value resolves, and a list
 has no single value to ask it of.
+
+`qualifier → <type>` is a column type and only a column type. A row of a column table is one
+fact about several things — a skill held at a level, with the evidence for it — and a fact
+like that is identified by the things it joins rather than by a name of its own. R2 names
+entities by their H1 and allows no two of a type to share one, so such a row cannot become an
+entity without being given a name nobody calls it. It stays a row: one column names what the
+row points at, and the rest qualify that reference. A qualifier must resolve, exactly as a
+reference must, and it draws no edge of its own; it reaches a reader as an attribute of the
+edge its row drew, already resolved to an id.
+
+So a column table declares at most one reference, and it is the first column. That is what
+makes the edge a row draws a matter of the schema rather than of the order somebody typed the
+columns in — a parser that takes the first cell to resolve takes the declared reference, and
+a qualifier standing before it would quietly take its place. A table declaring no reference at
+all draws nothing and is data, which is a table's other legal shape.
 
 `## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
 cannot: what the type is *for*, and what separates a good entity of it from one that merely
@@ -301,8 +317,15 @@ the page under the old name while every other check reports green.
 
 A field or column typed `ref → <type>` or `array of ref → <type>` draws an edge from every
 page that carries it. One typed `ref? → <type>` draws an edge when its value resolves, and
-stays a fact when it does not. Typed anything else, a field draws no edge — and typed `number`,
+stays a fact when it does not. One typed `qualifier → <type>` resolves and draws no edge: it
+qualifies the edge its own row drew, and reaches a reader in that edge's attributes. Typed
+anything else, a field draws no edge and its value resolves to nothing — and typed `number`,
 it is written as digits.
+
+The difference between a reference and a qualifier is not how hard it resolves; both must. It
+is what the row is saying. A row that names a skill and a level makes one claim about both, so
+one edge carries it and the level qualifies that edge. Two edges would say the page refers to
+the skill and, separately, to the level — and the second is a claim no row makes.
 
 `number` is about the written form, not a parsed type, and that is worth saying because a
 reader will otherwise take it for a bug. This is a model made of Markdown: every value in every

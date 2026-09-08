@@ -34,7 +34,7 @@ operation and an orphaned experience is unrepresentable.
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Skill` | Yes | ref → skill | Must match the H1 of a file in `skills/` exactly |
-| `Level` | Yes | ref → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
+| `Level` | Yes | qualifier → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
 | `Evidence` | Yes | string | A concrete fact the level can be weighed against. Required, because the adjective on its own measures confidence rather than skill. |
 
 An assessment is a table row rather than a frontmatter field because it is a claim with prose
