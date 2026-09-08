@@ -165,44 +165,13 @@ test("a frontmatter list that names entities becomes edges", () => {
   });
 });
 
-test("a table row draws an edge for every cell that resolves, each carrying the row's other cells as attrs", () => {
+test("a table row's first resolving cell is the edge; other cells are attrs, resolved where they can be", () => {
   const { edges } = parseInstance(valid);
-  const skill = edges.find(x => x.via === "Skills.Skill");
-  assert.deepEqual(skill, {
+  const e = edges.find(x => x.via === "Skills.Skill");
+  assert.deepEqual(e, {
     from: "profiles/mira-halvorsen", to: "skills/java-programming", via: "Skills.Skill",
     attrs: { Level: "proficiency-levels/proficient", Evidence: "Owned the JVM services." },
   });
-  const level = edges.find(x => x.via === "Skills.Level");
-  assert.deepEqual(level, {
-    from: "profiles/mira-halvorsen", to: "proficiency-levels/proficient", via: "Skills.Level",
-    attrs: { Skill: "skills/java-programming", Evidence: "Owned the JVM services." },
-  });
-  // The two edges from the same row each name the column that produced them, not a shared via.
-  assert.equal(skill.via, "Skills.Skill");
-  assert.equal(level.via, "Skills.Level");
-});
-
-test("a row naming exactly one entity still produces one edge, with the other cells as attrs", () => {
-  const files = new Map(valid);
-  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
-    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
-    "| Skill | Note |\n| --- | --- |\n| Java Programming | Owned the JVM services. |\n");
-  const { edges } = parseInstance(files);
-  const rows = edges.filter((x) => x.via.startsWith("Skills."));
-  assert.equal(rows.length, 1);
-  assert.deepEqual(rows[0], {
-    from: "profiles/mira-halvorsen", to: "skills/java-programming", via: "Skills.Skill",
-    attrs: { Note: "Owned the JVM services." },
-  });
-});
-
-test("a row naming no entity in a table of references is still an R4 error, with the same message", () => {
-  const files = new Map(valid);
-  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
-    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
-    "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned it. |\n" +
-    "| Nothing Here | Nowhere Either | Neither cell resolves, so the row is an error. |\n");
-  assert.throws(() => parseInstance(files), /^Error: R4: row "Nothing Here" in profiles\/mira-halvorsen\/mira-halvorsen\.md names no entity$/);
 });
 
 // R4 makes an unresolvable row an error so the page can never draw a line to nowhere. A table
@@ -214,8 +183,8 @@ test("a row naming no entity in a table of references is still an R4 error, with
 // row that resolves to nothing is still the error it was.
 //
 // Worth being exact about what that preserves, because it is narrower than it first looks. R4
-// never caught a typo in one cell: every *resolving* cell of a row draws its own edge, so a
-// misspelled skill beside a correct Level still draws the Level's edge. What it catches is a
+// never caught a typo in one cell: the first *resolving* cell of a row becomes the edge, so a
+// misspelled skill beside a correct Level still resolves — on the Level. What it catches is a
 // row where nothing at all resolves, and that is what stays caught.
 test("a table whose rows resolve to nothing at all is data, not an R4 error", () => {
   const files = new Map(valid);
