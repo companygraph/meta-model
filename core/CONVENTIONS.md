@@ -199,7 +199,9 @@ row points at, and the rest qualify that reference. A qualifier must resolve, ex
 reference must, and it draws no edge of its own; it reaches a reader as an attribute of the
 edge its row drew, already resolved to an id.
 
-So a column table declares at most one reference, and it is the first column. That is what
+So a column table declares at most one reference, and it is the first column; a table that
+qualifies anything declares the reference being qualified, because a qualifier with nothing to
+qualify is a cell whose value the parser would draw the edge from. That is what
 makes the edge a row draws a matter of the schema rather than of the order somebody typed the
 columns in — a parser that takes the first cell to resolve takes the declared reference, and
 a qualifier standing before it would quietly take its place. A table declaring no reference at

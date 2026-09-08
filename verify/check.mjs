@@ -775,7 +775,17 @@ const CHECKS = [
       for (const [type, tables] of columnTables)
         for (const { section, columns } of tables) {
           const draws = columns.filter((c) => refOf(c.declared)?.draws);
-          if (!draws.length) continue;
+          if (!draws.length) {
+            // A qualifier with nothing to qualify is a contradiction the parser resolves the
+            // wrong way: its value resolves, so the schema-blind parser draws the edge from it
+            // while the schema says the table draws nothing.
+            const q = columns.filter((c) => refOf(c.declared) && !refOf(c.declared).draws);
+            if (q.length)
+              fail(
+                `core/${type}-schema.md: "## ${section}" declares ${q.map((c) => "\`" + c.name + "\`").join(", ")} as ${q.length === 1 ? "a qualifier" : "qualifiers"} and no reference; a qualifier qualifies the edge its row draws, and this table draws none`,
+              );
+            continue;
+          }
           if (draws.length > 1)
             fail(
               `core/${type}-schema.md: "## ${section}" declares ${draws.length} references (${draws.map((c) => c.name).join(", ")}); a row draws one edge, so one column names what it points at and the rest qualify it`,
