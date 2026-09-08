@@ -181,3 +181,42 @@ naming none is still the R4 error it was.
 
 And the edge counts above are re-measured after the change rather than predicted: 5 more in
 `example/`, and 70 more when `robertblust/mental-model` is parsed at the same commit.
+
+## 7. What changed after the first implementation
+
+Sections 1 to 6 were implemented, and the result was read on a rendered graph before release.
+The parser rule they specify — one edge per resolving cell — is withdrawn. What follows is the
+finding that withdrew it, kept here because the rejected reading is the one a later reader will
+reach for again.
+
+**Two binary edges assert a claim no row makes.** A row naming a skill and a level is one fact
+about three things. Split into `profile → skill` and `profile → level`, the second says the
+page refers to a level, which is true of no row: a profile is not Familiar, a profile *at Java
+Programming* is. On the drawing it showed as the same profile appearing once per row around a
+level — four bands reading "referred by · 33 profiles" in an instance holding one profile.
+
+**An association is identified by its ends, not by a name.** This is why UML hangs an
+association class off the association line rather than making it a class, why an ER associative
+entity takes a composite key, and why a property graph promotes a relationship to a node only
+when it must. R2 reaches the same place from this model's side: an entity is named by its H1
+and no two of a type may share one, so a row promoted to an entity would need a name nobody
+calls it — which R2's own rationale rejects.
+
+So the row stays one edge and the cells that are not its target qualify it, which is what the
+code always did. What was wrong was never the parser but the schema: it typed such a cell
+`ref → <type>`, a word that promises an edge. The vocabulary gains `qualifier → <type>` for a
+cell that must resolve and draws nothing, and a column table declares at most one reference,
+lists it first, and declares one at all if it qualifies anything — because the parser reads no
+schema and takes the first cell that resolves.
+
+**What this costs.** A proficiency level is not reachable from a profile by walking the graph;
+it is read from the edge's attributes, already resolved to an id. That is a real limit, stated
+rather than papered over, and it is the limit a qualifier has in every notation that has one.
+Removing it means promoting the row to an entity — an owned `assessment` alongside
+`experiences` — which needs R2 scoped to an owner, restructures both instances and is a major.
+It is worth doing when something asks a level what points at it. Nothing does today.
+
+**What it buys.** `example.json` is byte-identical to the published copy apart from its pin, so
+no instance graph moves and no site re-renders an instance. `model.json` gains one edge,
+experience to identity, which the `string` declaration had hidden. Sections 1 to 3's other work
+stands: `ref? → <type>`, `organization`, R16 and the assertions, now five.
