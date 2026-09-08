@@ -153,8 +153,17 @@ table, and a column table for a section not marked `Table.`, are both errors: ea
 means nothing without the other.
 
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
-`array`, `enum`, `ref → <type>`, `array of ref → <type>`. A reference names one entity, so
-the type it points at is singular: `ref → skill`, never `ref → skills`.
+`array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`. A reference names
+one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+
+Some fields name a thing that is sometimes an entity and sometimes not — an employer that is
+the company itself, a client that is nobody here. `ref? → <type>` is how a schema says so: a
+value that resolves becomes an edge, a value that does not stays a string, and neither reading
+is an error.
+
+The `?` is not `Required`, though the two read as one thing on a first pass. `Required` says
+whether the field may be absent; `ref?` says whether a value that is present must resolve. A
+field can be both, and `organization` is.
 
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
 states and never at more; an author may deliberately record less. A shorter form is an
@@ -175,6 +184,10 @@ a column table the list types — `array` and `array of ref → <type>` — are 
 something to be read leniently, because there is nothing for them to mean: a column that
 references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter
 field (R8); it never becomes a column.
+
+`ref? → <type>` is legal wherever `ref → <type>` is — a frontmatter field or a column — on the
+same terms. `array of ref?` is not a form: the `?` asks whether one value resolves, and a list
+has no single value to ask it of.
 
 `## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
 cannot: what the type is *for*, and what separates a good entity of it from one that merely
@@ -283,6 +296,25 @@ What the rule costs is the local field: an instance cannot carry one of its own.
 is that a rename cannot half-happen. An undeclared field resolves no reference and satisfies no
 requirement — but it still renders, which is how a field left behind by a rename survives on
 the page under the old name while every other check reports green.
+
+### R16 — An instance is held to what its schema declares
+
+A field or column typed `ref → <type>` or `array of ref → <type>` draws an edge from every
+page that carries it. One typed `ref? → <type>` draws an edge when its value resolves, and
+stays a fact when it does not. Typed anything else, a field draws no edge — and typed `number`,
+it is written as digits.
+
+`number` is about the written form, not a parsed type, and that is worth saying because a
+reader will otherwise take it for a bug. This is a model made of Markdown: every value in every
+file is text, and what a serializer turns that text into is the serializer's own business, not
+this vocabulary's. A rule reading "digits become a number" would say more than intended — it
+would turn a year-only date into an integer, and a date written `YYYY` is legal by R9.
+
+What the rule costs is that a schema's types stop being decoration: retype a field from
+`string` to `ref → <type>` and a page that used to hold a fact now holds an edge, on every
+instance that field carries it. What it buys is that nothing beyond the schema decides which
+fields to resolve — a parser reads the type once and knows, for every page of every type, which
+fields become edges and which stay facts.
 
 ## Working
 

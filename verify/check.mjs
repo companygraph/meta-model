@@ -441,13 +441,20 @@ const CHECKS = [
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = row[2].replace(/`/g, "").trim();
-            const ref = declared.match(/^(array of )?ref → (.+)$/);
+            // `array of ref?` is rejected by its own message rather than left to fall through:
+            // the `?` asks whether one value resolves, and a list has no single value to ask
+            // it of, so the combination is never a form the regex below should accept.
+            if (/^array of ref\? → /.test(declared)) {
+              fail(`${path}: ${row[0]} is "${declared}"; \`array of ref?\` is not a form — the \`?\` is about one value`);
+              continue;
+            }
+            const ref = declared.match(/^(array of )?ref(\?)? → (.+)$/);
             if (ref) {
-              const [, many, target] = ref;
+              const [, many, optional, target] = ref;
               if (!known.has(target))
                 fail(`${path}: ${row[0]} points at unknown type "${target}"`);
               if (target.endsWith("s"))
-                fail(`${path}: ${row[0]} is "${many ?? ""}ref → ${target}"; a reference names one entity`);
+                fail(`${path}: ${row[0]} is "${many ?? ""}ref${optional ?? ""} → ${target}"; a reference names one entity`);
             } else if (!TYPE_VOCABULARY.has(declared)) {
               fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
             }
@@ -619,6 +626,11 @@ const CHECKS = [
       // value (`ref → <type>`) or a list of them (`array of ref → <type>`, the one list
       // shape R8 leaves in frontmatter) — and this is what makes either machine-visible.
       // Matching only the list form left the commoner singular one inert.
+      //
+      // This selects the fields required to resolve, and `ref?` is deliberately not among
+      // them: R16 draws an edge from a `ref?` field only when its value resolves, so a value
+      // that does not is not an error. The regex below excludes `ref?` by not matching its
+      // `?` — that is the correct behavior here, not an inconsistency to fix by widening it.
       const refFieldsOf = (type) =>
         fieldsOf(type).flatMap(({ field, declared }) => {
           const target = declared.match(/^(?:array of )?ref → (.+)$/)?.[1];
