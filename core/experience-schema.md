@@ -28,7 +28,7 @@ two together must be unique in the folder.
 | `start` | Yes | date | When the period began |
 | `end` | No | date | Absent means the period is ongoing. |
 | `kind` | Yes | ref → experience-kind | What sort of period this is — the H1 of a file in `experience-kinds/` |
-| `organization` | No | string | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. |
+| `organization` | No | ref? → identity | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. It draws an edge when it names the company this instance describes, and stays a fact when it names anyone else. |
 | `url` | No | string | The entry's own address on the web |
 | `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
 
