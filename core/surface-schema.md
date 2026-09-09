@@ -27,13 +27,13 @@ second copy.
 | `# [Surface]` | Yes | The canonical name. Everything references the surface by this exact string. |
 | `> [Description]` | Yes | Single-line description of what this surface is and who reaches it |
 | `## What it shows` | Yes | One line per unit the surface presents, naming the unit and what fills it |
-| `## Projection rules` | Yes | How the model becomes this surface: what is carried, what is left out, and why |
+| `## Projection rules` | Yes | How the model becomes this surface: what is carried, what is left out and why |
 | `## Constraints` | No | What the published result must satisfy, each written so a reader can pass or fail it |
 
 ## Purpose
 
 A surface is a place the company publishes that no script writes, and this file is what
-somebody needs in order to write it: which of the model's facts reach it, in what shape, and
+somebody needs in order to write it: which of the model's facts reach it, in what shape and
 what the result has to satisfy. It answers "if I had to rebuild this from the model today, what
 would I have to know?" — for a person, and for an agent producing the content. It is not a
 record of what the surface currently shows, which is R17's business and belongs in a validation
@@ -43,7 +43,8 @@ report.
 
 - A line of `## What it shows` names a unit the surface itself has, in the words the surface
   uses for it, and then what fills it. A reader has to be able to find that unit by that name
-  while looking at the surface.
+  while looking at the surface. It names the unit as the place a rule lands, never what that
+  unit currently holds — not a count, not a sample, not its present wording.
 - A projection rule states what the surface does with the model, not what the model contains. A
   rule that could be read off an entity is a fact restated, and the entity is where it lives.
 - Every omission is a rule with a reason. Silence about something the model holds and the

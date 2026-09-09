@@ -112,8 +112,12 @@ deletes it.
 
 A file in the model therefore records the rules by which something is made, and never the state
 of the thing made. "The published page currently shows June" is an observation: true on the day
-it was written, and unfalsifiable afterwards by anything in the repository. It belongs in the
-report a validation pass produces (R0). What belongs in a file is what stays true after the
+it was written, and unfalsifiable afterwards by anything in the repository. The line falls
+between the shape of a made thing and its content. That a place has a headline, and caps it at a
+length, is a condition the rules are written against, and it holds until the place itself
+changes; a shape recorded with where it was read is a fact like any other. That the headline
+currently reads one thing rather than another is what the next rebuild replaces. It belongs in
+the report a validation pass produces (R0). What belongs in a file is what stays true after the
 next rebuild.
 
 ## Schemas

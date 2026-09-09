@@ -72,11 +72,11 @@ Past its first release and in use by a real instance, with the tooling and most 
 remaining core types still ahead. The current release is 0.16.0, the twentieth tag, and at
 that release core holds ten types, one schema each: identity, vision, profile, experience,
 experience-kind, skill, proficiency-level, value, source and surface. The reference instance,
-[`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors core at
-that release and populates every one of those types for a company of one, and blust.ch builds
-its model pages from it with the parser this package ships. What is not there yet is the
-tooling, designed and not built, and the rest of the types the design names; the roadmap
-below says which.
+[`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
+its own pin names and populates the types that release carries, for a company of one, and
+blust.ch builds its model pages from it with the parser this package ships. What is not there
+yet is the tooling, designed and not built, and the rest of the types the design names; the
+roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in
 [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md),

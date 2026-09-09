@@ -100,8 +100,8 @@ surface owns nothing, as with `source`.
 | `# [Surface]` | Yes | The canonical name. Everything references the surface by this exact string. |
 | `> [Description]` | Yes | Single-line description of what this surface is and who reaches it |
 | `## What it shows` | Yes | One line per unit the surface presents, naming the unit and what fills it |
-| `## Projection rules` | Yes | How the model becomes this surface: what is compressed, what is left out, and why |
-| `## Constraints` | No | What the produced content must satisfy, each written so a reader can pass or fail it |
+| `## Projection rules` | Yes | How the model becomes this surface: what is carried, what is left out, and why |
+| `## Constraints` | No | What the published result must satisfy, each written so a reader can pass or fail it |
 
 **Purpose.** A surface is a place the company publishes that no script writes, and the file is
 what somebody needs in order to write it: which of the model's facts reach it, in what shape,
@@ -119,13 +119,13 @@ record of what the surface currently shows.
 - Every omission is a rule with a reason. Silence about something the model holds and the
   surface does not show is indistinguishable from drift, which is the one thing this type is
   for.
-- A constraint is written as a check: something a reader looking at the produced content can
+- A constraint is written as a check: something a reader looking at the published result can
   pass or fail. "Every unit that can appear alone pairs the name with a role or a domain" can
   be failed; "the tone is professional" cannot.
 - Where the surface imposes a limit, the constraint names the number and where the number was
   read. A limit quoted from memory is a claim like any other.
 - The file never states what the surface currently shows. That is an observation, true on the
-  day it was written, and it belongs in the report a validation pass produces (R17).
+  day it was written, and it belongs in the report a validation pass produces (R0).
 - A surface that a script writes has no file here. The script is the projection, and a second
   copy of a rule is what this model exists to end.
 
