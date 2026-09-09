@@ -19,10 +19,11 @@ named as such.
 core/              the shipped unit, copied whole into an instance
   CONVENTIONS.md   the portable rules that make the graph checkable
   *-schema.md      one per type: identity, vision, profile, experience,
-                   skill, proficiency-level, value, source
+                   experience-kind, skill, proficiency-level, value, source,
+                   surface
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
-example/           a fictional company, described in those eight types
+example/           a fictional company, described in those ten types
 lib/instance.mjs   the instance parser — the one module this package ships
 verify/
   check.mjs                npm run verify — asserts this repo's own shape
@@ -68,14 +69,14 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 ## Status
 
 Past its first release and in use by a real instance, with the tooling and most of the
-remaining core types still ahead. The current release is 0.13.2, the seventeenth tag, and at
-that release core holds nine types, one schema each: identity, vision, profile, experience,
-experience-kind, skill, proficiency-level, value and source. The reference instance,
-[`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors core at
-that release and populates every one of those types for a company of one, and blust.ch builds
-its model pages from it with the parser this package ships. What is not there yet is the
-tooling, designed and not built, and the rest of the types the design names; the roadmap
-below says which.
+remaining core types still ahead. The current release is 0.16.0, the twentieth tag, and at
+that release core holds ten types, one schema each: identity, vision, profile, experience,
+experience-kind, skill, proficiency-level, value, source and surface. The reference instance,
+[`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
+its own pin names and populates the types that release carries, for a company of one, and
+blust.ch builds its model pages from it with the parser this package ships. What is not there
+yet is the tooling, designed and not built, and the rest of the types the design names; the
+roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in
 [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md),

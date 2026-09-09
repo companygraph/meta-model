@@ -6,18 +6,20 @@ Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
-It uses eight core types — `identity`, `vision`, `profile`, `experience`, `skill`,
-`proficiency-level`, `value`, `source` — and declares no packs. That is what core ships, not a
-claim that eight types describe a company.
+It uses ten core types — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
+`skill`, `proficiency-level`, `value`, `source`, `surface` — and declares no packs. That is what
+core ships, not a claim that ten types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
 vision.md                        billing nobody has to explain
 values/                          say-the-hard-thing.md, craftsmanship.md
 sources/                         local.md, google-workspace.md
+surfaces/                        partner-directory.md
 skills/                          java-programming.md, domain-driven-design.md,
                                  product-discovery.md
 proficiency-levels/              familiar.md, competent.md, proficient.md, expert.md
+experience-kinds/                community.md, education.md, project.md, role.md
 profiles/mira-halvorsen/         mira-halvorsen.md
   experiences/                   2018-northwind-atelier.md, 2022-beacon-systems.md
 profiles/tomas-reyes/            tomas-reyes.md
