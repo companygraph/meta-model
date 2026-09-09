@@ -102,6 +102,20 @@ already named.
 a reader meets both in the same file, and a vocabulary that spells its fields one way and its
 sentences another has no rule at all, only a habit with an exception.
 
+### R17 — The model is the master
+
+Everything made from the model — a page, a profile, a document, a bundle — shows the model's
+facts and none of its own. Where a made thing and the model disagree, the model is corrected
+and the thing rebuilt; the made thing is never edited on its own. A fact that lives only on
+something made from the model is a fact no reader of the model can find, and the next rebuild
+deletes it.
+
+A file in the model therefore records the rules by which something is made, and never the state
+of the thing made. "The published page currently shows June" is an observation: true on the day
+it was written, and unfalsifiable afterwards by anything in the repository. It belongs in the
+report a validation pass produces (R0). What belongs in a file is what stays true after the
+next rebuild.
+
 ## Schemas
 
 ### R8 — Enum values are listed in the schema
@@ -356,9 +370,9 @@ any check cites a rule this document does not define. `npm run test:instance` ex
 instance parser's implementation of the rules it cites — R2, R3, R4, R5, R6, R7, R9 and R13 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. No file is checked against R1, R2,
-R3, R5, R7 or R8; where a check happens to touch one, it is incidental to the rule that check
-cites. Treat all six as agent-enforced — which is by design, not by omission: the claim this
-model ships under is that schemas written as prose are enforceable by agents.
+R3, R5, R7, R8 or R17; where a check happens to touch one, it is incidental to the rule that
+check cites. Treat all seven as agent-enforced — which is by design, not by omission: the claim
+this model ships under is that schemas written as prose are enforceable by agents.
 
 Those scripts are this repository's own harness. Copying `CONVENTIONS.md` into a company
 brings the rules and not the scripts — there is no `verify` script there, and what these run
