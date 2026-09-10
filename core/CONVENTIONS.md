@@ -186,8 +186,12 @@ field can be both, and `organization` is.
 
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
 states and never at more; an author may deliberately record less. A shorter form is an
-interval, not a point: `2002` is the whole year, and a comparison takes its earliest instant,
-so `2002` orders before `2002-03`.
+interval, not a point: `2002` is the whole year. A comparison takes the bound the field names —
+a `start` the interval's first instant, an `end` its last — so a period starting `2002` orders
+before one starting `2002-03`, and a period ending `2002` orders after one ending `2002-03`. One
+rule for both fields reads an end as its first instant, which says a period that ended sometime
+in 2002 ended before one that ended that March. The model does not know that, and it is the
+opposite of what a reader takes from the value.
 
 The form is stated here rather than in the description of whichever field happens to use it,
 because a type in a closed vocabulary that means different things in two schemas is not closed.

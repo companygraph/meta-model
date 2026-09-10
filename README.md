@@ -69,7 +69,7 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 ## Status
 
 Past its first release and in use by a real instance, with the tooling and most of the
-remaining core types still ahead. The current release is 0.17.0, the twenty-first tag, and at
+remaining core types still ahead. The current release is 0.18.0, the twenty-second tag, and at
 that release core holds ten types, one schema each: identity, vision, profile, experience,
 experience-kind, skill, proficiency-level, value, source and surface. The reference instance,
 [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
