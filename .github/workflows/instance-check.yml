@@ -1,0 +1,40 @@
+# The mechanical half of R0, for an instance that has no build step of its own. An instance
+# calls this at the release its `.companygraph/manifest.json` names:
+#
+#   jobs:
+#     companygraph:
+#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.20.0
+#
+# and holds one file and one pin. Nothing is installed: the checker has no dependencies, so the
+# release is checked out beside the caller and run from there. A maintainer with no Node still
+# gets the gate, because nothing here runs locally.
+#
+# The ref below is this file's own release, and it is what makes the guard possible: the runner
+# exposes nothing about the called workflow to its steps, so it cannot see how the caller
+# spelled the ref. The checker it checks out compares its own version against the pin in the
+# instance's manifest and refuses when they differ, which is the same shape as the conventions
+# guard and it is there for the same reason. Before tagging a release, set this ref and
+# `version` in package.json to that tag together.
+name: companygraph
+on:
+  workflow_call:
+jobs:
+  companygraph:
+    name: companygraph
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: the checker, at the release this workflow is
+        uses: actions/checkout@v7
+        with:
+          repository: companygraph/meta-model
+          ref: v0.20.0
+          path: .companygraph-checker
+      - name: the instance is held to the core it vendored
+        run: node .companygraph-checker/bin/check-instance.mjs .

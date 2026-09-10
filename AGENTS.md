@@ -82,7 +82,10 @@ neither.
 
 Two jobs, both required by the ruleset on `main`: `verify`, this repository's own suite, and
 `conventions`, called from robertblust/conventions at the pinned tag and shown by GitHub as
-`conventions / conventions`. The prose check leaves out `.superpowers`, tooling scratch, and
+`conventions / conventions`. A third workflow, `instance-check.yml`, is required by
+nothing here: it is called by an instance, which is why its ref and `version` in package.json
+are set to the release together before tagging — the checker it runs compares its own version
+against the instance's pin and refuses when they differ. The prose check leaves out `.superpowers`, tooling scratch, and
 `docs/superpowers`, whose specs and plans quote the very words it scans for. Core's own rule
 R14 says what the vocabulary's spelling is; `conventions/WRITING.md` says the same for every
 word the family writes, and the two agree. Everything else about how to write and how to
