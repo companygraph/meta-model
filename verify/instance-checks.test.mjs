@@ -53,7 +53,7 @@ test("a reference lands on the type its schema declares, not on any entity of th
     ],
   ]);
 
-  const failures = checkInstance(files, { core: "meta/core", model: "model" });
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
   const hit = failures.find((f) => f.includes("2019-aroov-realestate.md"));
   assert.ok(hit, `no failure named the file; got: ${failures.join(" | ") || "none"}`);
@@ -73,7 +73,7 @@ test("a value that resolves to the declared type is not a failure", () => {
     ],
   ]);
 
-  const failures = checkInstance(files, { core: "meta/core", model: "model" });
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
   assert.deepEqual(
     failures.filter((f) => f.includes("organization")),
@@ -92,7 +92,7 @@ test("a README in a type folder is not an entity", () => {
     ["model/skills/java.md", "---\nsource: Local\n---\n\n# Java\n\n> A language.\n"],
   ]);
 
-  const failures = checkInstance(files, { core: "meta/core", model: "model" });
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
   assert.deepEqual(failures.filter((f) => f.includes("README")), []);
 });
@@ -105,7 +105,23 @@ test("a README beside a folder entity is not a folder entity", () => {
     ["model/profiles/robert-blust/experiences/2015-3ap.md", "# Co-Founder\n\n> A period.\n"],
   ]);
 
-  const failures = checkInstance(files, { core: "meta/core", model: "model" });
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
   assert.deepEqual(failures.filter((f) => f.includes("README")), []);
+});
+
+// The spec's skew contract, in the one shape it takes today. An instance sits on the core it
+// vendored, and a core older than a type carries no schema for it — so every check that reads
+// that schema asks an empty table and passes on nothing at all. A vacuous pass is the dangerous
+// direction, so what the core does not carry is named and the report says it was not checked.
+test("a type the vendored core does not carry is named, not passed over in silence", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"])],
+    ["model/skills/java.md", "---\nsource: Local\n---\n\n# Java\n\n> A language.\n"],
+  ]);
+
+  const { skipped } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.ok(skipped.includes("surface"), `surface was not named as skipped; got: ${skipped.join(", ")}`);
+  assert.ok(!skipped.includes("skill"), "skill has a schema here and must not be named as skipped");
 });
