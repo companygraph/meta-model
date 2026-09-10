@@ -162,8 +162,9 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    a tag on every release.
 6. **The validator** — deferred, and when it arrives it will not be one that parses these
    Markdown schemas as its source of truth. The tooling's `check` is deliberately not it: it
-   reads the fixed shape and the H1s, never a description. Today `npm run verify` checks this
-   repository's own shape, not yours.
+   reads the fixed shape and the H1s, never a description. The eight checks that are about an
+   instance rather than about this repository ship as `companygraph-meta-model/checks`, and they
+   read the schemas from the core your instance vendored, never from the core in this package.
 
 ## License
 

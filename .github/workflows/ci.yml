@@ -20,5 +20,7 @@ jobs:
         run: npm run verify
       - name: The parser still parses
         run: npm run test:instance
-      - name: Every rule the parser cites still exists
+      - name: The instance checks still catch what they were written for
+        run: npm run test:instance-checks
+      - name: Every rule the shipped files cite still exists
         run: npm run test:rules
