@@ -248,7 +248,7 @@ A three-way merge is deliberately not attempted.
 
 ## 5. Installed skills and the sync slot
 
-Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded by the tooling:
+Five skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded by the tooling:
 
 - **`companygraph-validate`** — the R0 agent pass. Reads `meta/core/CONVENTIONS.md`, walks the graph,
   reports per rule. Runs `companygraph check` first so the agent's attention goes to what the
@@ -307,6 +307,27 @@ Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded b
   reads the release notes, walks the entities a schema change affects, and proposes the edits.
   This is where "upgrade an instance in place when core moves" actually lives; the command only
   moves the schemas.
+- **`companygraph-surface`** — produces the content of a surface, one file per entity of the type
+  into `dist/surfaces/`. The type arrived in core 0.16.0: a surface is a place the company
+  publishes that no script writes, and its file records the rules by which the model becomes that
+  place. Nothing turned those rules into the thing itself.
+
+  **It is the one skill that is a script and a procedure rather than a script alone**, and the
+  boundary is where judgment starts. A script walks the model and resolves what any surface would
+  want the same way — an entity's dates in the family's register, its `organization` with the
+  fallback the model supplies, its address, the sections a body could be written from — and it
+  routes nothing and orders nothing, because which kinds reach which unit and in what order are
+  the surface's own rules and its file is their only home. The procedure applies those rules to
+  the facts, writes each unit in the register the file names, and holds the result against every
+  constraint the file states.
+
+  The output is never committed and the reason is R17, not the build directory: a produced surface
+  is the state of the thing made, and a file in the model records the rules and never that state.
+
+  Producing a surface is also the only thing that checks a surface file. Reading the reference
+  instance's file against its model found nothing in two review rounds; producing the profile from
+  it found a missing rule every time, six times running, and every one was about what to put in
+  rather than what to leave out.
 
 This settles the older spec's §7 open question — the packaging belongs in core's tooling,
 shared and versioned, not copied per instance.
