@@ -7,9 +7,10 @@ an instance, bound to this repository by a constant, run against twenty-six Mark
 were written to pass them.
 
 The reference instance holds one hundred thirty-one Markdown files under `model/` and nothing
-mechanical reads them. This spec ships the eight checks from the package so an instance can run
-them, and settles the question that makes the move harder than the parser's: **which copy of
-core they validate against.**
+mechanical reads them. Run against those files, the eight report one failure, and the failure is
+published: a node in the graph blust.ch serves points at itself. This spec ships the eight checks
+from the package so an instance can run them, and settles the question that makes the move harder
+than the parser's: **which copy of core they validate against.**
 
 Status: proposed. Decided on 2026-09-10 against this repository at `main` at 0.19.0, and against
 `robertblust/mental-model` at `main`. Every number below was counted. It replaces a draft of
@@ -45,6 +46,46 @@ it, so an instance running them would check bytes it is forbidden to change.
 The moved eight keep running against `example/`, called from the package with this
 repository's own root. That is the point of the split rather than a concession to it: the code
 an instance depends on is exercised here on every commit, not only downstream.
+
+## What the eight find, run once against the instance
+
+The eight were run against `robertblust/mental-model` at `main`, with the instance's `model/` as
+the content tree and its own vendored `meta/core/` as the rules. They report one failure:
+
+```
+model/profiles/robert-blust/experiences/2019-aroov-realestate.md: `organization` is
+declared `ref? → identity` and says "Aroov", which names an entity of type experience,
+not identity; R16 lands a reference on the type it declares
+```
+
+That file's H1 is `# Aroov` and its own frontmatter says `organization: Aroov`. The parser
+consults no schema, so a scalar becomes an edge when it matches any entity's H1 — here, the
+page's own — and `model.json` at `70496b0`, the commit blust.ch pins and publishes, carries the
+result:
+
+```json
+{"from": "profiles/robert-blust/experiences/2019-aroov-realestate",
+ "to":   "profiles/robert-blust/experiences/2019-aroov-realestate",
+ "via":  "organization"}
+```
+
+It is the only `organization` edge among the graph's five hundred twenty-one. **The prose is
+correct and the graph is wrong**, which is the whole class of error a mechanical check exists
+for: the schema says `organization` draws an edge when it names the company the instance
+describes and stays a fact when it names anyone else, Aroov is a client, and it was written that
+way. Nothing in the diff looks wrong, because nothing in the diff is wrong. The R0 agent pass
+reads entities and did not find it; five hundred twenty-one edges are past what reading finds.
+
+The run also found something about the checks rather than the instance. Before reaching that
+failure the checker **threw** — `ENOTDIR` on `model/profiles/README.md`. The instance keeps a
+README in six type folders and `example/` keeps one only at the container root, so the
+`example structure` check walks a folder entity's name into `readdirSync` and meets a file. The eight have only
+ever read a tree written to pass them, and first contact with a hand-written one raised a stack
+trace. Two things follow, and they are requirements, not observations: the container's README
+shape is what an instance actually does and the checks have to know it, and **a check that meets
+a file where it expected a folder fails by name and never throws** — a stack trace names no rule,
+cites no file a maintainer can open, and turns a report that says what it did not check into no
+report at all.
 
 ## Where the checker lives
 
@@ -182,6 +223,10 @@ reports again.
   name, the checks that core predates.
 - Editing a rule in `core/CONVENTIONS.md` and releasing turns an instance red only when that
   instance takes the new core, not when it takes the new release.
+- The Aroov collision is what the instance's first green run had to clear, and the graph it
+  publishes carries no edge from a node to itself.
+- No input makes a check throw. A file where a folder was expected, a folder where a file was
+  expected and an unreadable path each fail by name, citing the rule and the path.
 - The workflow's guard is proven red by pointing a caller at a release its manifest does not
   name. A gate never seen to fail is not yet a gate.
 - A reader of a green workflow can tell from its name what it did not check.
@@ -194,6 +239,11 @@ reports again.
 - **Reproducing a red check.** The route above puts the only mechanical check in CI. A
   maintainer who cannot run Node reads a failure and cannot re-run it after a fix except by
   pushing again, which is a slow loop and may be the wrong trade.
+- **What a collision's fix is.** The check names a value that resolved to the wrong type; it
+  does not say what to do. Renaming the entity, qualifying the field and teaching resolution
+  about types are three different answers with three different costs, and the last one is closed
+  already — the parser consults no schema by design. Which of the other two the family takes is
+  content's decision and is not made here.
 - **What `tooling check` becomes.** The amendment says it takes the reader from here. Whether it
   wraps this checker, or is a different program with its own output, belongs to the tooling
   spec and is not settled by this one.
