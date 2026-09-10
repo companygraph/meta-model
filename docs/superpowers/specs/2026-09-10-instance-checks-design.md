@@ -135,9 +135,15 @@ That inverts what a validator library usually does, and it is the only arrangeme
 
 ## Version skew, and the slot the manifest reserves
 
-This repository has one version number: `package.json` and `core/manifest.json` both read
-0.19.0, and they move together. Skew is therefore not between two release streams but between
-two pins in the same instance — the core it vendored and the release its workflow calls.
+This repository has one version number today: `package.json` and `core/manifest.json` both read
+0.19.0. **They are the same number until a release changes no schema**, and the first one that
+does not — the release that ships these checks — separates them: `package.json` moves and
+`core/manifest.json` stays, because a core whose bytes did not change must not make every
+vendored copy read as behind. So the number to compare a vendored core against is core's own,
+never the package's, which is the reading the check below was going to take anyway.
+
+Skew is therefore not between two release streams but between two pins in the same instance —
+the core it vendored and the release its workflow calls.
 
 Today those agree. `robertblust/mental-model` vendors core 0.19.0 at shape 2, which is this
 repository's current release, so the skew is zero and every check would run. That is the
