@@ -4,10 +4,11 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "files": ["lib"],
-  "exports": { "./instance": "./lib/instance.mjs" },
+  "exports": { "./instance": "./lib/instance.mjs", "./checks": "./lib/checks.mjs" },
   "scripts": {
     "verify": "node verify/check.mjs",
     "test:instance": "node --test verify/instance.test.mjs",
+    "test:instance-checks": "node --test verify/instance-checks.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs"
   }
 }
