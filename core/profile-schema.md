@@ -24,7 +24,7 @@ operation and an orphaned experience is unrepresentable.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Name]` | Yes | The person's canonical name. Everything references the profile by this exact string. |
-| `> [Tagline]` | Yes | Single-line summary of the person |
+| `> [Tagline]` | Yes | Single-line summary of the person: what they do, or the claim their work makes |
 | `## Skills` | No | Table. One row per skill claimed; its columns are declared below. |
 | `## Summary` | No | A paragraph of context |
 | `## Also at` | No | Table. One row per presence the person maintains elsewhere; its columns are declared below. |
@@ -65,6 +65,10 @@ the claim — this person, this skill, at this level, on this evidence.
 
 - The tagline and `## Summary` are the person's own, in their own voice: what they do and what
   runs through it. Not their employer's description of the role, and not a job advertisement.
+- A tagline may state the claim the person's work makes rather than describe the work. Then the
+  claim is one the model holds elsewhere — a value, or the thread the summary names — and a
+  reader can follow it there. A line with nothing behind it is a slogan, and nothing on the page
+  tells one from the other except what backs it.
 - An Evidence cell states a fact that can be checked — a system, an organization, a number, a
   named outcome. "Extensive experience" and "deep knowledge" are not evidence.
 - Evidence never restates the level. If removing the Level column would lose nothing, the
