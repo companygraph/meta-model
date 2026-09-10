@@ -375,11 +375,28 @@ const CHECKS = [
         fail(`core/manifest.json: version must be MAJOR.MINOR.PATCH, got ${JSON.stringify(m.version)}`);
       if (!Number.isInteger(m.shape) || m.shape < 1)
         fail(`core/manifest.json: shape must be a positive integer, got ${JSON.stringify(m.shape)}`);
+      // The tag is the repository's release, and package.json is where that number lives.
+      // It used to be read from core/manifest.json, which was the same number until a release
+      // changed no schema: core stays where it is then, because a core whose bytes did not
+      // change must not make every vendored copy read as behind. Core may be behind the
+      // package and may never be ahead — a core release nobody can fetch is worse than a stale
+      // one, since an instance vendoring it would name a version that does not exist.
+      const pkgRaw = read("package.json");
+      const pkg = pkgRaw === null ? null : JSON.parse(pkgRaw);
+      if (!pkg) return fail("package.json is missing");
+      const parts = (v) => v.split(".").map(Number);
+      const ahead = (a, b) => {
+        const [x, y] = [parts(a), parts(b)];
+        for (let i = 0; i < 3; i++) if (x[i] !== y[i]) return x[i] > y[i];
+        return false;
+      };
+      if (ahead(m.version, pkg.version))
+        fail(`core/manifest.json says ${m.version}, ahead of package.json's ${pkg.version}; core is released with the package or behind it, never before it`);
       const tags = execFileSync("git", ["tag", "--points-at", "HEAD", "v*"], { cwd: ROOT, encoding: "utf8" })
         .split("\n").filter(Boolean);
       for (const tag of tags)
-        if (tag !== `v${m.version}`)
-          fail(`tag ${tag} sits on HEAD but core/manifest.json says ${m.version}`);
+        if (tag !== `v${pkg.version}`)
+          fail(`tag ${tag} sits on HEAD but package.json says ${pkg.version}`);
     },
   },
   {
