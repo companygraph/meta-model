@@ -29,6 +29,7 @@ two together must be unique in the folder.
 | `end` | No | date | Absent means the period is ongoing. |
 | `kind` | Yes | ref → experience-kind | What sort of period this is — the H1 of a file in `experience-kinds/` |
 | `organization` | No | ref? → identity | Where the period was spent. What it names depends on the `kind` — an employer, a client, a host, an awarding body — and each kind says which. It draws an edge when it names the company this instance describes, and stays a fact when it names anyone else. |
+| `role` | No | string | The part the subject played, where the H1 does not already name it |
 | `url` | No | string | The entry's own address on the web |
 | `skills` | No | array of ref → skill | Each entry is the H1 of a file in `skills/` |
 
@@ -71,6 +72,15 @@ is what happened, when, and what it evidences.
 
 ## Writing rules
 
+- `role` is filled where the H1 does not already name the part the subject played, and left
+  absent where it does. An entry named for what it delivered, or for the event it happened at,
+  does not say who the subject was on it. An entry named for a position does, and repeating it
+  in the field would be the same fact twice. Which of those an instance writes is the instance's
+  own convention and no rule here fixes it; the field is what carries the part when the H1 does
+  not.
+- `role` is the part, not the employer and not the client. Who the work was done for is
+  `organization`. Who it was done through is not a field at all: it is the period that contains
+  this one, and an instance that wants it stated reads it from there.
 - Every entry in `skills:` is one the body shows. A skill listed and not evidenced belongs in
   the profile's table or nowhere; here it is a claim with nothing under it.
 - An `## Achievements` bullet states an outcome, one idea each. "Responsible for the platform"

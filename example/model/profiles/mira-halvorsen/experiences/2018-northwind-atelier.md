@@ -3,6 +3,7 @@ source: Local
 kind: Role
 start: 2018-03
 end: 2022-01
+role: Backend engineer
 organization: Northwind Atelier
 skills:
   - Java Programming
