@@ -156,7 +156,8 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    `init` scaffolds an instance from a bundled or fetched release of this repository,
    `add` writes an entity from its schema, `check` runs the mechanical part of the
    conventions, `upgrade` brings a vendored core to a newer release — and it installs the
-   agent skills for validating, adding and exporting an instance as a loadable skill. Its
+   agent skills for validating an instance, adding to it, exporting it as a loadable skill and
+   producing the content of a surface. Its
    half of the contract lives here: `core/manifest.json` naming a version and a shape, and
    a tag on every release.
 6. **The validator** — deferred, and when it arrives it will not be one that parses these
