@@ -136,35 +136,11 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
 
 ## Roadmap
 
-1. ✅ **The person cluster** — `profile`, `experience`, `skill`, `proficiency-level` and
-   `value`, the conventions that make them checkable, and a worked example. One person
-   described completely, rather than every type partially.
-2. ✅ **The reference instance** — a real company described in this vocabulary:
-   [`robertblust/mental-model`](https://github.com/robertblust/mental-model), a company of
-   one, laid out by hand as the tooling will lay one out. What it taught is §7 of
-   [its spec](docs/superpowers/specs/2026-08-26-reference-instance-design.md).
-3. **The rest of core** — `identity` and `vision` shipped in 0.4.1, which is what let an
-   instance name the company it describes and say where it is going, and `experience-kind`
-   in 0.6.0; the remaining types the design names are direction, organization, operation,
-   market, obligation and domain.
-4. **Packs** — the mechanism above, deliberately undesigned until a second kind of company
-   asks for one.
-5. **Tooling** — designed, not built:
-   [`docs/superpowers/specs/2026-08-25-companygraph-tooling-design.md`](docs/superpowers/specs/2026-08-25-companygraph-tooling-design.md).
-   A separate repository, `companygraph/tooling`, Node with no dependencies, run as
-   `npx companygraph` in the manner of [spec-kit](https://github.com/github/spec-kit):
-   `init` scaffolds an instance from a bundled or fetched release of this repository,
-   `add` writes an entity from its schema, `check` runs the mechanical part of the
-   conventions, `upgrade` brings a vendored core to a newer release — and it installs the
-   agent skills for validating an instance, adding to it, exporting it as a loadable skill and
-   producing the content of a surface. Its
-   half of the contract lives here: `core/manifest.json` naming a version and a shape, and
-   a tag on every release.
-6. **The validator** — deferred, and when it arrives it will not be one that parses these
-   Markdown schemas as its source of truth. The tooling's `check` is deliberately not it: it
-   reads the fixed shape and the H1s, never a description. The eight checks that are about an
-   instance rather than about this repository ship as `companygraph-meta-model/checks`, and they
-   read the schemas from the core your instance vendored, never from the core in this package.
+What has shipped, what comes next and what was deliberately deferred are on the organization
+profile at [github.com/companygraph](https://github.com/companygraph), beside the diagram of
+which repository holds what, because that is the page a reader sees before choosing a
+repository. Why each decision was made is in
+[`docs/superpowers/specs/`](docs/superpowers/specs/), which is a different thing and stays here.
 
 ## License
 

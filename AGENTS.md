@@ -24,7 +24,9 @@ changing anything here** — it records what was decided and, more usefully, wha
 rejected and why.
 
 **Status: first release out** — the person cluster in `core/`, `CONVENTIONS.md`, `example/` and
-`verify/check.mjs`. The README's roadmap says what comes next; the spec says why.
+`verify/check.mjs`. The roadmap on the organization profile at github.com/companygraph says
+what comes next; the spec here says why. A phase list copied back into this repository is
+the drift that rule exists to prevent, so link to it instead.
 
 ## This is an extraction, not an invention
 
