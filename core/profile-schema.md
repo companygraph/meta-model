@@ -16,6 +16,8 @@ operation and an orphaned experience is unrepresentable.
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
+| `nature` | Yes | enum | `human` or `agent`. What holds this profile: a person, or an agent that runs under rulebooks and stands for whichever model runs it. |
+| `roles` | No | array of ref → role | The seats this profile holds, each the H1 of a file in `roles/`. Absent for a profile without a seat. |
 | `email` | No | string | Contact address |
 | `location` | No | string | Where the person works from |
 
@@ -54,12 +56,13 @@ in that experience's `## References`.
 
 ## Purpose
 
-A profile is the one page that says who a person is and what they claim — the entity every
-experience is owned by and every skill claim is made from. It answers "who is this, what can
-they do, and what is that judgment resting on?" for someone deciding whether to work with
-them. It is not a curriculum vitae: what happened, when and where lives in the experiences the
-profile owns, and what a capability *is* lives in the skill. What only the profile can hold is
-the claim — this person, this skill, at this level, on this evidence.
+A profile is the one page that says who a person or an agent is and what they claim — the
+entity every experience is owned by, every skill claim is made from and every role is held by.
+It answers "who is this, what can they do, and what is that judgment resting on?" for
+someone deciding whether to work with them. It is not a curriculum vitae: what happened, when
+and where lives in the experiences the profile owns, and what a capability *is* lives in the
+skill. What only the profile can hold is the claim — this person, this skill, at this level,
+on this evidence.
 
 ## Writing rules
 
@@ -84,3 +87,8 @@ the claim — this person, this skill, at this level, on this evidence.
   the table is what a reader will follow.
 - The URL in `## Also at` is the page that is the person's own on that place, not a search, a
   feed or a post. What a reader lands on has to be the person.
+- A profile that holds a role claims the skills the role requires in its Skills table, with
+  evidence. Where it cannot, the gap stays visible: the validation pass reports it and nothing
+  here invents a row to close it.
+- `nature` says what holds the profile, never how well. An agent's evidence is the rulebook it
+  runs under and the work it has produced under it, on the same terms as a person's.

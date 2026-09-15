@@ -1,6 +1,7 @@
 ---
 source: Google Workspace
 source-id: 104857613947
+nature: human
 email: tomas@example.invalid
 location: Lisbon
 ---

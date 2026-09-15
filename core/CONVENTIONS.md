@@ -128,6 +128,12 @@ next rebuild.
 A field typed `enum` states its permitted values. Any other value is an error, which is the
 whole reason to type it `enum` rather than `string`.
 
+The values are listed where a reader and a check both find them: the field's Description
+opens with the tokens in backticks, separated by commas or `or` — `` `human` or `agent`. `` —
+and the sentence after them says what the choice means. A check reads the tokens off the front
+of the cell, so a Description that opens with prose lists nothing, and an enum that lists
+nothing has nothing to hold a value to.
+
 `enum` is for a closed set of bare tokens. A set whose members carry a definition of their own
 is not an enum — make it a type, so the definition lives in one file and everything references
 it by canonical name. Otherwise the definitions end up restated on every entry that uses one,
@@ -372,14 +378,14 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm
-run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10, R11,
+run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R8, R9, R10, R11,
 R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
 any check cites a rule this document does not define. `npm run test:instance` exercises the
 instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. No file is checked against R1, R2,
-R3, R5, R7, R8 or R17; where a check happens to touch one, it is incidental to the rule that
-check cites. Treat all seven as agent-enforced — which is by design, not by omission: the claim
+R3, R5, R7 or R17; where a check happens to touch one, it is incidental to the rule that
+check cites. Treat all six as agent-enforced — which is by design, not by omission: the claim
 this model ships under is that schemas written as prose are enforceable by agents.
 
 Those scripts are this repository's own harness. Copying `CONVENTIONS.md` into a company
