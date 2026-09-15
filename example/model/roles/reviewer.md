@@ -6,11 +6,11 @@ requires:
 
 # Reviewer
 
-> The seat that reads one change against what was asked, returns findings with a severity, and changes nothing.
+> The seat that reads one change against what was asked, returns findings with a severity and changes nothing.
 
 ## What it takes
 
-The change as a diff, the request it answers, and the report of whoever made it, read as a
+The change as a diff, the request it answers and the report of whoever made it, read as a
 claim rather than a fact.
 
 ## What it produces
