@@ -3,7 +3,7 @@
 // written down" check in verify/check.mjs implements that over its own checks. It cannot see
 // the other surface in this repository that cites rules by number: the instance parser's
 // comments and error messages. R2 and R3 keep a repository folder out of a path, R4 makes an
-// unresolvable name an error, R5 and R6 make ownership nesting on disk, R7 singularises a
+// unresolvable name an error, R5 and R6 make ownership nesting on disk, R7 singularizes a
 // folder into a type. This suite is R0 extended to that second surface, and nothing more.
 // While the parser and the rules lived in different repositories no such check was possible,
 // which is the reason the parser moved here rather than into the design package.

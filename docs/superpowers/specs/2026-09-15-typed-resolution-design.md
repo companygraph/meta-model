@@ -93,8 +93,8 @@ different types sharing a name is what R2 permits and what this design makes wor
 `parseSchemas` already reads: path to text, one `<type>-schema.md` per type. The parser builds
 its declaration table from the same rows `parseSchemas` turns into type-level edges — a
 Frontmatter row whose Type cell matches `ref`, `ref?` or `qualifier`, and a captioned column
-table's row that does the same — so there is one reader of a schema's tables in this file, not
-two.
+table's row that does the same — so there is one reader of a declaration cell in this file, not
+two; the two walks over a schema's tables build different things and share that reader.
 
 An instance parsed without its schemas is an error, not a fallback to the old behavior. Name-only
 resolution is the mode this design retires, and R2 already says why a fallback is wrong: a
@@ -212,8 +212,8 @@ fixture's fields are. The cases that change or arrive:
 - A call without schemas fails, and a page whose type has no schema fails.
 - The same-type clash still fails under R2, unchanged.
 
-`verify/instance-checks.test.mjs` drops the fixtures for the two retired assertions and keeps
-the rest. `verify/rule-citations.test.mjs` needs no change, because every rule cited in the
+`verify/instance-checks.test.mjs` needs no change: no fixture exercised either retired
+assertion. `verify/rule-citations.test.mjs` needs no change, because every rule cited in the
 rewritten comments already exists.
 
 ## 8. Not done here
