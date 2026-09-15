@@ -31,11 +31,12 @@ are the same human and are called the same thing. A name unique across the whole
 would force one of them to be called something nobody calls it, and the graph would then
 describe a naming workaround rather than the company.
 
-A tool that resolves by name alone — one that recognizes a reference by the value happening to
-be a canonical name, rather than by reading the schema that declares it — cannot use the type
-to choose between two entities sharing one. It refuses rather than guesses: such a name is an
-error where it is used, naming the types it was found under. Resolving to the first match, or
-to the one in the nearest folder, is the failure this makes impossible.
+A tool resolves a reference by the type its schema declares and the name written, and looks in
+no other type. A name that exists only under another type is therefore unresolvable, not
+ambiguous, and the error says which type was searched. Resolving to the first match, or to the
+one in the nearest folder, is the failure this makes impossible — and so is recognizing a
+reference by its value happening to be a canonical name, which is how a string field ends up
+drawing an edge nobody declared.
 
 ### R3 — Every reference is by canonical name
 
@@ -221,13 +222,12 @@ row points at, and the rest qualify that reference. A qualifier must resolve, ex
 reference must, and it draws no edge of its own; it reaches a reader as an attribute of the
 edge its row drew, already resolved to an id.
 
-So a column table declares at most one reference, and it is the first column; a table that
-qualifies anything declares the reference being qualified, because a qualifier with nothing to
-qualify is a cell whose value the parser would draw the edge from. That is what
-makes the edge a row draws a matter of the schema rather than of the order somebody typed the
-columns in — a parser that takes the first cell to resolve takes the declared reference, and
-a qualifier standing before it would quietly take its place. A table declaring no reference at
-all draws nothing and is data, which is a table's other legal shape.
+So a column table declares at most one reference, and a table that qualifies anything declares
+the reference being qualified, because a qualifier with nothing to qualify is an attribute of
+an edge that does not exist. Where the reference column stands is the author's choice: the edge
+a row draws is a matter of the schema, never of the order somebody typed the columns in, and a
+parser draws from the declared column wherever it is. A table declaring no reference at all
+draws nothing and is data, which is a table's other legal shape.
 
 `## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
 cannot: what the type is *for*, and what separates a good entity of it from one that merely
@@ -375,7 +375,7 @@ Which rules those scripts reach is worth stating plainly. In the CompanyGraph re
 run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10, R11,
 R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
 any check cites a rule this document does not define. `npm run test:instance` exercises the
-instance parser's implementation of the rules it cites — R2, R3, R4, R5, R6, R7, R9 and R13 —
+instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. No file is checked against R1, R2,
 R3, R5, R7, R8 or R17; where a check happens to touch one, it is incidental to the rule that

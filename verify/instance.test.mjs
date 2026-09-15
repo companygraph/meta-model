@@ -1,5 +1,6 @@
-// The parser reads an instance by the fixed shape alone — no schema — so these fixtures are
-// small maps of path → Markdown, and every rule the spec names has a fixture that breaks it.
+// The parser reads an instance by the fixed shape and resolves by what its schemas declare, so
+// these fixtures are small maps of path → Markdown beside a map of the schemas they are read
+// against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { parseInstance, parseSchemas, CORE_LABEL } from "../lib/instance.mjs";
@@ -20,8 +21,58 @@ const valid = new Map([
    "---\nstart: 2022-02\norganization: Beacon Systems\nskills:\n  - Java Programming\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n"],
 ]);
 
+// A schema in the fixed shape R9 states, holding only the rows a fixture needs. `fields` is
+// a list of [name, type] pairs for the Frontmatter table; `tables` maps a section heading to
+// its [column, type] pairs, which become the captioned column table R9 requires.
+const schema = (type, { fields = [], tables = {} } = {}) => {
+  const title = type.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
+  const lines = [
+    `# ${title} Schema`, "", `> A ${type}.`, "", "## File Location", "", `\`${type}s/*.md\``, "",
+    "## Frontmatter", "",
+  ];
+  if (fields.length) {
+    lines.push("| Field | Required | Type | Description |", "| --- | --- | --- | --- |");
+    for (const [name, t] of fields) lines.push(`| \`${name}\` | No | ${t} | A ${name}. |`);
+  } else {
+    lines.push("No YAML frontmatter.");
+  }
+  lines.push("", "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |",
+             "| `# [Name]` | Yes | The canonical name. |");
+  for (const heading of Object.keys(tables)) lines.push(`| \`## ${heading}\` | No | Table. |`);
+  for (const [heading, columns] of Object.entries(tables)) {
+    lines.push("", `\`## ${heading}\` is a table with these columns:`, "",
+               "| Column | Required | Type | Description |", "| --- | --- | --- | --- |");
+    for (const [name, t] of columns) lines.push(`| \`${name}\` | No | ${t} | A ${name}. |`);
+  }
+  return lines.join("\n") + "\n";
+};
+
+// What every fixture in this file is read against. One schema per type the fixtures use,
+// declaring each field and table the way core does: a reference names its type, a qualifier
+// resolves and draws nothing, and everything else is a fact.
+const schemas = new Map([
+  ["identity-schema.md", schema("identity", { tables: { "Also at": [["Where", "string"], ["URL", "string"]] } })],
+  ["value-schema.md", schema("value")],
+  ["skill-schema.md", schema("skill", { fields: [["source", "ref → source"], ["group", "string"]] })],
+  ["proficiency-level-schema.md", schema("proficiency-level", { fields: [["rank", "number"]] })],
+  ["experience-kind-schema.md", schema("experience-kind")],
+  ["source-schema.md", schema("source", { fields: [["url", "string"]] })],
+  ["profile-schema.md", schema("profile", {
+    fields: [["email", "string"], ["location", "string"]],
+    tables: {
+      Skills: [["Skill", "ref → skill"], ["Level", "qualifier → proficiency-level"], ["Evidence", "string"]],
+      "Also at": [["Where", "string"], ["URL", "string"]],
+    },
+  })],
+  ["experience-schema.md", schema("experience", {
+    fields: [["kind", "ref → experience-kind"], ["start", "date"], ["end", "date"],
+             ["organization", "ref? → identity"], ["skills", "array of ref → skill"]],
+    tables: { References: [["What", "string"], ["URL", "string"]] },
+  })],
+]);
+
 test("the root is the identity entity, by name and by id", () => {
-  const { root, rootId } = parseInstance(valid);
+  const { root, rootId } = parseInstance(valid, { schemas });
   assert.equal(root, "Beacon Systems");
   assert.equal(rootId, "identity");
 });
@@ -34,7 +85,7 @@ test("the root is the identity entity, by name and by id", () => {
 test("an instance with no identity has no root, and that is an R6 error", () => {
   const rootless = new Map(valid);
   rootless.delete("identity.md");
-  assert.throws(() => parseInstance(rootless), /^Error: R6: .*identity/);
+  assert.throws(() => parseInstance(rootless, { schemas }), /^Error: R6: .*identity/);
 });
 
 // The stamp exists so a renderer can place a period and a kind beside a node without knowing
@@ -45,7 +96,7 @@ test("an entity carries a stamp of its kind and period, and one without either c
   files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nkind: Role\nstart: 2022-02\nend: 2026-05\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n");
-  const { entities } = parseInstance(files);
+  const { entities } = parseInstance(files, { schemas });
   const exp = entities.find((e) => e.type === "experience");
   assert.deepEqual(exp.stamp, { kind: "Role", start: "2022-02", end: "2026-05" });
   // A skill has neither, so it keeps exactly the shape it had before the stamp existed.
@@ -57,16 +108,16 @@ test("an open period stamps a null end, and a one-off stamps end equal to start"
   files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nkind: Role\nstart: 2026-06\n---\n\n# Still running\n\n> Ongoing.\n");
-  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+  assert.deepEqual(parseInstance(files, { schemas }).entities.find((e) => e.type === "experience").stamp,
                    { kind: "Role", start: "2026-06", end: null });
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nkind: Role\nstart: 2012-05-04\nend: 2012-05-04\n---\n\n# A talk\n\n> One day.\n");
-  assert.deepEqual(parseInstance(files).entities.find((e) => e.type === "experience").stamp,
+  assert.deepEqual(parseInstance(files, { schemas }).entities.find((e) => e.type === "experience").stamp,
                    { kind: "Role", start: "2012-05-04", end: "2012-05-04" });
 });
 
 test("types come from folders, singular by R7, with their owner", () => {
-  const { types } = parseInstance(valid);
+  const { types } = parseInstance(valid, { schemas });
   assert.deepEqual(types, [
     { type: "experience", folder: "experiences", owner: "profile", singular: false },
     { type: "identity", folder: null, owner: null, singular: true },
@@ -78,7 +129,7 @@ test("types come from folders, singular by R7, with their owner", () => {
 });
 
 test("an entity is its H1, tagline, fields, sections and path; a README is not one", () => {
-  const { entities } = parseInstance(valid);
+  const { entities } = parseInstance(valid, { schemas });
   assert.equal(entities.length, 6);
   const java = entities.find(e => e.id === "skills/java-programming");
   assert.deepEqual(java, {
@@ -95,12 +146,12 @@ test("an entity is its H1, tagline, fields, sections and path; a README is not o
 // site whose model sits at `model/` was a 404. The caller knows the prefix; it already had it
 // in a constant of its own.
 test("an entity's path is its file's path in the repository it came from", () => {
-  const at = (sub) => parseInstance(valid, { sub }).entities.find((e) => e.id === "skills/java-programming").path;
+  const at = (sub) => parseInstance(valid, { sub, schemas }).entities.find((e) => e.id === "skills/java-programming").path;
   assert.equal(at("model/"), "model/skills/java-programming.md");
   assert.equal(at("example/model/"), "example/model/skills/java-programming.md");
   // No prefix given: the path is the one the files were handed over with, and nothing is
   // invented on the caller's behalf.
-  assert.equal(parseInstance(valid).entities.find((e) => e.id === "skills/java-programming").path,
+  assert.equal(parseInstance(valid, { schemas }).entities.find((e) => e.id === "skills/java-programming").path,
                "skills/java-programming.md");
 });
 
@@ -111,7 +162,7 @@ test("a schema's path takes the prefix its caller passes too", () => {
 });
 
 test("the folder form names the entity by its folder and owns what nests inside it", () => {
-  const { entities } = parseInstance(valid);
+  const { entities } = parseInstance(valid, { schemas });
   const mira = entities.find(e => e.name === "Mira Halvorsen");
   assert.equal(mira.id, "profiles/mira-halvorsen");
   assert.equal(mira.path, "profiles/mira-halvorsen/mira-halvorsen.md");
@@ -121,7 +172,7 @@ test("the folder form names the entity by its folder and owns what nests inside 
 });
 
 test("a table section is kept as rows, and its body text is empty", () => {
-  const mira = parseInstance(valid).entities.find(e => e.name === "Mira Halvorsen");
+  const mira = parseInstance(valid, { schemas }).entities.find(e => e.name === "Mira Halvorsen");
   const skills = mira.sections.find(s => s.heading === "Skills");
   assert.deepEqual(skills.table, {
     caption: null,
@@ -140,7 +191,7 @@ test("a list is a block sequence, and each entry becomes an edge", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nstart: 2022-02\nskills:\n  - Java Programming\n---\n\n# Splitting\n\n> x\n");
-  const { entities, edges } = parseInstance(files);
+  const { entities, edges } = parseInstance(files, { schemas });
   const exp = entities.find((e) => e.type === "experience");
   assert.deepEqual(exp.fields.skills, ["Java Programming"]);
   assert.equal(edges.filter((x) => x.from === exp.id && x.via === "skills").length, 1);
@@ -153,11 +204,11 @@ test("a flow sequence is an R11 error, not a silently different shape", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nstart: 2022-02\nskills: [Java Programming]\n---\n\n# Splitting\n\n> x\n");
-  assert.throws(() => parseInstance(files), /^Error: R11: `skills`/);
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R11: `skills`/);
 });
 
 test("a frontmatter list that names entities becomes edges", () => {
-  const { edges } = parseInstance(valid);
+  const { edges } = parseInstance(valid, { schemas });
   const e = edges.find(x => x.via === "skills");
   assert.deepEqual(e, {
     from: "profiles/mira-halvorsen/experiences/2022-beacon-systems",
@@ -165,8 +216,8 @@ test("a frontmatter list that names entities becomes edges", () => {
   });
 });
 
-test("a table row's first resolving cell is the edge; other cells are attrs, resolved where they can be", () => {
-  const { edges } = parseInstance(valid);
+test("a table row's declared reference is the edge; a qualifier resolves into its attrs", () => {
+  const { edges } = parseInstance(valid, { schemas });
   const e = edges.find(x => x.via === "Skills.Skill");
   assert.deepEqual(e, {
     from: "profiles/mira-halvorsen", to: "skills/java-programming", via: "Skills.Skill",
@@ -174,25 +225,18 @@ test("a table row's first resolving cell is the edge; other cells are attrs, res
   });
 });
 
-// R4 makes an unresolvable row an error so the page can never draw a line to nowhere. A table
-// of references to the outside world — a register entry, a recording — resolves to nothing at
-// all, and under that rule it could not exist.
-//
-// The decision moves from the row to the table: a table where nothing resolves anywhere draws
-// no edges and is data; a table where something resolves is a table of references, and there a
-// row that resolves to nothing is still the error it was.
-//
-// Worth being exact about what that preserves, because it is narrower than it first looks. R4
-// never caught a typo in one cell: the first *resolving* cell of a row becomes the edge, so a
-// misspelled skill beside a correct Level still resolves — on the Level. What it catches is a
-// row where nothing at all resolves, and that is what stays caught.
-test("a table whose rows resolve to nothing at all is data, not an R4 error", () => {
+// A table draws edges only where its schema declares a reference column. A table of references
+// to the outside world — a register entry, a recording — is declared with string columns and so
+// draws nothing, whatever its cells say; its rows are kept as data. The case below and the one
+// named "a table declaring no reference draws nothing even when a cell names an entity" test
+// the two halves of that: this one that the rows survive, that one that no edge appears.
+test("a table whose schema declares no reference is data, and keeps its rows", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## References\n\n" +
     "| What | URL |\n| --- | --- |\n| Commercial register entry | https://example.invalid/firm/1 |\n" +
     "| Recording | https://example.invalid/talk |\n");
-  const { entities, edges } = parseInstance(files);
+  const { entities, edges } = parseInstance(files, { schemas });
   const exp = entities.find((e) => e.type === "experience");
   const refs = exp.sections.find((s) => s.heading === "References");
   assert.equal(refs.table.rows.length, 2);
@@ -212,7 +256,7 @@ test("an Also at table on the identity and on a profile is data: rows kept, no e
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Summary\n\nEight years.\n\n## Also at\n\n" +
     "| Where | URL |\n| --- | --- |\n| GitHub | https://github.example.invalid/mira |\n" +
     "| LinkedIn | https://linkedin.example.invalid/in/mira |\n");
-  const { entities, edges } = parseInstance(files);
+  const { entities, edges } = parseInstance(files, { schemas });
   for (const name of ["Beacon Systems", "Mira Halvorsen"]) {
     const e = entities.find((x) => x.name === name);
     const also = e.sections.find((s) => s.heading === "Also at");
@@ -223,38 +267,38 @@ test("an Also at table on the identity and on a profile is data: rows kept, no e
   }
 });
 
-test("a table where something resolves keeps R4 on every row", () => {
+test("a row whose reference column names nothing is an R4 error", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/mira-halvorsen.md",
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
     "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Proficient | Owned it. |\n" +
     "| Jva Programming | Prficient | Nothing here resolves, so the row is an error. |\n");
-  assert.throws(() => parseInstance(files), /^Error: R4: row "Jva Programming"/);
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "Jva Programming" in .* names no skill/);
 });
 
 test("a name that resolves to nothing is an R4 error", () => {
   const broken = new Map(valid);
   broken.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nstart: 2022-02\nskills:\n  - Kotlin\n---\n\n# Splitting\n\n> x\n");
-  assert.throws(() => parseInstance(broken), /^Error: R4: .*Kotlin/);
+  assert.throws(() => parseInstance(broken, { schemas }), /^Error: R4: .*Kotlin/);
 });
 
 test("a root folder that is not a plural is an R7 error", () => {
   const broken = new Map(valid);
   broken.set("value/humility.md", "# Humility\n\n> x\n");
-  assert.throws(() => parseInstance(broken), /^Error: R7: .*value/);
+  assert.throws(() => parseInstance(broken, { schemas }), /^Error: R7: .*value/);
 });
 
 test("output is deterministic regardless of map order", () => {
   const shuffled = new Map([...valid.entries()].reverse());
-  assert.deepEqual(parseInstance(shuffled), parseInstance(valid));
+  assert.deepEqual(parseInstance(shuffled, { schemas }), parseInstance(valid, { schemas }));
 });
 
-test("a scalar frontmatter value that names an entity becomes an edge; one that does not stays a fact", () => {
+test("a declared reference becomes an edge; a string stays a fact", () => {
   const withSource = new Map(valid);
   withSource.set("sources/local.md", "# Local\n\n> Kept in this repository.\n");
   withSource.set("skills/java-programming.md", "---\nsource: Local\ngroup: Programming Languages\n---\n\n# Java Programming\n\n> JVM services.\n");
-  const { edges, entities } = parseInstance(withSource);
+  const { edges, entities } = parseInstance(withSource, { schemas });
   assert.deepEqual(edges.find(x => x.via === "source"),
     { from: "skills/java-programming", to: "sources/local", via: "source", attrs: {} });
   assert.equal(edges.filter(x => x.via === "group").length, 0);
@@ -381,11 +425,114 @@ test("an Owner-shaped line inside a section's prose is not the Owner line", () =
 });
 
 test("the example instance still parses with tables, one per section", () => {
-  const mira = parseInstance(valid).entities.find(e => e.name === "Mira Halvorsen");
+  const mira = parseInstance(valid, { schemas }).entities.find(e => e.name === "Mira Halvorsen");
   const skills = mira.sections.find(s => s.heading === "Skills");
   assert.equal(skills.tables.length, 1);
   assert.equal(skills.tables[0].caption, null);
   assert.equal(skills.table, skills.tables[0]);
+});
+
+// R2 says a reference is a type and a name, and the parser reads the type from the schema
+// that declares the field. Without the schemas there is nothing to read it from, and a
+// fallback to name-only resolution is the mode this parser no longer has.
+test("an instance handed no schemas is an error, not a name-only fallback", () => {
+  assert.throws(() => parseInstance(valid), /^Error: R16: .*schemas/);
+});
+
+test("a page whose type no schema declares is an error", () => {
+  const files = new Map(valid);
+  files.set("surfaces/site.md", "# Site\n\n> A place.\n\n## Rules\n\nText.\n");
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R13: .*surface/);
+});
+
+// R16: a field typed anything but a reference draws no edge whatever it says. The profile's
+// `location` is a string, so a skill that happens to be called Bergen draws nothing from it
+// and the value is kept as written.
+test("a string field carrying a canonical name draws nothing", () => {
+  const files = new Map(valid);
+  files.set("skills/bergen.md", "# Bergen\n\n> A skill named like a city.\n\n## In practice\n\nText.\n");
+  const { edges, entities } = parseInstance(files, { schemas });
+  assert.equal(edges.filter((x) => x.via === "location").length, 0);
+  assert.equal(entities.find((e) => e.name === "Mira Halvorsen").fields.location, "Bergen");
+});
+
+// `ref? → identity` resolves against identities and nothing else. A value that names a profile
+// and no identity is a fact, not an edge to the profile.
+test("a ref? that names an entity of another type stays a fact", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\norganization: Mira Halvorsen\n---\n\n# Freelance\n\n> Ongoing.\n");
+  const { edges, entities } = parseInstance(files, { schemas });
+  const exp = entities.find((e) => e.type === "experience");
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via === "organization").length, 0);
+  assert.equal(exp.fields.organization, "Mira Halvorsen");
+});
+
+// R4: a `ref → skill` that names a source and no skill is unresolvable, and the message names
+// the type that was searched so the reader sees it is a type mismatch rather than a typo.
+test("a ref that names an entity of another type is an R4 error naming the type searched", () => {
+  const files = new Map(valid);
+  files.set("sources/local.md", "# Local\n\n> Kept here.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\nskills:\n  - Local\n---\n\n# Splitting\n\n> x\n");
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "Local" in .* names no skill/);
+});
+
+// A body table draws from the column its schema declares as the reference, wherever that
+// column stands. Here the qualifier comes first, and the edge still lands on the skill with
+// the level in its attributes.
+test("a table draws its edge from the declared reference column, not the first resolving cell", () => {
+  const swapped = new Map(schemas);
+  swapped.set("profile-schema.md", schema("profile", {
+    fields: [["email", "string"], ["location", "string"]],
+    tables: { Skills: [["Level", "qualifier → proficiency-level"], ["Skill", "ref → skill"], ["Evidence", "string"]] },
+  }));
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Level | Skill | Evidence |\n| --- | --- | --- |\n| Proficient | Java Programming | Owned it. |\n");
+  const { edges } = parseInstance(files, { schemas: swapped });
+  assert.deepEqual(edges.find((x) => x.via === "Skills.Skill"), {
+    from: "profiles/mira-halvorsen", to: "skills/java-programming", via: "Skills.Skill",
+    attrs: { Level: "proficiency-levels/proficient", Evidence: "Owned it." },
+  });
+});
+
+// A table whose schema declares no reference is data even when a cell happens to match an H1.
+test("a table declaring no reference draws nothing even when a cell names an entity", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Also at\n\n" +
+    "| Where | URL |\n| --- | --- |\n| Java Programming | https://example.invalid/mira |\n");
+  const { edges } = parseInstance(files, { schemas });
+  assert.equal(edges.filter((x) => x.via.startsWith("Also at")).length, 0);
+});
+
+// A qualifier must resolve exactly as a reference must (R16), and its failure names its type.
+test("a qualifier that names nothing of its type is an R4 error", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Expert | Owned it. |\n");
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "Expert" in .* names no proficiency-level/);
+});
+
+// R9 makes `qualifier → <type>` a column type only, and R16 makes a qualifier draw nothing.
+// A schema that declares one in frontmatter is wrong, and the checker's business; what the
+// parser owes is to keep R16 true for it: the value resolves, and no edge appears.
+test("a qualifier declared in frontmatter resolves and draws no edge", () => {
+  const withQualifier = new Map(schemas);
+  withQualifier.set("skill-schema.md", schema("skill", {
+    fields: [["source", "ref → source"], ["group", "string"], ["level", "qualifier → proficiency-level"]],
+  }));
+  const files = new Map(valid);
+  files.set("skills/java-programming.md",
+    "---\nlevel: Proficient\n---\n\n# Java Programming\n\n> JVM services.\n\n## In practice\n\nText.\n");
+  const { edges } = parseInstance(files, { schemas: withQualifier });
+  assert.equal(edges.filter((x) => x.via === "level").length, 0);
+  files.set("skills/java-programming.md",
+    "---\nlevel: Expert\n---\n\n# Java Programming\n\n> JVM services.\n\n## In practice\n\nText.\n");
+  assert.throws(() => parseInstance(files, { schemas: withQualifier }), /^Error: R4: "Expert" in .* names no proficiency-level/);
 });
 
 // A company of one: the company and the only person in it are the same human and carry the
@@ -399,7 +546,7 @@ test("two entities of different types may share a name", () => {
     ["profiles/robert-blust/robert-blust.md",
      "# Robert Blust\n\n> The person.\n\n## Summary\n\nTwenty-five years.\n"],
   ]);
-  const data = parseInstance(files);
+  const data = parseInstance(files, { schemas });
   assert.equal(data.entities.filter((e) => e.name === "Robert Blust").length, 2);
   assert.deepEqual(
     data.entities.filter((e) => e.name === "Robert Blust").map((e) => e.type).sort(),
@@ -412,13 +559,13 @@ test("two entities of the same type sharing a name is still an R2 error", () => 
     ["skills/a.md", "# Same Name\n\n> A skill.\n\n## In practice\n\nText.\n"],
     ["skills/b.md", "# Same Name\n\n> Another skill.\n\n## In practice\n\nText.\n"],
   ]);
-  assert.throws(() => parseInstance(files), /R2: two skill entities share the name "Same Name"/);
+  assert.throws(() => parseInstance(files, { schemas }), /R2: two skill entities share the name "Same Name"/);
 });
 
-// The parser reads no schema, so it cannot use a declared type to choose between two
-// entities that share a name. It refuses rather than guessing — the failure names both types
-// and the file the reference sits in.
-test("a reference to a name carried by two types is an error where it is used", () => {
+// The parser reads the schema, so it resolves `organization` against identities and nothing
+// else. The company of one is the case this exists for: the identity and the only profile
+// carry the same name, and the experience draws its edge to the identity the schema named.
+test("a reference resolves by its declared type when two types share the name", () => {
   const files = new Map([
     ["identity.md", "# Robert Blust\n\n> A company of one.\n\n## What it is\n\nOne person.\n"],
     ["profiles/robert-blust/robert-blust.md",
@@ -426,5 +573,8 @@ test("a reference to a name carried by two types is an error where it is used", 
     ["profiles/robert-blust/experiences/2026-now.md",
      "---\nstart: 2026-06\norganization: Robert Blust\n---\n\n# Now\n\n> Ongoing.\n\n## Achievements\n\n- Text.\n"],
   ]);
-  assert.throws(() => parseInstance(files), /carried by more than one type \(identity, profile\)/);
+  const { edges } = parseInstance(files, { schemas });
+  assert.deepEqual(edges.filter((x) => x.via === "organization"), [{
+    from: "profiles/robert-blust/experiences/2026-now", to: "identity", via: "organization", attrs: {},
+  }]);
 });
