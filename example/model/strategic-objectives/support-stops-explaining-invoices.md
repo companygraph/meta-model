@@ -10,8 +10,8 @@ horizon: 2027-06
 
 ## What it makes true
 
-Every number on an invoice names the rule that produced it, in the words the customer's contract
-uses, so the question "why is this line 4,200" is answered on the page it appears on. Support
+A customer looking at an invoice can tell how each number was reached, in the words their own
+contract uses, so the question "why is this line 4,200" is answered where it is asked. Support
 still hears from customers, and what it hears about is their pricing rather than our arithmetic.
 
 We would know it holds by what stops arriving. An explanation ticket is one where the customer

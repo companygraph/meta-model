@@ -35,17 +35,13 @@ A strategy is how an objective gets reached — one route among routes that coul
 taken, written so that the choice is visible as a choice. It answers "why this way and not the
 other way?" for someone who arrives after the decision and would otherwise re-open it.
 
-The vision says where and is not expected to move. A strategy says how and is expected to be
-replaced while the objective it serves still stands, which is why it carries the date it
-started deciding things and why a retired one is deleted rather than marked.
-
 ## Writing rules
 
 - The statement is a choice a reasonable company could have made differently. If no company
   would choose the opposite, it describes the work rather than choosing a route.
-- `## The approach` names what is actually done: the tools, the cadence, what is automated and
-  what deliberately is not. A strategy that could be pursued by any means at all has chosen
-  nothing.
+- `## The approach` names what is actually done, in the terms the route actually turns on:
+  tools where it turns on tools, timing where it turns on timing, what is automated and what
+  deliberately is not. A strategy that could be pursued by any means at all has chosen nothing.
 - `## What it rules out` names specific foreclosed options, not their absence. "We do not do bad
   work" rules nothing out; an option a reader can imagine the company taking does.
 - `## What would show it is working` states something observable while there is still time to
@@ -59,3 +55,5 @@ started deciding things and why a retired one is deleted rather than marked.
   every value the company holds: a strategy that upholds all of them has cited none.
 - Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
   same one throughout the instance.
+- A strategy that has been replaced is deleted rather than marked, because the model states the
+  route currently being taken and git holds the ones that were.

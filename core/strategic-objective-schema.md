@@ -34,10 +34,6 @@ a direction that holds still and the strategies that change under it. It answers
 trying to make true, that we are not sure of yet?" for someone weighing whether a piece of work
 is worth doing at all.
 
-It is one file per objective so that a strategy can cite the one it serves, and so that the set
-of them can be read as the portfolio it is. A vision with no objectives under it states a
-destination and leaves every route equally defensible.
-
 ## Writing rules
 
 - It says what must become true, never by what means. A means is a strategy, and an objective
@@ -51,3 +47,7 @@ destination and leaves every route equally defensible.
   rather than inventing one, and an invented horizon is a claim like any other.
 - Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
   same one throughout the instance.
+- An objective that has been reached is deleted, as a replaced strategy is — the model states
+  what the company is currently trying to make true, and git holds what it used to be.
+- A `horizon` that passes with the objective unmet is a decision and not a fact: the objective
+  is restated, re-dated or deleted, and leaving it to age is none of those.
