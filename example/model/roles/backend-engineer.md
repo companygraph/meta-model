@@ -2,26 +2,25 @@
 source: Local
 requires:
   - Java Programming
-  - Domain-Driven Design
 ---
 
 # Backend Engineer
 
-> The seat that owns the services other teams build on, and is the one called when they stop.
+> The seat that keeps the services the product runs on correct, and answers for them when they are not.
 
 ## What it takes
 
-A bounded context with a name, the invoices the service has to get right, and the two teams
-whose work sits on top of it. A change request that says what is wrong for a customer, not
-which class to edit.
+A bounded context with a name and the invoices it has to get right. A change request that
+says what is wrong for a customer, not which class to edit. A turn on the pager, because the
+seat answers for what it ships.
 
 ## What it produces
 
-A service that stays up, with the seam to the next context held where the domain puts it,
-and a pull request small enough that the reviewer reads it in one sitting.
+A service that stays up, and a change small enough that a reviewer reads it in one sitting,
+with the tests that show the invoice is still right.
 
 ## What it never does
 
-- Never merges its own pull request.
-- Never moves a seam between contexts without the product seat in the room.
+- Never merges its own change.
+- Never moves a seam between contexts on its own; where a seam sits is the domain's decision.
 - Never ships a change the invoice tests do not cover.
