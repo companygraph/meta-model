@@ -13,11 +13,13 @@
 // re-validates an instance against rules it has not adopted. The two pins that decide that are
 // held against each other before anything is read: an instance names the release of this
 // checker it calls in `.companygraph/manifest.json`, and a checker that is not that release
-// refuses rather than reporting on rules nobody chose.
+// refuses rather than reporting on rules nobody chose. It refuses a vendored core newer than
+// itself for the same reason: a release that adds a type adds a folder an older checker has
+// never heard of.
 import { readdirSync, statSync, readFileSync, existsSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance, MODEL } from "../lib/checks.mjs";
+import { checkInstance, isNewer, MODEL } from "../lib/checks.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8")).version;
@@ -40,6 +42,20 @@ if (manifest.tooling !== VERSION)
   die(
     `this checker is ${VERSION} and .companygraph/manifest.json names ${manifest.tooling} — ` +
       `move the pin and the workflow together, or call the release the manifest names`,
+  );
+
+// The other half of the same pin, and the first release where it can bite. `tooling` names the
+// checker an instance asked for; the core it vendored is a separate number that moves
+// separately. Until a release added a type, a checker older than the core read the same folders
+// either way. Now it meets one it has never heard of and says "not a folder of any type", which
+// reads as a broken model rather than as a workflow pin nobody moved. Core behind the checker
+// stays legal — a checker knowing more of the vocabulary than an instance uses holds it to the
+// part it uses — so only newer is refused.
+const vendored = manifest.core?.version;
+if (vendored && /^\d+\.\d+\.\d+$/.test(vendored) && isNewer(vendored, VERSION))
+  die(
+    `this checker is ${VERSION} and .companygraph/manifest.json vendors core ${vendored} — ` +
+      `a checker cannot hold an instance to a core newer than itself; move the workflow pin to v${vendored}`,
   );
 
 // R13: one container, and the manifest names where the vendored units sit beside it.

@@ -257,10 +257,13 @@ changes in a pull request that has nothing to do with them.
 
 Core goes to **0.21.0** and the package with it. Both types are new and no existing type
 changes, so every instance on an earlier release conforms without touching a page; an instance
-takes the release by re-vendoring `core/` and recomputing its manifest hashes. `shape` stays 2 —
-the layout of the vendored unit is unchanged, only its contents. Core sits at 0.19.0 and the
-package at 0.20.0 today, and core may be behind the package but never ahead, so a release that
-moves core moves both to the same number.
+takes the release by re-vendoring `core/`, recomputing its manifest hashes, and moving both
+`tooling` in that manifest and the `instance-check.yml` pin in its workflow to the same release.
+The three move together or the checker refuses, which as of this release includes refusing a
+core newer than the checker reading it. `shape` stays 2 — the layout of the vendored unit is
+unchanged, only its contents. Core sits at 0.19.0 and the package at 0.20.0 today, and core may
+be behind the package but never ahead, so a release that moves core moves both to the same
+number.
 
 ## 9. What no check reaches
 
