@@ -128,6 +128,12 @@ next rebuild.
 A field typed `enum` states its permitted values. Any other value is an error, which is the
 whole reason to type it `enum` rather than `string`.
 
+The values are listed where a reader and a check both find them: the field's Description
+opens with the tokens in backticks, separated by commas or `or` — `` `human` or `agent`. `` —
+and the sentence after them says what the choice means. A check reads the tokens off the front
+of the cell, so a Description that opens with prose lists nothing, and an enum that lists
+nothing has nothing to hold a value to.
+
 `enum` is for a closed set of bare tokens. A set whose members carry a definition of their own
 is not an enum — make it a type, so the definition lives in one file and everything references
 it by canonical name. Otherwise the definitions end up restated on every entry that uses one,
