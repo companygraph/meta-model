@@ -137,6 +137,17 @@ const CHECKS = [
         if (rules && !rules.split("\n").some((l) => /^[-*]\s+\S/.test(l)))
           fail(`${path}: "## Writing rules" is not a list`);
 
+        // R9 gives Purpose one paragraph: the sentence someone needs before writing their first
+        // entity of the type, not the rationale for the design. Nothing read that rule, and
+        // three schemas had drifted to two paragraphs before anyone counted — which is the
+        // argument for the check rather than against the rule. Core is copied whole into every
+        // instance, so a paragraph that belongs in the spec is a paragraph every adopter carries
+        // forever. What the paragraph says stays an agent's business; that there is one of it is
+        // this one's.
+        const purpose = (s.get("Purpose") ?? "").trim();
+        if (purpose && /\n[ \t]*\n/.test(purpose))
+          fail(`${path}: "## Purpose" runs to more than one paragraph — R9 gives it one, and the rationale belongs in the spec`);
+
         // The schema's own "## File Location" and the manifest's folder are two statements
         // of the same fact, and nothing else compares them. Without this, a schema could
         // name `skill/*.md` while TYPES says `skills` and every message quoting "the File

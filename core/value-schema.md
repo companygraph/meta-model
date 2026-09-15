@@ -8,7 +8,7 @@
 
 One file per value. Both source instances kept their values in a single document with a
 heading per value, and a heading has no canonical name — so no strategy, role or process
-could cite the value it serves, which is the one thing a company's values are for.
+could cite the value it upholds, which is the one thing a company's values are for.
 
 ## Frontmatter
 

@@ -20,26 +20,33 @@ core/              the shipped unit, copied whole into an instance
   CONVENTIONS.md   the portable rules that make the graph checkable
   *-schema.md      one per type: identity, vision, profile, experience,
                    experience-kind, skill, proficiency-level, value, source,
-                   surface
+                   surface, strategic-objective, strategy
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
-example/           a fictional company, described in those ten types
-lib/instance.mjs   the instance parser — the one module this package ships
+example/           a fictional company, described in those twelve types
+lib/instance.mjs   the instance parser, the module a site imports
+lib/checks.mjs     the checks an instance is held to, shared by the suite and the checker
+bin/check-instance.mjs     the mechanical half of R0, run over one instance by its workflow
 verify/
   check.mjs                npm run verify — asserts this repo's own shape
   instance.test.mjs        npm run test:instance — the parser, against fixtures
+  instance-checks.test.mjs npm run test:instance-checks — the checks, against fixtures
   rule-citations.test.mjs  npm run test:rules — every rule the parser cites is defined
 ```
 
 Everything a unit ships lives inside it, so vendoring is a copy rather than a recipe. There is
 no file outside `core/` that an instance also needs.
 
-The npm package ships `lib/` and nothing else. A site reads an instance with
+`lib/` is what a consumer imports and `bin/` is what a workflow runs: the parser a site builds
+its pages with, and the instance checker a caller invokes by path at the release its manifest
+names. Both travel in the package and neither is installed as a command, because nothing here is
+published to npm — a consumer takes the package from a tag. A site reads an instance with
 `import { parseInstance, parseSchemas, CORE_LABEL } from "companygraph-meta-model/instance"`
 — `parseInstance` turns a map of path → Markdown into the graph and `parseSchemas` does the
-same for the schemas, both pure: no filesystem, no network. `core/` is deliberately outside
-the tarball, because the rules are copied into an instance or read over the GitHub API, never
-resolved out of `node_modules`.
+same for the schemas, both pure: no filesystem, no network, nothing imported at all, which is
+what lets the same checks run in a site's build and in this repository's own suite. `core/` is
+deliberately outside the tarball, because the rules are copied into an instance or read over the
+GitHub API, never resolved out of `node_modules`.
 
 ## How it fits together
 
@@ -68,10 +75,11 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 
 ## Status
 
-Past its first release and in use by a real instance, with the tooling and most of the
-remaining core types still ahead. The current release is 0.19.0, the twenty-third tag, and at
-that release core holds ten types, one schema each: identity, vision, profile, experience,
-experience-kind, skill, proficiency-level, value, source and surface. The reference instance,
+Past its first release and in use by a real instance, with the tooling and most of the remaining
+core types still ahead. The current release is 0.21.0, the twenty-fifth tag, and at that release
+core holds twelve types, one schema each: identity, vision, profile, experience,
+experience-kind, skill, proficiency-level, value, source, surface, strategic-objective and
+strategy. The reference instance,
 [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
 its own pin names and populates the types that release carries, for a company of one, and
 blust.ch builds its model pages from it with the parser this package ships. What is not there

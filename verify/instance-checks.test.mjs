@@ -8,7 +8,7 @@
 // and no scaffolding to keep the other checks quiet.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkInstance } from "../lib/checks.mjs";
+import { checkInstance, isNewer } from "../lib/checks.mjs";
 
 // A schema in the fixed shape R9 states, with only the rows a case needs.
 const schema = (type, rows, { owner = null } = {}) =>
@@ -124,4 +124,15 @@ test("a type the vendored core does not carry is named, not passed over in silen
 
   assert.ok(skipped.includes("surface"), `surface was not named as skipped; got: ${skipped.join(", ")}`);
   assert.ok(!skipped.includes("skill"), "skill has a schema here and must not be named as skipped");
+});
+
+// The only arithmetic in the checker's guards, and the one place a plain string compare would
+// be silently wrong. 0.9.0 against 0.10.0 is the pair this project reaches next.
+test("isNewer compares releases as releases, not as strings", () => {
+  assert.equal(isNewer("0.21.0", "0.20.0"), true);
+  assert.equal(isNewer("0.10.0", "0.9.0"), true);
+  assert.equal(isNewer("0.9.0", "0.10.0"), false);
+  assert.equal(isNewer("1.0.0", "0.99.99"), true);
+  assert.equal(isNewer("0.21.0", "0.21.0"), false);
+  assert.equal(isNewer("0.20.0", "0.21.0"), false);
 });
