@@ -136,3 +136,46 @@ test("isNewer compares releases as releases, not as strings", () => {
   assert.equal(isNewer("0.21.0", "0.21.0"), false);
   assert.equal(isNewer("0.20.0", "0.21.0"), false);
 });
+
+// R8: an enum lists its values at the front of its Description, in backticks, and a written
+// value is one of them. The first enum in core is profile's `nature`, so the fixture is a
+// profile; the type folder form comes from TYPES, not from the fixture schema's File Location.
+const PROFILE_SCHEMA = schema("profile", [
+  "| `source` | Yes | ref → source | Where it came from. |",
+  "| `nature` | Yes | enum | `human` or `agent`. What holds this profile. |",
+]);
+
+test("an enum value outside the listed tokens is an R8 failure naming the field", () => {
+  const files = new Map([
+    ["meta/core/profile-schema.md", PROFILE_SCHEMA],
+    ["model/profiles/mira/mira.md", "---\nsource: Local\nnature: robot\n---\n\n# Mira\n\n> A person.\n"],
+  ]);
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+  const hit = failures.find((f) => f.includes("mira.md") && f.includes("nature"));
+  assert.ok(hit, `no failure named the field; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /robot/);
+  assert.match(hit, /human/);
+  assert.match(hit, /agent/);
+});
+
+test("an enum value among the listed tokens is not a failure", () => {
+  const files = new Map([
+    ["meta/core/profile-schema.md", PROFILE_SCHEMA],
+    ["model/profiles/mira/mira.md", "---\nsource: Local\nnature: agent\n---\n\n# Mira\n\n> An agent.\n"],
+  ]);
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+  assert.deepEqual(failures.filter((f) => f.includes("nature")), []);
+});
+
+test("an enum whose Description opens with prose lists nothing, and that is the schema's failure", () => {
+  const files = new Map([
+    ["meta/core/profile-schema.md", schema("profile", [
+      "| `nature` | Yes | enum | What holds this profile: human or agent. |",
+    ])],
+    ["model/profiles/mira/mira.md", "---\nnature: human\n---\n\n# Mira\n\n> A person.\n"],
+  ]);
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+  const hit = failures.find((f) => f.includes("profile-schema.md") && f.includes("nature"));
+  assert.ok(hit, `no failure named the schema; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /R8/);
+});
