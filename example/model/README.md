@@ -2,19 +2,21 @@
 
 > A fictional company, described in CompanyGraph. Nothing here is real.
 
-Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen and Tomas Reyes. The
+Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent. The
 content is invented so the shape can be read end to end without anyone's actual client or
 revenue data being published.
 
-It uses twelve core types — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
-`skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy` —
-and declares no packs. That is what core ships, not a claim that twelve types describe a company.
+It uses thirteen core types — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
+`skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`,
+`role` — and declares no packs. That is what core ships, not a claim that thirteen types
+describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
 vision.md                        billing nobody has to explain
 strategic-objectives/            support-stops-explaining-invoices.md
 strategies/                      invoicing-strategy.md
+roles/                           backend-engineer.md, reviewer.md
 values/                          say-the-hard-thing.md, craftsmanship.md
 sources/                         local.md, google-workspace.md
 surfaces/                        partner-directory.md
@@ -27,6 +29,8 @@ profiles/mira-halvorsen/         mira-halvorsen.md
 profiles/tomas-reyes/            tomas-reyes.md
   experiences/                   2019-northwind-atelier.md, 2021-orbit-conference.md,
                                  2022-beacon-systems.md
+profiles/ai-agent/               ai-agent.md — an agent, holding the Reviewer seat
+  experiences/                   empty
 ```
 
 `profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a

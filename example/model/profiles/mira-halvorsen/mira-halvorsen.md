@@ -2,6 +2,8 @@
 source: Google Workspace
 source-id: 104857613902
 nature: human
+roles:
+  - Backend Engineer
 email: mira@example.invalid
 location: Bergen
 ---
