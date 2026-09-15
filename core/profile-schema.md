@@ -58,10 +58,11 @@ in that experience's `## References`.
 
 A profile is the one page that says who a person or an agent is and what they claim — the
 entity every experience is owned by, every skill claim is made from and every role is held by.
-It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with
-them. It is not a curriculum vitae: what happened, when and where lives in the experiences the
-profile owns, and what a capability *is* lives in the skill. What only the profile can hold is
-the claim — this person, this skill, at this level, on this evidence.
+It answers "who is this, what can they do, and what is that judgment resting on?" for
+someone deciding whether to work with them. It is not a curriculum vitae: what happened, when
+and where lives in the experiences the profile owns, and what a capability *is* lives in the
+skill. What only the profile can hold is the claim — this person, this skill, at this level,
+on this evidence.
 
 ## Writing rules
 
