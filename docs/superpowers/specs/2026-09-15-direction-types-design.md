@@ -249,9 +249,15 @@ blust.ch then moves `source.json` to the instance commit and regenerates `model.
 stage and the model page are generic over types and need no rendering change; what moves is the
 type count the page states about itself.
 
-companygraph.io's prose is deliberately out of scope. Its ideas page and README already carry
-stale counts from earlier releases, and folding their correction into this work would put
-changes in a pull request that has nothing to do with them.
+companygraph.io needs a re-pin of its own, and this spec first said it did not. The site draws
+both companygraph.io/example and its vocabulary page from one pin of this repository, and that
+pin is twenty-four commits behind — so the example written in §6 to be met by a reader is,
+until it moves, an example nobody can reach. The reasoning that excluded it was about the site's
+*prose*, which is stale on facts this work does not touch, and it swallowed the *pin*, which is
+what makes the example do its job. The prose stays out: its ideas page and README carry counts
+from earlier releases, that correction is a writer's job with the translator after, and folding
+it in would put changes in a pull request that has nothing to do with them. The pin does not
+wait for the instance, because this site pins the meta-model rather than any instance of it.
 
 ## 8. Version
 

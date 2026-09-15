@@ -20,7 +20,7 @@
 - Prose follows `conventions/WRITING.md`: American English, spaced em-dashes, sentence case in headings, no serial comma, curly quotes. Run `sh conventions/conventions-check` in every repository before committing there. `docs/superpowers/` is excluded from that check in every member, so plan and spec prose is held by the agent pass alone.
 - Every commit runs the checks its task names, and is made only when they pass. A pipe into `tail` hides an exit code, so check the exit code on its own.
 - **Nothing is merged and nothing is tagged by an agent.** Each phase ends with a green pull request and stops. Merging, tagging and publishing the release are the owner's decisions.
-- Phase 2 is blocked until the owner has merged Phase 1 and pushed the tag `v0.21.0`. Phase 3 is blocked until the owner has merged Phase 2.
+- Phase 2 and Phase 3 are both blocked until the owner has merged Phase 1 and pushed the tag `v0.21.0`, and neither blocks the other: Phase 2 writes the instance, Phase 3 pins a site to the meta-model itself. Phase 4 is blocked until the owner has merged Phase 2.
 - Commit messages and pull request descriptions follow the git register: a subject under seventy characters with no type prefix and no trailing period, one to three short paragraphs, then one line beginning `Verified:` naming what ran and passed, then the trailers.
 
 ---
@@ -1114,11 +1114,129 @@ Report the pull request number, the check result, and the merge commit the owner
 
 ---
 
-## Phase 3 — robertblust.github.io
+## Phase 3 — companygraph/companygraph.github.io
+
+Repository: `/Users/rob/git/companygraph/companygraph.github.io`. **Blocked until Phase 1 is
+merged.** It does not wait for Phase 2: this site pins the meta-model, not the instance, so the
+merge commit is all it needs.
+
+This phase exists because the plan originally left it out, and the omission was load-bearing.
+`example/` was written so that a reader meets the two new types at companygraph.io/example,
+which is what the spec says the example is for — and the site draws that page from a pin of its
+own. Without this phase the example ships invisible.
+
+### Task 10: Re-pin companygraph.io onto the release
+
+**Files:**
+- Modify: `source.json` (the `commit`)
+- Modify: `example.json` and `model.json` (regenerated, committed)
+- Modify: `package.json` and `package-lock.json` (the parser pin)
+
+**Interfaces:**
+- Consumes: the merge commit of Phase 1 on `companygraph/meta-model`'s `main`.
+
+- [ ] **Step 1: Read what is about to move**
+
+```bash
+cd /Users/rob/git/companygraph/companygraph.github.io
+git checkout main && git pull
+cat source.json
+```
+
+The pin is `238ee354...`, which predates v0.17.0. This is a twenty-four-commit jump, not a
+one-release one: the `surface` type, the Also-at work, the tagline change and these two types all
+arrive at once. Treat the artifact diff in Step 4 as something to read, not to wave through.
+
+- [ ] **Step 2: Branch and take the merge commit**
+
+```bash
+git checkout -b direction-types
+gh api repos/companygraph/meta-model/commits/main --jq .sha
+```
+
+Confirm it is Phase 1's merge commit and not a later one.
+
+- [ ] **Step 3: Move both pins**
+
+```bash
+node -e '
+const fs = require("fs");
+const s = JSON.parse(fs.readFileSync("source.json", "utf8"));
+s.commit = process.argv[1];
+fs.writeFileSync("source.json", JSON.stringify(s) + "\n");
+console.log(s);' <THE_SHA>
+sed -i '' 's|meta-model#v0\.20\.0|meta-model#v0.21.0|' package.json
+npm install --package-lock-only
+grep -n "meta-model" package.json source.json
+```
+
+Replace `<THE_SHA>` with the sha from Step 2. Both pins move together here, unlike blust.ch: this
+site parses `core/` as well as `example/`, so the parser and the content it parses should be the
+same release.
+
+- [ ] **Step 4: Rebuild and read the diff**
+
+```bash
+npm ci
+npm run build; echo "exit: $?"
+git diff --stat example.json model.json
+```
+
+Expected: `model.json` gains the two new types and every schema change since v0.17.0;
+`example.json` gains the objective and the strategy and whatever the intervening releases added
+to Beacon Systems. Read the diff. A type or an entity appearing that nobody designed a page for
+is exactly what a jump this size surfaces, and the next step is where it shows.
+
+- [ ] **Step 5: Run the site's checks**
+
+```bash
+npm run build:check; echo "exit: $?"
+npm run pages:check; echo "exit: $?"
+npm run test:build; echo "exit: $?"
+npm run og:check; echo "exit: $?"
+npm run verify; echo "exit: $?"
+npm run pin:check; echo "exit: $?"
+sh conventions/conventions-check; echo "exit: $?"
+```
+
+All must exit 0. If `pages:check` fails, a committed page no longer matches what the build
+produces — run `npm run pages` and commit the result with the rest.
+
+- [ ] **Step 6: Look at both pages**
+
+```bash
+python3 -m http.server 8000 &
+open http://localhost:8000/example/
+open http://localhost:8000/model/
+```
+
+Confirm by eye: `/example/` shows Beacon Systems with a strategic objective and a strategy, the
+strategy's `serves` and `upholds` edges drawn; `/model/` shows twelve types. Kill the server when
+done.
+
+- [ ] **Step 7: Commit, push, open the pull request, report and stop**
+
+Write the commit message in the git register, saying what moved and that the pin had been
+twenty-four commits behind. Then:
+
+```bash
+git push -u origin direction-types
+gh pr create --title "The site draws the example the current release ships" --body "..."
+gh pr checks --watch; echo "exit: $?"
+```
+
+Report the pull request number and the check result. **Do not merge.**
+
+**Not in this phase.** The ideas page's counts and the README's "What is here" block are stale
+on facts this re-pin does not touch, and they are a writer job with the translator after. The
+re-pin makes the contradiction visible — a page saying eight types beside a `/model/` drawing
+twelve — so that sweep is owed soon, and it is still not owed here.
+
+## Phase 4 — robertblust.github.io
 
 Repository: `/Users/rob/git/robertblust/robertblust.github.io`. **Blocked until Phase 2 is merged.**
 
-### Task 10: Re-pin the site onto the instance
+### Task 11: Re-pin blust.ch onto the instance
 
 **Files:**
 - Modify: `source.json` (the `commit`)
@@ -1248,6 +1366,6 @@ Report the pull request number and the check result. **Do not merge.**
 
 ## What this plan does not do
 
-- **companygraph.io** is untouched. Its ideas page and README carry stale type counts from earlier releases, and correcting them here would put unrelated changes in these pull requests. That sweep is its own work, with the writer and translator roles.
+- **companygraph.io's prose** is untouched. Its ideas page and README carry stale type counts from earlier releases, and correcting them here would put unrelated changes in these pull requests. That sweep is its own work, with the writer and translator roles. Its *pin* is Phase 3 and is not optional: the example exists to be read on that site.
 - **No German.** No page in this work carries a `-de` attribute; the translator is not invoked. If the site later renders these types in a page that carries German, that is when the translator runs.
 - **`kpi` stays deferred.** A measure earns a type when something reads it on a schedule. Until then the strategy's `## What would show it is working` carries it as prose, which the spec's §9 records as the weaker arrangement it is.
