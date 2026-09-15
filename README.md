@@ -20,10 +20,10 @@ core/              the shipped unit, copied whole into an instance
   CONVENTIONS.md   the portable rules that make the graph checkable
   *-schema.md      one per type: identity, vision, profile, experience,
                    experience-kind, skill, proficiency-level, value, source,
-                   surface
+                   surface, strategic-objective, strategy
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
-example/           a fictional company, described in those ten types
+example/           a fictional company, described in those twelve types
 lib/instance.mjs   the instance parser — the one module this package ships
 verify/
   check.mjs                npm run verify — asserts this repo's own shape
@@ -69,9 +69,10 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 ## Status
 
 Past its first release and in use by a real instance, with the tooling and most of the
-remaining core types still ahead. The current release is 0.19.0, the twenty-third tag, and at
-that release core holds ten types, one schema each: identity, vision, profile, experience,
-experience-kind, skill, proficiency-level, value, source and surface. The reference instance,
+remaining core types still ahead. The current release is 0.21.0, the twenty-fifth tag, and at
+that release core holds twelve types, one schema each: identity, vision, profile, experience,
+experience-kind, skill, proficiency-level, value, source, surface, strategic-objective and
+strategy. The reference instance,
 [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
 its own pin names and populates the types that release carries, for a company of one, and
 blust.ch builds its model pages from it with the parser this package ships. What is not there
