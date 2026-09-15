@@ -375,7 +375,7 @@ Which rules those scripts reach is worth stating plainly. In the CompanyGraph re
 run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10, R11,
 R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
 any check cites a rule this document does not define. `npm run test:instance` exercises the
-instance parser's implementation of the rules it cites — R2, R3, R4, R5, R6, R7, R9, R11, R13 and R16 —
+instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. No file is checked against R1, R2,
 R3, R5, R7, R8 or R17; where a check happens to touch one, it is incidental to the rule that

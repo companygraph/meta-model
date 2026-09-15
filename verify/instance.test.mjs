@@ -225,19 +225,12 @@ test("a table row's declared reference is the edge; a qualifier resolves into it
   });
 });
 
-// R4 makes an unresolvable row an error so the page can never draw a line to nowhere. A table
-// of references to the outside world — a register entry, a recording — resolves to nothing at
-// all, and under that rule it could not exist.
-//
-// The decision moves from the row to the table: a table where nothing resolves anywhere draws
-// no edges and is data; a table where something resolves is a table of references, and there a
-// row that resolves to nothing is still the error it was.
-//
-// Worth being exact about what that preserves, because it is narrower than it first looks. R4
-// never caught a typo in one cell: the first *resolving* cell of a row becomes the edge, so a
-// misspelled skill beside a correct Level still resolves — on the Level. What it catches is a
-// row where nothing at all resolves, and that is what stays caught.
-test("a table whose rows resolve to nothing at all is data, not an R4 error", () => {
+// A table draws edges only where its schema declares a reference column. A table of references
+// to the outside world — a register entry, a recording — is declared with string columns and so
+// draws nothing, whatever its cells say; its rows are kept as data. The case below and the one
+// named "a table declaring no reference draws nothing even when a cell names an entity" test
+// the two halves of that: this one that the rows survive, that one that no edge appears.
+test("a table whose schema declares no reference is data, and keeps its rows", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
     "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## References\n\n" +
@@ -522,6 +515,24 @@ test("a qualifier that names nothing of its type is an R4 error", () => {
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
     "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming | Expert | Owned it. |\n");
   assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "Expert" in .* names no proficiency-level/);
+});
+
+// R9 makes `qualifier → <type>` a column type only, and R16 makes a qualifier draw nothing.
+// A schema that declares one in frontmatter is wrong, and the checker's business; what the
+// parser owes is to keep R16 true for it: the value resolves, and no edge appears.
+test("a qualifier declared in frontmatter resolves and draws no edge", () => {
+  const withQualifier = new Map(schemas);
+  withQualifier.set("skill-schema.md", schema("skill", {
+    fields: [["source", "ref → source"], ["group", "string"], ["level", "qualifier → proficiency-level"]],
+  }));
+  const files = new Map(valid);
+  files.set("skills/java-programming.md",
+    "---\nlevel: Proficient\n---\n\n# Java Programming\n\n> JVM services.\n\n## In practice\n\nText.\n");
+  const { edges } = parseInstance(files, { schemas: withQualifier });
+  assert.equal(edges.filter((x) => x.via === "level").length, 0);
+  files.set("skills/java-programming.md",
+    "---\nlevel: Expert\n---\n\n# Java Programming\n\n> JVM services.\n\n## In practice\n\nText.\n");
+  assert.throws(() => parseInstance(files, { schemas: withQualifier }), /^Error: R4: "Expert" in .* names no proficiency-level/);
 });
 
 // A company of one: the company and the only person in it are the same human and carry the
