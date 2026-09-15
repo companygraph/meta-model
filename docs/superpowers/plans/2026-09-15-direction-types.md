@@ -1166,8 +1166,9 @@ s.commit = process.argv[1];
 fs.writeFileSync("source.json", JSON.stringify(s) + "\n");
 console.log(s);' <THE_SHA>
 sed -i '' 's|meta-model#v0\.20\.0|meta-model#v0.21.0|' package.json
-npm install --package-lock-only
+npm update companygraph-meta-model
 grep -n "meta-model" package.json source.json
+grep -A3 '"node_modules/companygraph-meta-model"' package-lock.json
 ```
 
 Replace `<THE_SHA>` with the sha from Step 2. Both pins move together here, unlike blust.ch: this
@@ -1311,7 +1312,7 @@ Recommended: move it, in this same commit.
 
 ```bash
 sed -i '' 's|meta-model#v0\.20\.0|meta-model#v0.21.0|' package.json
-npm install --package-lock-only
+npm update companygraph-meta-model
 npm ci && npm run model:check; echo "exit: $?"
 ```
 
@@ -1363,6 +1364,31 @@ gh pr checks --watch; echo "exit: $?"
 Report the pull request number and the check result. **Do not merge.**
 
 ---
+
+## What changed while this ran
+
+A plan is a record of what was intended, and two things here were wrong by the time the work
+finished. Both are corrected above rather than left for the next reader to discover.
+
+**One strategy, not two.** The plan wrote a go-to-market strategy beside the AI strategy, and the
+owner removed it before it shipped. Two reasons, both worth keeping. It contradicted its own
+instance: companygraph.io/billing says "Nothing is being sold today, and it may never be" and
+"There is no rate, and nobody to ask for one", where the strategy claimed a company that sells
+and prices in the open, and its earliest measure was traffic in logs that do not exist because
+nothing in the family runs analytics. And it treated CompanyGraph as the business while
+GuestGraph is an equally unfinished idea, which is a choice between two ideas that the model had
+no business making. Task 8's text below still writes both; what shipped is the first.
+
+**`npm install --package-lock-only` does not re-resolve a git dependency.** It leaves the previous
+commit's sha in the lockfile while `package.json` names the new tag, so the build runs the old
+parser while every visible pin claims otherwise — and nothing catches it, because `model:check`
+and `build:check` compare the artifact against what the *current* parser produces, which makes a
+stale parser produce a self-consistent wrong answer. Caught on companygraph.io. Both re-pin tasks
+now say `npm update` and both ask for the lockfile to be grepped as proof.
+
+**The surviving strategy was also renamed**, from `AI Strategy` to `Model-First Strategy`: the
+instance already carries a skill whose H1 is `AI strategy`, and `parseInstance` refuses a name two
+types carry, so the model built only because of one capital letter.
 
 ## What this plan does not do
 
