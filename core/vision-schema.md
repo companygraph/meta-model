@@ -38,6 +38,9 @@ still while the ways of getting there change.
   we hold to whatever happens, a vision says what we are trying to make happen.
 - It says where, not how. A named tool, a named surface or a dated milestone is a plan, and
   plans move faster than a vision should.
+- What must become true on the way there is a strategic objective and not the vision. There is
+  one vision and it carries no date; objectives are several, carry the dates they were set and
+  aimed at, and are deleted once reached.
 - `## What it means` says what is true when it holds — concretely enough that a reader could
   tell whether it does — and what falls outside it. What is out of scope is stated, because a
   vision silent on its boundary is read as covering everything.

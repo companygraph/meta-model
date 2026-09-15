@@ -51,8 +51,9 @@ other way?" for someone who arrives after the decision and would otherwise re-op
   supposed to sit between them.
 - `serves` names at least one objective. A strategy serving none is either an objective nobody
   wrote down or work nothing in the model asked for.
-- `upholds` names the values that constrained the route, where any did. It is not a list of
-  every value the company holds: a strategy that upholds all of them has cited none.
+- `upholds` names the values that actually constrained the route, where any did. A citation that
+  would be equally true of any strategy the company might have chosen instead tells a reader
+  nothing.
 - Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
   same one throughout the instance.
 - A strategy that has been replaced is deleted rather than marked, because the model states the

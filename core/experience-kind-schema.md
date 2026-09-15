@@ -49,3 +49,6 @@ covers is one edit rather than a scan of every period.
 - Name it for what the period *is*, not for the type it belongs to: `Role`, not `Experience`.
 - `organization` means a different thing under each kind — an employer, a client, a host, an
   awarding body — and each kind says which one it means. That sentence has nowhere else to live.
+- A kind carries no dates and governs none. How a date on an experience reads is the
+  experience's business whatever kind it is, and a kind claiming otherwise would make an absent
+  `end` mean two things and resolve it by a label.

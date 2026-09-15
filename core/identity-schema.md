@@ -11,9 +11,9 @@ folder (R6, R13). The filesystem carries the cardinality: there is nowhere to pu
 The file is named for the type, not for the slug of its H1 (R12), which leaves the H1 free to
 be the company's name.
 
-It is also the one entity nothing references. Everything else in the graph is a reference
-target; identity is the root, and a reader arriving at a bare name searches for it rather than
-being sent to it.
+The file is the graph's root as well as its subject. Identity is the one entity nothing
+references — every other one is a reference target — so a reader arriving at a bare name
+searches for it rather than being sent to it.
 
 ## Frontmatter
 
