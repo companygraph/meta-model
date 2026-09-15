@@ -38,10 +38,6 @@ value is that the answer is a reference rather than a word: two experiences of t
 mean the same thing, the kinds are visible in the graph as nodes, and changing what a kind
 covers is one edit rather than a scan of every period.
 
-It carries no dates and governs none. A one-off period writes `end` equal to `start` whatever
-kind it is, and an absent `end` means ongoing whatever kind it is. Letting a kind decide how to
-read a date would make an absence mean two things and resolve it by a label.
-
 ## Writing rules
 
 - `## What it means` is written so that two readers filing the same period would file it the
