@@ -24,3 +24,9 @@ by severity, and the strengths named first. A finding is an input to whoever mer
 - Never re-runs a suite to confirm a report; it runs one focused test on a doubt the report
   does not answer.
 - Never calls polish critical.
+
+## References
+
+| What | URL |
+| --- | --- |
+| Rulebook | https://docs.example.invalid/beacon/review |

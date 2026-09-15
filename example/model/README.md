@@ -3,8 +3,8 @@
 > A fictional company, described in CompanyGraph. Nothing here is real.
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes
-and the agent. The content is invented so the shape can be read end to end without anyone's
-actual client or revenue data being published.
+and the agent that holds the Reviewer seat. The content is invented so the shape can be read
+end to end without anyone's actual client or revenue data being published.
 
 It uses thirteen core types — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
 `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`,

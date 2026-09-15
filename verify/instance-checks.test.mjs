@@ -179,3 +179,29 @@ test("an enum whose Description opens with prose lists nothing, and that is the 
   assert.ok(hit, `no failure named the schema; got: ${failures.join(" | ") || "none"}`);
   assert.match(hit, /R8/);
 });
+
+test("an enum list broken by an unlisted separator fails at the schema, not at the page", () => {
+  const files = new Map([
+    ["meta/core/profile-schema.md", schema("profile", [
+      "| `nature` | Yes | enum | `human` and `agent`. What holds this profile. |",
+    ])],
+    ["model/profiles/mira/mira.md", "---\nnature: agent\n---\n\n# Mira\n\n> An agent.\n"],
+  ]);
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+  assert.ok(failures.find((f) => f.includes("profile-schema.md") && f.includes("nature") && f.includes("R8")), `no schema failure; got: ${failures.join(" | ") || "none"}`);
+  assert.deepEqual(failures.filter((f) => f.includes("mira.md") && f.includes("nature")), []);
+});
+
+test("a missing enum field is named with its permitted values", () => {
+  const files = new Map([
+    ["meta/core/profile-schema.md", schema("profile", [
+      "| `nature` | Yes | enum | `human` or `agent`. What holds this profile. |",
+    ])],
+    ["model/profiles/mira/mira.md", "---\nsource: Local\n---\n\n# Mira\n\n> A profile.\n"],
+  ]);
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+  const hit = failures.find((f) => f.includes("mira.md") && f.includes("nature"));
+  assert.ok(hit, `no failure named the field; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /human/);
+  assert.match(hit, /agent/);
+});
