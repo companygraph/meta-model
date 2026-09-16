@@ -20,10 +20,10 @@ core/              the shipped unit, copied whole into an instance
   CONVENTIONS.md   the portable rules that make the graph checkable
   *-schema.md      one per type: identity, vision, profile, experience,
                    experience-kind, skill, proficiency-level, value, source,
-                   surface, strategic-objective, strategy, role
+                   surface, strategic-objective, strategy, role, process, phase
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
-example/           a fictional company, described in those thirteen types
+example/           a fictional company, described in those fifteen types
 lib/instance.mjs   the instance parser, the module a site imports
 lib/checks.mjs     the checks an instance is held to, shared by the suite and the checker
 bin/check-instance.mjs     the mechanical half of R0, run over one instance by its workflow
@@ -78,11 +78,11 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 
 ## Status
 
-Past its first release and in use by a real instance, with the tooling and most of the remaining
-core types still ahead. The current release is 0.24.0, the twenty-eighth tag, and at that release
-core holds thirteen types, one schema each: identity, vision, profile, experience,
+Past its first release and in use by a real instance, with the tooling and some of the remaining
+core types still ahead. The current release is 0.25.0, the twenty-ninth tag, and at that release
+core holds fifteen types, one schema each: identity, vision, profile, experience,
 experience-kind, skill, proficiency-level, value, source, surface, strategic-objective,
-strategy and role. The reference instance,
+strategy, role, process and phase. The reference instance,
 [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
 its own pin names and populates the types that release carries, for a company of one, and
 blust.ch builds its model pages from it with the parser this package ships. What is not there
