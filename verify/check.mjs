@@ -29,6 +29,7 @@ import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { TYPES, MODEL, TYPE_VOCABULARY, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
+import { parseInstance } from "../lib/instance.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EX = `example/${MODEL}`;
@@ -408,6 +409,31 @@ const CHECKS = [
       for (const tag of tags)
         if (tag !== `v${pkg.version}`)
           fail(`tag ${tag} sits on HEAD but package.json says ${pkg.version}`);
+    },
+  },
+  {
+    // Every other check in this file reads `TYPES`, where each folder is a literal string, and
+    // the parser derives a folder's type from the schemas instead. The two halves can disagree
+    // with nothing able to see it: `processes` came back from the parser as `processe` while
+    // every check here passed, because nothing ever ran the parser over the example. This runs
+    // it, so the package cannot ship a parser that chokes on its own demonstration instance.
+    name: "the example parses with the parser this package ships",
+    rule: "R16",
+    run() {
+      // Keys are relative to the container, as an instance's own files are; `sub` only
+      // prefixes the paths the parser reports, it does not strip one.
+      const files = new Map();
+      for (const [path, text] of filesUnder(EX))
+        if (path.endsWith(".md")) files.set(path.slice(EX.length + 1), text);
+      const schemas = new Map();
+      for (const [path, text] of filesUnder("core"))
+        if (path.endsWith("-schema.md")) schemas.set(path.split("/").pop(), text);
+      try {
+        const { entities } = parseInstance(files, { sub: `${EX}/`, schemas });
+        if (!entities.length) fail("the example parsed to no entities");
+      } catch (e) {
+        fail(`the example does not parse: ${e.message}`);
+      }
     },
   },
   {
