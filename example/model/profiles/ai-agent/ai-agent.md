@@ -11,5 +11,6 @@ roles:
 
 ## Summary
 
-One profile for every agent the company runs, so the seat has a holder. It claims no skill
-yet: a claim needs evidence, and the first review has not been read.
+One profile for every agent the company runs, so the seat has a holder. It claims no skill,
+and not because the first review is unread: a claim is a person's history with a capability,
+and an agent has none. What holds it to the seat is the rulebook, never a row.
