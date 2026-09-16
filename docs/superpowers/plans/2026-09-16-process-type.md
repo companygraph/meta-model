@@ -22,6 +22,7 @@
 - **Commits end with:**
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
 - **Do not merge anything.** Open the pull request and stop. Merging is the Owner's word, and a branch delete is never chained after a merge.
+- **A pull request description is prose, in the register the repository already uses.** Read the last two merged PRs before writing one. No `##` headings and no bullet lists: paragraphs that open with the gap, say what changed, say what it costs downstream, and — where a release is involved — one line reading `Release notes to write at tagging: …`. It closes with a single `Verified:` sentence naming the commands that were run, then the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line. `companygraph/meta-model` uses bold run-ins such as `**What changed.**` to open a paragraph; `robertblust/mental-model` uses none. The bodies below follow this; do not restructure them.
 - **Versions:** core `0.24.0` → `0.25.0` in three files — `package.json`, `core/manifest.json`, and the README's Status paragraph.
 
 ## Repository Map
@@ -783,23 +784,17 @@ git push -u origin process-type
 ```bash
 cd ~/git/companygraph/meta-model
 gh pr create --title "Core 0.25.0: the process and phase types" --body "$(cat <<'EOF'
-## What this is
+`role-schema.md` has said since it shipped that a role "is not a process, which says when the seat acts", and nothing said it. A role names what a seat takes and produces but never what hands it that input or what receives that output, so the model held the company's people and its work and not the path between them. This opens that with two types: `process`, a folder owning its phases as a profile owns its experiences, and `phase`, which carries its seats and its gate in frontmatter.
 
-`role-schema.md` has said since it shipped that a role "is not a process, which says when the seat acts", and nothing said it. Two types close that: `process`, a folder owning its phases as a profile owns its experiences, and `phase`, which carries its seats and its gate in frontmatter.
+**What changed.** `process-schema.md` declares the tracks a process runs and the order its phases are passed through; `phase-schema.md` declares `owner`, `executed-by`, `supported-by`, `gate-approvers`, `escalation-authority` and `gate-to`, every one of them a reference, so R3 and R4 hold them and the parser needs no change at all. One process with tracks rather than one per kind of work, because software and prose run the same steps and differ only in who executes and what is produced. The multi-person instance's involvement matrix is dropped rather than ported: its columns would be the instance's own phase names, so no schema could declare them and no column check could ever run on it — the four levels it encodes are those frontmatter fields, and a renderer pivots them back into a matrix. The gate chain gets no mechanical check, because `gate-to` agreeing with `## Phases` is a writing rule, and every check here names a rule `CONVENTIONS.md` defines. Core and the package go to 0.25.0.
 
-The design, including what was dropped from the multi-person instance's process schema and why, is in `docs/superpowers/specs/2026-09-16-process-design.md`.
+**Two checks move with it.** A required field declared as a list must carry at least one item: `gate-approvers:` followed by nothing passed, because the check above it reads the key and stops. It cites R9 and holds every type, not only the two new ones. And `list fields are block sequences` now walks the whole instance rather than `profiles/` alone — `phase` is the first type with array fields outside that folder, which is what made the old scope visible.
 
-## Three decisions worth reading
+**What it costs downstream.** Nothing breaks: this is additive, and an instance with no `processes/` folder is every instance today. `.github/workflows/instance-check.yml` moves to `v0.25.0` with the release, as every release before it moved it — left behind, the published workflow would run the 0.24.0 checker against an instance pinned to 0.25.0 and refuse it. The reference instance takes this next, with the `Delivery` process the design writes out and the three seats it names.
 
-- **One process with tracks**, not one process per kind of work. Software and prose run the same steps and differ only in who executes and what is produced.
-- **The involvement matrix is dropped, not ported.** Its columns are the instance's own phase names, so no schema could declare them and no column check could ever run on it. Its four levels became four frontmatter fields on the phase, where each is a typed reference R3 and R4 already check.
-- **The gate chain gets no mechanical check.** That `gate-to` agrees with `## Phases` is a writing rule, and writing rules belong to the agent pass. The one check added is general and cites R9: a required list field carries at least one item.
+Release notes to write at tagging: the two new types and what they are for, that nothing breaks, and the three places an instance moves its pin.
 
-The parser needs no change at all.
-
-## Verification
-
-`npm run verify`, all three suites and `conventions/conventions-check` pass on this branch.
+Verified: `npm run verify`, `npm run test:instance`, `npm run test:instance-checks`, `npm run test:rules` and `sh conventions/conventions-check` all pass.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
@@ -1556,20 +1551,16 @@ EOF
 ```bash
 cd ~/git/robertblust/mental-model
 git push -u origin delivery-process
-gh pr create --title "Delivery: the process the company already runs, written down" --body "$(cat <<'EOF'
-## What this is
+gh pr create --title "Delivery: the process this company already runs, written down" --body "$(cat <<'EOF'
+Core 0.25.0 added the `process` and `phase` types, and this instance is the first to hold one. The company's most reliable rule — that the Owner approves before an agent proceeds — had nowhere in the model to live, so it lived in habit. It lives here now, as five gates rather than a general sense that he decides.
 
-Core 0.25.0 brings the `process` and `phase` types. This takes them: the re-pin, three seats that have been acting without a file, and `Delivery` — five phases, two tracks, every gate approved by the Owner.
+`Delivery` runs on two tracks, Code and Prose, rather than splitting into one process for software and one for writing. They are the same five steps and differ only in who executes and what is produced, and the phases say so: Shape and Integrate carry no track headings at all, because classifying a request and merging a branch do not change with what is being made, while Spec, Plan and Implement split their activities where the work genuinely differs. A code review is mechanical and a prose review is the Owner reading English with the German reviewed by back-translation, and the Translator has no counterpart on the other side.
 
-## What is in it
+Three seats come with it. `implementer.md` has referred twice to "the controller" since it was written, in lowercase, as a thing the reader was assumed to know, and nothing in the model held it — Specifier, Planner and Controller are that seat and the two either side of it. Each passes the role schema's own test, that a second holder would still be called that, and each has a rulebook that predates this model. Every skill the three require was already in `model/skills/`; none was added to make a seat fit. The agent now holds seven of the eight seats.
 
-- **The re-pin**, four places: `meta/core/` re-vendored whole, eighteen hashes in `.companygraph/manifest.json`, the workflow pin and AGENTS.md's version line.
-- **Specifier, Planner and Controller.** `implementer.md` has referred twice to "the controller" since it was written, in lowercase, and nothing in the model held it. Every skill the three require was already in the model; none was added to fit. The agent now holds seven of the eight seats.
-- **Delivery**, at `model/processes/delivery/`. Shape, Spec, Plan, Implement, Integrate, with the Code and Prose tracks splitting the activities only in the phases where the work really differs.
+The re-pin is the usual four places: `meta/core/` re-vendored whole from the tag, the manifest's hashes recomputed — eighteen now, two schemas more than before — the workflow pin moved, and AGENTS.md's version line with it.
 
-## Verification
-
-`node bin/check-instance.mjs` at v0.25.0 passes, the prose check passes, and `phase-schema.md`'s writing rules were read by hand against all five phases — the mechanical half does not reach them.
+Verified: `node bin/check-instance.mjs` at v0.25.0 and `sh conventions/conventions-check` pass, and `phase-schema.md`'s writing rules were read by hand against all five phases, because the mechanical half of R0 does not reach them.
 
 🤖 Generated with [Claude Code](https://claude.com/claude-code)
 EOF
