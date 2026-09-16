@@ -35,7 +35,7 @@ same name, plus the `phases/` collection the phases nest in.
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Track` | Yes | string | The kind of thing this track makes |
-| `Produces` | Yes | string | What one pass down this track leaves behind |
+| `Produces` | Yes | string | What this track leaves behind when a change runs down it |
 
 `## References` is a table with these columns:
 
@@ -57,6 +57,10 @@ and it is not a record of work that happened, which is an experience.
 - Person-neutral, as a role is: a process names seats and never who holds them.
 - Named for the work rather than for the tool that carries it: `Delivery`, not `The board`.
 - A track is named for what it makes, not for who makes it.
+- Tracks run together in one pass rather than instead of one another. A change that is both
+  code and prose runs down both, so a phase's `### [Track]` headings are strands of one step
+  and never alternative routes through it, and a phase may produce a deliverable per track in
+  the same pass.
 - Each line under `## What it never does` is a sentence an agent can hold a change against.
   "Never merges without the Owner" can fail; "works carefully" cannot.
 - `## Phases` lists every phase in the folder and nothing else, in the order the work passes

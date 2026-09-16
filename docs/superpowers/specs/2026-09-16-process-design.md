@@ -77,7 +77,12 @@ from an approved first is a step only prose has.
 
 So: **one process, two tracks.** A track is the kind of thing being made. It does not change the
 phases, the gates or who approves them; it changes which seats execute and what the deliverable
-is. The process declares its tracks in a table, and a phase whose activities differ by track
+is. Corrected after the reference instance was written: it can also change the *shape* of a
+phase's activities, and in Implement it does — the Code track is a loop that dispatches one
+brief at a time and the Prose track is a linear pipeline. What the two share there is the rule
+that nothing goes forward unread, which is what that phase's goal now says. Tracks also run
+together rather than instead of one another; a change that is both code and prose runs down
+both in one pass. The process declares its tracks in a table, and a phase whose activities differ by track
 groups them under a heading per track. A phase whose activities are the same for every track —
 Shape is one — does not mention tracks at all.
 
