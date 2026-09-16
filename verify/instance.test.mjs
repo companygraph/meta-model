@@ -24,10 +24,12 @@ const valid = new Map([
 // A schema in the fixed shape R9 states, holding only the rows a fixture needs. `fields` is
 // a list of [name, type] pairs for the Frontmatter table; `tables` maps a section heading to
 // its [column, type] pairs, which become the captioned column table R9 requires.
-const schema = (type, { fields = [], tables = {} } = {}) => {
+const schema = (type, { fields = [], tables = {}, location = null, owner = null } = {}) => {
   const title = type.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
   const lines = [
-    `# ${title} Schema`, "", `> A ${type}.`, "", "## File Location", "", `\`${type}s/*.md\``, "",
+    `# ${title} Schema`, "", `> A ${type}.`, "",
+    ...(owner ? [`**Owner:** ${owner}`, ""] : []),
+    "## File Location", "", `\`${location ?? `${type}s/*.md`}\``, "",
     "## Frontmatter", "",
   ];
   if (fields.length) {
@@ -577,4 +579,24 @@ test("a reference resolves by its declared type when two types share the name", 
   assert.deepEqual(edges.filter((x) => x.via === "organization"), [{
     from: "profiles/robert-blust/experiences/2026-now", to: "identity", via: "organization", attrs: {},
   }]);
+});
+
+// R7 says a folder is the plural of its type, and the parser read that backwards by stripping
+// the plural's last letter. `processes` is the case that breaks it: it is `process` plus `es`,
+// while `phases` directly beneath it is `phase` plus `s`, and no suffix rule tells those two
+// apart. The type a folder holds is declared — every schema's `## File Location` names it — so
+// the parser reads the mapping rather than guessing at it.
+test("a type whose folder is not its name plus one s still resolves", () => {
+  const files = new Map([
+    ["identity.md", "# Beacon Systems\n\n> Billing software.\n\n## What it is\n\nOne product.\n"],
+    ["processes/delivery/delivery.md", "# Delivery\n\n> How work moves.\n\n## Tracks\n\nOne.\n"],
+    ["processes/delivery/phases/shape.md", "# Shape\n\n> Classify it.\n\n## What it takes\n\nA request.\n"],
+  ]);
+  const only = new Map([
+    ["identity-schema.md", schema("identity", { location: "identity.md" })],
+    ["process-schema.md", schema("process", { location: "processes/<process>/<process>.md" })],
+    ["phase-schema.md", schema("phase", { location: "processes/<process>/phases/*.md", owner: "process" })],
+  ]);
+  const { entities } = parseInstance(files, { schemas: only });
+  assert.deepEqual(entities.map((e) => e.type).sort(), ["identity", "phase", "process"]);
 });

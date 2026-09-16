@@ -79,7 +79,7 @@ to use any of the rest: it is help, not a dependency, and it is the only part th
 ## Status
 
 Past its first release and in use by a real instance, with the tooling and some of the remaining
-core types still ahead. The current release is 0.25.0, the twenty-ninth tag, and at that release
+core types still ahead. The current release is 0.25.1, the thirtieth tag, and at that release
 core holds fifteen types, one schema each: identity, vision, profile, experience,
 experience-kind, skill, proficiency-level, value, source, surface, strategic-objective,
 strategy, role, process and phase. The reference instance,
