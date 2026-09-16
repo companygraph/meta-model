@@ -158,11 +158,16 @@ Writing rules:
 
 ## 6. The phase schema
 
-`model/processes/<process>/phases/*.md`, owner declared as `process`. The filename is not the
-slug of the H1, which is R12's default. It is the phase's position, then a `-`, then the slug —
-`1-shape.md`, `2-spec.md`, `5-integrate.md` — so the folder sorts in order and reads as the
-process, for the same reason an experience carries its start year. The position must be the
-phase's position in the owning process's `## Phases` list, and the rest must be a slug by R12.
+`model/processes/<process>/phases/*.md`, owner declared as `process`. The filename is R12's
+default, the slug of the H1: `shape.md`, `spec.md`, `integrate.md`.
+
+A position prefix was considered — `1-shape.md`, as an experience carries its start year — and
+rejected. It would make three places encode the order: the prefix, the `## Phases` list and the
+`gate-to` chain. That is the duplication the matrix was dropped for two sections ago, and it is
+worse here, because inserting a phase would rename every file after it. The experience precedent
+does not carry: a career folder is browsed chronologically and a phase folder is not browsed at
+all, since the process file lists its phases in order and links each one. The folder sorts
+alphabetically and nobody reads it that way.
 
 Frontmatter carries the seats, which is where the matrix went:
 
@@ -201,11 +206,12 @@ Writing rules:
 - `gate-to` names the next phase and the process's `## Phases` list says the same thing; where
   they disagree the model is wrong, not the reader.
 - The last phase has no `gate-to`, and its gate is the one that releases the work.
-- A phase's name is unique across the instance, not merely within its process. R2 and R3 are
-  instance-wide and a phase is not exempt, so a company running two processes cannot call a
-  phase in each of them `Review`. This is a real cost and it is the right one: a name that means
-  two things is the ambiguity the whole convention exists to prevent, and the fix is to name a
-  phase for what it does in the process it belongs to.
+- A phase's name is unique across every phase in the instance, not merely within its process.
+  R2 scopes a name to its type and not to its owner, so a company running two processes cannot
+  call a phase in each of them `Review`. It may name a phase `Review` while a role of that name
+  exists, since a reference carries the type it resolves under and the two never compete. The
+  cost falls only between processes, and the fix is to name a phase for what it does in the
+  process it belongs to.
 
 ## 7. The three seats the process needs
 
@@ -246,7 +252,7 @@ wearing a seat's name, and it should be merged into its neighbor.
 ## 8. The example
 
 Beacon Systems gains `model/processes/delivery/` with two tracks, `Code` and `Docs`, and three
-phases — `1-specify.md`, `2-build.md`, `3-release.md` — so the seat fields, the gate chain, the
+phases — `specify.md`, `build.md`, `release.md` — so the seat fields, the gate chain, the
 track grouping and a phase without track headings all appear once. The gate approvers are the
 seats it already has. Three phases rather than five, because the example is there to show the
 type worked and not to propose a way of working.
@@ -254,11 +260,24 @@ type worked and not to propose a way of working.
 ## 9. What ships
 
 `process-schema.md` and `phase-schema.md` in core. The `TYPES` list in `lib/checks.mjs` gains two
-entries — `process` as a folder owning `phase`, and `phase` with its owner and its
-position-prefixed filename form — and the instance checks gain three assertions: the filename
-position matches the phase's position in the process's `## Phases` list, the `gate-to` chain
-matches that list, and `gate-approvers` is present and non-empty. The README's type list gains
-the fourteenth and fifteenth types. Core and the package go to 0.25.0.
+entries — `process` as a folder owning `phase`, and `phase` with `owner: "process"` and no
+`filename` form, since it derives by R12's default.
+
+The instance checks gain exactly one assertion, and it is not about processes: **a required
+field declared as a list carries at least one item.** R9 already has `## Frontmatter` say
+whether a field may be absent, and the existing check reads the key's presence and stops, so
+`gate-approvers:` followed by nothing passes today. The check is general — it holds every
+required list field on every type — and cites R9, which is why it can exist at all.
+
+The gate chain gets no mechanical check. That `gate-to` agrees with the process's `## Phases`
+list is a writing rule in `phase-schema.md`, and this repository's own split puts writing rules
+in the agent pass: every check in `lib/checks.mjs` names a rule `CONVENTIONS.md` defines, a
+meta-check fails when it does not, and inventing an `R18` to license one type's ordering would
+be the schema leaking into the conventions. The agent pass reads it, as it reads every other
+`## Writing rules`.
+
+The README's type list gains the fourteenth and fifteenth types. Core and the package go to
+0.25.0.
 
 The parser needs no change at all. Every reference the two types draw — `owner`, `executed-by`,
 `supported-by`, `gate-approvers`, `escalation-authority`, `gate-to` — is a frontmatter field it
