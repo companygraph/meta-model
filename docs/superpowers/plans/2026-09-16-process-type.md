@@ -19,8 +19,9 @@
 - **Schema files follow R9's fixed order:** `# <Type> Schema`, `>` tagline, `**Owner:**` if owned, `## File Location`, `## Frontmatter`, `## Sections`, `## Purpose`, `## Writing rules`.
 - **The type vocabulary is closed** (R9): `string`, `number`, `date`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`. A reference names one entity, so its target is singular.
 - **Every mechanical check names a rule `core/CONVENTIONS.md` defines.** A check citing an undefined rule fails the `rules are written down` meta-check. Do not invent a rule number.
-- **Commits end with:**
+- **A commit message is the git register of `conventions/WRITING.md`.** Subject a plain sentence under seventy characters, no type prefix, no trailing period, saying what is now true that was not before. Body one to three short paragraphs, cause before mechanism, no headers and no bullets. **It ends with one line beginning `Verified:` naming what ran and passed**, then the trailers. The trailer is:
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
+- **Write the `Verified:` line from the commands you actually ran**, never from this plan's prediction of them. Every commit in both repositories' history carries one; a commit without it is the defect this constraint exists to stop.
 - **Do not merge anything.** Open the pull request and stop. Merging is the Owner's word, and a branch delete is never chained after a merge.
 - **A pull request description is prose, in the register the repository already uses.** Read the last two merged PRs before writing one. No `##` headings and no bullet lists: paragraphs that open with the gap, say what changed, say what it costs downstream, and — where a release is involved — one line reading `Release notes to write at tagging: …`. It closes with a single `Verified:` sentence naming the commands that were run, then the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line. A bold run-in opening a paragraph, such as `**What changed.**`, is optional and somewhat more common in `companygraph/meta-model` than in `robertblust/mental-model`; of the last four merged in each, meta-model #82 and mental-model #120 use one and the rest do not. The release-notes line is usual rather than universal — meta-model #81 and #80 carry it, #82 does not. The bodies below follow all of this; do not restructure them.
 - **Versions:** core `0.24.0` → `0.25.0` in four places — `package.json`, `core/manifest.json`, the README's Status paragraph, and the `v0.25.0` ref on lines 6 and 37 of `.github/workflows/instance-check.yml`. That last one is the reusable workflow an instance calls: left at the previous tag, the workflow published at `v0.25.0` runs the older checker, which refuses any instance pinned to 0.25.0.
@@ -285,6 +286,8 @@ The order lives in the process's `## Phases` list and the `gate-to` chain, and
 nowhere else — no position prefix on the filename, which would have to be
 renamed through the folder whenever a phase was inserted.
 
+Verified: `npm run verify`, the three test suites and `conventions/conventions-check` pass.
+
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 ```
@@ -427,6 +430,8 @@ already says whether a field may be absent.
 
 General, not process-specific: it holds every required list field on every type.
 Optional lists are left alone, since R9 lets those be absent outright.
+
+Verified: `npm run test:instance-checks` red on the new case before the check, green after; the rest of the suite and `conventions/conventions-check` pass.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
@@ -698,6 +703,8 @@ track table and a phase whose activities split by track, a phase whose
 activities do not, the gate chain and the last phase that ends it, and the seat
 fields resolving to the two roles the company already had.
 
+Verified: `npm run verify`, the three test suites and `conventions/conventions-check` pass.
+
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
 ```
@@ -774,6 +781,8 @@ Core 0.25.0: fifteen types, and two of them say when a seat acts
 Additive and breaking nothing — an instance with no processes/ folder is every
 instance today, and is unchanged. The README's type list and status move with
 it.
+
+Verified: `npm run verify`, the three test suites and `conventions/conventions-check` pass.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
@@ -881,6 +890,8 @@ Re-vendored meta/core whole from the tag, recomputed the manifest's hashes —
 eighteen now, two more schemas than before — moved the workflow pin with it and
 updated AGENTS.md's version line. No page under model/ changes here; the
 process this release makes writable comes next.
+
+Verified: the instance checker at v0.25.0 and `conventions/conventions-check` pass.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
@@ -1099,6 +1110,8 @@ and each has a rulebook that predates this model. Every skill they require was
 already in the model; none was added to fit.
 
 The agent now holds seven of the eight seats.
+
+Verified: the instance checker at v0.25.0 and `conventions/conventions-check` pass; every skill the three require resolves, and `model/roles/` holds eight seats.
 
 Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>
 EOF
