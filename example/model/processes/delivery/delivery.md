@@ -1,0 +1,35 @@
+---
+source: Local
+owner: Backend Engineer
+supported-by:
+  - Reviewer
+---
+
+# Delivery
+
+> How a change to the platform is specified, built and released.
+
+## Tracks
+
+| Track | Produces |
+| --- | --- |
+| Code | A merged change to the platform |
+| Docs | A published page on the customer site |
+
+## Phases
+
+1. [Specify](phases/specify.md)
+2. [Build](phases/build.md)
+3. [Release](phases/release.md)
+
+## What it never does
+
+- Never begins a phase whose predecessor's gate has not been approved.
+- Never releases a change that no reviewer has read.
+- Never counts a check nobody ran as a check that passed.
+
+## References
+
+| What | URL |
+| --- | --- |
+| Engineering handbook | https://example.com/handbook |
