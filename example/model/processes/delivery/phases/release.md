@@ -7,6 +7,7 @@ supported-by:
   - Backend Engineer
 gate-approvers:
   - Reviewer
+  - Backend Engineer
 escalation-authority: Reviewer
 ---
 

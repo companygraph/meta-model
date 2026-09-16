@@ -20,7 +20,7 @@ to be renamed through the whole folder whenever a phase was inserted.
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
-| `owner` | Yes | ref → role | The seat accountable for the phase's outcome, the H1 of a file in `roles/` |
+| `owner` | Yes | ref → role | The seat accountable for the phase's outcome, the H1 of a file in `roles/`. Distinct from the **Owner:** line above, which names the type that owns a phase; this field names the seat. |
 | `executed-by` | Yes | array of ref → role | The seats that do the phase's work |
 | `supported-by` | No | array of ref → role | The seats consulted in the phase, producing nothing it is graded on |
 | `gate-approvers` | Yes | array of ref → role | The seats that approve passage out of the phase. At least one; a phase nobody approves is an activity inside another phase. |

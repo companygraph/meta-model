@@ -61,5 +61,7 @@ and it is not a record of work that happened, which is an experience.
   "Never merges without the Owner" can fail; "works carefully" cannot.
 - `## Phases` lists every phase in the folder and nothing else, in the order the work passes
   through them. It is the authority on that order, and each phase's `gate-to` agrees with it.
+- In `## Phases`, the phase's name is the reference (R3); the path beside it is a convenience
+  for a reader clicking through, not the reference itself.
 - A process with one track says so and names it; a track table is not omitted because there
   happens to be only one kind of work today.
