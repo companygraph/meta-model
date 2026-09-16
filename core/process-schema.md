@@ -1,0 +1,65 @@
+# Process Schema
+
+> Required structure for process files.
+
+## File Location
+
+`model/processes/<process>/<process>.md`
+
+A process owns its phases and cannot be read without them, so it is a folder rather than a
+file, as a profile is. The folder is named for the process and holds its own file under that
+same name, plus the `phases/` collection the phases nest in.
+
+## Frontmatter
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
+| `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
+| `owner` | Yes | ref → role | The seat accountable for the process as a whole, the H1 of a file in `roles/` |
+| `supported-by` | No | array of ref → role | The seats that keep the process working without being accountable for it |
+
+## Sections
+
+| Section | Required | Description |
+| --- | --- | --- |
+| `# [Process]` | Yes | The canonical name of the process. Phases and readers reference it by this exact string. |
+| `> [Purpose]` | Yes | Single-line statement of what the process is for |
+| `## Tracks` | Yes | Table. The kinds of thing this process makes; its columns are declared below. |
+| `## Phases` | Yes | An ordered list, one entry per phase, in the order the work passes through them, each linking the phase's file |
+| `## What it never does` | Yes | A list, one sentence each, of what the process refuses in every phase |
+| `## References` | No | Table. The rulebooks the process is run by; its columns are declared below. |
+
+`## Tracks` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Track` | Yes | string | The kind of thing this track makes |
+| `Produces` | Yes | string | What one pass down this track leaves behind |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a rulebook, a checklist, a mandate |
+| `URL` | Yes | string | Where it is |
+
+## Purpose
+
+A process is the path work takes through the company's seats — one folder, the phases in the
+order they are passed through, and the gate between each pair — and it answers "what happens
+next, who does it, and what has to be true before it moves on?" for someone doing the work or
+waiting on it. It is not a seat, which says what one role takes and produces whenever it acts,
+and it is not a record of work that happened, which is an experience.
+
+## Writing rules
+
+- Person-neutral, as a role is: a process names seats and never who holds them.
+- Named for the work rather than for the tool that carries it: `Delivery`, not `The board`.
+- A track is named for what it makes, not for who makes it.
+- Each line under `## What it never does` is a sentence an agent can hold a change against.
+  "Never merges without the Owner" can fail; "works carefully" cannot.
+- `## Phases` lists every phase in the folder and nothing else, in the order the work passes
+  through them. It is the authority on that order, and each phase's `gate-to` agrees with it.
+- A process with one track says so and names it; a track table is not omitted because there
+  happens to be only one kind of work today.
