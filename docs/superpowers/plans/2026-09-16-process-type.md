@@ -4,7 +4,7 @@
 
 **Goal:** Add the `process` and `phase` types to CompanyGraph core, release them as 0.25.0, and write the `Delivery` process and its three new seats into the reference instance.
 
-**Architecture:** Two types in `core/`: `process` is a folder entity owning a collection of phases, exactly as `profile` owns `experiences`. A phase carries its seats and its gate in frontmatter as typed references, so the parser needs no change and R3/R4 check them for free. One process with two tracks, `Code` and `Prose`, rather than one process per kind of work. Work lands in two repositories in a fixed order: `companygraph/meta-model` merges and tags 0.25.0 first, then `robertblust/mental-model` re-pins and adds its process.
+**Architecture:** Two types in `core/`: `process` is a folder entity owning a collection of phases, exactly as `profile` owns `experiences`. A phase carries its seats and its gate in frontmatter as typed references, so the parser needs no change and R3/R4 check them for free. One process with two tracks rather than one process per kind of work — `Code` and `Prose` in the reference instance, and `Code` and `Docs` in this repository's example, which is a different fictional company. Work lands in two repositories in a fixed order: `companygraph/meta-model` merges and tags 0.25.0 first, then `robertblust/mental-model` re-pins and adds its process.
 
 **Tech Stack:** Node ≥ 20, no dependencies. Markdown with YAML frontmatter. `node:test` for the suites. The checks are plain assertions in `lib/checks.mjs` and `verify/check.mjs`.
 
@@ -22,8 +22,8 @@
 - **Commits end with:**
   `Co-Authored-By: Claude Opus 5 (1M context) <noreply@anthropic.com>`
 - **Do not merge anything.** Open the pull request and stop. Merging is the Owner's word, and a branch delete is never chained after a merge.
-- **A pull request description is prose, in the register the repository already uses.** Read the last two merged PRs before writing one. No `##` headings and no bullet lists: paragraphs that open with the gap, say what changed, say what it costs downstream, and — where a release is involved — one line reading `Release notes to write at tagging: …`. It closes with a single `Verified:` sentence naming the commands that were run, then the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line. `companygraph/meta-model` uses bold run-ins such as `**What changed.**` to open a paragraph; `robertblust/mental-model` uses none. The bodies below follow this; do not restructure them.
-- **Versions:** core `0.24.0` → `0.25.0` in three files — `package.json`, `core/manifest.json`, and the README's Status paragraph.
+- **A pull request description is prose, in the register the repository already uses.** Read the last two merged PRs before writing one. No `##` headings and no bullet lists: paragraphs that open with the gap, say what changed, say what it costs downstream, and — where a release is involved — one line reading `Release notes to write at tagging: …`. It closes with a single `Verified:` sentence naming the commands that were run, then the `🤖 Generated with [Claude Code](https://claude.com/claude-code)` line. A bold run-in opening a paragraph, such as `**What changed.**`, is optional and somewhat more common in `companygraph/meta-model` than in `robertblust/mental-model`; of the last four merged in each, meta-model #82 and mental-model #120 use one and the rest do not. The release-notes line is usual rather than universal — meta-model #81 and #80 carry it, #82 does not. The bodies below follow all of this; do not restructure them.
+- **Versions:** core `0.24.0` → `0.25.0` in four places — `package.json`, `core/manifest.json`, the README's Status paragraph, and the `v0.25.0` ref on lines 6 and 37 of `.github/workflows/instance-check.yml`. That last one is the reusable workflow an instance calls: left at the previous tag, the workflow published at `v0.25.0` runs the older checker, which refuses any instance pinned to 0.25.0.
 
 ## Repository Map
 
@@ -45,7 +45,7 @@
 | Create `example/model/processes/delivery/delivery.md` | The example process |
 | Create `example/model/processes/delivery/phases/{specify,build,release}.md` | Its three phases |
 | Modify `README.md` | Type list in two places, Status paragraph, version |
-| Modify `package.json`, `core/manifest.json` | 0.25.0 |
+| Modify `package.json`, `core/manifest.json`, `.github/workflows/instance-check.yml` | 0.25.0, in all three — the workflow's ref is what an instance checks itself against |
 
 **Part B — `robertblust/mental-model`**
 
@@ -410,7 +410,7 @@ Run:
 cd ~/git/companygraph/meta-model
 npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:rules
 ```
-Expected: all green. `npm run verify` still says `✓ 15 checks passed` — this check lives in `instanceChecks`, which `verify/check.mjs` runs as one of its fifteen, not as a sixteenth.
+Expected: all green. `npm run verify` says `✓ 16 checks passed` — `verify/check.mjs` spreads the array `instanceChecks` returns into its own `CHECKS` list and prints that list's length, so adding a check increments the count by one.
 
 - [ ] **Step 6: Commit**
 
@@ -710,6 +710,7 @@ EOF
 - Modify: `package.json:3`
 - Modify: `core/manifest.json:1`
 - Modify: `README.md` — the `## What is here` type list (around line 22), the `## Status` paragraph (around line 78)
+- Modify: `.github/workflows/instance-check.yml:6` and `:37` — the `v0.24.0` ref becomes `v0.25.0`
 
 **Interfaces:**
 - Consumes: everything from Tasks 1–3.
@@ -788,7 +789,7 @@ gh pr create --title "Core 0.25.0: the process and phase types" --body "$(cat <<
 
 **What changed.** `process-schema.md` declares the tracks a process runs and the order its phases are passed through; `phase-schema.md` declares `owner`, `executed-by`, `supported-by`, `gate-approvers`, `escalation-authority` and `gate-to`, every one of them a reference, so R3 and R4 hold them and the parser needs no change at all. One process with tracks rather than one per kind of work, because software and prose run the same steps and differ only in who executes and what is produced. The multi-person instance's involvement matrix is dropped rather than ported: its columns would be the instance's own phase names, so no schema could declare them and no column check could ever run on it — the four levels it encodes are those frontmatter fields, and a renderer pivots them back into a matrix. The gate chain gets no mechanical check, because `gate-to` agreeing with `## Phases` is a writing rule, and every check here names a rule `CONVENTIONS.md` defines. Core and the package go to 0.25.0.
 
-**Two checks move with it.** A required field declared as a list must carry at least one item: `gate-approvers:` followed by nothing passed, because the check above it reads the key and stops. It cites R9 and holds every type, not only the two new ones. And `list fields are block sequences` now walks the whole instance rather than `profiles/` alone — `phase` is the first type with array fields outside that folder, which is what made the old scope visible.
+**Two checks move with it.** A required field declared as a list must carry at least one item: `gate-approvers:` followed by nothing passed, because the check above it reads the key and stops. It cites R9 and holds every type, not only the two new ones. And `list fields are block sequences` now walks the whole instance rather than `profiles/` alone. `strategy` and `role` already carried array fields outside `profiles/` and were never held to it; `phase` is what made someone look.
 
 **What it costs downstream.** Nothing breaks: this is additive, and an instance with no `processes/` folder is every instance today. `.github/workflows/instance-check.yml` moves to `v0.25.0` with the release, as every release before it moved it — left behind, the published workflow would run the 0.24.0 checker against an instance pinned to 0.25.0 and refuse it. The reference instance takes this next, with the `Delivery` process the design writes out and the three seats it names.
 
