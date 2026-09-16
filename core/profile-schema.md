@@ -87,8 +87,11 @@ on this evidence.
   the table is what a reader will follow.
 - The URL in `## Also at` is the page that is the person's own on that place, not a search, a
   feed or a post. What a reader lands on has to be the person.
-- A profile that holds a role claims the skills the role requires in its Skills table, with
-  evidence. Where it cannot, the gap stays visible: the validation pass reports it and nothing
-  here invents a row to close it.
-- `nature` says what holds the profile, never how well. An agent's evidence is the rulebook it
-  runs under and the work it has produced under it, on the same terms as a person's.
+- A person who holds a role claims the skills the role requires in their Skills table, with
+  evidence. Where they cannot, the gap stays visible: the validation pass reports it and
+  nothing here invents a row to close it.
+- `nature` says what holds the profile, never how well. A profile whose nature is `agent`
+  claims no skill and carries no Skills table: a claim is a person's history with a capability,
+  evidenced by work that stays true after the next release, and an agent has no such history.
+  What holds an agent to a seat is the rulebook it runs under, never a row it wrote about
+  itself.

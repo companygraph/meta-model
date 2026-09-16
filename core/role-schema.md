@@ -53,6 +53,8 @@ a process, which says when the seat acts.
 - Each line under `## What it never does` is a sentence an agent can hold an output against.
   "Never merges" can fail; "acts responsibly" cannot.
 - `requires` lists what the seat needs, not what its current holder happens to have.
-- A skill the role requires that the holding profile does not claim is a gap the validation
+- A skill the role requires that a person holding it does not claim is a gap the validation
   pass reports, never an error. It says what the holder has to learn or the company has to
-  hire, which is information about the person and not a defect in the model.
+  hire, which is information about the person and not a defect in the model. An agent claims
+  nothing, so a seat held by one reports no gap and needs none: what the seat requires is
+  answered by its rulebook.
