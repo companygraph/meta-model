@@ -205,3 +205,46 @@ test("a missing enum field is named with its permitted values", () => {
   assert.match(hit, /human/);
   assert.match(hit, /agent/);
 });
+
+test("a required list field with no items fails, and one with an item passes", () => {
+  const PHASE_SCHEMA = schema("phase", [
+    "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
+  ]);
+  const ROLE_SCHEMA = schema("role", []);
+  const files = new Map([
+    ["core/phase-schema.md", PHASE_SCHEMA],
+    ["core/role-schema.md", ROLE_SCHEMA],
+    ["model/roles/owner.md", "# Owner\n"],
+    ["model/processes/delivery/phases/empty.md", "---\ngate-approvers:\n---\n\n# Empty\n"],
+    ["model/processes/delivery/phases/empty-flow.md", "---\ngate-approvers: []\n---\n\n# Empty Flow\n"],
+    ["model/processes/delivery/phases/filled.md", "---\ngate-approvers:\n  - Owner\n---\n\n# Filled\n"],
+  ]);
+  const { failures } = checkInstance(files);
+  assert.ok(
+    failures.some((f) => f.includes("model/processes/delivery/phases/empty.md") && f.includes("gate-approvers")),
+    `expected a failure for the empty list, got:\n${failures.join("\n")}`,
+  );
+  assert.ok(
+    failures.some((f) => f.includes("model/processes/delivery/phases/empty-flow.md") && f.includes("gate-approvers")),
+    `expected a failure for the empty flow sequence, got:\n${failures.join("\n")}`,
+  );
+  assert.ok(
+    !failures.some((f) => f.includes("model/processes/delivery/phases/filled.md") && f.includes("carries no items")),
+    `expected no empty-list failure for the filled list, got:\n${failures.join("\n")}`,
+  );
+});
+
+test("an optional list field with no items is not held to the rule", () => {
+  const ROLE_SCHEMA = schema("role", [
+    "| `requires` | No | array of ref → skill | The skills the seat needs. |",
+  ]);
+  const files = new Map([
+    ["core/role-schema.md", ROLE_SCHEMA],
+    ["model/roles/owner.md", "---\nrequires:\n---\n\n# Owner\n"],
+  ]);
+  const { failures } = checkInstance(files);
+  assert.ok(
+    !failures.some((f) => f.includes("carries no items")),
+    `expected no failure for an optional empty list, got:\n${failures.join("\n")}`,
+  );
+});
