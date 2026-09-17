@@ -39,7 +39,7 @@ two together must be unique in the folder.
 | --- | --- | --- |
 | `# [Title]` | Yes | The canonical name of this period |
 | `> [Tagline]` | Yes | One-paragraph summary of the period |
-| `## Achievements` | No | What was accomplished in this period |
+| `## Achievements` | No | Grouped. What was accomplished in this period, as bullets under `###` headings that name achievement kinds |
 | `## Ending` | No | Why the period ended, where a bare `end` date would otherwise be read into. One or two sentences. |
 | `## References` | No | Table. What a reader can check this entry against |
 
@@ -61,6 +61,12 @@ someone wrote on purpose, not a token someone selected.
 | --- | --- | --- | --- |
 | `What` | Yes | string | The kind of document — a register entry, a recording, a certificate, a product |
 | `URL` | Yes | string | Where it is |
+
+`## Achievements` is grouped under these headings:
+
+| Heading | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Kind` | No | ref → achievement-kind | The kind every bullet below it is chiefly evidence of |
 
 ## Purpose
 
@@ -86,6 +92,17 @@ is what happened, when, and what it evidences.
 - An `## Achievements` bullet states an outcome, one idea each. "Responsible for the platform"
   is a job description; "held platform cost flat as volume grew to 89M events a year" is an
   achievement. Where a number, a system or a named result exists, it goes in the bullet.
+- Where an instance defines achievement kinds, every entry with achievements groups them: each
+  bullet sits under the heading of the one kind it is chiefly evidence of, headings follow the
+  kinds' `rank`, and a kind with nothing in the entry has no heading. An instance that defines
+  none writes a flat list.
+- Every entry with achievements carries the headings, even one bullet under one heading, so a
+  reader finds a kind in the same place in every entry.
+- Within a kind the broadest claim comes first, peers follow the order they happened in, and a
+  bullet that points back comes directly after what it points to — or names it, where the
+  grouping would part them.
+- A list of tools or a stack is not an achievement: what was built with a tool says so in the
+  bullet that built it.
 - A period still running has no `end`, and the tagline says so — a reader sees a tagline and
   does not see an absent field.
 - A one-off is not a period: a talk, a certification, an award or a publication sets `end`

@@ -8,7 +8,7 @@
 // and no scaffolding to keep the other checks quiet.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkInstance, isNewer } from "../lib/checks.mjs";
+import { blocksOf, checkInstance, isNewer } from "../lib/checks.mjs";
 
 // A schema in the fixed shape R9 states, with only the rows a case needs.
 const schema = (type, rows, { owner = null } = {}) =>
@@ -247,4 +247,29 @@ test("an optional list field with no items is not held to the rule", () => {
     !failures.some((f) => f.includes("carries no items")),
     `expected no failure for an optional empty list, got:\n${failures.join("\n")}`,
   );
+});
+
+// R9 fixes two captions under "## Sections" and both open by naming a section in backticks, so
+// what tells them apart is their words: a column table declares what a body table's columns
+// are, a heading table what the `###` headings under one section name. Reading a heading table
+// as an uncaptioned block is what the loose match would do, and that block is an error.
+test("a heading table is addressed by its own caption, apart from the column tables", () => {
+  const body = [
+    "| Section | Required | Description |",
+    "| --- | --- | --- |",
+    "| `## Achievements` | No | Grouped. What was accomplished. |",
+    "",
+    "`## Achievements` is grouped under these headings:",
+    "",
+    "| Heading | Required | Type | Description |",
+    "| --- | --- | --- | --- |",
+    "| `Kind` | No | ref → achievement-kind | The kind. |",
+  ].join("\n");
+  const blocks = blocksOf(body);
+  assert.equal(blocks.length, 2);
+  assert.equal(blocks[0].section, null);
+  assert.equal(blocks[0].grouped, null);
+  assert.equal(blocks[1].section, null, "a heading table is not a column table");
+  assert.equal(blocks[1].grouped, "Achievements");
+  assert.deepEqual(blocks[1].table.columns, ["Heading", "Required", "Type", "Description"]);
 });
