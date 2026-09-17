@@ -15,8 +15,13 @@ skills:
 
 ## Achievements
 
+### Delivery
+
 - Replaced a nightly batch with a pipeline that ran when the order did, taking visibility from
   the next morning to seconds.
+
+### Results
+
 - Established that the speed-up mattered less than anyone expected, and why — which set the
   direction for the work that followed.
 
