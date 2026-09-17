@@ -142,6 +142,26 @@ test("an entity is its H1, tagline, fields, sections and path; a README is not o
   });
 });
 
+// R9: a tagline is one blockquote paragraph, and Markdown reads a run of `>` lines as one. The
+// parser used to keep the first line only, so a tagline wrapped the way the family wraps prose
+// reached every consumer as half a sentence while GitHub rendered it whole.
+test("a tagline wrapped across `>` lines is one paragraph, joined with a space", () => {
+  const files = new Map(valid);
+  files.set("skills/java-programming.md",
+    "---\ngroup: Programming Languages\n---\n\n# Java Programming\n\n> JVM services, built and run\n> on the virtual machine.\n\n## In practice\n\nReading the stack trace.\n");
+  assert.equal(parseInstance(files, { schemas }).entities.find((e) => e.id === "skills/java-programming").tagline,
+               "JVM services, built and run on the virtual machine.");
+});
+
+test("a tagline ends at a blank line or a bare `>`, and a later quote is not part of it", () => {
+  const files = new Map(valid);
+  files.set("skills/java-programming.md",
+    "---\ngroup: Programming Languages\n---\n\n# Java Programming\n\n> JVM services.\n>\n> A second paragraph.\n\n> A quote after a blank line.\n\n## In practice\n\n> A quote in a section.\n");
+  const java = parseInstance(files, { schemas }).entities.find((e) => e.id === "skills/java-programming");
+  assert.equal(java.tagline, "JVM services.");
+  assert.equal(java.sections[0].text, "> A quote in a section.");
+});
+
 // `path` is what the page turns into a link to the file on GitHub, so it has to be the path in
 // the repository the files came from. It was hardcoded to "example/model/" — true of the
 // repository this example lives in and false of every other instance, so every file link on a
