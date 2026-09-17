@@ -10,8 +10,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { blocksOf, checkInstance, isNewer } from "../lib/checks.mjs";
 
-// A schema in the fixed shape R9 states, with only the rows a case needs.
-const schema = (type, rows, { owner = null } = {}) =>
+// A schema in the fixed shape R9 states, with only the rows a case needs. `grouped` adds R9's
+// third declared shape: a section marked "Grouped." and the heading table that says what its
+// `###` headings name.
+const schema = (type, rows, { owner = null, grouped = null } = {}) =>
   [
     `# ${type[0].toUpperCase()}${type.slice(1)} Schema`,
     "",
@@ -32,6 +34,17 @@ const schema = (type, rows, { owner = null } = {}) =>
     "",
     "| Section | Required | Description |",
     "| --- | --- | --- |",
+    ...(grouped
+      ? [
+          `| \`## ${grouped.section}\` | No | Grouped. What was accomplished. |`,
+          "",
+          `\`## ${grouped.section}\` is grouped under these headings:`,
+          "",
+          "| Heading | Required | Type | Description |",
+          "| --- | --- | --- | --- |",
+          `| \`${grouped.heading}\` | No | ${grouped.type} | The kind. |`,
+        ]
+      : []),
     "",
   ].join("\n");
 
@@ -272,4 +285,114 @@ test("a heading table is addressed by its own caption, apart from the column tab
   assert.equal(blocks[1].section, null, "a heading table is not a column table");
   assert.equal(blocks[1].grouped, "Achievements");
   assert.deepEqual(blocks[1].table.columns, ["Heading", "Required", "Type", "Description"]);
+});
+
+// The grouped section, from the checks' side. The parser refuses a heading that resolves to
+// nothing; what a check can add is the order the headings take and whether any bullet stands
+// outside them, which is the half of the schema's writing rules a machine can read. Whether a
+// bullet sits under the right kind is a reading, and stays the agent pass's.
+const GROUPED_EXPERIENCE_SCHEMA = schema("experience", [], {
+  owner: "profile",
+  grouped: { section: "Achievements", heading: "Kind", type: "ref → achievement-kind" },
+});
+
+const ACHIEVEMENT_KIND_SCHEMA = schema("achievement-kind", [
+  "| `rank` | Yes | number | Position within an entry. |",
+]);
+
+const KIND_FILES = [
+  ["model/achievement-kinds/delivery.md", "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n"],
+  ["model/achievement-kinds/results.md", "---\nrank: 40\n---\n\n# Results\n\n> What came of it.\n"],
+];
+
+test("headings out of rank order are a failure naming both of them", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", GROUPED_EXPERIENCE_SCHEMA],
+    ["meta/core/achievement-kind-schema.md", ACHIEVEMENT_KIND_SCHEMA],
+    ...KIND_FILES,
+    [
+      "model/profiles/mira/experiences/2022-beacon.md",
+      "# Splitting\n\n> Ongoing.\n\n## Achievements\n\n### Results\n\n- What came of it.\n\n### Delivery\n\n- What was built.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Achievements"));
+  assert.ok(hit, `no failure named the entry; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /Delivery/);
+  assert.match(hit, /Results/);
+  assert.match(hit, /rank/);
+});
+
+test("headings in rank order are not a failure", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", GROUPED_EXPERIENCE_SCHEMA],
+    ["meta/core/achievement-kind-schema.md", ACHIEVEMENT_KIND_SCHEMA],
+    ...KIND_FILES,
+    [
+      "model/profiles/mira/experiences/2022-beacon.md",
+      "# Splitting\n\n> Ongoing.\n\n## Achievements\n\n### Delivery\n\n- What was built.\n\n### Results\n\n- What came of it.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("Achievements")), []);
+});
+
+test("a bullet before the first heading is a failure where the instance holds a kind", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", GROUPED_EXPERIENCE_SCHEMA],
+    ["meta/core/achievement-kind-schema.md", ACHIEVEMENT_KIND_SCHEMA],
+    ...KIND_FILES,
+    [
+      "model/profiles/mira/experiences/2022-beacon.md",
+      "# Splitting\n\n> Ongoing.\n\n## Achievements\n\n- A bullet outside every heading.\n\n### Delivery\n\n- What was built.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Achievements"));
+  assert.ok(hit, `no failure named the entry; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /bullet/);
+});
+
+// An instance that defines no kinds writes a flat list, and the schema says so: `Required` is
+// `No` precisely because the headings exist only where the kinds do.
+test("a flat list is not a failure where the instance defines no kinds", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", GROUPED_EXPERIENCE_SCHEMA],
+    ["meta/core/achievement-kind-schema.md", ACHIEVEMENT_KIND_SCHEMA],
+    [
+      "model/profiles/mira/experiences/2022-beacon.md",
+      "# Splitting\n\n> Ongoing.\n\n## Achievements\n\n- One bullet.\n- Another.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("Achievements")), []);
+});
+
+// R16 makes a heading a declared reference, so the checker says what the parser throws on
+// rather than reporting green over a file the parser refuses to read.
+test("a heading that names nothing of its type is a failure naming the type", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", GROUPED_EXPERIENCE_SCHEMA],
+    ["meta/core/achievement-kind-schema.md", ACHIEVEMENT_KIND_SCHEMA],
+    ...KIND_FILES,
+    [
+      "model/profiles/mira/experiences/2022-beacon.md",
+      "# Splitting\n\n> Ongoing.\n\n## Achievements\n\n### Deliverly\n\n- What was built.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Deliverly"));
+  assert.ok(hit, `no failure named the heading; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /achievement-kind/);
+  assert.match(hit, /R16/);
 });
