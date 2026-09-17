@@ -21,7 +21,7 @@ processes/delivery/              delivery.md
   phases/                        specify.md, build.md, release.md
 values/                          say-the-hard-thing.md, craftsmanship.md
 sources/                         local.md, google-workspace.md
-surfaces/                        partner-directory.md
+surfaces/                        partner-directory.md, beacon-systems-website.md
 skills/                          java-programming.md, domain-driven-design.md,
                                  product-discovery.md
 proficiency-levels/              familiar.md, competent.md, proficient.md, expert.md
