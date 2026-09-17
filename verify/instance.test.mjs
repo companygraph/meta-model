@@ -24,7 +24,7 @@ const valid = new Map([
 // A schema in the fixed shape R9 states, holding only the rows a fixture needs. `fields` is
 // a list of [name, type] pairs for the Frontmatter table; `tables` maps a section heading to
 // its [column, type] pairs, which become the captioned column table R9 requires.
-const schema = (type, { fields = [], tables = {}, location = null, owner = null } = {}) => {
+const schema = (type, { fields = [], tables = {}, grouped = {}, location = null, owner = null } = {}) => {
   const title = type.split("-").map((w) => w[0].toUpperCase() + w.slice(1)).join(" ");
   const lines = [
     `# ${title} Schema`, "", `> A ${type}.`, "",
@@ -41,10 +41,18 @@ const schema = (type, { fields = [], tables = {}, location = null, owner = null 
   lines.push("", "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |",
              "| `# [Name]` | Yes | The canonical name. |");
   for (const heading of Object.keys(tables)) lines.push(`| \`## ${heading}\` | No | Table. |`);
+  for (const heading of Object.keys(grouped)) lines.push(`| \`## ${heading}\` | No | Grouped. |`);
   for (const [heading, columns] of Object.entries(tables)) {
     lines.push("", `\`## ${heading}\` is a table with these columns:`, "",
                "| Column | Required | Type | Description |", "| --- | --- | --- | --- |");
     for (const [name, t] of columns) lines.push(`| \`${name}\` | No | ${t} | A ${name}. |`);
+  }
+  // R9's third declared shape: a section grouped under `###` headings that name entities. One
+  // row, because every heading in the section names the same type.
+  for (const [heading, [name, t]] of Object.entries(grouped)) {
+    lines.push("", `\`## ${heading}\` is grouped under these headings:`, "",
+               "| Heading | Required | Type | Description |", "| --- | --- | --- | --- |",
+               `| \`${name}\` | No | ${t} | The ${name}. |`);
   }
   return lines.join("\n") + "\n";
 };
@@ -58,6 +66,7 @@ const schemas = new Map([
   ["skill-schema.md", schema("skill", { fields: [["source", "ref → source"], ["group", "string"]] })],
   ["proficiency-level-schema.md", schema("proficiency-level", { fields: [["rank", "number"]] })],
   ["experience-kind-schema.md", schema("experience-kind")],
+  ["achievement-kind-schema.md", schema("achievement-kind", { fields: [["rank", "number"]] })],
   ["source-schema.md", schema("source", { fields: [["url", "string"]] })],
   ["profile-schema.md", schema("profile", {
     fields: [["email", "string"], ["location", "string"]],
@@ -70,6 +79,7 @@ const schemas = new Map([
     fields: [["kind", "ref → experience-kind"], ["start", "date"], ["end", "date"],
              ["organization", "ref? → identity"], ["skills", "array of ref → skill"]],
     tables: { References: [["What", "string"], ["URL", "string"]] },
+    grouped: { Achievements: ["Kind", "ref → achievement-kind"] },
   })],
 ]);
 
@@ -619,4 +629,84 @@ test("a type whose folder is not its name plus one s still resolves", () => {
   ]);
   const { entities } = parseInstance(files, { schemas: only });
   assert.deepEqual(entities.map((e) => e.type).sort(), ["identity", "phase", "process"]);
+});
+
+// R9's grouped section. A `###` heading is not a field and not a table cell, so until a schema
+// could declare one, a heading that named an entity drew nothing and R4 was not true of it. The
+// declaration reads like a column's and the edge is named the same way — `<Section>.<Heading>`.
+test("a `###` heading in a grouped section draws an edge via Section.Heading", () => {
+  const files = new Map(valid);
+  files.set("achievement-kinds/delivery.md",
+    "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n\n## What it means\n\nText.\n");
+  files.set("achievement-kinds/results.md",
+    "---\nrank: 40\n---\n\n# Results\n\n> What came of it.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n" +
+    "### Delivery\n\n- Split one service.\n\n### Results\n\n- The second team stopped waiting.\n");
+  const { edges } = parseInstance(files, { schemas });
+  assert.deepEqual(edges.filter((x) => x.via === "Achievements.Kind"), [
+    { from: "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+      to: "achievement-kinds/delivery", via: "Achievements.Kind", attrs: {} },
+    { from: "profiles/mira-halvorsen/experiences/2022-beacon-systems",
+      to: "achievement-kinds/results", via: "Achievements.Kind", attrs: {} },
+  ]);
+});
+
+// The headings stay in the text, unlike a caption, which is pulled out of it. A consumer that
+// renders the section renders what the file says, and the edges are drawn beside it.
+test("a grouped section keeps its headings in the text it hands on", () => {
+  const files = new Map(valid);
+  files.set("achievement-kinds/delivery.md",
+    "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting\n\n> Ongoing.\n\n## Achievements\n\n" +
+    "### Delivery\n\n- Split one service.\n");
+  const exp = parseInstance(files, { schemas }).entities.find((e) => e.type === "experience");
+  const achievements = exp.sections.find((s) => s.heading === "Achievements");
+  assert.equal(achievements.text, "### Delivery\n\n- Split one service.");
+});
+
+test("a heading that names nothing of its type is an R4 error", () => {
+  const files = new Map(valid);
+  files.set("achievement-kinds/delivery.md",
+    "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting\n\n> Ongoing.\n\n## Achievements\n\n" +
+    "### Deliverly\n\n- Split one service.\n");
+  assert.throws(() => parseInstance(files, { schemas }),
+                /^Error: R4: "Deliverly" in .* names no achievement-kind/);
+});
+
+// The declaration is what makes a heading a reference, exactly as it is for a field and for a
+// column: a `###` line in a section no schema declares grouped is prose with a hash in front.
+test("a `###` heading in a section the schema does not group draws nothing", () => {
+  const files = new Map(valid);
+  files.set("achievement-kinds/delivery.md",
+    "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting\n\n> Ongoing.\n\n## Ending\n\n### Delivery\n\nText.\n");
+  const { edges } = parseInstance(files, { schemas });
+  assert.equal(edges.filter((x) => x.via.startsWith("Ending")).length, 0);
+});
+
+// The vocabulary graph draws a heading table's type the way it draws a column table's, so a
+// reader of core sees that an experience points at an achievement kind.
+test("a heading table's Type cell is an edge in the schema graph, via Section.Heading", () => {
+  const withGrouped = new Map(core);
+  withGrouped.set("achievement-kind-schema.md",
+    "# Achievement Kind Schema\n\n> Kinds.\n\n## File Location\n\n`achievement-kinds/*.md`\n\n" +
+    "## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `rank` | Yes | number | Position |\n\n## Sections\n\n| Section | Required | Description |\n" +
+    "| --- | --- | --- |\n| `# [Label]` | Yes | Name |\n");
+  withGrouped.set("experience-schema.md",
+    withGrouped.get("experience-schema.md") +
+    "| `## Achievements` | No | Grouped. What was accomplished. |\n\n" +
+    "`## Achievements` is grouped under these headings:\n\n" +
+    "| Heading | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `Kind` | No | ref → achievement-kind | The kind |\n");
+  const { edges } = parseSchemas(withGrouped);
+  assert.deepEqual(edges.find((x) => x.via === "Achievements.Kind"), {
+    from: "core/experience", to: "core/achievement-kind", via: "Achievements.Kind",
+    attrs: { type: "ref → achievement-kind" },
+  });
 });
