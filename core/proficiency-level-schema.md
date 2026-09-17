@@ -23,7 +23,7 @@ is then one edit, in one file.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Label]` | Yes | The canonical name. Every assessment references this exact string. |
-| `> [Summary]` | Yes | Single-line summary of what the level claims |
+| `> [Summary]` | Yes | One-paragraph summary of what the level claims |
 | `## What it means` | Yes | What someone at this level can actually do |
 
 ## Purpose

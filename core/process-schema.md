@@ -24,7 +24,7 @@ same name, plus the `phases/` collection the phases nest in.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Process]` | Yes | The canonical name of the process. Phases and readers reference it by this exact string. |
-| `> [Purpose]` | Yes | Single-line statement of what the process is for |
+| `> [Purpose]` | Yes | One-paragraph statement of what the process is for |
 | `## Tracks` | Yes | Table. The kinds of thing this process makes; its columns are declared below. |
 | `## Phases` | Yes | An ordered list, one entry per phase, in the order the work passes through them, each linking the phase's file |
 | `## What it never does` | Yes | A list, one sentence each, of what the process refuses in every phase |

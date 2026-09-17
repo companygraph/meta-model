@@ -24,7 +24,7 @@ the page's identifier inside that source — so a sync can find it again.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Name]` | Yes | The canonical name. Everything references the source by this exact string. |
-| `> [Description]` | No | Single-line description of what the source holds |
+| `> [Description]` | No | One-paragraph description of what the source holds |
 
 ## Purpose
 

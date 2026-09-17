@@ -38,7 +38,7 @@ two together must be unique in the folder.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Title]` | Yes | The canonical name of this period |
-| `> [Tagline]` | Yes | Single-line summary of the period |
+| `> [Tagline]` | Yes | One-paragraph summary of the period |
 | `## Achievements` | No | What was accomplished in this period |
 | `## Ending` | No | Why the period ended, where a bare `end` date would otherwise be read into. One or two sentences. |
 | `## References` | No | Table. What a reader can check this entry against |

@@ -30,7 +30,7 @@ searches for it rather than being sent to it.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Name]` | Yes | The company's canonical name |
-| `> [Tagline]` | Yes | Single-line statement of what the company is |
+| `> [Tagline]` | Yes | One-paragraph statement of what the company is |
 | `## What it is` | Yes | What the company does, and for whom |
 | `## Also at` | No | Table. One row per presence the company maintains elsewhere; its columns are declared below. |
 

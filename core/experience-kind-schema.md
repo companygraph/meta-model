@@ -27,7 +27,7 @@ this metamodel and a release of it.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Label]` | Yes | The canonical name. Every experience references this exact string. |
-| `> [Summary]` | Yes | Single-line summary of what the kind covers |
+| `> [Summary]` | Yes | One-paragraph summary of what the kind covers |
 | `## What it means` | Yes | Which periods belong to this kind, and which do not |
 
 ## Purpose
