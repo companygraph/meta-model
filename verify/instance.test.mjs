@@ -710,3 +710,75 @@ test("a heading table's Type cell is an edge in the schema graph, via Section.He
     attrs: { type: "ref → achievement-kind" },
   });
 });
+
+// HEADING_CAPTION is exact and SECTION_CAPTION is loose on purpose, so a caption one word off
+// the grouped form — "heading:" for "headings:" — fails the first match and falls to the
+// second, which reads the block as if it declared columns. `colIdx` then names "Column", which
+// this table does not have, and reading a row at a missing index used to be a bare
+// `row[-1].replace`, a TypeError naming no path. The fix is a skip, not a read: this block
+// draws no edge, and "schema fixed shape" (verify/check.mjs) is what tells the author the
+// caption itself is wrong.
+test("a caption one word off the grouped form is skipped, not read, and throws nothing", () => {
+  const nearMiss = new Map(core);
+  nearMiss.set("achievement-kind-schema.md",
+    "# Achievement Kind Schema\n\n> Kinds.\n\n## File Location\n\n`achievement-kinds/*.md`\n\n" +
+    "## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `rank` | Yes | number | Position |\n\n## Sections\n\n| Section | Required | Description |\n" +
+    "| --- | --- | --- |\n| `# [Label]` | Yes | Name |\n");
+  nearMiss.set("experience-schema.md",
+    nearMiss.get("experience-schema.md") +
+    "| `## Achievements` | No | Grouped. What was accomplished. |\n\n" +
+    "`## Achievements` is grouped under these heading:\n\n" +
+    "| Heading | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `Kind` | No | ref → achievement-kind | The kind |\n");
+  assert.doesNotThrow(() => parseSchemas(nearMiss));
+  const { edges } = parseSchemas(nearMiss);
+  assert.equal(edges.find((x) => x.via === "Achievements.Kind"), undefined);
+});
+
+// R9 gives a heading table exactly one row; a second is malformed. Before this, `parseSchemas`
+// read every row of it while `declarationsOf` — what an instance actually resolves against —
+// read only the first, so a two-row table drew two edges in the vocabulary graph and declared
+// one reference for the parser. Both readers of "how many rows" must agree.
+test("a two-row heading table draws one edge in the schema graph, matching declarationsOf", () => {
+  const twoRows = new Map(core);
+  twoRows.set("achievement-kind-schema.md",
+    "# Achievement Kind Schema\n\n> Kinds.\n\n## File Location\n\n`achievement-kinds/*.md`\n\n" +
+    "## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `rank` | Yes | number | Position |\n\n## Sections\n\n| Section | Required | Description |\n" +
+    "| --- | --- | --- |\n| `# [Label]` | Yes | Name |\n");
+  twoRows.set("experience-schema.md",
+    twoRows.get("experience-schema.md") +
+    "| `## Achievements` | No | Grouped. What was accomplished. |\n\n" +
+    "`## Achievements` is grouped under these headings:\n\n" +
+    "| Heading | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+    "| `Kind` | No | ref → achievement-kind | The kind |\n" +
+    "| `Other` | No | ref → skill | A stray second row |\n");
+  const { edges } = parseSchemas(twoRows);
+  const fromAchievements = edges.filter(
+    (x) => x.from === "core/experience" && x.via.startsWith("Achievements."),
+  );
+  assert.equal(fromAchievements.length, 1);
+  assert.equal(fromAchievements[0].via, "Achievements.Kind");
+});
+
+// R16 makes a heading declared `ref → <type>` draw an edge (core 0.28.0), but a schema is prose
+// an author can still mistype as `qualifier → <type>` — a form R16 also allows there, and one
+// that resolves and draws nothing wherever it appears. The frontmatter walk above already
+// guards on `decl.form !== "qualifier"`; the heading walk did not, and drew an edge a qualifier
+// is never supposed to carry.
+test("a heading declared qualifier resolves and draws no edge", () => {
+  const qualifierSchemas = new Map(schemas);
+  qualifierSchemas.set("experience-schema.md", schema("experience", {
+    fields: [["start", "date"]],
+    grouped: { Achievements: ["Kind", "qualifier → achievement-kind"] },
+  }));
+  const files = new Map(valid);
+  files.set("achievement-kinds/delivery.md",
+    "---\nrank: 20\n---\n\n# Delivery\n\n> What was built.\n\n## What it means\n\nText.\n");
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: 2022-02\n---\n\n# Splitting\n\n> Ongoing.\n\n## Achievements\n\n" +
+    "### Delivery\n\n- Split one service.\n");
+  const { edges } = parseInstance(files, { schemas: qualifierSchemas });
+  assert.equal(edges.filter((x) => x.via === "Achievements.Kind").length, 0);
+});
