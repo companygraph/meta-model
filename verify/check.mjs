@@ -349,7 +349,7 @@ const CHECKS = [
         ];
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
-            const declared = row[2].replace(/`/g, "").trim();
+            const declared = (row[2] ?? "").replace(/`/g, "").trim();
             // `array of ref?` is rejected by its own message rather than left to fall through:
             // the `?` asks whether one value resolves, and a list has no single value to ask
             // it of, so the combination is never a form the regex below should accept.
