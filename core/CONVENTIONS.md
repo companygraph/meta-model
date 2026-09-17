@@ -191,7 +191,9 @@ introduced by a caption line naming its section — `` `## Achievements` is grou
 headings: `` — which is what tells it from a column table, since both open by naming a
 section. The row's Type is `ref → <type>`, the one type every heading in the section names,
 and `Heading` names the reference, which is what the edge is called. One row, because a
-heading that named a second type would be a second section. A section marked `Grouped.` with
+heading that named a second type would be a second section. Required says whether an instance
+must carry the headings at all: an instance that defines no entities of the heading's type
+writes the section ungrouped, which is what `No` allows. A section marked `Grouped.` with
 no heading table, and a heading table for a section not marked `Grouped.`, are both errors, as
 with `Table.`.
 
@@ -199,6 +201,10 @@ Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `num
 `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`,
 `qualifier → <type>`. A reference names
 one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+
+`rank` is the vocabulary's name for an entity's order within its type, wherever a schema needs
+one: a field so named is typed `number`, and two entities of one type never share a rank —
+there is nothing left to order them by if they do.
 
 Some fields name a thing that is sometimes an entity and sometimes not — an employer that is
 the company itself, a client that is nobody here. `ref? → <type>` is how a schema says so: a
