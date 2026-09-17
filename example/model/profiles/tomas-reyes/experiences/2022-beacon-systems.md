@@ -14,6 +14,11 @@ skills:
 
 ## Achievements
 
+### Decisions
+
 - Ranked the two contexts by what customers asked about in support, not by what was easier to
   split, and got the order accepted.
+
+### Results
+
 - Not finished: the third team's context has no customer voice yet, and no ranking.

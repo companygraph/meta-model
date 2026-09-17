@@ -16,6 +16,8 @@ skills:
 
 ## Achievements
 
+### Sharing
+
 - Told a room that had funded the same kind of rebuild what the Northwind conversations
   found: that visibility, not speed, was what the pipeline bought.
 

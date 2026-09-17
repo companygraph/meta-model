@@ -184,10 +184,27 @@ to list its rows in whatever order reads best. A section marked `Table.` with no
 table, and a column table for a section not marked `Table.`, are both errors: each half
 means nothing without the other.
 
+A section whose content is grouped under `###` headings that name entities declares that the
+same way: its Description begins with `Grouped.`, and a table naming what those headings
+reference follows, with columns `Heading | Required | Type | Description` and one row. It is
+introduced by a caption line naming its section — `` `## Achievements` is grouped under these
+headings: `` — which is what tells it from a column table, since both open by naming a
+section. The row's Type is `ref → <type>`, the one type every heading in the section names,
+and `Heading` names the reference, which is what the edge is called. One row, because a
+heading that named a second type would be a second section. Required says whether an instance
+must carry the headings at all: an instance that defines no entities of the heading's type
+writes the section ungrouped, which is what `No` allows. A section marked `Grouped.` with
+no heading table, and a heading table for a section not marked `Grouped.`, are both errors, as
+with `Table.`.
+
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
 `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`,
 `qualifier → <type>`. A reference names
 one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+
+`rank` is the vocabulary's name for an entity's order within its type, wherever a schema needs
+one: a field so named is typed `number`, and two entities of one type never share a rank —
+there is nothing left to order them by if they do.
 
 Some fields name a thing that is sometimes an entity and sometimes not — an employer that is
 the company itself, a client that is nobody here. `ref? → <type>` is how a schema says so: a
@@ -358,6 +375,10 @@ stays a fact when it does not. One typed `qualifier → <type>` resolves and dra
 qualifies the edge its own row drew, and reaches a reader in that edge's attributes. Typed
 anything else, a field draws no edge and its value resolves to nothing — and typed `number`,
 it is written as digits.
+
+A heading declared `ref → <type>` draws an edge from the page to the entity each `###` heading
+in that section names, via `<Section>.<Heading>`, and a heading that names nothing of its type
+is R4.
 
 The difference between a reference and a qualifier is not how hard it resolves; both must. It
 is what the row is saying. A row that names a skill and a level makes one claim about both, so

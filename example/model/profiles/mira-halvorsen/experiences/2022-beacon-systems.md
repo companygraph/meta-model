@@ -14,9 +14,14 @@ skills:
 
 ## Achievements
 
+### Delivery
+
 - Split one service that three teams edited into two that one team each owns, so the second
   team stopped waiting on the first to merge.
-- Not finished: the third team is still waiting.
+
+### Results
+
+- Not finished: the third team is still waiting on the split.
 
 ## References
 

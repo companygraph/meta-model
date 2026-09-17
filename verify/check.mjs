@@ -200,12 +200,16 @@ const CHECKS = [
         };
 
         const blocks = blocksOf(s.get("Sections") ?? "");
-        const [sections, ...columnTables] = blocks;
+        const [sections, ...captioned] = blocks;
         if (!blocks.length) fail(`${path}: "## Sections" has no table`);
         else if (!sections.table) fail(`${path}: the first block under "## Sections" is not a table`);
         else if (sections.section)
           fail(
             `${path}: the sections table is captioned "\`## ${sections.section}\` is a table with these columns:"; that caption introduces a column table, and the sections table comes first`,
+          );
+        else if (sections.grouped)
+          fail(
+            `${path}: the sections table is captioned "\`## ${sections.grouped}\` is grouped under these headings:"; that caption introduces a heading table, and the sections table comes first`,
           );
         else if (sections.table.columns.join("|") !== "Section|Required|Description")
           fail(
@@ -215,18 +219,56 @@ const CHECKS = [
 
         // A row declares itself table-valued by starting its Description with "Table." —
         // one fixed token, not prose about what the section contains. R9 states it, so a
-        // schema cannot leave the column table implicit and nothing notice.
+        // schema cannot leave the column table implicit and nothing notice. "Grouped." is the
+        // second such token and is read the same way: it says the section's content sits under
+        // `###` headings that name entities, and that a heading table follows.
         const tableValued = new Set();
+        const groupedSections = new Set();
         for (const row of sections?.table?.rows ?? []) {
-          if (!/^Table\./.test((row[2] ?? "").trim())) continue;
+          const token = (row[2] ?? "").trim().match(/^(Table|Grouped)\./)?.[1];
+          if (!token) continue;
           const named = (row[0] ?? "").replace(/`/g, "").trim().match(/^##\s+(.+)$/)?.[1];
           if (!named)
-            fail(`${path}: "${row[0]}" says "Table." but is not a "## " section, so it holds no table`);
-          else tableValued.add(named);
+            fail(`${path}: "${row[0]}" says "${token}." but is not a "## " section, so it holds no ${token === "Table" ? "table" : "headings"}`);
+          else if (token === "Table") tableValued.add(named);
+          else groupedSections.add(named);
         }
 
         const declared = new Set();
-        for (const block of columnTables) {
+        const headingDeclared = new Set();
+        for (const block of captioned) {
+          // A heading table is the other half of a "Grouped." row, checked against it in both
+          // directions exactly as a column table is checked against "Table.". One row, because
+          // every `###` heading in the section names the same type, and `ref → <type>` because
+          // a heading names one entity — there is no cell for a list and none for a qualifier,
+          // since a heading has no row of its own to qualify.
+          if (block.grouped) {
+            const where = `the heading table for "## ${block.grouped}"`;
+            if (!groupedSections.has(block.grouped))
+              fail(
+                `${path}: ${where} declares headings, but the sections table does not mark "## ${block.grouped}" grouped — its Description must begin "Grouped."`,
+              );
+            if (headingDeclared.has(block.grouped)) fail(`${path}: "## ${block.grouped}" has two heading tables`);
+            headingDeclared.add(block.grouped);
+            if (!block.table) fail(`${path}: ${where} is not a table`);
+            else if (block.table.columns.join("|") !== "Heading|Required|Type|Description")
+              fail(
+                `${path}: ${where} has columns ${block.table.columns.join("|")}; must be Heading|Required|Type|Description`,
+              );
+            else if (block.table.rows.length !== 1)
+              fail(
+                `${path}: ${where} declares ${block.table.rows.length} headings; R9 gives a grouped section one, because every heading in it names the same type`,
+              );
+            else {
+              requiredYesNo(block.table, where);
+              const cell = (block.table.rows[0][2] ?? "").replace(/`/g, "").trim();
+              if (!/^ref → \S/.test(cell))
+                fail(
+                  `${path}: ${block.table.rows[0][0]} in ${where} is typed "${cell}"; a heading names one entity, so a heading's type is \`ref → <type>\``,
+                );
+            }
+            continue;
+          }
           if (!block.section) {
             fail(
               `${path}: a table under "## Sections" has no caption; a column table is introduced by "\`## <Section>\` is a table with these columns:"`,
@@ -269,6 +311,11 @@ const CHECKS = [
             fail(
               `${path}: "## ${named}" is marked table-valued, but no table under "## Sections" is captioned "\`## ${named}\` is a table with these columns:"`,
             );
+        for (const named of groupedSections)
+          if (!headingDeclared.has(named))
+            fail(
+              `${path}: "## ${named}" is marked grouped, but no table under "## Sections" is captioned "\`## ${named}\` is grouped under these headings:"`,
+            );
       }
     },
   },
@@ -289,14 +336,20 @@ const CHECKS = [
         // column — is the uncaptioned one. Selecting by caption says that; dropping the first
         // block instead only worked because another check happens to enforce that the
         // sections table comes first, which is the coupling the caption exists to remove.
+        //
+        // A grouped section's heading table carries a Type cell like any other declaration, so
+        // it is read here with them: the type a heading points at is held to the vocabulary and
+        // to the list of types, or a schema could group a section under a type nobody defines.
         const s = sectionsOf(text);
         const typed = [
           tableOf((s.get("Frontmatter") ?? "").trim()),
-          ...blocksOf(s.get("Sections") ?? "").filter((b) => b.section).map((b) => b.table),
+          ...blocksOf(s.get("Sections") ?? "")
+            .filter((b) => b.section || b.grouped)
+            .map((b) => b.table),
         ];
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
-            const declared = row[2].replace(/`/g, "").trim();
+            const declared = (row[2] ?? "").replace(/`/g, "").trim();
             // `array of ref?` is rejected by its own message rather than left to fall through:
             // the `?` asks whether one value resolves, and a list has no single value to ask
             // it of, so the combination is never a form the regex below should accept.

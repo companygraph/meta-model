@@ -14,6 +14,8 @@ skills:
 
 ## Achievements
 
+### Decisions
+
 - Ran the conversations that showed visibility, not speed, was what the pipeline rebuild
   bought — and rewrote the roadmap around it.
 - Retired a reporting feature with no users, which was harder than shipping one.
