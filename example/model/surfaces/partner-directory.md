@@ -1,5 +1,6 @@
 ---
 source: Local
+production: written
 url: https://directory.example.invalid/beacon-systems
 ---
 
