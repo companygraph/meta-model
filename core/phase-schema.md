@@ -32,7 +32,7 @@ to be renamed through the whole folder whenever a phase was inserted.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Phase]` | Yes | The canonical name of the phase. The owning process's `## Phases` list and the previous phase's `gate-to` reference it by this exact string. |
-| `> [Goal]` | Yes | Single-line statement of what the phase is for |
+| `> [Goal]` | Yes | One-paragraph statement of what the phase is for |
 | `## What it takes` | Yes | What enters the phase, and what it refuses to start without |
 | `## Activities` | Yes | A numbered list of what is done; where the work differs by track, one `### [Track]` heading per track, each with its own numbered list |
 | `## What it produces` | Yes | Table. What leaves the phase; its columns are declared below. |

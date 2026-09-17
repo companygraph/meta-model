@@ -24,7 +24,7 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Topic] Strategy` | Yes | The canonical name, ending in "Strategy". Everything references the strategy by this exact string. |
-| `> [Statement]` | Yes | Single-line statement of the approach |
+| `> [Statement]` | Yes | One-paragraph statement of the approach |
 | `## The approach` | Yes | How, concretely enough that someone could follow it |
 | `## What it rules out` | Yes | The options this choice forecloses |
 | `## What would show it is working` | Yes | What is observable, early enough to change course |

@@ -22,7 +22,7 @@ could cite the value it upholds, which is the one thing a company's values are f
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Value]` | Yes | The canonical name. Everything references the value by this exact string. |
-| `> [Statement]` | Yes | Single-line statement of the value |
+| `> [Statement]` | Yes | One-paragraph statement of the value |
 | `## In practice` | Yes | What following this value looks like, and what breaking it looks like |
 
 ## Purpose

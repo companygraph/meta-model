@@ -167,6 +167,13 @@ in the container: `model/vision.md`.
 instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens
 with the sections table, whose columns are `Section | Required | Description`.
 
+The sections table lists the page's `>` line beside its H1 — a tagline, a definition, a
+statement, under whatever name the type gives it — and a page writes it as the first blockquote
+after the H1: one paragraph, one short statement. It may wrap across as many `>` lines as the
+prose needs, because Markdown reads a run of them as one paragraph and so does every tool that
+reads the model; a blank line or a bare `>` ends it. A line break inside it is layout, never
+content, so a tagline that renders whole on a page reaches every reader whole.
+
 A section whose content is itself a table declares that in the sections table: its Description
 begins with `Table.`, and a table naming that section's columns follows, with columns
 `Column | Required | Type | Description`, read on the same terms as the frontmatter table

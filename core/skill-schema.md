@@ -22,7 +22,7 @@ a role requires one, and it outlives both.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Skill]` | Yes | The canonical name. Profiles, experiences and roles reference this exact string. |
-| `> [Definition]` | Yes | Single-line definition of what the skill is |
+| `> [Definition]` | Yes | One-paragraph definition of what the skill is |
 | `## In practice` | No | What someone using this skill actually does |
 
 ## Purpose

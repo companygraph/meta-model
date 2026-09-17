@@ -23,7 +23,7 @@ skills it requires and to nothing else.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Seat]` | Yes | The canonical name of the seat. Profiles reference the role by this exact string. |
-| `> [Purpose]` | Yes | Single-line statement of what the seat is for |
+| `> [Purpose]` | Yes | One-paragraph statement of what the seat is for |
 | `## What it takes` | Yes | What the holder is handed, and what the seat refuses to start without |
 | `## What it produces` | Yes | What leaves the seat, and in what form |
 | `## What it never does` | Yes | A list, one sentence each, of what the seat refuses whoever holds it |

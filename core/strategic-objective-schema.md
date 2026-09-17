@@ -24,7 +24,7 @@ document could not offer.
 | Section | Required | Description |
 | --- | --- | --- |
 | `# [Objective]` | Yes | The canonical name, the objective stated as a phrase. Everything references the objective by this exact string. |
-| `> [Statement]` | Yes | Single-line statement of what must become true |
+| `> [Statement]` | Yes | One-paragraph statement of what must become true |
 | `## What it makes true` | Yes | What is concretely different when it holds, and what falls outside it |
 
 ## Purpose
