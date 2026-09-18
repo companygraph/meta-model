@@ -12,11 +12,21 @@ location: Lisbon
 
 ## Skills
 
-| Skill | Level | Evidence |
+| Skill | Level |
+| --- | --- |
+| Product Discovery | Expert |
+| Domain-Driven Design | Familiar |
+| Java Programming | Familiar |
+
+## Evidence
+
+| Skill | What it shows | Experience |
 | --- | --- | --- |
-| Product Discovery | Expert | Killed two of the three features on the 2023 roadmap after twenty customer conversations; the third shipped and is the one customers name. |
-| Domain-Driven Design | Familiar | Sat in the billing-context sessions and can follow a context map; has never drawn one. |
-| Java Programming | Familiar | Reads pull requests well enough to ask the right question, and has merged none. |
+| Product Discovery | Ran the conversations that showed visibility, not speed, was what the pipeline rebuild bought, and rewrote the roadmap around it. | Finding out what the order pipeline was for |
+| Product Discovery | Told a room that the rebuild's measured win was not the one it had been funded for. | Conference talk — the speed-up nobody asked for |
+| Product Discovery | Killed two of the three features on the roadmap after twenty customer conversations; the third shipped and is the one customers name. | Deciding which billing goes first |
+| Domain-Driven Design | Sat in the billing-context sessions and can follow a context map; has never drawn one. | Deciding which billing goes first |
+| Java Programming | Reads pull requests well enough to ask the right question, and has merged none. |  |
 
 ## Summary
 
