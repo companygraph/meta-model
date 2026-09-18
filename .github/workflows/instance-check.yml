@@ -3,7 +3,7 @@
 #
 #   jobs:
 #     companygraph:
-#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.28.0
+#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.29.0
 #
 # and holds one file and one pin. Nothing is installed: the checker has no dependencies, so the
 # release is checked out beside the caller and run from there. A maintainer with no Node still
@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: companygraph/meta-model
-          ref: v0.28.0
+          ref: v0.29.0
           path: .companygraph-checker
       - name: the instance is held to the core it vendored
         run: node .companygraph-checker/bin/check-instance.mjs .
