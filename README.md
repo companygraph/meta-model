@@ -47,7 +47,14 @@ published to npm — a consumer takes the package from a tag. A site reads an in
 the schemas it is written against — `parseInstance(files, { sub, schemas })`, the second map
 keyed the way `parseSchemas` reads it, one bare `<type>-schema.md` per type whatever folder or
 pack it came from — and `parseSchemas` turns that second map into the graph of the vocabulary
-itself. Both are pure: no filesystem, no network, nothing imported at all, which is
+itself.
+
+A consumer that offers what a schema declares rather than checking it, an editor's completion,
+reads a Type cell with `declarationOf` from the same module and an enum's permitted values with
+`enumTokensOf` from `companygraph-meta-model/checks`; both are the one reader the parser and the
+checks use themselves.
+
+Both are pure: no filesystem, no network, nothing imported at all, which is
 what lets the same checks run in a site's build and in this repository's own suite. `core/` is
 deliberately outside the tarball, because the rules are copied into an instance or read over the
 GitHub API, never resolved out of `node_modules`.
