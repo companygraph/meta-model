@@ -51,7 +51,7 @@ has.
 
 | Option | Decision | Why |
 | --- | --- | --- |
-| A table, one row per evidence item | Taken | Separates the facts and resolves the period. No parser change. |
+| A table, one row per evidence item | Taken | Separates the facts and resolves the period, on a shape the parser already has. |
 | A grouped section, one bullet per item | Rejected | Separates the facts and leaves the year unresolved, which is the gap. |
 | Bullets that carry a typed reference | Rejected | Buys both at the price of a new declaration form for a shape tables already have. |
 
@@ -90,12 +90,21 @@ Skills table.
 
 ## 4. What is checked, and what is not
 
-**Nothing in `checks.mjs` or the parser changes.** A column declared `Required: No` with a
-plain `qualifier → experience` already gives what this needs: R16 skips a blank cell and holds
-a filled one to its declared type, so an Experience cell either says nothing or names an
-experience that exists. `qualifier?` is not a form in the declaration grammar and is not needed
-here — the `?` governs whether a value resolves, and `Required` governs whether there has to be
-one.
+A column declared `Required: No` with a plain `qualifier → experience` is what this needs, and
+`qualifier?` is not a form in the declaration grammar: the `?` governs whether a value
+resolves, and `Required` governs whether there has to be one. `checks.mjs` already reads the
+pair correctly — it skips a blank cell and holds a filled one to its declared type.
+
+**The parser does not, and one line of it changes.** `parseInstance` resolves every declared
+cell in a table row whether or not the cell is empty, so the first blank Experience cell throws
+`R4: "" … names no experience`, which the probe that wrote this section hit on its first run.
+Frontmatter has had the rule right all along — an empty field yields no value to resolve — and
+the table loop gains the same guard: a blank cell in a qualifier column keeps its empty value
+and is not resolved. Requiredness stays the checker's, which is where the schema's `Required`
+column is already read.
+
+The reference column is deliberately left alone. A blank cell there is still the R4 it always
+was, because softening it would move a real error out of the parser to buy nothing.
 
 What that buys, which the year never could: a row whose Experience names nothing, or names an
 entity that is not an experience, fails by name against the file it is in.
@@ -144,8 +153,9 @@ example is where the case is shown.
 - **Release** core 0.29.0, a minor while core is below 1.0. The notes say the Skills table is
   now two columns, an instance moves its evidence into `## Evidence`, and a consumer reading the
   Evidence column by name reads a section instead.
-- **This repository**: `profile-schema.md`, the example's two profiles, and the assertions in
-  `verify/instance.test.mjs` that name the three-column shape.
+- **This repository**: `profile-schema.md`, one line of `lib/instance.mjs` with a test for it,
+  and the example's two profiles. The fixtures in `verify/instance.test.mjs` declare a profile
+  schema of their own and are unaffected by the core schema moving.
 - **`companygraph/mcp-server`**: no code change — `findEvidence` names no column and passes
   whatever the schema declares. Its `find_evidence` description and the row for it in the
   README say "Evidence verbatim" and need rewording, and five test assertions name
@@ -160,7 +170,8 @@ example is where the case is shown.
 ## 8. Order of work
 
 1. This specification, reviewed by the Owner.
-2. A plan, then on a branch here: the schema, the example's two profiles, the suite.
+2. A plan, then on a branch here: the parser guard and its test, the schema, the example's two
+   profiles.
 3. Release 0.29.0.
 4. The reference instance, then the MCP server, then the site.
 
