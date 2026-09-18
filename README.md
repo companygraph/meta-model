@@ -61,6 +61,7 @@ flowchart TB
     end
     subgraph oss["Open source — Apache 2.0, forever"]
         TOOL["Tooling — scaffolding, checks, upgrades"]
+        SERVER["MCP server — read-only access for agents"]
         PACK["Pack — vocabulary only some kinds of company need"]
         CORE["Core — types, schemas, CONVENTIONS.md"]
     end
@@ -68,14 +69,21 @@ flowchart TB
 
     CONS -.-> INST
     TOOL --> CORE
+    SERVER --> CORE
     INST --> TOOL & PACK & CORE
     PACK --> CORE
 ```
 
-An arrow points at what a thing depends on. CompanyGraph owns core, the packs and whatever
-tooling gets built for them — all of it Apache 2.0 and staying that way. The company owns its
-content and the repository holding it. Consulting is dotted because nothing in it is required
-to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
+An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server and
+whatever tooling gets built for them — all of it Apache 2.0 and staying that way. The company
+owns its content and the repository holding it. Consulting is dotted because nothing in it is
+required to use any of the rest: it is help, not a dependency, and it is the only part that
+costs money.
+
+The server sits beside the tooling rather than between core and an instance: it depends on the
+parser this package ships and on nothing an instance declares, and a deployment of it names the
+instance and the release it serves. `companygraph/mcp-server` is the package,
+`robertblust/mcp-blust-ch` is the deployment that runs it over the reference instance.
 
 ## Status
 
@@ -86,9 +94,10 @@ experience, experience-kind, achievement-kind, skill, proficiency-level, value, 
 surface, strategic-objective, strategy, role, process and phase. The reference instance,
 [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release
 its own pin names and populates the types that release carries, for a company of one, and
-blust.ch builds its model pages from it with the parser this package ships. What is not there
-yet is the tooling, designed and not built, and the rest of the types the design names; the
-roadmap below says which.
+blust.ch builds its model pages from it with the parser this package ships, and
+`companygraph/mcp-server` serves the same instance to an agent over MCP. What is not there yet
+is the tooling, designed and not built, and the rest of the types the design names; the roadmap
+below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in
 [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md),
@@ -125,8 +134,9 @@ that builds a product has features, architecture decisions and roadmaps; a consu
 none of those and should not carry empty folders implying it forgot.
 
 That is the difference between a pack and an unused core type. Core defines a type without
-obliging you to populate it: a company of one has no `group`, and the type stays in core,
-unused. A pack is for vocabulary that would not belong at all.
+obliging you to populate it: a company that does not group what its people have achieved writes
+no `achievement-kind`, and the type stays in core either way. A pack is for vocabulary that
+would not belong at all.
 
 No pack ships yet. The mechanism arrives when a second kind of company asks for it.
 
