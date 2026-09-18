@@ -78,9 +78,11 @@ one drawing reference, and this one does.
 
 `Experience` is last because it is the optional column, and it is optional because a claim at
 the lower rungs can rest on having been near work rather than on having owned a period of it.
-Such a row keeps its sentence and leaves the cell blank. Where the cell is filled, the year in
-parentheses goes: the period is the experience's, read from the experience, and stating it
-twice is the fault this design exists to remove.
+Such a row keeps its sentence and leaves the cell blank. Where the cell is filled and the year in
+parentheses is the experience's own period, the year goes: it is read from the experience, and
+stating it twice is the fault this design exists to remove. A year that marks a shorter period of
+its own — a practice that ran for two years inside a four-year role — stays, because it is a copy
+of nothing.
 
 The third column is `What it shows` rather than `Evidence` so that it does not restate the
 section it sits in, the same move `## References` makes with `What`.
@@ -198,3 +200,9 @@ The release number moved as well. While this branch was open, v0.29.0 was tagged
 the package alone, with core left at 0.28.0, so the number was taken and core and the package had
 parted. This change moves both, and both go to 0.30.0: core passes over 0.29.0 so that a release
 carries one number again. §7 and §8 name the number it shipped with, and the reason is kept here.
+
+The rule on the year was narrowed after the branch was built. Previewed against the reference
+instance, the first form of it would have erased five periods shorter than the experience they sit
+in, among them the years Camunda ran inside LIKE MAGIC, and the example had already lost the year
+that named Tomas's 2023 roadmap to it. §3 and the schema now drop only a copy of the experience's
+own period, and the example has its year back.

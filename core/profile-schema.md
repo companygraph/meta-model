@@ -61,8 +61,11 @@ that rule readable by anyone, including a machine.
 `Experience` is the optional column and sits last. It is optional because a claim at the lower
 rungs can rest on having been near work rather than on having owned a period of it, and such a
 row leaves the cell blank rather than inventing a period to fill it. Where the cell is filled,
-the period is read from the experience and is not written into the sentence as well: a date
-copied beside a fact the experience already owns is a second copy that nothing keeps true.
+the experience's period is read from the experience and is not written into the sentence as
+well: a date copied beside a fact the experience already owns is a second copy that nothing
+keeps true. A period shorter than the experience's is different. The years a practice ran inside
+a longer role are not a copy of the role's dates but a fact of their own, and the sentence is the
+only place that holds them, so they stay.
 
 The column is `What it shows` rather than `Evidence` so that it does not restate the section it
 sits in, which is the same reason `## References` calls its first column `What`.
@@ -102,8 +105,9 @@ on this evidence.
   is describing confidence rather than the work.
 - A row that says no more than its own `Experience` cell says nothing. It is dropped rather
   than written.
-- One sentence per row, under forty words, and the period is not repeated in it where the
-  `Experience` column names one.
+- One sentence per row, under forty words. The sentence does not repeat the period of the
+  experience its `Experience` column names; a period of the fact's own, shorter than that one,
+  stays in it.
 - Rows run in the order the Skills table lists the skills, and chronologically within a skill.
 - A level is weighed against the rows under it and the rung's own definition, not against how
   long the person has done it. One row supports a lower rung than three.
