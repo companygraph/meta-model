@@ -150,7 +150,7 @@ example is where the case is shown.
 
 ## 7. Cost
 
-- **Release** core 0.29.0, a minor while core is below 1.0. The notes say the Skills table is
+- **Release** core 0.30.0, a minor while core is below 1.0. The notes say the Skills table is
   now two columns, an instance moves its evidence into `## Evidence`, and a consumer reading the
   Evidence column by name reads a section instead.
 - **This repository**: `profile-schema.md`, one line of `lib/instance.mjs` with a test for it,
@@ -172,7 +172,7 @@ example is where the case is shown.
 1. This specification, reviewed by the Owner.
 2. A plan, then on a branch here: the parser guard and its test, the schema, the example's two
    profiles.
-3. Release 0.29.0.
+3. Release 0.30.0.
 4. The reference instance, then the MCP server, then the site.
 
 ## 9. Open questions
@@ -184,3 +184,17 @@ condition of this change.
 Whether the two unchecked joins of §4 should become a rule is left open until the column has
 been lived with. The argument for waiting is in §4; the argument against is that a writing rule
 kept by a skill is the thing this design just removed one of.
+
+One thing this document got wrong and a whole-branch review then fixed rather than reopening:
+§7 named `profile-schema.md`, the parser line and the example as this repository's cost, and
+missed two more — the workflow's own release pin, which a release commit has to move together
+with `core/manifest.json` and `package.json` and had not been, and four places in
+`core/skill-schema.md`, `core/CONVENTIONS.md` and `bin/check-instance.mjs` still describing
+evidence as a cell or column of the Skills table after this design moved it into a table of its
+own. The review fixed both directly rather than through §7, so a reader of the design sees the
+cost it shipped with and what a review found missing from it after.
+
+The release number moved as well. While this branch was open, v0.29.0 was tagged for a change to
+the package alone, with core left at 0.28.0, so the number was taken and core and the package had
+parted. This change moves both, and both go to 0.30.0: core passes over 0.29.0 so that a release
+carries one number again. §7 and §8 name the number it shipped with, and the reason is kept here.

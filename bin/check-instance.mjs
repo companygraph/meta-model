@@ -5,8 +5,9 @@
 //
 // It is not the whole of R0 and says so on every run. `companygraph-validate` judges every
 // entity against its schema's `## Writing rules`, and nothing mechanical reaches those — a
-// machine can check that an evidence cell's reference resolves, not that the cell states a fact
-// rather than restating the level. A green run here covers the rules named below and no others.
+// machine can check that an Evidence row's reference resolves, not that its `What it shows`
+// cell states a fact rather than restating the level. A green run here covers the rules named
+// below and no others.
 //
 // Where the rules come from is the point. The schemas are read from the instance's own vendored
 // core, never from this package's `core/`, so taking a newer release of this checker never
