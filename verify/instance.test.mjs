@@ -3,7 +3,7 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, parseSchemas, CORE_LABEL } from "../lib/instance.mjs";
+import { parseInstance, parseSchemas, declarationOf, CORE_LABEL } from "../lib/instance.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
@@ -781,4 +781,15 @@ test("a heading declared qualifier resolves and draws no edge", () => {
     "### Delivery\n\n- Split one service.\n");
   const { edges } = parseInstance(files, { schemas: qualifierSchemas });
   assert.equal(edges.filter((x) => x.via === "Achievements.Kind").length, 0);
+});
+
+// Exported for a consumer that offers what a schema declares — an editor's completion — so that
+// it reads a Type cell through the one reader and never through a copy of DECLARATION.
+test("declarationOf is the one reader of a Type cell, and a consumer may call it", () => {
+  assert.deepEqual(declarationOf("ref → source"), { form: "ref", target: "source" });
+  assert.deepEqual(declarationOf("`array of ref → role`"), { form: "ref", target: "role" });
+  assert.deepEqual(declarationOf("ref? → identity"), { form: "ref?", target: "identity" });
+  assert.deepEqual(declarationOf("qualifier → proficiency-level"), { form: "qualifier", target: "proficiency-level" });
+  assert.equal(declarationOf("string"), null);
+  assert.equal(declarationOf(undefined), null);
 });

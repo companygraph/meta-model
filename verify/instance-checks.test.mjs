@@ -8,7 +8,7 @@
 // and no scaffolding to keep the other checks quiet.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocksOf, checkInstance, isNewer } from "../lib/checks.mjs";
+import { blocksOf, checkInstance, enumTokensOf, isNewer } from "../lib/checks.mjs";
 
 // A schema in the fixed shape R9 states, with only the rows a case needs. `grouped` adds R9's
 // third declared shape: a section marked "Grouped." and the heading table that says what its
@@ -528,4 +528,13 @@ test("a section with a bullet and no heading at all names the absence, not a hea
   assert.ok(hit, `no failure named the entry; got: ${failures.join(" | ") || "none"}`);
   assert.match(hit, /no `###` heading at all/);
   assert.doesNotMatch(hit, /before its first/);
+});
+
+// Exported for the same consumer: the values an enum permits are read from its Description by
+// this function in the R8 check, and an editor that offered a list read any other way would
+// offer a value the check then refuses.
+test("enumTokensOf reads the run of backticked values a Description opens with", () => {
+  assert.deepEqual(enumTokensOf("`human` or `agent`. What holds this profile."), ["human", "agent"]);
+  assert.deepEqual(enumTokensOf("`a`, `b`, or `c`"), ["a", "b", "c"]);
+  assert.deepEqual(enumTokensOf("One of several kinds."), []);
 });
