@@ -793,3 +793,31 @@ test("declarationOf is the one reader of a Type cell, and a consumer may call it
   assert.equal(declarationOf("string"), null);
   assert.equal(declarationOf(undefined), null);
 });
+
+// A cell with nothing in it names nothing, so there is nothing to resolve. Frontmatter has
+// always read an empty field that way; a table row did not, and the first optional qualifier
+// column in a schema — `Experience` on a profile's Evidence table — met R4 against an empty
+// string. Requiredness is the checker's, which reads the schema's Required column; the parser
+// owes only that a value it was given resolves.
+test("a blank qualifier cell is not resolved, and keeps its empty value", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n| Java Programming |  | Owned it. |\n");
+  const { edges } = parseInstance(files, { schemas });
+  assert.deepEqual(edges.find((x) => x.via === "Skills.Skill"), {
+    from: "profiles/mira-halvorsen", to: "skills/java-programming", via: "Skills.Skill",
+    attrs: { Level: "", Evidence: "Owned it." },
+  });
+});
+
+// The reference column is not softened with it. A row that names no skill is the R4 it always
+// was, because moving that error out of the parser would buy nothing: the row draws no edge
+// and the page has said a thing it cannot mean.
+test("a blank reference cell is still an R4 error", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/mira-halvorsen.md",
+    "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Owned it. |\n");
+  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "" in .* names no skill/);
+});
