@@ -561,7 +561,7 @@ const PROCESS_SCHEMA = [
 
 const PHASE_SCHEMA = schema("phase", ["| `gate-to` | No | ref → phase | The phase this gate leads to. |"], { owner: "process" });
 
-const phase = (name, next) => `---\n${next ? `gate-to: ${next}\n` : ""}---\n\n# ${name}\n\n> A phase.\n`;
+const phase = (name, next) => `---\n${next ? `gate-to: ${next}\n` : ""}---\n\n${name ? `# ${name}\n\n` : ""}> A phase.\n`;
 const processWith = (rows) => `# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| --- |\n${rows.map((r) => `| ${r} |`).join("\n")}\n`;
 
 const owned = (rows, phases) =>
@@ -624,4 +624,48 @@ test("an owner whose schema declares no table of what it owns is held to nothing
     ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
   ]);
   assert.deepEqual(checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("does not list") || f.includes("not one of its own")), []);
+});
+
+// What review found the first version silent on. The check ran only where the section already
+// held a table the checks can read, so the two ways of not having one passed everything: the
+// old list of links left in place, which is every instance that takes this release and does
+// not rewrite the section, and a separator row with an alignment colon, which the checks' table
+// reader refuses and the parser reads all the same, drawing edges nothing had held.
+const ownedWith = (processText, phases = THREE) =>
+  checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processText],
+      ...phases.map(([file, name, next]) => [`model/processes/delivery/phases/${file}.md`, phase(name, next)]),
+    ]),
+    { core: "meta/core" },
+  ).failures;
+
+test("a section the schema declares a table and the file still writes as a list of links is a failure", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n\n## Phases\n\n1. [Specify](phases/specify.md)\n2. [Build](phases/build.md)\n3. [Release](phases/release.md)\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"## Phases"') && f.includes("holds no table")), failures.join("\n"));
+});
+
+test("a table whose separator row is not plain dashes is no table to the checks, and that is said", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| :--- |\n| Release |\n| Specify |\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes("holds no table") && f.includes("dashes")), failures.join("\n"));
+});
+
+test("an owner with no such section at all is a failure naming the section", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"## Phases"')), failures.join("\n"));
+});
+
+test("a successor written in quotes is read as every other check reads a field, and is no disagreement", () => {
+  const quoted = [["specify", "Specify", '"Build"'], ["build", "Build", "Release"], ["release", "Release", null]];
+  const failures = ownedWith(processWith(["Specify", "Build", "Release"]), quoted).filter((f) => f.includes("one order") || f.includes("ends on"));
+  assert.deepEqual(failures, []);
+});
+
+test("a row that matches no H1 says so, without claiming the folder holds no such file", () => {
+  const failures = ownedWith(processWith(["Specify", "Build"]), [["specify", "Specify", "Build"], ["build", null, null]]);
+  const mine = failures.filter((f) => f.includes('"Build"') && f.includes("not one of its own"));
+  assert.equal(mine.length, 1, failures.join("\n"));
+  assert.ok(mine[0].includes("the H1 of no phase"), mine[0]);
 });
