@@ -5,9 +5,11 @@ its type. Put together they leave a question open that the owner asked on Septem
 the day a process's phases became a table: is it guaranteed that the phases a process may name
 are the ones in its own folder, and the same for the experience a profile's evidence names?
 
-Status: the first half, the check, is built here and stacked on the change that made the phases
-a table. The second half, how far an owned name reaches in the parser, is decided in principle
-by the owner and designed below; it is not built, and it is its own change.
+Status: the first half, the check, is built here, on top of the change that made the phases a
+table. That change was released with the evidence table while this was being written, so this
+one is a release of its own and not part of that one. The second half, how far an owned name
+reaches in the parser, is decided in principle by the owner and designed below; it is not
+built, and it is its own change.
 
 ## What was true, measured against the example
 
@@ -74,3 +76,13 @@ and names them, and the same refusal serves. An editor offers, in an owner, only
 own names. It makes an instance that is invalid today valid and none that is valid invalid,
 except one that names another owner's entity, which its schema's prose already forbade; it
 changes no declared shape, so `shape` stays, and it is a minor.
+
+## What it asks of a release
+
+Core's bytes change in two places, a writing rule of the profile schema that said what is not
+checked and R0's account of which rules a script reads, and the package gains a check. An
+instance that names only its owners' own entities does nothing. One that names another owner's
+was already against its schema's prose and now fails by name. By the release contract that is a
+rule corrected and prose fixed, a patch, for core and the package together so that the two
+numbers keep agreeing; the workflow's ref moves with the package, in the commit that prepares
+the release and not in this one. Which number it takes is the owner's to say at tagging.
