@@ -206,6 +206,14 @@ reader is a table reader, not a prose reader.
 
 ### `check`
 
+`check` is not built in a tooling repository. It ships from this one as `lib/checks.mjs`, by the
+amendment in [`2026-09-10-instance-checks-design.md`](2026-09-10-instance-checks-design.md), and
+runs in three places: an instance's CI through `instance-check.yml`, a shell through
+`bin/check-instance.mjs`, and the editor through `companygraph/obsidian-plugin`, which bundles the
+package and reads the schemas from the core the vault vendored. Whoever builds `init`, `add` and
+`upgrade` takes it from there and does not build it again. What follows is the design as it was
+agreed, kept for what it says the command holds and why.
+
 Fails on:
 
 | what | rule cited |
