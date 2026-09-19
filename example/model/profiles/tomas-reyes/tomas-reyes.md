@@ -26,7 +26,7 @@ location: Lisbon
 | Product Discovery | Told a room that the rebuild's measured win was not the one it had been funded for. | Conference talk — the speed-up nobody asked for |
 | Product Discovery | Killed two of the three features on the 2023 roadmap after twenty customer conversations; the third shipped and is the one customers name. | Deciding which billing goes first |
 | Domain-Driven Design | Sat in the billing-context sessions and can follow a context map; has never drawn one. | Deciding which billing goes first |
-| Java Programming | Reads pull requests well enough to ask the right question, and has merged none. |  |
+| Java Programming | Reads pull requests well enough to ask the right question, and has merged none. | |
 
 ## Summary
 
