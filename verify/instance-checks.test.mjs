@@ -538,3 +538,90 @@ test("enumTokensOf reads the run of backticked values a Description opens with",
   assert.deepEqual(enumTokensOf("`a`, `b`, or `c`"), ["a", "b", "c"]);
   assert.deepEqual(enumTokensOf("One of several kinds."), []);
 });
+
+// An owner that lists what it owns. A process's `## Phases` was an ordered list of links by
+// file path, which no check read: the names in it could rot, a phase could be left out, and
+// the order it stated could disagree with the `gate-to` chain that states it a second time.
+// As a table whose column is declared `ref → phase` the names are held by R16 like any other
+// reference, and what is left for a check of its own is what R16 cannot see: that the rows are
+// exactly the entities the owner owns, and that their order is the one the owned entities give
+// each other. It hangs on what the schemas declare, an owned type referenced from a table of
+// its owner and a field of the owned type that references its own type, and names no type.
+const PROCESS_SCHEMA = [
+  "# Process Schema", "", "> A process.", "",
+  "## File Location", "", "`processes/<process>/<process>.md`", "",
+  "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |", "",
+  "## Sections", "",
+  "| Section | Required | Description |", "| --- | --- | --- |",
+  "| `## Phases` | Yes | Table. The phases, in order. |", "",
+  "`## Phases` is a table with these columns:", "",
+  "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
+  "| `Phase` | Yes | ref → phase | The phase. |", "",
+].join("\n");
+
+const PHASE_SCHEMA = schema("phase", ["| `gate-to` | No | ref → phase | The phase this gate leads to. |"], { owner: "process" });
+
+const phase = (name, next) => `---\n${next ? `gate-to: ${next}\n` : ""}---\n\n# ${name}\n\n> A phase.\n`;
+const processWith = (rows) => `# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| --- |\n${rows.map((r) => `| ${r} |`).join("\n")}\n`;
+
+const owned = (rows, phases) =>
+  checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(rows)],
+      ...phases.map(([file, name, next]) => [`model/processes/delivery/phases/${file}.md`, phase(name, next)]),
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes('"## Phases"'));
+
+const THREE = [["specify", "Specify", "Build"], ["build", "Build", "Release"], ["release", "Release", null]];
+
+test("an owner's table that lists exactly what it owns, in the order the owned give, is not a failure", () => {
+  assert.deepEqual(owned(["Specify", "Build", "Release"], THREE), []);
+});
+
+test("an owned entity the owner's table leaves out is a failure naming it", () => {
+  const failures = owned(["Specify", "Build"], THREE);
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"Release"') && f.includes("does not list")), failures.join("\n"));
+});
+
+test("a row naming an entity the owner does not own is a failure, though the name resolves elsewhere", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(["Specify", "Audit"])],
+      ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+      ["model/processes/review/review.md", processWith(["Audit"])],
+      ["model/processes/review/phases/audit.md", phase("Audit", null)],
+    ]),
+    { core: "meta/core" },
+  ).failures;
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"Audit"') && f.includes("not one of its own")), failures.join("\n"));
+});
+
+test("a row written twice is a failure naming the duplicate", () => {
+  const failures = owned(["Specify", "Build", "Build", "Release"], THREE);
+  assert.ok(failures.some((f) => f.includes('"Build"') && f.includes("twice")), failures.join("\n"));
+});
+
+test("an order that disagrees with what the owned entities say of each other is a failure naming both", () => {
+  const failures = owned(["Specify", "Release", "Build"], THREE);
+  assert.ok(failures.some((f) => f.includes('"Release"') && f.includes('"Specify"') && f.includes("`gate-to`") && f.includes('"Build"')), failures.join("\n"));
+});
+
+test("a last row whose entity still leads somewhere is a failure", () => {
+  const failures = owned(["Specify", "Build"], [["specify", "Specify", "Build"], ["build", "Build", "Release"], ["release", "Release", null]].slice(0, 2));
+  assert.ok(failures.some((f) => f.includes('"Build"') && f.includes("last")), failures.join("\n"));
+});
+
+test("an owner whose schema declares no table of what it owns is held to nothing here", () => {
+  const files = new Map([
+    ["meta/core/process-schema.md", schema("process", [])],
+    ["meta/core/phase-schema.md", PHASE_SCHEMA],
+    ["model/processes/delivery/delivery.md", "# Delivery\n\n> A process.\n"],
+    ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+  ]);
+  assert.deepEqual(checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("does not list") || f.includes("not one of its own")), []);
+});
