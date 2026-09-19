@@ -906,5 +906,19 @@ test("a reference to an owned type written outside every owner of it names nothi
   const schemas = scoped();
   schemas.set("skill-schema.md", schema("skill", { fields: [["first-used", "ref → phase"]] }));
   const files = twoProcesses([["skills/java.md", "---\nfirst-used: Build\n---\n\n# Java\n\n> A language.\n"]]);
-  assert.throws(() => parseInstance(files, { schemas }), /R4: "Build" .* names no phase: a phase is named only within the process that owns it/);
+  assert.throws(() => parseInstance(files, { schemas }), /R4: "Build" .* names no phase: phase entities are named only within the process that owns them/);
+});
+
+// Review found that the parser took an owned type's owner from whichever file it read last, so
+// one stray phase under a profile, read after the processes, made every correct process refuse.
+// The owner is the schema's `**Owner:**` line (R10), and an entity of an owned type that sits in
+// no owner of that type is an R5 error naming it, not a reason to read the others wrongly.
+test("ownership comes from the schema, and a stray owned entity is named, not the correct ones", () => {
+  const schemas = scoped();
+  schemas.set("profile-schema.md", schema("profile", { location: "profiles/<profile>/<profile>.md" }));
+  const files = twoProcesses([
+    ["profiles/mira/mira.md", "# Mira\n\n> A person.\n"],
+    ["profiles/mira/phases/stray.md", "# Stray\n\n> Lost.\n"],
+  ]);
+  assert.throws(() => parseInstance(files, { schemas }), /R5: profiles\/mira\/phases\/stray.md is a phase, and a phase is owned by a process; it sits in no process/);
 });

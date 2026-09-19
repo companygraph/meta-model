@@ -724,8 +724,9 @@ test("a README is no entity, and its links are its own business", () => {
 // every reference core makes to an owned type is written inside that owner's subtree: a process
 // names its phases, a phase the phase its gate leads to, a profile the experience a fact comes
 // from. Each schema says in prose that the name is one of the owner's own, and nothing held it:
-// a name resolves within its type, an owned type's names run across every owner, and one
-// profile's evidence could name another profile's experience with every check green. It is held
+// the checks read names by type across the instance, and one profile's evidence could name
+// another profile's experience with every check green, where the parser, resolving within the
+// owner since 0.31.0, refuses it. It is held
 // wherever a schema declares a reference, a qualifier or a list of references to a type that is
 // owned, from the owner itself or from an entity the same owner owns; no type is named.
 const OWNING_PROFILE_SCHEMA = [
@@ -757,7 +758,7 @@ const evidence = (miraRows) =>
       ["model/profiles/tomas/experiences/2021-orders.md", "# Finding the order pipeline\n\n> A period.\n"],
     ]),
     { core: "meta/core" },
-  ).failures.filter((f) => f.includes("owns it (R5)"));
+  ).failures.filter((f) => f.includes("owns them (R5)"));
 
 test("an owner's qualifier that names one of its own is not a failure, and neither is a blank cell", () => {
   assert.deepEqual(evidence(["Splitting the billing domain", ""]), []);
@@ -783,7 +784,7 @@ test("an owned entity that names a sibling is held to its own owner, and a forei
         ["model/processes/review/phases/audit.md", phase("Audit", null)],
       ]),
       { core: "meta/core" },
-    ).failures.filter((f) => f.includes("owns it (R5)"));
+    ).failures.filter((f) => f.includes("owns them (R5)"));
   assert.deepEqual(run("Build"), []);
   const foreign = run("Audit");
   assert.equal(foreign.length, 1, foreign.join("\n"));
@@ -805,23 +806,52 @@ test("a foreign row in an owner's listing is said once, by this check and not by
   assert.equal(failures.length, 1, failures.join("\n"));
 });
 
-test("an optional reference is held to nothing, and a reference written outside every owner is not read", () => {
-  const optional = OWNING_PROFILE_SCHEMA.replace("qualifier → experience", "ref? → experience");
-  const failures = checkInstance(
-    new Map([
-      ["meta/core/profile-schema.md", optional],
-      ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
-      ["meta/core/skill-schema.md", schema("skill", ["| `first-used` | No | ref → experience | Where it was first used. |"])],
-      ["model/skills/java.md", "---\nfirst-used: Finding the order pipeline\n---\n\n# Java\n\n> A language.\n"],
-      ["model/profiles/mira/mira.md", profileWith("Mira", ["Finding the order pipeline"])],
-      ["model/profiles/tomas/tomas.md", profileWith("Tomas", [""])],
-      ["model/profiles/tomas/experiences/2021-orders.md", "# Finding the order pipeline\n\n> A period.\n"],
-    ]),
-    { core: "meta/core" },
-  ).failures.filter((f) => f.includes("owns it (R5)"));
-  assert.deepEqual(failures, []);
+test("an optional reference is held to nothing, and a reference written outside every owner names nothing (R4)", () => {
+  // R4 answers what an earlier version of this check left open: a reference to an owned type
+  // written outside every owner of it has no owner to be resolved in, and names nothing. The
+  // parser refuses it, so the checks say so too; one that is optional stays a fact.
+  const run = (declared) =>
+    checkInstance(
+      new Map([
+        ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA.replace("qualifier → experience", "ref? → experience")],
+        ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
+        ["meta/core/skill-schema.md", schema("skill", [`| \`first-used\` | No | ${declared} | Where it was first used. |`])],
+        ["model/skills/java.md", "---\nfirst-used: Finding the order pipeline\n---\n\n# Java\n\n> A language.\n"],
+        ["model/profiles/mira/mira.md", profileWith("Mira", ["Finding the order pipeline"])],
+        ["model/profiles/tomas/tomas.md", profileWith("Tomas", [""])],
+        ["model/profiles/tomas/experiences/2021-orders.md", "# Finding the order pipeline\n\n> A period.\n"],
+      ]),
+      { core: "meta/core" },
+    ).failures;
+  const optional = run("ref? → experience");
+  assert.deepEqual(optional.filter((f) => f.includes("(R5)") || f.includes("(R4)")), []);
+  const outside = run("ref → experience").filter((f) => f.startsWith("model/skills/java.md: "));
+  assert.equal(outside.length, 1, outside.join("\n"));
+  assert.ok(outside[0].includes("outside") && outside[0].includes("(R4)"), outside[0]);
 });
 
+// An owned entity sits inside an owner of the type its schema declares as its owner (R5). A
+// folder inside an owner's folder that is not one it owns was passed by every check, and the
+// parser, which read ownership from whatever file came last, refused every correct process over
+// one stray phase under a profile. The checks now name the folder.
+test("a folder inside an owner's folder that it does not own is a failure", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA],
+      ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(["Specify"])],
+      ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+      ["model/profiles/mira/mira.md", profileWith("Mira", [""])],
+      ["model/profiles/mira/experiences/2022-billing.md", "# Splitting the billing domain\n\n> A period.\n"],
+      ["model/profiles/mira/phases/stray.md", phase("Stray", null)],
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("mira/phases"));
+  assert.equal(failures.length, 1, failures.join("\n"));
+  assert.ok(failures[0].includes("(R5)") || failures[0].includes("not a folder"), failures[0]);
+});
 // One cause is one finding. A qualifier or a reference that names no entity of its type at all is
 // R16's to report, that it resolves nowhere; the owner check speaks only of a name that does
 // resolve and belongs to another owner. Found in the plugin, where a blank-named period showed

@@ -77,8 +77,10 @@ wanted. It needs no new syntax because every reference core makes to an owned ty
 inside its owner. The parser would keep a name index per owner for an owned type and give
 `resolve` the referring entity; identifiers are paths already, so a drawn graph is unchanged;
 a lookup by type and name, as the MCP server's `get_entity` makes, would meet two answers and
-have to say whose, as it already does for a name under two types; an editor would offer an
-owner's own names only. It makes invalid instances valid and no valid one invalid, changes no
+have to say whose, which it does not do today: it returns the first entity of that type and name,
+and its `fetch` refuses a bare name under two types with a message that assumes the types
+differ, so both change when the MCP server takes this release; an editor would offer an owner's
+own names only. It makes invalid instances valid and no valid one invalid, changes no
 declared shape, and is a minor.
 
 **Set against each other.** For the owner's answer: it is R5 read for names, the way a
