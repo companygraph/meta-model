@@ -115,8 +115,10 @@ on this evidence.
   `## Evidence`. A skill the person can name but not evidence has no row in either: the table
   is the claim, and a claim needs something under it.
 - An `Experience` names a period this profile owns, and that experience lists this skill in its
-  `skills` field. Neither is checked — both would be the first rule in the checker to name a
-  type, and the schemas drive every rule there today — so both are kept by whoever writes.
+  `skills` field. The first is held by the instance checks, which hold every name of an owned
+  type to its owner from what the schemas declare. The second is not: it would be the first
+  rule in the checker to name a type, and the schemas drive every rule there today, so it is
+  kept by whoever writes.
 - The Skills table is where a person's history with a skill lives. The skill file stays
   person-neutral, so nothing here belongs there and nothing there belongs here.
 - One row per place in `## Also at`, and a place the person no longer maintains has no row:

@@ -717,3 +717,105 @@ test("what only looks like a link is none: code, an image, brackets without a ta
 test("a README is no entity, and its links are its own business", () => {
   assert.deepEqual(linked("Plain.", [["model/skills/README.md", "# Skills\n\n- [Java](java.md)\n"]]), []);
 });
+
+// A name of an owned type is its owner's. R5 nests an owned collection inside its owner, and
+// every reference core makes to an owned type is written inside that owner's subtree: a process
+// names its phases, a phase the phase its gate leads to, a profile the experience a fact comes
+// from. Each schema says in prose that the name is one of the owner's own, and nothing held it:
+// a name resolves within its type, an owned type's names run across every owner, and one
+// profile's evidence could name another profile's experience with every check green. It is held
+// wherever a schema declares a reference, a qualifier or a list of references to a type that is
+// owned, from the owner itself or from an entity the same owner owns; no type is named.
+const OWNING_PROFILE_SCHEMA = [
+  "# Profile Schema", "", "> A profile.", "",
+  "## File Location", "", "`profiles/<profile>/<profile>.md`", "",
+  "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |", "",
+  "## Sections", "",
+  "| Section | Required | Description |", "| --- | --- | --- |",
+  "| `## Evidence` | No | Table. The facts. |", "",
+  "`## Evidence` is a table with these columns:", "",
+  "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
+  "| `Skill` | Yes | ref → skill | The skill. |",
+  "| `Experience` | No | qualifier → experience | The period the fact comes from. |", "",
+].join("\n");
+
+const OWNED_EXPERIENCE_SCHEMA = schema("experience", [], { owner: "profile" });
+const profileWith = (name, rows) => `# ${name}\n\n> A profile.\n\n## Evidence\n\n| Skill | Experience |\n| --- | --- |\n${rows.map((r) => `| Java | ${r} |`).join("\n")}\n`;
+
+const evidence = (miraRows) =>
+  checkInstance(
+    new Map([
+      ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA],
+      ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
+      ["meta/core/skill-schema.md", schema("skill", [])],
+      ["model/skills/java.md", "# Java\n\n> A language.\n"],
+      ["model/profiles/mira/mira.md", profileWith("Mira", miraRows)],
+      ["model/profiles/mira/experiences/2022-billing.md", "# Splitting the billing domain\n\n> A period.\n"],
+      ["model/profiles/tomas/tomas.md", profileWith("Tomas", ["Finding the order pipeline"])],
+      ["model/profiles/tomas/experiences/2021-orders.md", "# Finding the order pipeline\n\n> A period.\n"],
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("owns it (R5)"));
+
+test("an owner's qualifier that names one of its own is not a failure, and neither is a blank cell", () => {
+  assert.deepEqual(evidence(["Splitting the billing domain", ""]), []);
+});
+
+test("an owner's qualifier that names another owner's entity is a failure, though the name resolves", () => {
+  const failures = evidence(["Finding the order pipeline"]);
+  assert.equal(failures.length, 1, failures.join("\n"));
+  assert.ok(failures[0].startsWith("model/profiles/mira/mira.md: "));
+  assert.ok(failures[0].includes('"Finding the order pipeline"') && failures[0].includes("model/profiles/mira/experiences/"), failures[0]);
+});
+
+test("an owned entity that names a sibling is held to its own owner, and a foreign one is a failure", () => {
+  const run = (next) =>
+    checkInstance(
+      new Map([
+        ["meta/core/process-schema.md", PROCESS_SCHEMA],
+        ["meta/core/phase-schema.md", PHASE_SCHEMA],
+        ["model/processes/delivery/delivery.md", processWith(["Specify"])],
+        ["model/processes/delivery/phases/specify.md", phase("Specify", next)],
+        ["model/processes/delivery/phases/build.md", phase("Build", null)],
+        ["model/processes/review/review.md", processWith(["Audit"])],
+        ["model/processes/review/phases/audit.md", phase("Audit", null)],
+      ]),
+      { core: "meta/core" },
+    ).failures.filter((f) => f.includes("owns it (R5)"));
+  assert.deepEqual(run("Build"), []);
+  const foreign = run("Audit");
+  assert.equal(foreign.length, 1, foreign.join("\n"));
+  assert.ok(foreign[0].startsWith("model/processes/delivery/phases/specify.md: ") && foreign[0].includes("`gate-to`"), foreign[0]);
+});
+
+test("a foreign row in an owner's listing is said once, by this check and not by the listing's as well", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(["Specify", "Audit"])],
+      ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+      ["model/processes/review/review.md", processWith(["Audit"])],
+      ["model/processes/review/phases/audit.md", phase("Audit", null)],
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"Audit"'));
+  assert.equal(failures.length, 1, failures.join("\n"));
+});
+
+test("an optional reference is held to nothing, and a reference written outside every owner is not read", () => {
+  const optional = OWNING_PROFILE_SCHEMA.replace("qualifier → experience", "ref? → experience");
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/profile-schema.md", optional],
+      ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
+      ["meta/core/skill-schema.md", schema("skill", ["| `first-used` | No | ref → experience | Where it was first used. |"])],
+      ["model/skills/java.md", "---\nfirst-used: Finding the order pipeline\n---\n\n# Java\n\n> A language.\n"],
+      ["model/profiles/mira/mira.md", profileWith("Mira", ["Finding the order pipeline"])],
+      ["model/profiles/tomas/tomas.md", profileWith("Tomas", [""])],
+      ["model/profiles/tomas/experiences/2021-orders.md", "# Finding the order pipeline\n\n> A period.\n"],
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("owns it (R5)"));
+  assert.deepEqual(failures, []);
+});
