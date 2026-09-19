@@ -821,3 +821,43 @@ test("a blank reference cell is still an R4 error", () => {
     "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Owned it. |\n");
   assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "" in .* names no skill/);
 });
+
+// A process names its phases in a table whose column is declared `ref → phase`, where it used
+// to link their files by path in a list nothing read. The column draws like any other declared
+// reference, one edge per row, beside the ownership the nesting already gives; and the order,
+// which an edge list sorted by name cannot carry, stays readable from the section's own rows.
+test("a process's Phases table draws an edge to each phase it names, and keeps their order in its rows", () => {
+  const files = new Map([
+    ["identity.md", "# Beacon Systems\n\n> Billing software.\n"],
+    ["processes/delivery/delivery.md", "# Delivery\n\n> How a change ships.\n\n## Phases\n\n| Phase |\n| --- |\n| Specify |\n| Build |\n"],
+    ["processes/delivery/phases/specify.md", "---\ngate-to: Build\n---\n\n# Specify\n\n> First.\n"],
+    ["processes/delivery/phases/build.md", "# Build\n\n> Second.\n"],
+  ]);
+  const schemas = new Map([
+    ["identity-schema.md", schema("identity", { location: "identity.md" })],
+    ["process-schema.md", schema("process", { tables: { Phases: [["Phase", "ref → phase"]] }, location: "processes/<process>/<process>.md" })],
+    ["phase-schema.md", schema("phase", { fields: [["gate-to", "ref → phase"]], location: "processes/<process>/phases/*.md", owner: "process" })],
+  ]);
+  const graph = parseInstance(files, { schemas });
+  const drawn = graph.edges.filter((e) => e.via === "Phases.Phase").map((e) => [e.from, e.to]);
+  assert.deepEqual(drawn, [
+    ["processes/delivery", "processes/delivery/phases/build"],
+    ["processes/delivery", "processes/delivery/phases/specify"],
+  ]);
+  const rows = graph.entities.find((e) => e.id === "processes/delivery").sections.find((s) => s.heading === "Phases").table.rows;
+  assert.deepEqual(rows, [["Specify"], ["Build"]]);
+});
+
+test("a Phases row that names no phase is an R4, as any declared reference is", () => {
+  const files = new Map([
+    ["identity.md", "# Beacon Systems\n\n> Billing software.\n"],
+    ["processes/delivery/delivery.md", "# Delivery\n\n> How a change ships.\n\n## Phases\n\n| Phase |\n| --- |\n| Specfy |\n"],
+    ["processes/delivery/phases/specify.md", "# Specify\n\n> First.\n"],
+  ]);
+  const schemas = new Map([
+    ["identity-schema.md", schema("identity", { location: "identity.md" })],
+    ["process-schema.md", schema("process", { tables: { Phases: [["Phase", "ref → phase"]] }, location: "processes/<process>/<process>.md" })],
+    ["phase-schema.md", schema("phase", { location: "processes/<process>/phases/*.md", owner: "process" })],
+  ]);
+  assert.throws(() => parseInstance(files, { schemas }), /R4: "Specfy"/);
+});

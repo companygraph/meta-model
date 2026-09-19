@@ -406,15 +406,18 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm
-run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R8, R9, R10, R11,
-R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
+run verify` runs `verify/check.mjs`, which mechanically checks part of R3, R4, R5, R6, R8, R9,
+R10, R11, R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
 any check cites a rule this document does not define. `npm run test:instance` exercises the
 instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
-rules the parser cites in its comments and error messages. No file is checked against R1, R2,
-R3, R5, R7 or R17; where a check happens to touch one, it is incidental to the rule that
-check cites. Treat all six as agent-enforced — which is by design, not by omission: the claim
-this model ships under is that schemas written as prose are enforceable by agents.
+rules the parser cites in its comments and error messages. Part is the word that matters. Of
+R3 a script reads one thing, a link from an entity to a file of the model, and of R5 that an
+owner's table of what it owns agrees with its folder; that a name written in prose is the
+canonical one, no script can tell. No file is checked against R1, R2, R7 or R17; where a check
+happens to touch one, it is incidental to the rule that check cites. Treat these, and the rest of
+every rule a script reads in part, as agent-enforced — which is by design, not by omission: the
+claim this model ships under is that schemas written as prose are enforceable by agents.
 
 Those scripts are this repository's own harness. Copying `CONVENTIONS.md` into a company
 brings the rules and not the scripts — there is no `verify` script there, and what these run

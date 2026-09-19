@@ -538,3 +538,182 @@ test("enumTokensOf reads the run of backticked values a Description opens with",
   assert.deepEqual(enumTokensOf("`a`, `b`, or `c`"), ["a", "b", "c"]);
   assert.deepEqual(enumTokensOf("One of several kinds."), []);
 });
+
+// An owner that lists what it owns. A process's `## Phases` was an ordered list of links by
+// file path, which no check read: the names in it could rot, a phase could be left out, and
+// the order it stated could disagree with the `gate-to` chain that states it a second time.
+// As a table whose column is declared `ref → phase` the names are held by R16 like any other
+// reference, and what is left for a check of its own is what R16 cannot see: that the rows are
+// exactly the entities the owner owns, and that their order is the one the owned entities give
+// each other. It hangs on what the schemas declare, an owned type referenced from a table of
+// its owner and a field of the owned type that references its own type, and names no type.
+const PROCESS_SCHEMA = [
+  "# Process Schema", "", "> A process.", "",
+  "## File Location", "", "`processes/<process>/<process>.md`", "",
+  "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |", "",
+  "## Sections", "",
+  "| Section | Required | Description |", "| --- | --- | --- |",
+  "| `## Phases` | Yes | Table. The phases, in order. |", "",
+  "`## Phases` is a table with these columns:", "",
+  "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
+  "| `Phase` | Yes | ref → phase | The phase. |", "",
+].join("\n");
+
+const PHASE_SCHEMA = schema("phase", ["| `gate-to` | No | ref → phase | The phase this gate leads to. |"], { owner: "process" });
+
+const phase = (name, next) => `---\n${next ? `gate-to: ${next}\n` : ""}---\n\n${name ? `# ${name}\n\n` : ""}> A phase.\n`;
+const processWith = (rows) => `# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| --- |\n${rows.map((r) => `| ${r} |`).join("\n")}\n`;
+
+const owned = (rows, phases) =>
+  checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(rows)],
+      ...phases.map(([file, name, next]) => [`model/processes/delivery/phases/${file}.md`, phase(name, next)]),
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes('"## Phases"'));
+
+const THREE = [["specify", "Specify", "Build"], ["build", "Build", "Release"], ["release", "Release", null]];
+
+test("an owner's table that lists exactly what it owns, in the order the owned give, is not a failure", () => {
+  assert.deepEqual(owned(["Specify", "Build", "Release"], THREE), []);
+});
+
+test("an owned entity the owner's table leaves out is a failure naming it", () => {
+  const failures = owned(["Specify", "Build"], THREE);
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"Release"') && f.includes("does not list")), failures.join("\n"));
+});
+
+test("a row naming an entity the owner does not own is a failure, though the name resolves elsewhere", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processWith(["Specify", "Audit"])],
+      ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+      ["model/processes/review/review.md", processWith(["Audit"])],
+      ["model/processes/review/phases/audit.md", phase("Audit", null)],
+    ]),
+    { core: "meta/core" },
+  ).failures;
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"Audit"') && f.includes("not one of its own")), failures.join("\n"));
+});
+
+test("a row written twice is a failure naming the duplicate", () => {
+  const failures = owned(["Specify", "Build", "Build", "Release"], THREE);
+  assert.ok(failures.some((f) => f.includes('"Build"') && f.includes("twice")), failures.join("\n"));
+});
+
+test("an order that disagrees with what the owned entities say of each other is a failure naming both", () => {
+  const failures = owned(["Specify", "Release", "Build"], THREE);
+  assert.ok(failures.some((f) => f.includes('"Release"') && f.includes('"Specify"') && f.includes("`gate-to`") && f.includes('"Build"')), failures.join("\n"));
+});
+
+test("a last row whose entity still leads somewhere is a failure", () => {
+  const failures = owned(["Specify", "Build"], [["specify", "Specify", "Build"], ["build", "Build", "Release"], ["release", "Release", null]].slice(0, 2));
+  assert.ok(failures.some((f) => f.includes('"Build"') && f.includes("last")), failures.join("\n"));
+});
+
+test("an owner whose schema declares no table of what it owns is held to nothing here", () => {
+  const files = new Map([
+    ["meta/core/process-schema.md", schema("process", [])],
+    ["meta/core/phase-schema.md", PHASE_SCHEMA],
+    ["model/processes/delivery/delivery.md", "# Delivery\n\n> A process.\n"],
+    ["model/processes/delivery/phases/specify.md", phase("Specify", null)],
+  ]);
+  assert.deepEqual(checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("does not list") || f.includes("not one of its own")), []);
+});
+
+// What review found the first version silent on. The check ran only where the section already
+// held a table the checks can read, so the two ways of not having one passed everything: the
+// old list of links left in place, which is every instance that takes this release and does
+// not rewrite the section, and a separator row with an alignment colon, which the checks' table
+// reader refuses and the parser reads all the same, drawing edges nothing had held.
+const ownedWith = (processText, phases = THREE) =>
+  checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", PROCESS_SCHEMA],
+      ["meta/core/phase-schema.md", PHASE_SCHEMA],
+      ["model/processes/delivery/delivery.md", processText],
+      ...phases.map(([file, name, next]) => [`model/processes/delivery/phases/${file}.md`, phase(name, next)]),
+    ]),
+    { core: "meta/core" },
+  ).failures;
+
+test("a section the schema declares a table and the file still writes as a list of links is a failure", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n\n## Phases\n\n1. [Specify](phases/specify.md)\n2. [Build](phases/build.md)\n3. [Release](phases/release.md)\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"## Phases"') && f.includes("holds no table")), failures.join("\n"));
+});
+
+test("a table whose separator row is not plain dashes is no table to the checks, and that is said", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| :--- |\n| Release |\n| Specify |\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes("holds no table") && f.includes("dashes")), failures.join("\n"));
+});
+
+test("an owner with no such section at all is a failure naming the section", () => {
+  const failures = ownedWith("# Delivery\n\n> A process.\n");
+  assert.ok(failures.some((f) => f.startsWith("model/processes/delivery/delivery.md: ") && f.includes('"## Phases"')), failures.join("\n"));
+});
+
+test("a successor written in quotes is read as every other check reads a field, and is no disagreement", () => {
+  const quoted = [["specify", "Specify", '"Build"'], ["build", "Build", "Release"], ["release", "Release", null]];
+  const failures = ownedWith(processWith(["Specify", "Build", "Release"]), quoted).filter((f) => f.includes("one order") || f.includes("ends on"));
+  assert.deepEqual(failures, []);
+});
+
+test("a row that matches no H1 says so, without claiming the folder holds no such file", () => {
+  const failures = ownedWith(processWith(["Specify", "Build"]), [["specify", "Specify", "Build"], ["build", null, null]]);
+  const mine = failures.filter((f) => f.includes('"Build"') && f.includes("not one of its own"));
+  assert.equal(mine.length, 1, failures.join("\n"));
+  assert.ok(mine[0].includes("the H1 of no phase"), mine[0]);
+});
+
+// R3, the half a machine can read. An entity names another by its canonical name and never by
+// a path, and until a process's phases were found written as links to their files nothing
+// looked: R3 was the agent pass's alone, and a list of five links sat in the reference instance
+// through every review. A Markdown link inside an entity whose target is a file of the model
+// is that, whatever the link's text says. An address outside the model is not: a document or a
+// place is no entity, and its address is a fact.
+const linked = (body, extra = []) =>
+  checkInstance(
+    new Map([
+      ["meta/core/skill-schema.md", schema("skill", [])],
+      ["model/skills/java.md", "# Java\n\n> A language.\n"],
+      ["model/skills/kotlin.md", `# Kotlin\n\n> A language.\n\n## In practice\n\n${body}\n`],
+      ...extra,
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("(R3)"));
+
+test("a link from one entity to another's file is a failure naming the link and what to write", () => {
+  const failures = linked("Runs beside [Java](java.md) on the same machine.");
+  assert.equal(failures.length, 1, failures.join("\n"));
+  assert.ok(failures[0].startsWith("model/skills/kotlin.md: "));
+  assert.ok(failures[0].includes('"Java"') && failures[0].includes("java.md"), failures[0]);
+});
+
+test("the path is what fails, however it is written: up and down folders, a fragment, spaces, a target that is not there", () => {
+  assert.equal(linked("See [a level](../proficiency-levels/expert.md#what-it-means).").length, 1);
+  assert.equal(linked("See [it](<./java.md>) and [it again](./java.md \"Java\").").length, 2);
+  assert.equal(linked("See [gone](../skills/gone.md).").length, 1, "a rotten path is still a path");
+  assert.equal(linked("See [a folder](../profiles/).").length, 1);
+});
+
+test("an address outside the model is a fact and not a reference", () => {
+  assert.deepEqual(linked("Documented at [the site](https://example.invalid/java.md), by [mail](mailto:a@example.invalid)."), []);
+  assert.deepEqual(linked("See [below](#in-practice)."), []);
+  assert.deepEqual(linked("See [the conventions](../../meta/core/CONVENTIONS.md) and [the readme](../../README.md)."), []);
+});
+
+test("what only looks like a link is none: code, an image, brackets without a target", () => {
+  assert.deepEqual(linked("Written `[Java](java.md)` in a schema's example."), []);
+  assert.deepEqual(linked("```\n[Java](java.md)\n```"), []);
+  assert.deepEqual(linked("![a diagram](java.md)"), []);
+  assert.deepEqual(linked("An array is [1, 2] and a call is f(java.md)."), []);
+});
+
+test("a README is no entity, and its links are its own business", () => {
+  assert.deepEqual(linked("Plain.", [["model/skills/README.md", "# Skills\n\n- [Java](java.md)\n"]]), []);
+});
