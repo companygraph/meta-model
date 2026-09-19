@@ -30,8 +30,8 @@ a role requires one, and it outlives both.
 A skill is a capability a person can claim, an experience can evidence and a role can require —
 one file, named once, referenced by every profile that claims it. It answers "what is this, and
 what does doing it look like?" for a reader who may claim it, assess it or hire for it. It is
-not any one person's history with the capability: that lives in the profile's Skills table, as
-a level and an evidence cell, and in the experiences that list the skill.
+not any one person's history with the capability: that lives in the profile's Skills table as
+a level, in the Evidence table under it and in the experiences that list the skill.
 
 ## Writing rules
 

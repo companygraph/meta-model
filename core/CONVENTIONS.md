@@ -147,8 +147,8 @@ Frontmatter is for short facts.
 So a list of *bare names* stays in frontmatter, typed `array of ref → <type>`; a list of
 *records* becomes a table in the body. The same reference therefore appears in both places and
 that is not an inconsistency — an experience naming the skills it used is a list of names and
-nothing more, while a profile's claim on a skill carries a level and its evidence. What decides
-the shape is whether the edge has attributes of its own.
+nothing more, while a profile's claim on a skill carries a level. What decides the shape is
+whether the edge has attributes of its own.
 
 ### R9 — Schema files have a fixed shape
 
@@ -244,8 +244,8 @@ same terms. `array of ref?` is not a form: the `?` asks whether one value resolv
 has no single value to ask it of.
 
 `qualifier → <type>` is a column type and only a column type. A row of a column table is one
-fact about several things — a skill held at a level, with the evidence for it — and a fact
-like that is identified by the things it joins rather than by a name of its own. R2 names
+fact about several things — a skill held at a level — and a fact like that is identified by
+the things it joins rather than by a name of its own. R2 names
 entities by their H1 and allows no two of a type to share one, so such a row cannot become an
 entity without being given a name nobody calls it. It stays a row: one column names what the
 row points at, and the rest qualify that reference. A qualifier must resolve, exactly as a
