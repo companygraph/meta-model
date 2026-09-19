@@ -663,11 +663,13 @@ test("a successor written in quotes is read as every other check reads a field, 
   assert.deepEqual(failures, []);
 });
 
-test("a row that matches no H1 says so, without claiming the folder holds no such file", () => {
+test("a row that matches no H1 is reported once, as a name that resolves nowhere, and not as another owner's", () => {
+  // The phase file is there and has no H1, so "Build" names no phase anywhere: R16 says so, and
+  // the owner check, which speaks only of a name that resolves to another owner's entity, does not.
   const failures = ownedWith(processWith(["Specify", "Build"]), [["specify", "Specify", "Build"], ["build", null, null]]);
-  const mine = failures.filter((f) => f.includes('"Build"') && f.includes("not one of its own"));
-  assert.equal(mine.length, 1, failures.join("\n"));
-  assert.ok(mine[0].includes("the H1 of no phase"), mine[0]);
+  const about = failures.filter((f) => f.includes("delivery.md") && f.includes('"Build"') && !f.includes("gate-to"));
+  assert.equal(about.length, 1, failures.join("\n"));
+  assert.ok(about[0].includes("R16"), about[0]);
 });
 
 // R3, the half a machine can read. An entity names another by its canonical name and never by
@@ -818,4 +820,24 @@ test("an optional reference is held to nothing, and a reference written outside 
     { core: "meta/core" },
   ).failures.filter((f) => f.includes("owns it (R5)"));
   assert.deepEqual(failures, []);
+});
+
+// One cause is one finding. A qualifier or a reference that names no entity of its type at all is
+// R16's to report, that it resolves nowhere; the owner check speaks only of a name that does
+// resolve and belongs to another owner. Found in the plugin, where a blank-named period showed
+// twice in the pane.
+test("a name of an owned type that names nothing at all is reported once, by R16, and not by the owner check", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA],
+      ["meta/core/experience-schema.md", OWNED_EXPERIENCE_SCHEMA],
+      ["meta/core/skill-schema.md", schema("skill", [])],
+      ["model/skills/java.md", "# Java\n\n> A language.\n"],
+      ["model/profiles/mira/mira.md", profileWith("Mira", ["A period that never was"])],
+      ["model/profiles/mira/experiences/2022-billing.md", "# Splitting the billing domain\n\n> A period.\n"],
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("A period that never was"));
+  assert.equal(failures.length, 1, failures.join("\n"));
+  assert.ok(failures[0].includes("R16"), failures[0]);
 });
