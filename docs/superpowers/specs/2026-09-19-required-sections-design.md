@@ -64,3 +64,13 @@ work beyond re-vendoring `CONVENTIONS.md`.
 It is a patch release, 0.31.1. The schemas already said which sections are required. The check
 reads what they said and asks nothing new of a valid instance, as 0.30.1 held owned names to
 their owner.
+
+## After the release: one reading of a heading
+
+A review of the Obsidian plugin's heading marks found the checks and the parser reading a heading
+differently. The checks' section reader took any whitespace after the hashes and read inside the
+frontmatter; the parser heads a section only on a line that opens with `## `, below the
+frontmatter. A YAML comment that read like a required heading therefore satisfied the new check
+while the parser, and the editor that reads as it does, saw no such section. The checks now read a
+heading exactly as the parser does, and on both instances the two agree on every entity. It changes
+the checker and not core, so it is released as 0.31.2 with core staying at 0.31.1, as 0.29.0 was.
