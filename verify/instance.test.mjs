@@ -861,3 +861,64 @@ test("a Phases row that names no phase is an R4, as any declared reference is", 
   ]);
   assert.throws(() => parseInstance(files, { schemas }), /R4: "Specfy"/);
 });
+
+// A name of an owned type identifies an entity within its owner (R2), and a reference to one is
+// resolved within the owner it is written in (R4). Every reference core makes to an owned type is
+// written inside that owner, so the scope is known from where a name is written and never
+// guessed. Two processes may each have a phase called Review, and two people periods of one title.
+const scoped = () => new Map([
+  ["identity-schema.md", schema("identity", { location: "identity.md" })],
+  ["process-schema.md", schema("process", { tables: { Phases: [["Phase", "ref → phase"]] }, location: "processes/<process>/<process>.md" })],
+  ["phase-schema.md", schema("phase", { fields: [["gate-to", "ref → phase"]], location: "processes/<process>/phases/*.md", owner: "process" })],
+]);
+const twoProcesses = (extra = []) => new Map([
+  ["identity.md", "# Beacon Systems\n\n> Billing software.\n"],
+  ["processes/delivery/delivery.md", "# Delivery\n\n> Ships.\n\n## Phases\n\n| Phase |\n| --- |\n| Build |\n| Review |\n"],
+  ["processes/delivery/phases/build.md", "---\ngate-to: Review\n---\n\n# Build\n\n> First.\n"],
+  ["processes/delivery/phases/review.md", "# Review\n\n> Second.\n"],
+  ["processes/hiring/hiring.md", "# Hiring\n\n> Hires.\n\n## Phases\n\n| Phase |\n| --- |\n| Screen |\n| Review |\n"],
+  ["processes/hiring/phases/screen.md", "---\ngate-to: Review\n---\n\n# Screen\n\n> First.\n"],
+  ["processes/hiring/phases/review.md", "# Review\n\n> Second.\n"],
+  ...extra,
+]);
+
+test("two owners may each own an entity of one name, and each reference lands on its own owner's", () => {
+  const graph = parseInstance(twoProcesses(), { schemas: scoped() });
+  const edge = (from, via) => graph.edges.filter((e) => e.from === from && e.via === via).map((e) => e.to).sort();
+  assert.deepEqual(edge("processes/delivery", "Phases.Phase"), ["processes/delivery/phases/build", "processes/delivery/phases/review"]);
+  assert.deepEqual(edge("processes/hiring", "Phases.Phase"), ["processes/hiring/phases/review", "processes/hiring/phases/screen"]);
+  assert.deepEqual(edge("processes/delivery/phases/build", "gate-to"), ["processes/delivery/phases/review"]);
+  assert.deepEqual(edge("processes/hiring/phases/screen", "gate-to"), ["processes/hiring/phases/review"]);
+});
+
+test("two entities of one name within one owner are still the R2 they always were", () => {
+  const files = twoProcesses([["processes/delivery/phases/review-again.md", "# Review\n\n> Again.\n"]]);
+  assert.throws(() => parseInstance(files, { schemas: scoped() }), /R2: two phase entities share the name "Review" in processes\/delivery/);
+});
+
+test("a name that is only another owner's is unresolvable from here, and the error says where it looked", () => {
+  const files = twoProcesses();
+  files.set("processes/delivery/phases/build.md", "---\ngate-to: Screen\n---\n\n# Build\n\n> First.\n");
+  assert.throws(() => parseInstance(files, { schemas: scoped() }), /R4: "Screen" .* names no phase of processes\/delivery/);
+});
+
+test("a reference to an owned type written outside every owner of it names nothing", () => {
+  const schemas = scoped();
+  schemas.set("skill-schema.md", schema("skill", { fields: [["first-used", "ref → phase"]] }));
+  const files = twoProcesses([["skills/java.md", "---\nfirst-used: Build\n---\n\n# Java\n\n> A language.\n"]]);
+  assert.throws(() => parseInstance(files, { schemas }), /R4: "Build" .* names no phase: phase entities are named only within the process that owns them/);
+});
+
+// Review found that the parser took an owned type's owner from whichever file it read last, so
+// one stray phase under a profile, read after the processes, made every correct process refuse.
+// The owner is the schema's `**Owner:**` line (R10), and an entity of an owned type that sits in
+// no owner of that type is an R5 error naming it, not a reason to read the others wrongly.
+test("ownership comes from the schema, and a stray owned entity is named, not the correct ones", () => {
+  const schemas = scoped();
+  schemas.set("profile-schema.md", schema("profile", { location: "profiles/<profile>/<profile>.md" }));
+  const files = twoProcesses([
+    ["profiles/mira/mira.md", "# Mira\n\n> A person.\n"],
+    ["profiles/mira/phases/stray.md", "# Stray\n\n> Lost.\n"],
+  ]);
+  assert.throws(() => parseInstance(files, { schemas }), /R5: profiles\/mira\/phases\/stray.md is a phase, and a phase is owned by a process; it sits in no process/);
+});
