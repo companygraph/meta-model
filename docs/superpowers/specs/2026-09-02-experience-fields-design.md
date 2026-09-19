@@ -9,7 +9,7 @@
 > one that shows where it missed.**
 >
 > | | proposed here | shipped |
-> |---|---|---|
+> | --- | --- | --- |
 > | date precision | `YYYY` \| `YYYY-MM` \| `YYYY-MM-DD`, stated in R9 | **0.7.0**, as written |
 > | `kind` | a required bare-token **enum** | **0.6.0**, as a **type** — see below |
 > | references | `url` and a `## References` table | **0.9.0**, as written |

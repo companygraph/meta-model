@@ -24,7 +24,7 @@ Status: proposed. Decided on 2026-09-10 against this repository at `main` at 0.1
 `verify/check.mjs:65` defines as `example/${MODEL}` — and six read only `core/`.
 
 | Reads a content tree, and moves | Asserts about core itself, and stays |
-|---|---|
+| --- | --- |
 | example structure | schemas exist |
 | example references | schema fixed shape |
 | the example is held to what the schemas declare | type vocabulary |

@@ -101,7 +101,7 @@ spec does not open.
 ## 6. What changes, and in what order
 
 | # | repository | change |
-|---|---|---|
+| --- | --- | --- |
 | 1 | **companygraph/meta-model** | R14 and R15 in `CONVENTIONS.md`; the field renamed in `experience-schema.md`; prose in `experience-kind-schema.md`, `profile-schema.md`, `proficiency-level-schema.md` and `CONVENTIONS.md`; `recognises` and `modelling`; the R15 check in `verify/check.mjs`; the reference instance — 5 experience files' key and 4 experience-kind files' prose; `README.md`. Release **0.13.0** (`package.json`, `core/manifest.json` and the tag move together — `verify` fails a tag that disagrees with the manifest). |
 | 2 | **robertblust/mental-model** | Re-vendor `meta/core` and its 12 sha256s, from 0.11.0 to 0.13.0 — two versions, so 0.12.0's changes arrive with it. Rename the key in 23 experience files; prose in 5 experience-kind files; and the `AGENTS.md` parenthetical quoted in §1, which R14 makes false. Three existing British spellings in published content — `README.md`, `model/skills/open-source-stewardship.md`, `model/proficiency-levels/competent.md` — come into line under R14. |
 | 3 | **blust.ch**, **companygraph.io** | Regenerate the model data blocks; no code changes. `companygraph.io` also has `README.md` and `CLAUDE.md` prose. |

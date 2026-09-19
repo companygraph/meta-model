@@ -28,7 +28,7 @@ So the declarations and the graph agree only where the two rules happen to coinc
 field by field against the published pair, they disagree in three places:
 
 | The schema declares | The instance carries | Why |
-|---|---|---|
+| --- | --- | --- |
 | `organization` is `string` | an edge to `identity`, drawn on the example page | the value matched an H1 |
 | `Level` is `ref → proficiency-level`, required | **no edge**; the id sits in the `Skills.Skill` edge's `attrs` | `Skill` resolved first |
 | `rank` is `number` | `"20"` | frontmatter is text and nothing coerces |
