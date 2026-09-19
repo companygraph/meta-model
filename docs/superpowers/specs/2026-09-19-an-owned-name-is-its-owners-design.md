@@ -5,12 +5,14 @@ its type. Put together they leave a question open that the owner asked on Septem
 the day a process's phases became a table: is it guaranteed that the phases a process may name
 are the ones in its own folder, and the same for the experience a profile's evidence names?
 
-Status: the first half, the check, is built here, on top of the change that made the phases a
-table. That change was released with the evidence table while this was being written, so this
-one is a release of its own and not part of that one. The second half, how far an owned name
-reaches, is **open**: core has an answer today, the owner leans the other way, and the last
-section sets the two against each other for him to decide. Nothing of it is built here, and the
-check holds under either answer.
+Status: the first half, the check, was released as 0.30.1. The second half, how far an owned name
+reaches, was open when that was released, with both answers set against each other below. **The
+owner decided it on September 19, 2026: a name of an owned type is unique within its owner.** It
+reverses the process design of September 16, which chose names unique across the instance. The
+decision is built in the change that follows this note: R2 and R4 amended as the last section
+states them, the phase schema's rule rewritten, the parser resolving an owned name within the
+owner it is written in, and a check that two entities of one name within one owner fail, while
+across owners they pass.
 
 ## What was true, measured against the example
 

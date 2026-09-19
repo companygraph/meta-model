@@ -841,3 +841,27 @@ test("a name of an owned type that names nothing at all is reported once, by R16
   assert.equal(failures.length, 1, failures.join("\n"));
   assert.ok(failures[0].includes("R16"), failures[0]);
 });
+
+// R2, for an owned type: a name is unique within its owner. The checks list a type's own folder
+// and did not reach into an owner's, so two phases of one name in one process passed every check
+// while the parser refused them; across owners one name is now allowed, within one it is not.
+test("two entities of one name within one owner are a failure naming the owner, and across owners none", () => {
+  const run = (extra) =>
+    checkInstance(
+      new Map([
+        ["meta/core/process-schema.md", PROCESS_SCHEMA],
+        ["meta/core/phase-schema.md", PHASE_SCHEMA],
+        ["model/processes/delivery/delivery.md", processWith(["Build", "Review"])],
+        ["model/processes/delivery/phases/build.md", phase("Build", "Review")],
+        ["model/processes/delivery/phases/review.md", phase("Review", null)],
+        ["model/processes/hiring/hiring.md", processWith(["Review"])],
+        ["model/processes/hiring/phases/review.md", phase("Review", null)],
+        ...extra,
+      ]),
+      { core: "meta/core" },
+    ).failures.filter((f) => f.includes("unique within its owner"));
+  assert.deepEqual(run([]), []);
+  const within = run([["model/processes/delivery/phases/review-again.md", phase("Review", null)]]);
+  assert.equal(within.length, 1, within.join("\n"));
+  assert.ok(within[0].startsWith("model/processes/delivery/phases/") && within[0].includes('"Review"') && within[0].includes("(R2)"), within[0]);
+});

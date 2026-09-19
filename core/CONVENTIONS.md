@@ -21,8 +21,10 @@ collection: a heading has no canonical name, so nothing can reference it.
 Not the filename, not a frontmatter field, and not the first of several fallbacks. A fallback
 chain is what makes a reference unresolvable without running code.
 
-A name identifies an entity within its type, not across the instance. Two entities of one type
-may not share a name; two of different types may. Every schema declares its references as
+A name identifies an entity within its type, not across the instance, and for an owned type
+within its owner (R5). Two entities of one type may not share a name, unless the type is owned
+and their owners differ; two of different types may. Two processes may each have a phase called
+Review, and two people each a period of one title. Every schema declares its references as
 `ref → <type>`, so a reference carries a type as well as a name, and the pair is what resolves
 — which is why R4 fails a name that exists under a type other than the one asked for.
 
@@ -32,7 +34,8 @@ would force one of them to be called something nobody calls it, and the graph wo
 describe a naming workaround rather than the company.
 
 A tool resolves a reference by the type its schema declares and the name written, and looks in
-no other type. A name that exists only under another type is therefore unresolvable, not
+no other type; for an owned type it looks within the owner the reference is written in, which
+R4 fixes. A name that exists only under another type is therefore unresolvable, not
 ambiguous, and the error says which type was searched. Resolving to the first match, or to the
 one in the nearest folder, is the failure this makes impossible — and so is recognizing a
 reference by its value happening to be a canonical name, which is how a string field ends up
@@ -46,6 +49,14 @@ Never by file path and never by filename. Paths move; a canonical name is the en
 
 Not a warning. A reference naming an entity that does not exist, or that exists under a
 different type, fails the check.
+
+A reference to an owned type is resolved within the owner it is written in: the owner itself,
+or an entity the same owner owns. Every reference core declares to an owned type is written
+there, so the scope is read from where the name is, never guessed from the nearest folder, which
+is the failure R2 warns of. A name that is only another owner's entity is unresolvable from
+here, and one written outside every owner of the type has no owner to be resolved in and names
+nothing. Should a reference from outside ever be wanted, it names the owner as well, and that
+form is designed when it is.
 
 ### R5 — An owned collection nests inside its owner
 
@@ -406,16 +417,16 @@ reading the files against these rules. A repository may also own a script that c
 them; nothing here depends on having one.
 
 Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm
-run verify` runs `verify/check.mjs`, which mechanically checks part of R3, R4, R5, R6, R8, R9,
-R10, R11, R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
+run verify` runs `verify/check.mjs`, which mechanically checks part of R2, R3, R4, R5, R6, R8,
+R9, R10, R11, R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if
 any check cites a rule this document does not define. `npm run test:instance` exercises the
 instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 —
 against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
 rules the parser cites in its comments and error messages. Part is the word that matters. Of
-R3 a script reads one thing, a link from an entity to a file of the model, and of R5 that a
-name of an owned type is one of its owner's own and that an owner's table of what it owns
-agrees with its folder; that a name written in prose is the
-canonical one, no script can tell. No file is checked against R1, R2, R7 or R17; where a check
+R3 a script reads one thing, a link from an entity to a file of the model, of R2 that a name
+of an owned type is unique within its owner, and of R5 that a name of an owned type is one of
+its owner's own and that an owner's table of what it owns agrees with its folder; that a name written in prose is the
+canonical one, no script can tell. No file is checked against R1, R7 or R17; where a check
 happens to touch one, it is incidental to the rule that check cites. Treat these, and the rest of
 every rule a script reads in part, as agent-enforced — which is by design, not by omission: the
 claim this model ships under is that schemas written as prose are enforceable by agents.

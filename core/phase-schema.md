@@ -64,9 +64,8 @@ its end does not scale at all.
 - `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
   where the two disagree the model is wrong, not the reader, and the instance checks say so.
 - The last phase has no `gate-to`, and its gate is the one that releases the work.
-- A phase's name is unique across every phase in the instance, not merely within its process,
-  because R2 scopes a name to its type rather than to its owner. Two processes cannot each call
-  a phase `Review`; name a phase for what it does in the process it belongs to. A phase and a
-  role may share a name, since a reference carries the type it resolves under.
+- A phase's name is unique within its process (R2): two processes may each call a phase
+  `Review`, and a `gate-to` or a process's `## Phases` finds the one in its own process (R4). A
+  phase and a role may share a name, since a reference carries the type it resolves under.
 - `executed-by` names the seats that do the work, never the seat that approves it; a seat that
   only signs belongs in `gate-approvers`.
