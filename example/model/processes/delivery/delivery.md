@@ -18,9 +18,11 @@ supported-by:
 
 ## Phases
 
-1. [Specify](phases/specify.md)
-2. [Build](phases/build.md)
-3. [Release](phases/release.md)
+| Phase |
+| --- |
+| Specify |
+| Build |
+| Release |
 
 ## What it never does
 

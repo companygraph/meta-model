@@ -11,7 +11,7 @@
 A phase is owned by a process and cannot exist without it, so it nests inside the process's
 folder rather than sitting at the root with a `process:` field pointing back. The filename is
 R12's default, the slug of the H1. It carries no position prefix: the order is the owning
-process's `## Phases` list and the `gate-to` chain, and a third copy on the filename would have
+process's `## Phases` table and the `gate-to` chain, and a third copy on the filename would have
 to be renamed through the whole folder whenever a phase was inserted.
 
 ## Frontmatter
@@ -31,7 +31,7 @@ to be renamed through the whole folder whenever a phase was inserted.
 
 | Section | Required | Description |
 | --- | --- | --- |
-| `# [Phase]` | Yes | The canonical name of the phase. The owning process's `## Phases` list and the previous phase's `gate-to` reference it by this exact string. |
+| `# [Phase]` | Yes | The canonical name of the phase. The owning process's `## Phases` table and the previous phase's `gate-to` reference it by this exact string. |
 | `> [Goal]` | Yes | One-paragraph statement of what the phase is for |
 | `## What it takes` | Yes | What enters the phase, and what it refuses to start without |
 | `## Activities` | Yes | A numbered list of what is done; where the work differs by track, one `### [Track]` heading per track, each with its own numbered list |
@@ -61,8 +61,8 @@ its end does not scale at all.
 - A `### [Track]` heading under `## Activities` names a track the owning process declares, spelled
   as that track's `Track` cell spells it.
 - A phase whose activities are the same for every track carries no track headings at all.
-- `gate-to` names the next phase and the owning process's `## Phases` list says the same thing;
-  where the two disagree the model is wrong, not the reader.
+- `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
+  where the two disagree the model is wrong, not the reader, and the instance checks say so.
 - The last phase has no `gate-to`, and its gate is the one that releases the work.
 - A phase's name is unique across every phase in the instance, not merely within its process,
   because R2 scopes a name to its type rather than to its owner. Two processes cannot each call

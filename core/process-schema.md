@@ -26,7 +26,7 @@ same name, plus the `phases/` collection the phases nest in.
 | `# [Process]` | Yes | The canonical name of the process. Phases and readers reference it by this exact string. |
 | `> [Purpose]` | Yes | One-paragraph statement of what the process is for |
 | `## Tracks` | Yes | Table. The kinds of thing this process makes; its columns are declared below. |
-| `## Phases` | Yes | An ordered list, one entry per phase, in the order the work passes through them, each linking the phase's file |
+| `## Phases` | Yes | Table. The phases of the process, one row each, in the order the work passes through them; its columns are declared below. |
 | `## What it never does` | Yes | A list, one sentence each, of what the process refuses in every phase |
 | `## References` | No | Table. The rulebooks the process is run by; its columns are declared below. |
 
@@ -36,6 +36,12 @@ same name, plus the `phases/` collection the phases nest in.
 | --- | --- | --- | --- |
 | `Track` | Yes | string | The kind of thing this track makes |
 | `Produces` | Yes | string | What this track leaves behind when a change runs down it |
+
+`## Phases` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Phase` | Yes | ref → phase | The phase, by its canonical name: the H1 of a file in this process's `phases/` |
 
 `## References` is a table with these columns:
 
@@ -64,8 +70,10 @@ and it is not a record of work that happened, which is an experience.
 - Each line under `## What it never does` is a sentence an agent can hold a change against.
   "Never merges without the Owner" can fail; "works carefully" cannot.
 - `## Phases` lists every phase in the folder and nothing else, in the order the work passes
-  through them. It is the authority on that order, and each phase's `gate-to` agrees with it.
-- In `## Phases`, the phase's name is the reference (R3); the path beside it is a convenience
-  for a reader clicking through, not the reference itself.
+  through them. It is the authority on that order, and each phase's `gate-to` agrees with it;
+  the instance checks hold both.
+- A phase is named in `## Phases` by its canonical name and nothing beside it (R3). A path to
+  the phase's file is not written there: a path moves, nothing resolves one, and whatever shows
+  the model to a reader can make the name a link.
 - A process with one track says so and names it; a track table is not omitted because there
   happens to be only one kind of work today.
