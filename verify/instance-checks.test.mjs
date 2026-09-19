@@ -12,8 +12,8 @@ import { blocksOf, checkInstance, enumTokensOf, isNewer } from "../lib/checks.mj
 
 // A schema in the fixed shape R9 states, with only the rows a case needs. `grouped` adds R9's
 // third declared shape: a section marked "Grouped." and the heading table that says what its
-// `###` headings name.
-const schema = (type, rows, { owner = null, grouped = null } = {}) =>
+// `###` headings name. `sections` adds rows to the sections table as written.
+const schema = (type, rows, { owner = null, grouped = null, sections = [] } = {}) =>
   [
     `# ${type[0].toUpperCase()}${type.slice(1)} Schema`,
     "",
@@ -34,6 +34,7 @@ const schema = (type, rows, { owner = null, grouped = null } = {}) =>
     "",
     "| Section | Required | Description |",
     "| --- | --- | --- |",
+    ...sections,
     ...(grouped
       ? [
           `| \`## ${grouped.section}\` | No | Grouped. What was accomplished. |`,
@@ -894,4 +895,57 @@ test("two entities of one name within one owner are a failure naming the owner, 
   const within = run([["model/processes/delivery/phases/review-again.md", phase("Review", null)]]);
   assert.equal(within.length, 1, within.join("\n"));
   assert.ok(within[0].startsWith("model/processes/delivery/phases/") && within[0].includes('"Review"') && within[0].includes("(R2)"), within[0]);
+});
+
+// R9: the sections table says which sections a page must carry, and until this check nothing
+// read it, so a required section renamed or deleted passed every check. What is held is the
+// declared heading, written exactly: a heading the schema does not declare is the page's own
+// and is no failure, which is what separates sections from frontmatter fields (R15).
+const LEVEL_SCHEMA = schema("proficiency-level", [], {
+  sections: [
+    "| `# [Name]` | Yes | The level's name. |",
+    "| `## What it means` | Yes | What someone at this level can do. |",
+    "| `## References` | No | Where it is written down. |",
+  ],
+});
+const levelFiles = (text) =>
+  new Map([
+    ["core/proficiency-level-schema.md", LEVEL_SCHEMA],
+    ["model/proficiency-levels/expert.md", text],
+  ]);
+const missingSection = (failures) => failures.filter((f) => f.includes("which proficiency-level-schema.md requires"));
+
+test("a required section that is missing is a failure naming the section", () => {
+  const { failures } = checkInstance(levelFiles("# Expert\n\n> Leads it.\n"));
+  assert.deepEqual(missingSection(failures), [
+    "model/proficiency-levels/expert.md: no `## What it means`, which proficiency-level-schema.md requires",
+  ]);
+});
+
+test("a required section renamed is missing under its declared heading, and the new heading is no failure of its own", () => {
+  const { failures } = checkInstance(levelFiles("# Expert\n\n> Leads it.\n\n## What it is\n\nLeads it.\n"));
+  assert.deepEqual(missingSection(failures), [
+    "model/proficiency-levels/expert.md: no `## What it means`, which proficiency-level-schema.md requires",
+  ]);
+  assert.ok(!failures.some((f) => f.includes("What it is")), `expected the page's own heading to pass, got:\n${failures.join("\n")}`);
+});
+
+test("required sections present, an optional one absent and a heading of the page's own are not a failure", () => {
+  const { failures } = checkInstance(
+    levelFiles("# Expert\n\n> Leads it.\n\n## What it means\n\nLeads it.\n\n## Notes\n\nMine.\n"),
+  );
+  assert.deepEqual(missingSection(failures), []);
+});
+
+test("a required heading counts only as written: case and trailing words make it another heading", () => {
+  const { failures } = checkInstance(
+    levelFiles("# Expert\n\n> Leads it.\n\n## What It Means\n\nA.\n\n## What it means, roughly\n\nB.\n"),
+  );
+  assert.equal(missingSection(failures).length, 1);
+});
+
+test("a README in a type folder carries no required section", () => {
+  const files = levelFiles("# Expert\n\n> Leads it.\n\n## What it means\n\nLeads it.\n");
+  files.set("model/proficiency-levels/README.md", "# Proficiency levels\n");
+  assert.deepEqual(missingSection(checkInstance(files).failures), []);
 });
