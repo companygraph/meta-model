@@ -99,5 +99,7 @@ checked and R0's account of which rules a script reads, and the package gains a 
 instance that names only its owners' own entities does nothing. One that names another owner's
 was already against its schema's prose and now fails by name. By the release contract that is a
 rule corrected and prose fixed, a patch, for core and the package together so that the two
-numbers keep agreeing; the workflow's ref moves with the package, in the commit that prepares
-the release and not in this one. Which number it takes is the owner's to say at tagging.
+numbers keep agreeing. The owner said so, and the change carries its own preparation: core's
+manifest, the package and the workflow's ref all read the patch in one commit, because nothing
+holds the three to each other and a tag cut with one of them behind ships a checker that refuses
+the instances that ask for it.
