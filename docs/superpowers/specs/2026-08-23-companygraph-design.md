@@ -36,7 +36,7 @@ CompanyGraph is that shape, extracted, with the company-specific parts named as 
 ## 2. The three layers
 
 | layer | what it is | who owns it |
-|---|---|---|
+| --- | --- | --- |
 | **Core** | The vocabulary any company can be described in — types, schemas, conventions | CompanyGraph |
 | **Pack** | Vocabulary only some kinds of company need — extra types, seed concepts | CompanyGraph |
 | **Instance** | A company's actual content, declaring which packs it uses | The company |
@@ -130,7 +130,7 @@ nothing can reference one.
 ### Core
 
 | group | type | folder | notes |
-|---|---|---|---|
+| --- | --- | --- | --- |
 | Profile | `profile` | `profiles/<profile>/` | A folder: it owns experiences. The profile itself is `<profile>.md`. |
 | | `experience` | `profiles/<profile>/experiences/` | Owned by a profile. A bounded period. |
 | Capability | `skill` | `skills/` | Claimed by profiles, required by roles, owned by neither. |
@@ -154,7 +154,7 @@ nothing can reference one.
 ### Pack: `product`
 
 | type | folder | notes |
-|---|---|---|
+| --- | --- | --- |
 | `feature` | `features/` | |
 | `architecture-decision` | `architecture-decisions/` | |
 | `roadmap` | `roadmaps/` | |
@@ -253,7 +253,7 @@ which is the one thing a company's values are for.
 The person cluster produced two kinds of reference, and they fail differently:
 
 | kind | example | what removing the target means |
-|---|---|---|
+| --- | --- | --- |
 | **Plain reference** | `profile → skill`, `experience → skill` | The referring file stays valid. It points at a name nothing defines. |
 | **Ownership** | `experience → profile` | What was owned becomes garbage. An experience without its person is not a fact about anything. |
 
@@ -402,7 +402,7 @@ repository's agent-instruction file, where portable and company-specific rules c
 in one table. Three kinds live there:
 
 | kind | shape of the rule | goes to |
-|---|---|---|
+| --- | --- | --- |
 | Modelling conventions | Cross-reference validation is required before committing; names must match their canonical definitions exactly; no abbreviations; link by canonical name rather than by file path | **`CONVENTIONS.md`** |
 | Operational rules | Anything naming a particular issue tracker, wiki, chat tool or MCP server, and what to do in it | **Instance** |
 | House style | The company's own writing and output standards | **Instance** |

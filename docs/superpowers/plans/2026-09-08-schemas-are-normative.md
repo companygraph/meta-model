@@ -58,7 +58,7 @@ Counted on 2026-09-08 against this repository at `schemas-are-normative`. Re-mea
 trust any of these if a step's output disagrees.
 
 | Fact | Value |
-|---|---|
+| --- | --- |
 | The suite today | `13 checks passed` |
 | Rule headings are **not** in numeric order | R13/R14 sit between R7 and R8; **R0 is last**, at line 289 |
 | Highest number used | R15, so R16 is free |

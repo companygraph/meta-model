@@ -217,7 +217,7 @@ agreed, kept for what it says the command holds and why.
 Fails on:
 
 | what | rule cited |
-|---|---|
+| --- | --- |
 | `.companygraph/manifest.json` missing or unreadable | — |
 | a schema file inside a type folder | R9 |
 | a root folder no schema names, or a schema whose root folder is missing | R6, R7 |
