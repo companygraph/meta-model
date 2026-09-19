@@ -77,6 +77,28 @@ release, rewrite nothing, and stay green. The successor is read with `fieldValue
 every other check uses, after the same review showed that a second reader took a value in
 quotes for a disagreement about order.
 
+## R3 gets the half a machine can read
+
+Rewriting one section ends one link and forbids none. The owner asked whether the phase list was
+the only one, and it was: five links in the reference instance, the example's three, and no
+other schema asks for one. He then asked that the next one not pass unseen, since that is how
+this one lasted.
+
+**An entity names another by its canonical name, never by a link to its file.** The check fails
+a Markdown link inside an entity whose target is a path into the container, whatever the link's
+text says and whether or not the target exists, since a rotten path is still a path. It cites
+R3. What it does not read as one is said in its comment and held by its tests: an address with
+a scheme, a fragment of the same page and a path that leaves the container name nothing of the
+model, and a document's address is a fact, which is what a References table holds; an image is
+an embed; code is not prose, so a schema's example of a link is not a link; a README is never an
+entity. A name in double brackets is left alone, being a name, and where a schema declares the
+position R16 already refuses the brackets as part of it.
+
+R0 said which rules a script reaches and named R3 and R5 among those no file is checked
+against. Both are read in part now, and R0 says which part: of R3 a link to a file of the
+model, of R5 that an owner's table agrees with its folder. That a name written in prose is the
+canonical one no script can tell, and the rest of both rules stays the agent pass's.
+
 ## What it costs
 
 Every instance with a process rewrites one section, a list of links into a table of names. It

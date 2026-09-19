@@ -669,3 +669,51 @@ test("a row that matches no H1 says so, without claiming the folder holds no suc
   assert.equal(mine.length, 1, failures.join("\n"));
   assert.ok(mine[0].includes("the H1 of no phase"), mine[0]);
 });
+
+// R3, the half a machine can read. An entity names another by its canonical name and never by
+// a path, and until a process's phases were found written as links to their files nothing
+// looked: R3 was the agent pass's alone, and a list of five links sat in the reference instance
+// through every review. A Markdown link inside an entity whose target is a file of the model
+// is that, whatever the link's text says. An address outside the model is not: a document or a
+// place is no entity, and its address is a fact.
+const linked = (body, extra = []) =>
+  checkInstance(
+    new Map([
+      ["meta/core/skill-schema.md", schema("skill", [])],
+      ["model/skills/java.md", "# Java\n\n> A language.\n"],
+      ["model/skills/kotlin.md", `# Kotlin\n\n> A language.\n\n## In practice\n\n${body}\n`],
+      ...extra,
+    ]),
+    { core: "meta/core" },
+  ).failures.filter((f) => f.includes("(R3)"));
+
+test("a link from one entity to another's file is a failure naming the link and what to write", () => {
+  const failures = linked("Runs beside [Java](java.md) on the same machine.");
+  assert.equal(failures.length, 1, failures.join("\n"));
+  assert.ok(failures[0].startsWith("model/skills/kotlin.md: "));
+  assert.ok(failures[0].includes('"Java"') && failures[0].includes("java.md"), failures[0]);
+});
+
+test("the path is what fails, however it is written: up and down folders, a fragment, spaces, a target that is not there", () => {
+  assert.equal(linked("See [a level](../proficiency-levels/expert.md#what-it-means).").length, 1);
+  assert.equal(linked("See [it](<./java.md>) and [it again](./java.md \"Java\").").length, 2);
+  assert.equal(linked("See [gone](../skills/gone.md).").length, 1, "a rotten path is still a path");
+  assert.equal(linked("See [a folder](../profiles/).").length, 1);
+});
+
+test("an address outside the model is a fact and not a reference", () => {
+  assert.deepEqual(linked("Documented at [the site](https://example.invalid/java.md), by [mail](mailto:a@example.invalid)."), []);
+  assert.deepEqual(linked("See [below](#in-practice)."), []);
+  assert.deepEqual(linked("See [the conventions](../../meta/core/CONVENTIONS.md) and [the readme](../../README.md)."), []);
+});
+
+test("what only looks like a link is none: code, an image, brackets without a target", () => {
+  assert.deepEqual(linked("Written `[Java](java.md)` in a schema's example."), []);
+  assert.deepEqual(linked("```\n[Java](java.md)\n```"), []);
+  assert.deepEqual(linked("![a diagram](java.md)"), []);
+  assert.deepEqual(linked("An array is [1, 2] and a call is f(java.md)."), []);
+});
+
+test("a README is no entity, and its links are its own business", () => {
+  assert.deepEqual(linked("Plain.", [["model/skills/README.md", "# Skills\n\n- [Java](java.md)\n"]]), []);
+});
