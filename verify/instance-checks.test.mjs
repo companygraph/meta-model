@@ -8,7 +8,7 @@
 // and no scaffolding to keep the other checks quiet.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocksOf, checkInstance, enumTokensOf, isNewer } from "../lib/checks.mjs";
+import { blocksOf, checkInstance, enumTokensOf, isNewer, sectionsOf } from "../lib/checks.mjs";
 
 // A schema in the fixed shape R9 states, with only the rows a case needs. `grouped` adds R9's
 // third declared shape: a section marked "Grouped." and the heading table that says what its
@@ -948,4 +948,28 @@ test("a README in a type folder carries no required section", () => {
   const files = levelFiles("# Expert\n\n> Leads it.\n\n## What it means\n\nLeads it.\n");
   files.set("model/proficiency-levels/README.md", "# Proficiency levels\n");
   assert.deepEqual(missingSection(checkInstance(files).failures), []);
+});
+
+// The checks and the parser read a heading alike: a line that opens with `## `, below the
+// frontmatter, whose fence is a line of exactly three dashes. A reader that also took a tab after
+// the hashes, or a YAML comment inside the frontmatter, passed a required section the parser
+// never saw, and an editor that reads as the parser does drew it missing.
+test("a required section is present only where the parser reads a heading", () => {
+  const cases = [
+    ["a YAML comment in the frontmatter", "---\n## What it means\n---\n\n# Expert\n\n> Leads it.\n"],
+    ["a tab after the hashes", "# Expert\n\n> Leads it.\n\n##\tWhat it means\n\nLeads it.\n"],
+  ];
+  for (const [what, text] of cases)
+    assert.deepEqual(
+      missingSection(checkInstance(levelFiles(text)).failures),
+      ["model/proficiency-levels/expert.md: no `## What it means`, which proficiency-level-schema.md requires"],
+      what,
+    );
+});
+
+test("sectionsOf keys a page's sections as the parser heads them", () => {
+  const text = "---\nsource: Local\n## a comment\n---\n\n# Expert\n\n> Leads it.\n\n## What it means\n\nA.\n\n##\tNot one\n\n## References  \n";
+  assert.deepEqual([...sectionsOf(text).keys()], ["", "What it means", "References"]);
+  // The frontmatter stays where it was, in the part before the first heading.
+  assert.ok(sectionsOf(text).get("").includes("source: Local"));
 });
