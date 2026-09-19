@@ -178,6 +178,15 @@ in the container: `model/vision.md`.
 instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens
 with the sections table, whose columns are `Section | Required | Description`.
 
+A section the sections table marks `Yes` is on every page of the type, under its heading
+exactly as the table writes it, so a page that renames one has dropped it. A page may carry
+sections of its own beside the declared ones: a heading its schema does not declare resolves
+nothing, draws no edge and is read as prose. That is the opposite of R15, on purpose. A field
+left over by a rename still renders as though it were the field, while a section of the page's
+own claims to be nothing the schema knows. What it costs is that an optional section written
+with a typo reads as one of the page's own, and no script can tell the two apart; an editor
+that knows the schema can.
+
 The sections table lists the page's `>` line beside its H1 — a tagline, a definition, a
 statement, under whatever name the type gives it — and a page writes it as the first blockquote
 after the H1: one paragraph, one short statement. It may wrap across as many `>` lines as the
