@@ -246,6 +246,12 @@ The `?` is not `Required`, though the two read as one thing on a first pass. `Re
 whether the field may be absent; `ref?` says whether a value that is present must resolve. A
 field can be both, and `organization` is.
 
+A required list that is present and empty is absent in every sense that matters: nothing
+resolves, no edge is drawn, and the page reads as though it had answered a question it did not.
+So a required field typed `array` or `array of ref → <type>` carries at least one entry. An
+optional list written empty is how an author says none yet, and that is theirs to say, since
+the field could have been left out.
+
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
 states and never at more; an author may deliberately record less. A shorter form is an
 interval, not a point: `2002` is the whole year. A comparison takes the bound the field names —
@@ -322,6 +328,13 @@ you write for a type of your own may leave them out, and every schema in `core/`
 reader that checks the shape stops at the tables, so nothing that reads a schema mechanically
 sees them; the agent pass does, which is the point of putting them in the schema rather than
 in a document beside it.
+
+A schema declares the references its type makes and none it receives. Which types reference
+this one is read from the tables of every other schema, so a sentence here saying that nothing
+does, or that one edge is the only one, is a second copy of a fact held elsewhere, and it stops
+being true the day another schema declares a reference and nobody rereads this one. Prose may
+name a referrer to explain a design — a skill outlives the profile that claims it — and never
+says that the ones it names are all there are.
 
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
 `:---`, `---:` or `:---:`.

@@ -54,9 +54,10 @@ and declares its columns here exactly as a frontmatter field does.
 
 Evidence is a table of its own rather than a third column of `## Skills` because a claim rests
 on more than one thing and a cell holds one line. A paragraph listing four engagements cannot be
-counted, and the rule for reading a level is a rule about counting: evidence that names one
-engagement supports a lower rung than evidence that names three. One fact per row is what makes
-that rule readable by anyone, including a machine.
+counted, and breadth is one of the things a level is read from: a capability shown in three
+engagements has held where the people, the constraints and the stakes changed, which one
+engagement cannot show however well it went. One fact per row is what makes that breadth
+readable by anyone, including a machine.
 
 `Experience` is the optional column and sits last. It is optional because a claim at the lower
 rungs can rest on having been near work rather than on having owned a period of it, and such a
@@ -110,7 +111,9 @@ on this evidence.
   stays in it.
 - Rows run in the order the Skills table lists the skills, and chronologically within a skill.
 - A level is weighed against the rows under it and the rung's own definition, not against how
-  long the person has done it. One row supports a lower rung than three.
+  long the person has done it. Rows that name different experiences show breadth, and breadth
+  is what the count is read for; the count never outranks the definition. Three rows that show
+  less than the rung asks for do not reach it, and one row that shows it does.
 - One row per skill claimed in `## Skills`, and every claim has at least one row under it in
   `## Evidence`. A skill the person can name but not evidence has no row in either: the table
   is the claim, and a claim needs something under it. The sections table declares it, `Under`,
