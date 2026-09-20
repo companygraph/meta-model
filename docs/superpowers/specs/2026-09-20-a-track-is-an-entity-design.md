@@ -62,9 +62,9 @@ is what the role matrix was dropped for. The rule that a process with one track 
 names it stays on the process.
 
 The phase schema declares `## Activities` grouped under a heading `Track`, not required, typed
-`ref → track`. The two writing rules that said so in prose go, because the declaration says it;
-the rule that a phase whose activities are the same for every track carries no track headings
-stays, and the last section says how much of it a machine holds.
+`ref → track`. The writing rule that said so in prose goes, because the declaration says it; the
+rule that a phase whose activities are the same for every track carries no track headings stays,
+and the last section says how much of it a machine holds.
 
 This is the move `achievement-kind` made. A set of heading words became a thin type so that a
 heading could be a reference, and its schema gives the reason that applies here unchanged: the
