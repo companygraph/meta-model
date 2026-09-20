@@ -3,9 +3,7 @@
 node_modules
 .vscode
 .claudian
+.superpowers
 
 # Local, untracked: paths that must not be published.
 /LOCAL.md
-
-# SDD scratch: ledgers, briefs and review packages for in-flight plans
-.superpowers/
