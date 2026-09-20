@@ -33,9 +33,11 @@ Repository: `/Users/rob/git/companygraph/meta-model`. Branch: `typed-resolution`
 ### Task 1: The parser tests carry schemas
 
 **Files:**
+
 - Modify: `verify/instance.test.mjs` (the file header comment, a new `schema` helper and `schemas` fixture after the `valid` fixture at lines 7-21, and every `parseInstance(` call)
 
 **Interfaces:**
+
 - Produces: `schema(type, { fields, tables })`, a helper returning one schema file's text in the R9 shape, and `schemas`, a `Map` of `<type>-schema.md` → text declaring every field and table the fixtures in this file use. Task 2 adds cases on top of both.
 
 This task changes no behavior. The parser ignores the option until Task 2, so the suite stays green throughout, and the step that would otherwise mix "fixtures grow" with "resolution changes" in one diff is split off.
@@ -149,10 +151,12 @@ MSG
 ### Task 2: The parser resolves by declared type
 
 **Files:**
+
 - Modify: `lib/instance.mjs` (the header comment at lines 1-10; `parseInstance` at lines 157-283, replacing the resolution block at lines 175-256; a new `declarationsOf` helper placed after `parseSchemas`)
 - Modify: `verify/instance.test.mjs` (four existing cases change, eight new cases arrive)
 
 **Interfaces:**
+
 - Consumes: `schema` and `schemas` from Task 1; `parseSchemas` and `parseBody`, already in `lib/instance.mjs`.
 - Produces: `parseInstance(files, { sub = "", schemas })`. Without `schemas` it throws `R16: ...`. Output shape is unchanged: `{ commit, root, rootId, types, entities, edges }`, edges as `{ from, to, via, attrs }`.
 
@@ -508,9 +512,11 @@ MSG
 ### Task 3: Two check assertions retire
 
 **Files:**
+
 - Modify: `lib/checks.mjs` (the comment block at lines 395-410, the `held` helper at lines 444-465, and the column-order branch at lines 515-519)
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks; `checks.mjs` imports no parser.
 - Produces: `checkInstance` with two fewer failure messages. `verify/instance-checks.test.mjs` asserts neither, so no test changes.
 
@@ -618,10 +624,12 @@ MSG
 ### Task 4: The rules say what the parser now does
 
 **Files:**
+
 - Modify: `core/CONVENTIONS.md` (R2's fourth paragraph, R9's "So a column table declares" paragraph, R0's list of rules `test:instance` exercises)
 - Modify: `README.md` (the import blurb at lines 44-47)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: rule prose that Task 5 ships as core 0.22.0.
 
@@ -728,9 +736,11 @@ MSG
 ### Task 5: Versions, push, pull request
 
 **Files:**
+
 - Modify: `core/manifest.json`, `package.json`, `.github/workflows/instance-check.yml` (lines 6 and 37)
 
 **Interfaces:**
+
 - Produces: the branch `typed-resolution` at 0.22.0, and a pull request the owner merges and tags as `v0.22.0`.
 
 - [ ] **Step 1: Move the four version strings**
@@ -804,12 +814,14 @@ Repository: `/Users/rob/git/robertblust/mental-model`. **Blocked until `v0.22.0`
 ### Task 6: Re-vendor core at 0.22.0
 
 **Files:**
+
 - Modify: `meta/core/CONVENTIONS.md`, `meta/core/manifest.json` (copied from the tag, never edited here)
 - Modify: `.companygraph/manifest.json` (`tooling`, `core.version`, `core.source`, the `files` hashes)
 - Modify: `.github/workflows/companygraph.yml` (`instance-check.yml@v0.21.0` → `@v0.22.0`)
 - Modify: `AGENTS.md` if it names `core 0.21.0`
 
 **Interfaces:**
+
 - Consumes: the tag `v0.22.0` on `companygraph/meta-model`.
 - Produces: the merge commit Phase 3 pins.
 
@@ -922,12 +934,14 @@ Repository: `/Users/rob/git/robertblust/robertblust.github.io`. **Blocked until 
 ### Task 7: The site passes the core and re-pins the parser
 
 **Files:**
+
 - Modify: `build/model.mjs` (lines 31-37)
 - Modify: `source.json` (the `commit`)
 - Modify: `package.json`, `package-lock.json` (the parser pin)
 - Modify: `model.json` (regenerated; expected byte-identical)
 
 **Interfaces:**
+
 - Consumes: the merge commit of Phase 2 on `robertblust/mental-model`'s `main`; the tag `v0.22.0`.
 - Produces: a site building on the typed parser.
 
@@ -1062,12 +1076,14 @@ Repository: `/Users/rob/git/companygraph/companygraph.github.io`. **Blocked unti
 ### Task 8: The example target passes the core and re-pins
 
 **Files:**
+
 - Modify: `build/build.mjs` (the `TARGETS` array at lines 42-54 and the loop at line 100)
 - Modify: `source.json` (the `commit`)
 - Modify: `package.json`, `package-lock.json` (the parser pin)
 - Modify: `example.json`, `model.json` (regenerated)
 
 **Interfaces:**
+
 - Consumes: the merge commit of Phase 1 on `companygraph/meta-model`'s `main`; the tag `v0.22.0`.
 
 - [ ] **Step 1: Branch, take the merge commit, move both pins**

@@ -67,11 +67,13 @@
 ### Task 1: The two schemas
 
 **Files:**
+
 - Create: `core/process-schema.md`
 - Create: `core/phase-schema.md`
 - Modify: `lib/checks.mjs:18-45` (the `TYPES` array)
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks.
 - Produces: the type names `process` and `phase` in `TYPES`, with `process` declared `{ type: "process", folder: "processes/<process>", owns: ["phase"] }` and `phase` declared `{ type: "phase", folder: "processes/<process>/phases", owner: "process" }`. Task 2 adds a check beside them; Task 3 writes example entities into those folders.
 
@@ -96,12 +98,14 @@ In `lib/checks.mjs`, insert both entries immediately after the `role` line and b
 
 Run: `cd ~/git/companygraph/meta-model && npm run verify`
 Expected: FAIL, exactly two problems:
+
 ```
 ✗ 2 problems
 
   core/process-schema.md is missing
   core/phase-schema.md is missing
 ```
+
 If you see any other failure, stop and report it — the entries are wrong.
 
 - [ ] **Step 3: Write `core/process-schema.md`**
@@ -261,11 +265,13 @@ If `schema fixed shape` fails, the cause is almost always one of: a section in t
 - [ ] **Step 6: Run the rest of the suite and the prose check**
 
 Run:
+
 ```bash
 cd ~/git/companygraph/meta-model
 npm run test:instance && npm run test:instance-checks && npm run test:rules
 sh conventions/conventions-check
 ```
+
 Expected: all suites pass; the prose check prints `✓ every Markdown file follows WRITING.md`.
 
 - [ ] **Step 7: Commit**
@@ -297,10 +303,12 @@ EOF
 ### Task 2: A required list field carries at least one item
 
 **Files:**
+
 - Modify: `lib/checks.mjs` (add a check to the array returned by `instanceChecks`)
 - Test: `verify/instance-checks.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `TYPES` from Task 1, and the existing helpers in `instanceChecks` — `fieldsOf(type)`, `walkMd(EX, cb)`, `typeOfFile(path)`, `frontmatterOf(text)`, `fail(msg)`.
 - Produces: nothing later tasks import. Task 3's example must satisfy it.
 
@@ -409,10 +417,12 @@ Expected: PASS, both new tests green.
 - [ ] **Step 5: Run the whole suite**
 
 Run:
+
 ```bash
 cd ~/git/companygraph/meta-model
 npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:rules
 ```
+
 Expected: all green. `npm run verify` says `✓ 16 checks passed` — `verify/check.mjs` spreads the array `instanceChecks` returns into its own `CHECKS` list and prints that list's length, so adding a check increments the count by one.
 
 - [ ] **Step 6: Commit**
@@ -442,12 +452,14 @@ EOF
 ### Task 3: The example gains a process
 
 **Files:**
+
 - Create: `example/model/processes/delivery/delivery.md`
 - Create: `example/model/processes/delivery/phases/specify.md`
 - Create: `example/model/processes/delivery/phases/build.md`
 - Create: `example/model/processes/delivery/phases/release.md`
 
 **Interfaces:**
+
 - Consumes: the two schemas from Task 1 and the check from Task 2.
 - Produces: the first entities of both new types, which the `references resolve`, `the instance is held to what the schemas declare` and `filenames derive` checks now read.
 
@@ -456,10 +468,12 @@ EOF
 - [ ] **Step 1: Read the example's source and roles**
 
 Run:
+
 ```bash
 cd ~/git/companygraph/meta-model
 grep -h '^# ' example/model/sources/*.md example/model/roles/*.md
 ```
+
 Expected: `Local`, `Google Workspace`, `Reviewer`, `Backend Engineer`. The files below use `Local`
 as the source and those two role names verbatim. If any of these four strings has changed since
 this plan was written, the files below must change with it or the references will not resolve.
@@ -682,11 +696,13 @@ Likely failures and what they mean: `references resolve` naming a `source`, an `
 - [ ] **Step 5: Run the whole suite and the prose check**
 
 Run:
+
 ```bash
 cd ~/git/companygraph/meta-model
 npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:rules
 sh conventions/conventions-check
 ```
+
 Expected: all green.
 
 - [ ] **Step 6: Commit**
@@ -714,12 +730,14 @@ EOF
 ### Task 4: Release 0.25.0
 
 **Files:**
+
 - Modify: `package.json:3`
 - Modify: `core/manifest.json:1`
 - Modify: `README.md` — the `## What is here` type list (around line 22), the `## Status` paragraph (around line 78)
 - Modify: `.github/workflows/instance-check.yml:6` and `:37` — the `v0.24.0` ref becomes `v0.25.0`
 
 **Interfaces:**
+
 - Consumes: everything from Tasks 1–3.
 - Produces: the tag `v0.25.0`, which Part B pins to.
 
@@ -733,6 +751,7 @@ sed -i '' 's/"version": "0.24.0"/"version": "0.25.0"/' package.json
 sed -i '' 's/"version": "0.24.0"/"version": "0.25.0"/' core/manifest.json
 git diff --stat package.json core/manifest.json
 ```
+
 Expected: one line changed in each. Do **not** touch `"shape": 2` — the shape is unchanged; nothing about how a unit is laid out has moved.
 
 - [ ] **Step 2: Update the README's type list**
@@ -768,6 +787,7 @@ cd ~/git/companygraph/meta-model
 npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:rules
 sh conventions/conventions-check
 ```
+
 Expected: all green.
 
 - [ ] **Step 5: Commit and push the branch**
@@ -823,12 +843,14 @@ gh pr view --json number,url
 ### Task 5: Re-pin to core 0.25.0
 
 **Files:**
+
 - Modify: `meta/core/` — every file, re-vendored whole from the tag
 - Modify: `.companygraph/manifest.json` — `tooling`, `core.version`, `core.source`, and the `files` hash map, which gains two entries
 - Modify: `.github/workflows/companygraph.yml:8` — `instance-check.yml@v0.25.0`
 - Modify: `AGENTS.md:27` — the vendored-core version sentence
 
 **Interfaces:**
+
 - Consumes: the tag `v0.25.0`.
 - Produces: an instance whose vendored core knows the two new types, which Tasks 6 and 7 write entities against.
 
@@ -844,6 +866,7 @@ mkdir -p meta/core
 cd ~/git/companygraph/meta-model && git fetch --tags && git archive v0.25.0 core | tar -x -C ~/git/robertblust/mental-model/meta --strip-components=0
 cd ~/git/robertblust/mental-model && ls meta/core
 ```
+
 Expected: eighteen files — sixteen `*-schema.md` (including the two new ones), `CONVENTIONS.md`, `LICENSE` and `manifest.json`.
 
 - [ ] **Step 2: Recompute the manifest's hashes**
@@ -854,6 +877,7 @@ for f in $(ls meta/core | sort); do
   printf '    "meta/core/%s": "sha256:%s",\n' "$f" "$(shasum -a 256 "meta/core/$f" | cut -d' ' -f1)"
 done
 ```
+
 Paste the output into `.companygraph/manifest.json` as the `files` object, removing the trailing comma on the last line. In the same file set `"tooling": "0.25.0"`, `"core": { "version": "0.25.0", ... "source": "fetched:v0.25.0" }`. Leave `"shape": 2`, `"units"` and `"packs"` alone.
 
 - [ ] **Step 3: Move the workflow pin**
@@ -863,6 +887,7 @@ cd ~/git/robertblust/mental-model
 sed -i '' 's|instance-check.yml@v0.24.0|instance-check.yml@v0.25.0|' .github/workflows/companygraph.yml
 grep -n 'instance-check' .github/workflows/companygraph.yml
 ```
+
 Expected: one line, naming `@v0.25.0`.
 
 - [ ] **Step 4: Update the AGENTS.md version sentence**
@@ -876,6 +901,7 @@ cd ~/git/companygraph/meta-model && git checkout v0.25.0
 node bin/check-instance.mjs ~/git/robertblust/mental-model
 cd ~/git/robertblust/mental-model && sh conventions/conventions-check
 ```
+
 Expected: `✓ model/ against meta/core/ at core 0.25.0: the mechanical checks pass`, and the prose check green. A refusal naming the two pins means step 2 missed one of `tooling` or `core.version`.
 
 - [ ] **Step 6: Commit**
@@ -902,6 +928,7 @@ EOF
 ### Task 6: The three seats
 
 **Files:**
+
 - Create: `model/roles/specifier.md`
 - Create: `model/roles/planner.md`
 - Create: `model/roles/controller.md`
@@ -910,6 +937,7 @@ EOF
 - Modify: `AGENTS.md` — "four of the five seats" becomes "seven of the eight seats"
 
 **Interfaces:**
+
 - Consumes: the re-pinned core from Task 5.
 - Produces: the role names `Specifier`, `Planner` and `Controller`, which Task 7's phase frontmatter references by these exact strings.
 
@@ -1042,6 +1070,7 @@ in the plan's order, each committed as it lands.
 - [ ] **Step 4: Point implementer.md at the seat**
 
 In `model/roles/implementer.md`, two edits and nothing else:
+
 - `a short status the controller acts on` → `a short status the Controller acts on`
 - `review comes from the controller after the report` → `review comes from the Controller after the report`
 
@@ -1089,6 +1118,7 @@ node bin/check-instance.mjs ~/git/robertblust/mental-model
 cd ~/git/robertblust/mental-model && sh conventions/conventions-check
 ls model/roles | wc -l   # expect 9: eight roles plus README.md
 ```
+
 Expected: both green. A `references resolve` failure naming a skill means a skill H1 was mistyped — check it against `grep -h '^# ' model/skills/*.md`.
 
 - [ ] **Step 8: Commit**
@@ -1122,6 +1152,7 @@ EOF
 ### Task 7: The Delivery process
 
 **Files:**
+
 - Create: `model/processes/README.md`
 - Create: `model/processes/delivery/delivery.md`
 - Create: `model/processes/delivery/phases/shape.md`
@@ -1131,6 +1162,7 @@ EOF
 - Create: `model/processes/delivery/phases/integrate.md`
 
 **Interfaces:**
+
 - Consumes: the eight role names from Task 6 and `model/roles/owner.md`'s `Owner`, plus the source `Local`.
 - Produces: the instance's first process. Nothing later depends on it.
 
@@ -1523,11 +1555,13 @@ cd ~/git/companygraph/meta-model && git checkout v0.25.0
 node bin/check-instance.mjs ~/git/robertblust/mental-model
 cd ~/git/robertblust/mental-model && sh conventions/conventions-check
 ```
+
 Expected: `✓ model/ against meta/core/ at core 0.25.0: the mechanical checks pass` and the prose check green.
 
 - [ ] **Step 9: Read the agent pass by hand**
 
 The mechanical checks do not reach `## Writing rules`. Read the five phase files against `meta/core/phase-schema.md`'s rules and confirm each, out loud, in the commit body:
+
 - every `### [Track]` heading spells a track as `delivery.md` spells it (`Code`, `Prose`);
 - `shape.md` and `integrate.md` carry no track headings, and their activities really are the same for both tracks;
 - every gate criterion is a sentence that can fail;

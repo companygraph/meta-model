@@ -82,11 +82,13 @@ The simplest type first: `skill` owns nothing, has one optional frontmatter fiel
 exercises the fixed shape without the owner or enum branches.
 
 **Files:**
+
 - Create: `package.json`
 - Create: `verify/check.mjs`
 - Create: `core/meta/skill-schema.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `verify/check.mjs` exporting nothing but defining, for later tasks —
   `TYPES` (array of `{type, folder, owner?, owns?}`), `read(relPath)` → string,
@@ -293,11 +295,13 @@ git commit -m "Check the repository's own shape, starting with one schema"
 it will reject a legitimate schema — that is the red.
 
 **Files:**
+
 - Modify: `verify/check.mjs` (the `TYPES` array, and the `Frontmatter` branch of
   `schema fixed shape`)
 - Create: `core/meta/value-schema.md`
 
 **Interfaces:**
+
 - Consumes: `TYPES`, `read`, `fail`, `sectionsOf`, `tableOf` from Task 1.
 - Produces: the literal string `No YAML frontmatter.` as the sanctioned contents of a
   `## Frontmatter` section that has no fields. Later schemas may use it.
@@ -404,10 +408,12 @@ git commit -m "Give a value its own file, and the checker a way to say 'no field
 carrying an `enum`.
 
 **Files:**
+
 - Modify: `verify/check.mjs` (the `TYPES` array; add the `type vocabulary` check)
 - Create: `core/meta/profile-schema.md`
 
 **Interfaces:**
+
 - Consumes: `TYPES`, `read`, `fail`, `sectionsOf`, `tableOf`.
 - Produces: `TYPE_VOCABULARY`, an exported `Set` of the six permitted Type-column values,
   used by Task 4.
@@ -525,10 +531,12 @@ git commit -m "Make a profile a folder, because it owns something"
 The first owned type, and the first `**Owner:**` line.
 
 **Files:**
+
 - Modify: `verify/check.mjs` (the `TYPES` array; add the `ownership declared` check)
 - Create: `core/meta/experience-schema.md`
 
 **Interfaces:**
+
 - Consumes: `TYPES`, `read`, `fail`, `sectionsOf`, `tableOf`, `TYPE_VOCABULARY`.
 - Produces: the `**Owner:** <type>` line as the sole declaration of ownership; Task 6's
   example content relies on the `profiles/<profile>/experiences/` path it fixes.
@@ -645,10 +653,12 @@ most easily goes wrong. Each rule gets an id, and the checker's `rule:` fields a
 against them — so a check enforcing a rule nobody wrote down is a failure.
 
 **Files:**
+
 - Create: `CONVENTIONS.md`
 - Modify: `verify/check.mjs` (add the `rules are written down` check)
 
 **Interfaces:**
+
 - Consumes: `read`, `fail`, and the `rule` field already present on every check.
 - Produces: rule ids `R1`–`R10`, referenced by `rule:` in `verify/check.mjs`.
 
@@ -780,6 +790,7 @@ A small fictional company that reads end to end, and the checks that prove the s
 describe something real rather than something plausible.
 
 **Files:**
+
 - Create: `example/README.md`, `example/values/craftsmanship.md`,
   `example/values/say-the-hard-thing.md`, `example/skills/java-programming.md`,
   `example/skills/domain-driven-design.md`,
@@ -789,6 +800,7 @@ describe something real rather than something plausible.
 - Modify: `verify/check.mjs` (add `example structure` and `example references` checks)
 
 **Interfaces:**
+
 - Consumes: `TYPES`, `read`, `fail`.
 - Produces: nothing later tasks depend on.
 
@@ -1079,9 +1091,11 @@ The repository's front door has said "design agreed, nothing built yet" since th
 commit. It is now wrong.
 
 **Files:**
+
 - Modify: `README.md`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: nothing.
 
