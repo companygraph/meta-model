@@ -5,10 +5,13 @@
 > One program, in this repository, released with the core it carries; every editor and every CI
 > runs the same commands, and the Obsidian plugin calls the same code rather than writing its own.
 
-Status: designed with the owner on September 20, 2026, nothing built. It supersedes the parts of
-`2026-08-25-companygraph-tooling-design.md` that place the tooling in a repository of its own and
-keep this one free of code; its layout, its manifest and its reasons for them stand and are not
-restated here. Where the two differ, this note is the later decision.
+Status: designed with the owner on September 20, 2026, and built the same day, in the plan at
+[`docs/superpowers/plans/2026-09-20-the-cli.md`](../plans/2026-09-20-the-cli.md). It supersedes
+the parts of `2026-08-25-companygraph-tooling-design.md` that place the tooling in a repository
+of its own and keep this one free of code; its layout, its manifest and its reasons for them
+stand and are not restated here. Where the two differ, this note is the later decision. The three
+skills this note describes below are not in what was built: `init` writes none of them, and
+porting them is a plan of its own, still to be written.
 
 ## Why here, and why now
 

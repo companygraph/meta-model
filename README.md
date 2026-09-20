@@ -40,8 +40,13 @@ no file outside `core/` that an instance also needs.
 
 `lib/` is what a consumer imports and `bin/` is what a workflow runs: the parser a site builds
 its pages with, and the instance checker a caller invokes by path at the release its manifest
-names. Both travel in the package and neither is installed as a command, because nothing here is
-published to npm — a consumer takes the package from a tag. A site reads an instance with
+names, because every instance's CI calls it there rather than through a command. The package's
+own command is `bin/companygraph.mjs`, published as the package's `bin` and run as
+`npx companygraph-meta-model <command>` once a consumer takes the package from a tag; what it
+does is under Instantiating it, below. Nothing here is published to npm — a consumer still takes
+the package from a tag, and a tag's `bin` runs the same as any package's would.
+
+A site reads an instance with
 `import { parseInstance, parseSchemas, CORE_LABEL } from "companygraph-meta-model/instance"`
 — `parseInstance` turns a map of path → Markdown into the graph, read beside a second map of
 the schemas it is written against — `parseInstance(files, { sub, schemas })`, the second map
@@ -94,8 +99,8 @@ instance and the release it serves. `companygraph/mcp-server` is the package,
 
 ## Status
 
-Past its first release and in use by a real instance, with the tooling and some of the remaining
-core types still ahead. The current release is the newest tag, and `core/manifest.json` names
+Past its first release and in use by a real instance, with some of the remaining core types
+still ahead. The current release is the newest tag, and `core/manifest.json` names
 it. Core holds one schema per type, and `core/` is the list: identity, vision, profile,
 experience, experience-kind, achievement-kind, skill, proficiency-level, value, source,
 surface, strategic-objective, strategy, role, process and phase. The reference instance,
@@ -103,8 +108,7 @@ surface, strategic-objective, strategy, role, process and phase. The reference i
 its own pin names and populates the types that release carries, for a company of one, and
 blust.ch builds its model pages from it with the parser this package ships, and
 `companygraph/mcp-server` serves the same instance to an agent over MCP. What is not there yet
-is the tooling, designed and not built, and the rest of the types the design names; the roadmap
-below says which.
+is the rest of the types the design names; the roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in
 [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md),
@@ -130,8 +134,33 @@ The schemas are the contract; `CONVENTIONS.md` is what an agent checks the resul
 both are inside `core/` so neither can be left behind. `example/` is there to be read, not
 copied — [companygraph.io/example](https://companygraph.io/example/) draws it.
 
-Setting that up and keeping it current is the tooling's job — roadmap item 5, designed and
-not yet built. Until it ships, the layout above is the whole recipe.
+Setting that up and keeping it current is `bin/companygraph.mjs`'s job: one entry point with
+three subcommands, published as this package's `bin` and run as
+`npx companygraph-meta-model <command>` once a consumer takes the package from a tag.
+
+`init [<folder>]` writes a new instance: the vendored core, `.companygraph/manifest.json` with
+a sha256 per vendored file, a README in the model and in each root type folder, the three
+entities no instance can pass the checks without — `model/sources/local.md`,
+`model/identity.md`, `model/vision.md` — a workflow pinned to the release whose core it
+vendored, and the chosen agent's own files. Claude is the only agent this release writes for,
+asked for with `--agent claude`, and asking for another is refused by name. The core it vendors
+is the one inside the release that runs, unless `--core <tag>` names one to fetch from GitHub
+instead, and the manifest records which, as `bundled` or `fetched:<tag>`. The fact worth stating
+plainly: an instance `init` writes passes the checks on its first day, with nothing in its model
+but those stubs.
+
+`upgrade [<folder>]` moves the vendored core, the manifest and the workflow's tag together,
+because those are the three places a release lands and moving them apart is how one gets left
+behind. It owns only those three places; `AGENTS.md`, `CLAUDE.md` and the rest of the model are
+the instance's own and are never touched. A vendored file whose hash no longer matches what the
+manifest recorded was edited inside the instance, and the whole upgrade refuses rather than
+leave it half old and half new; `--force` overwrites and says which. It ends by running the
+checks over the instance it has just moved, and a failing check does not undo the upgrade — the
+files are the release's, the work is the instance's own to do.
+
+`check [<folder>]` is a second door to the same mechanical checks the reusable workflow runs.
+`bin/check-instance.mjs` keeps its own path and behavior, because every instance's CI calls it
+there.
 
 ## Packs
 
