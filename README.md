@@ -52,9 +52,13 @@ itself.
 A consumer that offers what a schema declares rather than checking it, an editor's completion,
 reads a Type cell with `declarationOf` from the same module and an enum's permitted values with
 `enumTokensOf` from `companygraph-meta-model/checks`; both are the one reader the parser and the
-checks use themselves.
+checks use themselves. What a Description opens with, a join or a list kind, is read with
+`listsDeclarationOf`, `underDeclarationOf` and `listKindOf`, and a consumer that serves or draws
+the vocabulary takes all of it at once from `constraintsOf`: per type, every reference with how
+many a page may hold, the joins and the list sections.
 
-Both are pure: no filesystem, no network, nothing imported at all, which is
+Both are pure: no filesystem, no network, and nothing imported but the checks' three readers
+from the parser beside them, which is
 what lets the same checks run in a site's build and in this repository's own suite. `core/` is
 deliberately outside the tarball, because the rules are copied into an instance or read over the
 GitHub API, never resolved out of `node_modules`.
