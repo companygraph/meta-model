@@ -59,10 +59,11 @@ test("--here into a folder that already holds an instance is refused by name, an
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const before = filesOf(root);
   // --here says "add to what is here", and the answer is that an instance is here already: the
-  // plan names the files it would have written over, and writes none of them.
+  // whole-folder check refuses by naming the units folder or .companygraph/, before the per-file
+  // check ever runs.
   assert.throws(
     () => run(["init", root, "--here", "--name", "Acme", "--agent", "claude"], { stdio: "pipe" }),
-    /\.companygraph\/manifest\.json/,
+    /(meta|\.companygraph)\//,
   );
   const after = filesOf(root);
   assert.deepEqual([...after.keys()].sort(), [...before.keys()].sort());
@@ -97,6 +98,53 @@ test("upgrade moves an instance, says what it did, and leaves the model alone", 
   assert.ok(fs.existsSync(path.join(root, "model/skills/java.md")));
 });
 
+const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
+
+// Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested
+// end to end … with the manifest, the hashes and the workflow line all moved, and the checks run
+// after", but the only CLI-level upgrade test was the no-op "already on core" path above. This
+// does the move for real without touching the network: init at the bundled (current) release,
+// then doctor the instance to look like it is on an older one by rewriting one vendored file and
+// the manifest and workflow around it to match, so `upgrade` has an actual move to make when it
+// brings that instance forward to this release.
+test("upgrade moves an instance between two real releases end to end: core, every hash, tooling, core.version and the workflow line all move, and the checks run after", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const conventionsPath = path.join(root, "meta/core/CONVENTIONS.md");
+  const olderConventions = "# Conventions\n\nAs an older release shipped it.\n";
+  fs.writeFileSync(conventionsPath, olderConventions);
+  manifest.core.version = "0.1.0";
+  manifest.files["meta/core/CONVENTIONS.md"] = sha256(olderConventions);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const workflowPath = path.join(root, ".github/workflows/companygraph.yml");
+  fs.writeFileSync(
+    workflowPath,
+    fs.readFileSync(workflowPath, "utf8").replace(/instance-check\.yml@v[\d.]+/, "instance-check.yml@v0.1.0"),
+  );
+
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const bundledConventions = fs.readFileSync(path.join(here, "..", "core/CONVENTIONS.md"), "utf8");
+  const bundledCoreVersion = JSON.parse(fs.readFileSync(path.join(here, "..", "core/manifest.json"), "utf8")).version;
+
+  const said = run(["upgrade", root]);
+  assert.match(said, /^core 0\.1\.0 → /);
+  assert.ok(!/already on core/i.test(said));
+  assert.match(said, /mechanical checks pass/);
+
+  assert.equal(fs.readFileSync(conventionsPath, "utf8"), bundledConventions);
+
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.equal(moved.tooling, version);
+  assert.equal(moved.core.version, bundledCoreVersion);
+  for (const [rel, hash] of Object.entries(moved.files))
+    assert.equal(hash, sha256(fs.readFileSync(path.join(root, rel), "utf8")), rel);
+
+  assert.ok(fs.readFileSync(workflowPath, "utf8").includes(`instance-check.yml@v${version}`));
+});
+
 test("upgrade refuses when core was edited inside the instance, and --dry-run writes nothing", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -107,8 +155,6 @@ test("upgrade refuses when core was edited inside the instance, and --dry-run wr
   run(["upgrade", root, "--force", "--dry-run"]);
   assert.equal(fs.readFileSync(conventions, "utf8"), before);
 });
-
-const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 1: a manifest is a file inside the instance, and can name anything in `files` with a
 // correct hash next to it. Unfiltered, that list became a delete list: this proves both halves —

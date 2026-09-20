@@ -60,9 +60,12 @@ reads a Type cell with `declarationOf` from the same module and an enum's permit
 checks use themselves.
 
 Both are pure: no filesystem, no network, nothing imported at all, which is
-what lets the same checks run in a site's build and in this repository's own suite. `core/` is
-deliberately outside the tarball, because the rules are copied into an instance or read over the
-GitHub API, never resolved out of `node_modules`.
+what lets the same checks run in a site's build and in this repository's own suite. `core/` ships
+inside the tarball now, alongside `lib/` and `bin/`, because a published `init` vendors it into a
+new instance and must do that without a network call: it reads `core/` straight out of the
+installed package. Beyond that one case, core is still never imported as a module — a site or the
+MCP server reads it over the GitHub API, or from the copy an instance already vendored under its
+own `<units>/core/`.
 
 ## How it fits together
 
@@ -141,8 +144,10 @@ three subcommands, published as this package's `bin` and run as
 `init [<folder>]` writes a new instance: the vendored core, `.companygraph/manifest.json` with
 a sha256 per vendored file, a README in the model and in each root type folder, the three
 entities no instance can pass the checks without — `model/sources/local.md`,
-`model/identity.md`, `model/vision.md` — a workflow pinned to the release whose core it
-vendored, and the chosen agent's own files. Claude is the only agent this release writes for,
+`model/identity.md`, `model/vision.md` — a workflow pinned to the release of this checker the
+instance's manifest names as its `tooling`, and the chosen agent's own files. That pin is never
+the tag of a fetched core: which checker runs and which core is vendored are two separate facts,
+and a core behind the checker is legal by design, so only the first belongs on the workflow line. Claude is the only agent this release writes for,
 asked for with `--agent claude`, and asking for another is refused by name. The core it vendors
 is the one inside the release that runs, unless `--core <tag>` names one to fetch from GitHub
 instead, and the manifest records which, as `bundled` or `fetched:<tag>`. The fact worth stating

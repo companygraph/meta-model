@@ -31,8 +31,10 @@ upgrade: --core <tag>  --force  --dry-run
 
 // The core inside this release, which is what `init` vendors unless a tag says otherwise.
 // Recursive, to match `extractCore`: `core/` is flat today, but a future subfolder must not be
-// dropped from a bundled init while a fetched one keeps it.
-export function coreOfThisRelease() {
+// dropped from a bundled init while a fetched one keeps it. Not exported: importing this module
+// runs the argv dispatcher at the foot of the file, so nothing outside it could ever call this
+// anyway; it stays local until something needs to.
+function coreOfThisRelease() {
   const from = join(HERE, "..", "core");
   const files = new Map();
   const walk = (rel) => {
@@ -117,6 +119,7 @@ async function init(argv) {
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, plan.writes);
   console.log(`${written.length} files written into ${root}`);
+  console.log(`  written for ${agent}`);
   console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   console.log(`  the model is empty but for its README files, its source and its two singular entities`);
   console.log(`  run "npx companygraph-meta-model check ${root}" whenever it changes`);
@@ -174,7 +177,12 @@ async function upgrade(argv) {
   const written = writePlan(root, plan.writes);
   for (const path of plan.removes) rmSync(join(root, path), { force: true });
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${plan.removes.length} removed`);
+  // Edited and missing are both --force taking a vendored file the instance no longer held as
+  // this tooling wrote it, but only the first was a file to overwrite; the second was not there
+  // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
+  // said of a file it does not fit.
   if (plan.edited.length) console.log(`  overwritten, as --force asked: ${plan.edited.join(", ")}`);
+  if (plan.missing.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${plan.missing.join(", ")}`);
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
   // failed. The files are the release's; the work the check names is the owner's to do. checkPath

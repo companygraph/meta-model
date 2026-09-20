@@ -39,10 +39,16 @@ test("the manifest it writes names the core's own version and shape, the tooling
   assert.match(manifest.files["meta/core/CONVENTIONS.md"], /^sha256:[0-9a-f]{64}$/);
 });
 
-test("a fetched core is said to be fetched, and the workflow names that tag", () => {
+// Blocking 1/2 (2026-09-20 review): the workflow pin names the release of this checker — this
+// package's own `tooling` — never the tag whose core happened to be fetched. A core older than
+// the checker is legal by design, so a fetched tag naming an older release must not land on the
+// workflow line: pinning it there made an instance's own CI red on its first commit.
+test("a fetched core is said to be fetched, and the workflow names the tooling's own release, not the fetched tag", () => {
   const { writes } = initPlan({ ...ask, tag: "v0.30.0", fetched: true });
   assert.equal(JSON.parse(writes.get(".companygraph/manifest.json")).core.source, "fetched:v0.30.0");
-  assert.ok(writes.get(".github/workflows/companygraph.yml").includes("instance-check.yml@v0.30.0"));
+  const workflow = writes.get(".github/workflows/companygraph.yml");
+  assert.ok(workflow.includes(`instance-check.yml@v${ask.tooling}`));
+  assert.ok(!workflow.includes("v0.30.0"));
 });
 
 test("another schemas folder is written there and said in the manifest", () => {
@@ -52,13 +58,35 @@ test("another schemas folder is written there and said in the manifest", () => {
   assert.ok(writes.get("AGENTS.md").includes("schemas/core/CONVENTIONS.md"));
 });
 
-test("anything already there refuses the whole plan, naming every conflict", () => {
-  const taken = initPlan({ ...ask, present: new Set([".companygraph/manifest.json", "meta/core/CONVENTIONS.md"]) });
-  assert.ok(taken.refused.includes(".companygraph/manifest.json"));
-  assert.ok(taken.refused.includes("meta/core/CONVENTIONS.md"));
+test("a file already there outside the units and .companygraph folders refuses the whole plan, naming every conflict", () => {
+  const taken = initPlan({ ...ask, present: new Set(["AGENTS.md", "model/identity.md"]) });
+  assert.ok(taken.refused.includes("AGENTS.md"));
+  assert.ok(taken.refused.includes("model/identity.md"));
   assert.equal(taken.writes, undefined);
   // A file the plan does not write is not a conflict: `--here` adds to a repository.
   assert.ok(initPlan({ ...ask, present: new Set(["README.md", ".git/config"]) }).writes);
+});
+
+// Defect 5 (2026-09-20 review): `--here` must refuse when the units folder or `.companygraph/`
+// already exists at all, not merge into it one file at a time. A per-file check alone lets an
+// unrelated `meta/notes.txt` in a foreign repository through, because the plan below never writes
+// exactly that path.
+test("--here refuses when the units folder or .companygraph/ is already there, named by itself", () => {
+  const meta = initPlan({ ...ask, present: new Set(["meta/notes.txt"]) });
+  assert.ok(meta.refused.includes("meta/"));
+  assert.equal(meta.writes, undefined);
+
+  const companygraph = initPlan({ ...ask, present: new Set([".companygraph/other.json"]) });
+  assert.ok(companygraph.refused.includes(".companygraph/"));
+  assert.equal(companygraph.writes, undefined);
+
+  // The bare folder name itself is a claim too, not only a file found beneath it.
+  const bare = initPlan({ ...ask, present: new Set(["meta"]) });
+  assert.ok(bare.refused.includes("meta/"));
+
+  // A different --schemas name is checked the same way, by its own name.
+  const schemas = initPlan({ ...ask, units: "schemas", present: new Set(["schemas/notes.txt"]) });
+  assert.ok(schemas.refused.includes("schemas/"));
 });
 
 test("a name with nothing to write refuses", () => {
@@ -110,15 +138,22 @@ test("a vendored file edited inside the instance refuses the whole upgrade, and 
   assert.equal(refused.writes, undefined);
   const forced = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: changed, workflow, force: true });
   assert.deepEqual(forced.edited, ["meta/core/CONVENTIONS.md"]);
+  assert.deepEqual(forced.missing, []);
   assert.ok(forced.writes.has("meta/core/CONVENTIONS.md"));
 });
 
-test("a vendored file the instance no longer has is an edit of the same kind", () => {
+// Defect 7 (2026-09-20 review): a file the instance no longer holds was never there to overwrite,
+// so it must not be reported as edited — `--force` writes it fresh instead, and the two lists are
+// kept apart so a report never calls a missing file "overwritten".
+test("a vendored file the instance no longer has refuses the same as an edit, but --force writes it fresh, not 'overwritten'", () => {
   const { manifest, held, workflow } = instance();
-  const missing = new Map(held);
-  missing.delete("meta/core/gone-schema.md");
-  const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: missing, workflow });
+  const goneFromDisk = new Map(held);
+  goneFromDisk.delete("meta/core/gone-schema.md");
+  const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: goneFromDisk, workflow });
   assert.ok(refused.refused.includes("meta/core/gone-schema.md"));
+  const forced = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: goneFromDisk, workflow, force: true });
+  assert.deepEqual(forced.missing, ["meta/core/gone-schema.md"]);
+  assert.deepEqual(forced.edited, []);
 });
 
 test("an instance already on that core is said so, and nothing is written", () => {
