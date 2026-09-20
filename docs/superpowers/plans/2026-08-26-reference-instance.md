@@ -28,6 +28,7 @@
 ## File map
 
 **meta-model (modified):**
+
 - `core/manifest.json` — new; the release contract
 - `verify/check.mjs` — one new check, `CHECKS` entry "release manifest"; meta-check learns to skip a check with `rule: null`
 - `LOCAL.md` — untracked; last line renamed
@@ -35,6 +36,7 @@
 - `docs/superpowers/specs/2026-08-26-reference-instance-design.md` — §7 filled (Task 9)
 
 **mental-model (created):**
+
 - `.companygraph/manifest.json`
 - `meta/` — `CONVENTIONS.md`, `LICENSE`, six `*-schema.md`
 - `LICENSE`, `README.md`, `AGENTS.md`, `CLAUDE.md`, `.gitignore`
@@ -48,11 +50,13 @@
 ### Task 1: The release contract in meta-model
 
 **Files:**
+
 - Create: `core/manifest.json`
 - Modify: `verify/check.mjs` — append one entry to `CHECKS` before the `"rules are written down"` entry (line ~600); modify that meta-check
 - Modify: `LOCAL.md` (untracked)
 
 **Interfaces:**
+
 - Produces: tag `v0.1.0` on `main`, which Task 2 vendors from.
 
 - [ ] **Step 1: Branch and confirm identity**
@@ -173,9 +177,11 @@ git tag --points-at HEAD   # prints v0.1.0
 ### Task 2: The instance skeleton
 
 **Files:**
+
 - Create in `~/git/robertblust/mental-model/`: `.companygraph/manifest.json`, `meta/*`, `LICENSE`, `README.md`, `CLAUDE.md`, `.gitignore`, and `README.md` in `sources/`, `proficiency-levels/`, `skills/`, `values/`, `profiles/`
 
 **Interfaces:**
+
 - Produces: the tree every later task writes into; the manifest's `files` map, which must be regenerated only if Task 2 is redone (no later task touches `meta/`).
 
 - [ ] **Step 1: Create the repository**
@@ -263,6 +269,7 @@ meta-model's
 [reference instance spec](https://github.com/companygraph/meta-model/blob/main/docs/superpowers/specs/2026-08-26-reference-instance-design.md).
 
 ```
+
 .companygraph/manifest.json    which core this vendors, and a hash per vendored file
 meta/                          core 0.1.0: CONVENTIONS.md, LICENSE, one schema per type — never edited here
 sources/                       where each page's facts are mastered
@@ -272,6 +279,7 @@ values/                        one file per value
 profiles/robert-blust/         the profile, and the experiences it owns
 AGENTS.md                      the instance's own rules; every modelling rule is in meta/CONVENTIONS.md
 .claude/skills/companygraph-*  the portable skills: validate, add an entity, export as a skill
+
 ```
 
 The content is the whole professional portfolio, in English, drawn from the CV. Pages with
@@ -321,9 +329,11 @@ git push -u origin main
 ### Task 3: Sources and proficiency levels
 
 **Files:**
+
 - Create: `sources/local.md`, `sources/rob-cv.md`, `proficiency-levels/{familiar,competent,proficient,expert}.md`
 
 **Interfaces:**
+
 - Produces H1s every later task references: `Local`, `rob-cv`, `Familiar`, `Competent`, `Proficient`, `Expert`.
 
 - [ ] **Step 1: The two sources**
@@ -382,9 +392,11 @@ EOF
 ### Task 4: Skills
 
 **Files:**
+
 - Create: 22 files under `skills/`, named for the kebab-case of the H1.
 
 **Interfaces:**
+
 - Consumes: `Local` (Task 3).
 - Produces: the 22 H1s below; the profile table (Task 6) and the experiences (Task 7) reference these strings exactly.
 
@@ -476,9 +488,11 @@ EOF
 ### Task 5: Values
 
 **Files:**
+
 - Create: `values/decide-well-over-build-fast.md`, `values/production-is-the-finish-line.md`, `values/grow-the-people-with-the-platform.md`, `values/model-it-before-you-build-it.md`
 
 **Interfaces:**
+
 - Consumes: `Local`.
 
 - [ ] **Step 1: Write the four values**
@@ -597,9 +611,11 @@ EOF
 ### Task 6: The profile
 
 **Files:**
+
 - Create: `profiles/robert-blust/robert-blust.md`
 
 **Interfaces:**
+
 - Consumes: every skill H1 (Task 4), every level H1 (Task 3), `rob-cv`.
 - Produces: `Robert Blust`, the owner of Task 7's experiences.
 
@@ -665,9 +681,11 @@ EOF
 ### Task 7: The experiences
 
 **Files:**
+
 - Create: 20 files under `profiles/robert-blust/experiences/`
 
 **Interfaces:**
+
 - Consumes: skill H1s (Task 4), `rob-cv`, the profile folder (Task 6).
 
 - [ ] **Step 1: Write the 20 experiences**
@@ -719,6 +737,7 @@ The twenty, with the frontmatter that is fixed by the CV (bullets and `skills` c
 | `2022-talk-camundacon.md` | talk-camundacon-2022 | Camunda | 2022-01 | — | Conference Speaker — CamundaCon 2022, Berlin |
 
 Notes that are decisions, not options:
+
 - A project's tagline names the employer and role: `> 3AP · Lead Architect & Backend Engineer, about two years hands-on.` The `organisation` is the client.
 - `end` absent where the CV has none — for a one-off (a talk, a certification, a case study) the schema reads absence as "ongoing", which is wrong for a talk. Write it absent anyway and record the strain in §7 (Task 9); do not invent an end month.
 - If a project's CV title collides with an H1 already used, keep the CV's title — the file's H1 must be unique across `experiences/` because it is the canonical name (R2); check with the script below.
@@ -764,9 +783,11 @@ EOF
 ### Task 8: Agent instructions and the three portable skills
 
 **Files:**
+
 - Create: `AGENTS.md`, `.claude/skills/companygraph-validate/SKILL.md`, `.claude/skills/companygraph-add-entity/SKILL.md`, `.claude/skills/companygraph-export/SKILL.md`, `export/SKILL-intro.md`
 
 **Interfaces:**
+
 - Consumes: `.companygraph/manifest.json` (Task 2) — export reads name and core version from it.
 - Produces: `dist/mental-model-skill.zip` when export runs (Task 9).
 
@@ -966,10 +987,12 @@ git push
 ### Task 9: Validate, export, findings, and the two PRs
 
 **Files:**
+
 - Modify (mental-model): whatever validate reports
 - Modify (meta-model): `README.md` roadmap item 2; spec §7
 
 **Interfaces:**
+
 - Consumes: everything above.
 
 - [ ] **Step 1: Run the validate skill over the instance**
@@ -996,6 +1019,7 @@ cd ~/git/companygraph/meta-model && git checkout main && git pull -q && git chec
 ```
 
 In `docs/superpowers/specs/2026-08-26-reference-instance-design.md`, replace the sentence `The rest is written as it is found.` with the findings from Tasks 2–9, each as a bullet `**<spec>, §<n>** — <finding>` in the same voice as the four already there. At minimum, one bullet each on:
+
 - `end` absent on a one-off experience reads as "ongoing" (core, `experience`)
 - what `companygraph-validate` listed under **Not checked** (tooling §5/§6)
 - whether the skill count survived the two cut passes, and how many rows the profile table ended with (core, `profile`)

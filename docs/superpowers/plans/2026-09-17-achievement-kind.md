@@ -55,12 +55,14 @@
 ## Task 1: The achievement-kind type
 
 **Files:**
+
 - Create: `core/achievement-kind-schema.md`
 - Modify: `lib/checks.mjs` (the `TYPES` array, lines 18–49 — one line inserted after the `experience-kind` entry)
 - Modify: `README.md` (lines 20–22 and lines 84–86)
 - Test: `npm run verify` — `verify/check.mjs`'s "schemas exist", "schema fixed shape", "type vocabulary" and "ownership declared" checks all read `TYPES` and are the test for this task. `verify/check.mjs` has no fixtures of its own; the repository's own files are what it asserts against.
 
 **Interfaces:**
+
 - Produces: `TYPES` entry `{ type: "achievement-kind", folder: "achievement-kinds" }`, consumed by every check in `lib/checks.mjs` and `verify/check.mjs`.
 - Produces: `core/achievement-kind-schema.md` declaring `## File Location` as `model/achievement-kinds/*.md`, which is what `folderTypes` in `lib/instance.mjs` reads to map the folder to the type, and `rank` typed `number`, which Task 4's order check keys on.
 
@@ -224,10 +226,12 @@ MSG
 ## Task 2: The parser reads a grouped section's headings
 
 **Files:**
+
 - Modify: `lib/instance.mjs` (the caption constant near line 339; the `parseSchemas` Sections loop, lines 401–415; `declarationsOf`, lines 434–459; the instance edge walk, after the body-table loop that ends at line 295)
 - Test: `verify/instance.test.mjs` (the `schema` helper at lines 27–50, the `schemas` map at lines 55–74, and five new tests)
 
 **Interfaces:**
+
 - Consumes: `declarationOf(cell)` → `{ form, target } | null`, already in `lib/instance.mjs`.
 - Produces: ``const HEADING_CAPTION = /^`##\s*([^`]+)`\s+is grouped under these headings:$/`` in `lib/instance.mjs`.
 - Produces: `declarationsOf(schemas)` entries gain `headings`, a `Map<sectionHeading, { name, decl }>` where `name` is the Heading cell without backticks and `decl` is `{ form, target }`.
@@ -595,6 +599,7 @@ MSG
 ## Task 3: R9's grouped section, and the experience that declares one
 
 **Files:**
+
 - Modify: `lib/checks.mjs` (the caption constant at line 119, the `blocksOf` comment and body at lines 122–156)
 - Modify: `verify/check.mjs` (the "schema fixed shape" block at lines 202–271, and the "type vocabulary" typed-table list at line 295)
 - Modify: `core/CONVENTIONS.md` (R9, after the `Table.` paragraph ending "each half means nothing without the other."; R16, after the paragraph ending "it is written as digits.")
@@ -602,6 +607,7 @@ MSG
 - Test: `verify/instance-checks.test.mjs` (one `blocksOf` test), plus `npm run verify` over the edited `core/experience-schema.md`
 
 **Interfaces:**
+
 - Consumes: `TYPES` (Task 1) — `achievement-kind` must be a known type or the vocabulary check rejects `ref → achievement-kind`.
 - Consumes: `HEADING_CAPTION` semantics from Task 2; `lib/checks.mjs` keeps its own copy, as it already keeps its own `COLUMN_CAPTION`.
 - Produces: ``export const HEADING_CAPTION = /^`##\s+(.+?)`\s+is grouped under these headings:$/`` in `lib/checks.mjs`.
@@ -1146,10 +1152,12 @@ MSG
 ## Task 4: The two instance checks
 
 **Files:**
+
 - Modify: `lib/checks.mjs` (a `groupedOf`, `headingsIn` and `targetOf` helper beside `fieldsOf`, lines 286–294; one addition inside the "the instance is held to what the schemas declare" walk, after the column-table loop that ends at line 568; two new check objects after it)
 - Test: `verify/instance-checks.test.mjs` (the fixture `schema` helper at lines 14–36, and five new tests)
 
 **Interfaces:**
+
 - Consumes: `blocksOf(body)` with `grouped` (Task 3); `sectionsOf`, `tableOf`, `fieldsOf`, `frontmatterOf`, `fmScalar`, `walkMd`, `typeOfFile`, `fail`, all already in `lib/checks.mjs`.
 - Produces: `groupedOf(type)` → `[{ section, heading, declared }]`, read from the vendored core's schema.
 - Produces: `headingsIn(body)` → `string[]`, the `###` headings of one section's text in document order.
@@ -1584,6 +1592,7 @@ MSG
 ## Task 5: The example instance defines its own kinds and groups its entries
 
 **Files:**
+
 - Create: `example/model/achievement-kinds/decisions.md`, `delivery.md`, `sharing.md`, `results.md`
 - Modify: `example/model/profiles/mira-halvorsen/experiences/2018-northwind-atelier.md`, `2022-beacon-systems.md`
 - Modify: `example/model/profiles/tomas-reyes/experiences/2019-northwind-atelier.md`, `2021-orbit-conference.md`, `2022-beacon-systems.md`
@@ -1591,6 +1600,7 @@ MSG
 - Test: `npm run verify` — the two checks from Task 4, over the example tree, are this task's test
 
 **Interfaces:**
+
 - Consumes: `core/achievement-kind-schema.md` (Task 1), the grouped declaration in `core/experience-schema.md` (Task 3), both checks (Task 4).
 - Produces: eight `Achievements.Kind` edges in the example graph, drawn by `parseInstance`.
 
@@ -1931,12 +1941,14 @@ MSG
 ## Task 6: Release preparation for 0.28.0, without tagging
 
 **Files:**
+
 - Modify: `package.json` (line 3, `"version": "0.27.0"`)
 - Modify: `core/manifest.json` (the whole file, one line)
 - Modify: `.github/workflows/instance-check.yml` (line 6 and line 37, both `v0.27.0`)
 - Test: `npm run verify` — the "release manifest" check reads both versions and any `v*` tag on HEAD
 
 **Interfaces:**
+
 - Consumes: nothing new.
 - Produces: the release number `0.28.0` and `shape` `3`, which the reference instance's `.companygraph/manifest.json` and its workflow pin take next.
 
