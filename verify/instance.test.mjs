@@ -922,3 +922,47 @@ test("ownership comes from the schema, and a stray owned entity is named, not th
   ]);
   assert.throws(() => parseInstance(files, { schemas }), /R5: profiles\/mira\/phases\/stray.md is a phase, and a phase is owned by a process; it sits in no process/);
 });
+
+// A track is a second type a process owns, and a phase's `### [Track]` heading is a declared
+// reference to it. The parser was not changed for it: a type is read from its schema's File
+// Location, an owned name resolves within the owner the referring entity is or is owned by, and a
+// grouped heading draws an edge. These pin that, since nothing else would notice it going.
+const tracking = () => new Map([
+  ["identity-schema.md", schema("identity", { location: "identity.md" })],
+  ["process-schema.md", schema("process", { tables: { Tracks: [["Track", "ref → track"]], Phases: [["Phase", "ref → phase"]] }, location: "processes/<process>/<process>.md" })],
+  ["track-schema.md", schema("track", { location: "processes/<process>/tracks/*.md", owner: "process" })],
+  ["phase-schema.md", schema("phase", { grouped: { Activities: ["Track", "ref → track"] }, location: "processes/<process>/phases/*.md", owner: "process" })],
+]);
+const twoTracked = (extra = []) => new Map([
+  ["identity.md", "# Beacon Systems\n\n> Billing software.\n"],
+  ["processes/delivery/delivery.md", "# Delivery\n\n> Ships.\n\n## Tracks\n\n| Track |\n| --- |\n| Code |\n| Docs |\n\n## Phases\n\n| Phase |\n| --- |\n| Build |\n"],
+  ["processes/delivery/tracks/code.md", "# Code\n\n> A merged change.\n"],
+  ["processes/delivery/tracks/docs.md", "# Docs\n\n> A published page.\n"],
+  ["processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n### Code\n\n1. Write it.\n\n### Docs\n\n1. Draft it.\n"],
+  ["processes/hiring/hiring.md", "# Hiring\n\n> Hires.\n\n## Tracks\n\n| Track |\n| --- |\n| Code |\n\n## Phases\n\n| Phase |\n| --- |\n| Screen |\n"],
+  ["processes/hiring/tracks/code.md", "# Code\n\n> A reviewed exercise.\n"],
+  ["processes/hiring/phases/screen.md", "# Screen\n\n> First.\n\n## Activities\n\n### Code\n\n1. Read it.\n"],
+  ...extra,
+]);
+
+test("a track is an entity its process owns, named by its table and by a phase's headings", () => {
+  const graph = parseInstance(twoTracked(), { schemas: tracking() });
+  const code = graph.entities.find((e) => e.id === "processes/delivery/tracks/code");
+  assert.equal(code.type, "track");
+  assert.equal(code.owner, "processes/delivery");
+  const edge = (from, via) => graph.edges.filter((e) => e.from === from && e.via === via).map((e) => e.to).sort();
+  assert.deepEqual(edge("processes/delivery", "Tracks.Track"), ["processes/delivery/tracks/code", "processes/delivery/tracks/docs"]);
+  assert.deepEqual(edge("processes/delivery/phases/build", "Activities.Track"), ["processes/delivery/tracks/code", "processes/delivery/tracks/docs"]);
+});
+
+test("two processes may each have a track of one name, and a phase's heading finds its own process's", () => {
+  const graph = parseInstance(twoTracked(), { schemas: tracking() });
+  const to = graph.edges.filter((e) => e.from === "processes/hiring/phases/screen" && e.via === "Activities.Track").map((e) => e.to);
+  assert.deepEqual(to, ["processes/hiring/tracks/code"]);
+});
+
+test("a phase heading that names no track of its own process is an R4 that says where it looked", () => {
+  const files = twoTracked();
+  files.set("processes/hiring/phases/screen.md", "# Screen\n\n> First.\n\n## Activities\n\n### Docs\n\n1. Read it.\n");
+  assert.throws(() => parseInstance(files, { schemas: tracking() }), /R4: "Docs" in .*screen\.md "## Activities" names no track of processes\/hiring/);
+});
