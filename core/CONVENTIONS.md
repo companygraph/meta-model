@@ -280,6 +280,13 @@ a row draws is a matter of the schema, never of the order somebody typed the col
 parser draws from the declared column wherever it is. A table declaring no reference at all
 draws nothing and is data, which is a table's other legal shape.
 
+A schema declares the references its type makes and none it receives. Which types reference
+this one is read from the tables of every other schema, so a sentence here saying that nothing
+does, or that one edge is the only one, is a second copy of a fact held elsewhere, and it stops
+being true the day another schema declares a reference and nobody rereads this one. Prose may
+name a referrer to explain a design — a skill outlives the profile that claims it — and never
+says that the ones it names are all there are.
+
 `## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
 cannot: what the type is *for*, and what separates a good entity of it from one that merely
 has the shape. Purpose is one paragraph — the sentence someone needs before writing their
