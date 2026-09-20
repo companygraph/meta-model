@@ -33,12 +33,14 @@ Repository: `/Users/rob/git/companygraph/meta-model`. Branch: `every-surface`, w
 ### Task 1: The schema, and the example that exercises both values
 
 **Files:**
+
 - Modify: `core/surface-schema.md` (whole file below)
 - Modify: `example/model/surfaces/partner-directory.md` (frontmatter)
 - Create: `example/model/surfaces/beacon-systems-website.md`
 - Modify: `example/model/README.md` (the `surfaces/` line of the tree)
 
 **Interfaces:**
+
 - Produces: `production` and `built-by` on `surface`, which Phase 2 writes against.
 
 - [ ] **Step 1: Replace `core/surface-schema.md`**
@@ -208,9 +210,11 @@ Replace the `Verified:` line with what Step 6 actually printed before committing
 ### Task 2: Versions, README, push, update the pull request
 
 **Files:**
+
 - Modify: `core/manifest.json`, `package.json`, `.github/workflows/instance-check.yml`, `README.md`
 
 **Interfaces:**
+
 - Produces: the release number 0.26.0 that Phases 2 and 5 vendor and pin.
 
 - [ ] **Step 1: Move the four version strings**
@@ -283,11 +287,13 @@ Repository: `/Users/rob/git/robertblust/mental-model`. **Blocked until `v0.26.0`
 ### Task 3: Re-vendor core at 0.26.0 and mark the LinkedIn profile written
 
 **Files:**
+
 - Modify: `meta/core/` (copied whole from the tag, never edited here)
 - Modify: `.companygraph/manifest.json`, `.github/workflows/companygraph.yml`, `AGENTS.md` (line 27), `README.md` (line 14)
 - Modify: `model/surfaces/linkedin-profile.md` (frontmatter)
 
 **Interfaces:**
+
 - Produces: the instance green at 0.26.0, which Task 4 adds surfaces to.
 
 - [ ] **Step 1: Confirm the release, branch, copy core**
@@ -373,11 +379,13 @@ MSG
 ### Task 4: The three built surfaces and the missing Also at row
 
 **Files:**
+
 - Create: `model/surfaces/blust-ch-website.md`, `model/surfaces/mcp-blust-ch-mcp-server.md`, `model/surfaces/mcp-registry-listing.md`
 - Modify: `model/surfaces/README.md` (first and last paragraphs)
 - Modify: `model/profiles/robert-blust/robert-blust.md` (the `## Also at` table)
 
 **Interfaces:**
+
 - Consumes: `production` and `built-by` from core 0.26.0.
 - Produces: the merge commit Phases 3 and 4 pin.
 
@@ -553,10 +561,12 @@ Repository: `/Users/rob/git/robertblust/robertblust.github.io`. **Blocked until 
 ### Task 5: The site stops listing itself in sameAs, and takes the model and the parser
 
 **Files:**
+
 - Modify: `build/jsonld.mjs` (`alsoAt`), `build/renderers.test.mjs`
 - Modify: `source.json`, `package.json`, `package-lock.json`, `model.json`, and every page or og stamp the checks regenerate
 
 **Interfaces:**
+
 - Consumes: Phase 2's merge commit on `robertblust/mental-model` `main`; the tag `v0.26.0`.
 
 - [ ] **Step 1: Worktree**
@@ -703,6 +713,7 @@ Repository: `/Users/rob/git/robertblust/mcp-blust-ch`. **Blocked until Phase 2 i
 ### Task 6: The server reads the commit that lists it
 
 **Files:**
+
 - Modify: `source.json`, `snapshot.json` (if committed)
 
 - [ ] **Step 1: Branch and move the pin**
@@ -769,6 +780,7 @@ Repository: `/Users/rob/git/companygraph/companygraph.github.io`. **Blocked unti
 ### Task 7: companygraph.io takes the release
 
 **Files:**
+
 - Modify: `source.json`, `package.json`, `package-lock.json`, `example.json`, `model.json`, plus every page or og stamp the checks regenerate
 
 - [ ] **Step 1: Branch and move both pins**

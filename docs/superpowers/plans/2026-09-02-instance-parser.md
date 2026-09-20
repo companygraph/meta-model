@@ -75,10 +75,12 @@ changed from the two sites' copy is one diff and not buried in a 300-line paste.
 ### Task 1: meta-model gains the parser, its tests, and the tripwire
 
 **Files:**
+
 - Create: `lib/instance.mjs`, `verify/instance.test.mjs`, `verify/rule-citations.test.mjs`
 - Modify: `package.json`, `.github/workflows/ci.yml`
 
 **Interfaces:**
+
 - Produces: the three exports above, at specifier `companygraph-meta-model/instance`.
 
 - [ ] **Step 1: Copy the parser verbatim**

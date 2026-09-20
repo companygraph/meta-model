@@ -28,10 +28,12 @@
 The parser resolves every declared cell in a table row whether or not the cell holds anything, so the first blank `Experience` cell throws `R4: "" ... names no experience`. Frontmatter has had this right all along — `value === "" ? [] : [value]` at `lib/instance.mjs:264` means an empty field yields nothing to resolve. The table loop gains the same guard. This task is first because the schema change in Task 2 cannot be verified without it.
 
 **Files:**
+
 - Modify: `lib/instance.mjs:290`
 - Test: `verify/instance.test.mjs` (append at end of file)
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: `parseInstance(files, { schemas })` no longer throws on a blank cell in a column declared `qualifier → <type>`; the edge's `attrs` carries that column with the empty string as its value. Tasks 2 and 3 rely on this.
 
@@ -143,9 +145,11 @@ MSG
 ### Task 2: The schema moves evidence into a table of its own
 
 **Files:**
+
 - Modify: `core/profile-schema.md:31` (a row inserted into the Sections table, above `## Summary`), `:40` (the Evidence column row, deleted), `:42` (the paragraph under the Skills table), `:46` (the new column table and its paragraphs go immediately above this line), `:75-95` (the writing rules)
 
 **Interfaces:**
+
 - Consumes: Task 1's guard, without which the example written in Task 3 cannot parse.
 - Produces: `## Skills` declared as `Skill | Level`; `## Evidence` declared as `Skill | What it shows | Experience`. Task 3's example files must match these column lists exactly, in this order — `checks.mjs` compares the instance's header row to the schema's column list joined by `|` and fails on any difference, including order.
 
@@ -290,10 +294,12 @@ The repository is red until Task 3 lands, and a commit that does not verify is a
 Both example profiles move. Tomas's is where the design is shown: he claims Product Discovery at Expert, three of his experiences list the skill, and today's single evidence cell names one of them. Under rows the Expert rung has three periods beside it. His Java Programming claim is the other case — no experience of his lists it, so the row keeps its sentence and leaves `Experience` blank, which is what the optional column exists for.
 
 **Files:**
+
 - Modify: `example/model/profiles/tomas-reyes/tomas-reyes.md:13-19`
 - Modify: `example/model/profiles/mira-halvorsen/mira-halvorsen.md:15-20`
 
 **Interfaces:**
+
 - Consumes: Task 1's guard (Tomas's blank cell) and Task 2's declarations (the exact column lists).
 - Produces: a worked instance the schemas ship beside. Nothing later depends on it in this repository.
 
@@ -411,11 +417,13 @@ MSG
 A change to what another repository vendors is at least a minor release, because it makes every copy stale. This one asks the taking repository to rewrite its profile, which by `conventions/WORKING.md` would be a major — except that core is below 1.0, where a minor carries a breaking change and the notes say so.
 
 **Files:**
+
 - Modify: `core/manifest.json:1`
 - Modify: `package.json:3`
 - Create: the tag `v0.29.0` and its GitHub Release
 
 **Interfaces:**
+
 - Consumes: Tasks 1 through 3, all committed and green.
 - Produces: tag `v0.29.0` and a GitHub Release. The follow-on plan for `robertblust/mental-model` starts from it.
 

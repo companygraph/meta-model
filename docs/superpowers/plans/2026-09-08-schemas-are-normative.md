@@ -82,10 +82,12 @@ without that, `core/experience-schema.md` fails the "type vocabulary" check and 
 red.
 
 **Files:**
+
 - Modify: `core/CONVENTIONS.md`, `core/experience-schema.md`, `verify/check.mjs`,
   `core/manifest.json`, `package.json`
 
 **Interfaces:**
+
 - Produces: `R16`, the `ref? → <type>` form, `organization` declared as one, and a
   `TYPE_VOCABULARY` check that accepts `ref?`.
 
@@ -213,9 +215,11 @@ MSG
 ### Task 2: A row draws an edge for every reference it names
 
 **Files:**
+
 - Modify: `lib/instance.mjs`, `verify/instance.test.mjs`
 
 **Interfaces:**
+
 - Consumes: nothing from Task 1.
 - Produces: a graph where a table row yields one edge per resolving cell. Every consumer of
   `parseInstance` sees more edges once it re-pins. Task 3 depends on this: it is what makes
@@ -386,9 +390,11 @@ section would need naming here." Assertion 1 replaces that hardcoding. Assertion
 is what found `organization`. Assertion 3 is new.
 
 **Files:**
+
 - Modify: `verify/check.mjs`
 
 **Interfaces:**
+
 - Consumes: R16 from Task 1, `ref?` being a legal type from Task 1, and the parser's new rule
   from Task 2.
 

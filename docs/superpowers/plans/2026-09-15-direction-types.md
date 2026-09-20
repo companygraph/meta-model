@@ -32,12 +32,14 @@ Repository: `/Users/rob/git/companygraph/meta-model`. Branch: `direction-types`,
 ### Task 1: The `strategic-objective` schema
 
 **Files:**
+
 - Create: `core/strategic-objective-schema.md`
 - Modify: `lib/checks.mjs` (the `TYPES` array, currently lines 18-40)
 - Add: `docs/superpowers/specs/2026-09-15-direction-types-design.md` and `docs/superpowers/plans/2026-09-15-direction-types.md` (both already written, neither yet committed)
 - Test: `npm run verify`
 
 **Interfaces:**
+
 - Produces: the type name `strategic-objective`, its folder `strategic-objectives`, and the section heading `## What it makes true`. Task 2's `serves` field points at this type by name; Task 3 and Task 7 write entities against this schema.
 
 - [ ] **Step 1: Confirm the current shape before touching anything**
@@ -177,11 +179,13 @@ MSG
 ### Task 2: The `strategy` schema
 
 **Files:**
+
 - Create: `core/strategy-schema.md`
 - Modify: `lib/checks.mjs` (the `TYPES` array)
 - Test: `npm run verify`
 
 **Interfaces:**
+
 - Consumes: the type `strategic-objective` from Task 1, named in the `serves` field's type as `array of ref → strategic-objective`.
 - Produces: the type name `strategy`, its folder `strategies`, the fields `serves` and `upholds`, and the section headings `## The approach`, `## What it rules out` and `## What would show it is working`. Tasks 3, 8 write entities against this schema.
 
@@ -339,11 +343,13 @@ MSG
 ### Task 3: The example gains one objective and one strategy
 
 **Files:**
+
 - Create: `example/model/strategic-objectives/support-stops-explaining-invoices.md`
 - Create: `example/model/strategies/invoicing-strategy.md`
 - Test: `npm run verify`
 
 **Interfaces:**
+
 - Consumes: the schemas from Tasks 1 and 2; the example's existing entities `Local` (source) and `Craftsmanship` (value).
 - Produces: nothing later tasks read. This is the worked instance a reader meets at companygraph.io/example.
 
@@ -490,6 +496,7 @@ MSG
 ### Task 4: Versions, the workflow ref and the README
 
 **Files:**
+
 - Modify: `core/manifest.json` (version 0.19.0 → 0.21.0)
 - Modify: `package.json` (version 0.20.0 → 0.21.0)
 - Modify: `.github/workflows/instance-check.yml` (`ref: v0.20.0` → `ref: v0.21.0`, and the example pin in the header comment)
@@ -497,6 +504,7 @@ MSG
 - Test: `npm run verify`
 
 **Interfaces:**
+
 - Consumes: nothing.
 - Produces: the release number `0.21.0`, which Phase 2 vendors and pins in three places.
 
@@ -660,6 +668,7 @@ Repository: `/Users/rob/git/robertblust/mental-model`. **Blocked until `v0.21.0`
 ### Task 6: Re-vendor core at 0.21.0
 
 **Files:**
+
 - Create: `meta/core/strategic-objective-schema.md`, `meta/core/strategy-schema.md` (copied, never edited here)
 - Modify: `meta/core/manifest.json`, and any other vendored file whose bytes changed
 - Modify: `.companygraph/manifest.json` (`tooling`, `core.version`, `core.source`, and the `files` hashes)
@@ -667,6 +676,7 @@ Repository: `/Users/rob/git/robertblust/mental-model`. **Blocked until `v0.21.0`
 - Modify: `AGENTS.md` (the line reading "core 0.19.0")
 
 **Interfaces:**
+
 - Produces: `meta/core/strategic-objective-schema.md` and `meta/core/strategy-schema.md`, which Tasks 7 and 8 write against, and which the `companygraph-add-entity` and `companygraph-validate` skills read.
 
 - [ ] **Step 1: Confirm the release exists**
@@ -773,10 +783,12 @@ MSG
 ### Task 7: The objective
 
 **Files:**
+
 - Create: `model/strategic-objectives/README.md`
 - Create: `model/strategic-objectives/whoever-decides-about-me-decided-from-the-model.md`
 
 **Interfaces:**
+
 - Consumes: `meta/core/strategic-objective-schema.md` from Task 6; the source entity `Local`.
 - Produces: the canonical name **Whoever decides about me decided from the model**, referenced verbatim by both strategies in Task 8.
 
@@ -871,11 +883,13 @@ MSG
 ### Task 8: The two strategies
 
 **Files:**
+
 - Create: `model/strategies/README.md`
 - Create: `model/strategies/ai-strategy.md`
 - Create: `model/strategies/go-to-market-strategy.md`
 
 **Interfaces:**
+
 - Consumes: the objective's canonical name from Task 7; the value entities `Decide well over build fast`, `Model it before you build it`, `Build the alternative before making the point` and `Production is the finish line`.
 
 - [ ] **Step 1: Confirm every name the frontmatter will reference**
@@ -1128,11 +1142,13 @@ own. Without this phase the example ships invisible.
 ### Task 10: Re-pin companygraph.io onto the release
 
 **Files:**
+
 - Modify: `source.json` (the `commit`)
 - Modify: `example.json` and `model.json` (regenerated, committed)
 - Modify: `package.json` and `package-lock.json` (the parser pin)
 
 **Interfaces:**
+
 - Consumes: the merge commit of Phase 1 on `companygraph/meta-model`'s `main`.
 
 - [ ] **Step 1: Read what is about to move**
@@ -1240,11 +1256,13 @@ Repository: `/Users/rob/git/robertblust/robertblust.github.io`. **Blocked until 
 ### Task 11: Re-pin blust.ch onto the instance
 
 **Files:**
+
 - Modify: `source.json` (the `commit`)
 - Modify: `model.json` (regenerated, committed)
 - Modify: `package.json` (the `companygraph-meta-model` pin, if the owner wants it moved)
 
 **Interfaces:**
+
 - Consumes: the merge commit on `robertblust/mental-model`'s `main` from Phase 2.
 
 - [ ] **Step 1: Branch and take the merge commit**

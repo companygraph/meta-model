@@ -43,9 +43,11 @@ zero occurrences of the field name.
 ## Task 1: R14 and R15 in CONVENTIONS.md
 
 **Files:**
+
 - Modify: `core/CONVENTIONS.md`
 
 **Interfaces:**
+
 - Produces: rule ids `R14` and `R15`, which Task 2's check cites. `verify/check.mjs` fails a
   check whose `rule` names a rule `CONVENTIONS.md` does not define, so the rules land first.
 
@@ -118,9 +120,11 @@ git commit -m "R14 and R15: American English, and fields a schema declares"
 ## Task 2: The R15 check
 
 **Files:**
+
 - Modify: `verify/check.mjs`
 
 **Interfaces:**
+
 - Consumes: `R15` from Task 1; the existing `TYPES`, `fieldsOf(type)`, `typeOfFile(rel)`,
   `walkMd(rel, visit)`, `frontmatterOf(text)`, `EX` and `fail(message)`.
 - Produces: a check named `frontmatter fields are declared`, which Task 3 relies on to prove
@@ -217,6 +221,7 @@ git commit -m "A frontmatter field no schema declares is an error"
 ## Task 3: `organisation` becomes `organization`
 
 **Files:**
+
 - Modify: `core/experience-schema.md` (6 occurrences, one of them the field declaration),
   `core/experience-kind-schema.md` (1), `core/profile-schema.md` (1),
   `core/proficiency-level-schema.md` (1), `core/CONVENTIONS.md` (2), `README.md` (1),
@@ -226,6 +231,7 @@ git commit -m "A frontmatter field no schema declares is an error"
   occurrences in prose
 
 **Interfaces:**
+
 - Consumes: Task 2's check, which is what proves no example page kept the old key.
 
 - [ ] **Step 1: Rename everywhere except the historical records**
@@ -264,6 +270,7 @@ git commit -m "organisation becomes organization"
 ## Task 4: Release 0.13.0
 
 **Files:**
+
 - Modify: `package.json`, `core/manifest.json`
 
 - [ ] **Step 1: Bump both, to the same number**
@@ -301,6 +308,7 @@ the manifest agree.
 **Blocked on:** `v0.13.0` tagged in `companygraph/meta-model`.
 
 **Files (repository: `robertblust/mental-model`, branch `american-english`):**
+
 - Modify: `meta/core/*` — 12 files, replaced wholesale from the release
 - Modify: `.companygraph/manifest.json` — the version, the source, and 12 sha256 values
 - Modify: `model/profiles/robert-blust/experiences/*.md` — 23 files carrying `organisation:`
@@ -309,6 +317,7 @@ the manifest agree.
   `model/proficiency-levels/competent.md`
 
 **Interfaces:**
+
 - Consumes: core 0.13.0's `experience-schema.md`, which declares `organization`.
 - Produces: the commit both sites will pin.
 
@@ -399,6 +408,7 @@ The body states that 0.12.0 arrives in the same step, and lists what moved beyon
 **Blocked on:** Task 5 merged, so there is a commit to pin.
 
 **Files (repository: `robertblust.github.io`, branch `model-0-13-0`):**
+
 - Modify: `package.json`, `package-lock.json` — the parser pin
 - Modify: `source.json` — the mental-model commit
 - Modify: `model/index.html` — regenerated, not edited
@@ -459,6 +469,7 @@ graph and no card body.
 renders the meta-model, not the mental-model.
 
 **Files (repository: `companygraph.github.io`, branch `core-0-13-0`):**
+
 - Modify: `package.json`, `package-lock.json`, `source.json`
 - Modify: `model/index.html`, `example/index.html` — regenerated
 - Modify: `README.md`, `CLAUDE.md` — prose
