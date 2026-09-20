@@ -717,6 +717,21 @@ test("what only looks like a link is none: code, an image, brackets without a ta
   assert.deepEqual(linked("An array is [1, 2] and a call is f(java.md)."), []);
 });
 
+// The image rule is read from the character before a match rather than from a lookbehind, since
+// a regex literal is parsed with the file and `(?<!!)` is a syntax error on an engine without it:
+// Safari gained lookbehind in 16.4 and this file is bundled into an editor plugin that runs on a
+// phone. These are the cases that separate reading the character from the obvious alternative,
+// capturing it, which would eat the separator between two links and miss the second.
+test("links that touch are each read, and only an image's own bracket is skipped", () => {
+  assert.equal(linked("Two in a row: [Java](java.md)[again](java.md).").length, 2);
+  // An image, then a link with nothing between them: the second is a link.
+  assert.equal(linked("![a diagram](java.md)[Java](java.md)").length, 1);
+  // A link that opens the line has no character before it and is still a link.
+  assert.equal(linked("[Java](java.md) opens this line.").length, 1);
+  // An image that opens the line is still an image.
+  assert.deepEqual(linked("![a diagram](java.md) opens this line."), []);
+});
+
 test("a README is no entity, and its links are its own business", () => {
   assert.deepEqual(linked("Plain.", [["model/skills/README.md", "# Skills\n\n- [Java](java.md)\n"]]), []);
 });
