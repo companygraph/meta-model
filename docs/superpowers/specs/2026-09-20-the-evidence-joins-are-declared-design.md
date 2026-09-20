@@ -9,8 +9,8 @@ schemas drive every rule there today, so it is kept by whoever writes.” The re
 carries an agent skill of its own to keep them, which runs when someone remembers to run it.
 
 Status: written on September 20, 2026, against `main` at core 0.33.0, as the first commit of the
-pull request that builds it. The owner has seen the direction in one paragraph and not this
-grammar. It is here so the grammar can be refused before the code is read.
+pull request that builds it, so that the grammar could be refused before the code was read. The
+owner decided it as the last section records.
 
 ## What was wrong
 
@@ -95,8 +95,12 @@ This is new vocabulary in R9 and rides well with the declared list kind that is 
 next such release, which is also a Description opener. `shape` stays 3: nothing about how a
 page or a schema is laid out changes, and a consumer that reads 0.33.0 reads this.
 
-## What the owner decides
+## What the owner decided
 
-Whether the grammar stands, and the two words in it: `lists` and `Under`. Whether the checks
-cite R16 or get a rule of their own. And whether this waits for the release that carries the
-declared list kind or goes ahead of it.
+On September 20, 2026, one question at a time. The grammar stands, with both words: `lists`
+and `Under`. R9 says that `Under` holds both ways, which answers the word's one-directional
+sound. The checks cite R16 and get no rule of their own, since a join is one more thing a
+schema declares and an instance is held to, and grammar in R9 with the holding in R16 is how
+every other declared shape already works. And this does not go out alone: the declared list
+kind is built first, on this branch's work, and the two leave as one vocabulary release and one
+wave through the consumers.
