@@ -67,6 +67,11 @@ its end does not scale at all.
 - A phase whose activities are the same for every track carries no track headings at all, and
   one that carries any puts every activity under one: an activity above the first heading
   belongs to no track, and the instance checks say so.
+- Activities are a numbered list, because their order is the order the work is done in, and the
+  instance checks read the marker. A numbered list under no track heading is a phase whose work
+  is the same on every track. Bullets under no heading are reported as standing under no track,
+  as an entry's achievements under no kind are, and the answer is to number them and not to add
+  a heading.
 - `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
   where the two disagree the model is wrong, not the reader, and the instance checks say so.
 - The last phase has no `gate-to`, and its gate is the one that releases the work.

@@ -6,9 +6,10 @@
 
 `model/processes/<process>/<process>.md`
 
-A process owns its phases and cannot be read without them, so it is a folder rather than a
-file, as a profile is. The folder is named for the process and holds its own file under that
-same name, plus the `phases/` and `tracks/` collections the phases and tracks nest in.
+A process owns its phases and its tracks and cannot be read without them, so it is a folder
+rather than a file, as a profile is. The folder is named for the process and holds its own file
+under that same name, plus the `phases/` and `tracks/` collections the phases and tracks nest
+in.
 
 ## Frontmatter
 

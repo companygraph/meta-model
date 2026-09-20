@@ -42,5 +42,5 @@ nothing. Which seats work a track and what they do on it are said by the phases.
 - A track's name is unique within its process (R2): two processes may each have a track called
   `Code`, and a phase's heading or a process's `## Tracks` finds the one in its own process
   (R4).
-- A track carries no order. Tracks run together in one pass, and the order a process lists them
-  in is the order a reader meets them and nothing more.
+- A track carries no order: the order a process lists its tracks in is the order a reader meets
+  them and nothing more.
