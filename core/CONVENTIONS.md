@@ -213,9 +213,10 @@ section. The row's Type is `ref → <type>`, the one type every heading in the s
 and `Heading` names the reference, which is what the edge is called. One row, because a
 heading that named a second type would be a second section. Required says whether an instance
 must carry the headings at all: an instance that defines no entities of the heading's type
-writes the section ungrouped, which is what `No` allows. A section marked `Grouped.` with
-no heading table, and a heading table for a section not marked `Grouped.`, are both errors, as
-with `Table.`.
+writes the section ungrouped, which is what `No` allows, and a schema may say in its writing
+rules when a page writes it ungrouped although the instance does. A section marked `Grouped.`
+with no heading table, and a heading table for a section not marked `Grouped.`, are both
+errors, as with `Table.`.
 
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
 `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`,

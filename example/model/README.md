@@ -8,8 +8,8 @@ end to end without anyone's actual client or revenue data being published.
 
 It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
 `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`,
-`strategic-objective`, `strategy`, `role`, `process`, `phase` — and declares no packs. That is
-what core ships, not a claim that these types describe a company.
+`strategic-objective`, `strategy`, `role`, `process`, `phase`, `track` — and declares no packs.
+That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -19,6 +19,7 @@ strategies/                      invoicing-strategy.md
 roles/                           backend-engineer.md, reviewer.md
 processes/delivery/              delivery.md
   phases/                        specify.md, build.md, release.md
+  tracks/                        code.md, docs.md
 values/                          say-the-hard-thing.md, craftsmanship.md
 sources/                         local.md, google-workspace.md
 surfaces/                        partner-directory.md, beacon-systems-website.md

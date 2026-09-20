@@ -11,10 +11,10 @@ supported-by:
 
 ## Tracks
 
-| Track | Produces |
-| --- | --- |
-| Code | A merged change to the platform |
-| Docs | A published page on the customer site |
+| Track |
+| --- |
+| Code |
+| Docs |
 
 ## Phases
 

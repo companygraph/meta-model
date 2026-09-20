@@ -6,9 +6,10 @@
 
 `model/processes/<process>/<process>.md`
 
-A process owns its phases and cannot be read without them, so it is a folder rather than a
-file, as a profile is. The folder is named for the process and holds its own file under that
-same name, plus the `phases/` collection the phases nest in.
+A process owns its phases and its tracks and cannot be read without them, so it is a folder
+rather than a file, as a profile is. The folder is named for the process and holds its own file
+under that same name, plus the `phases/` and `tracks/` collections the phases and tracks nest
+in.
 
 ## Frontmatter
 
@@ -25,7 +26,7 @@ same name, plus the `phases/` collection the phases nest in.
 | --- | --- | --- |
 | `# [Process]` | Yes | The canonical name of the process. Phases and readers reference it by this exact string. |
 | `> [Purpose]` | Yes | One-paragraph statement of what the process is for |
-| `## Tracks` | Yes | Table. The kinds of thing this process makes; its columns are declared below. |
+| `## Tracks` | Yes | Table. The kinds of thing this process makes, one row each; its columns are declared below. |
 | `## Phases` | Yes | Table. The phases of the process, one row each, in the order the work passes through them; its columns are declared below. |
 | `## What it never does` | Yes | A list, one sentence each, of what the process refuses in every phase |
 | `## References` | No | Table. The rulebooks the process is run by; its columns are declared below. |
@@ -34,8 +35,7 @@ same name, plus the `phases/` collection the phases nest in.
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Track` | Yes | string | The kind of thing this track makes |
-| `Produces` | Yes | string | What this track leaves behind when a change runs down it |
+| `Track` | Yes | ref → track | The track, by its canonical name: the H1 of a file in this process's `tracks/` |
 
 `## Phases` is a table with these columns:
 
@@ -62,7 +62,6 @@ and it is not a record of work that happened, which is an experience.
 
 - Person-neutral, as a role is: a process names seats and never who holds them.
 - Named for the work rather than for the tool that carries it: `Delivery`, not `The board`.
-- A track is named for what it makes, not for who makes it.
 - Tracks run together in one pass rather than instead of one another. A change that is both
   code and prose runs down both, so a phase's `### [Track]` headings are strands of one step
   and never alternative routes through it, and a phase may produce a deliverable per track in
@@ -75,5 +74,8 @@ and it is not a record of work that happened, which is an experience.
 - A phase is named in `## Phases` by its canonical name and nothing beside it (R3). A path to
   the phase's file is not written there: a path moves, nothing resolves one, and whatever shows
   the model to a reader can make the name a link.
+- `## Tracks` lists every track in the folder and nothing else, each by its canonical name and
+  nothing beside it (R3); the instance checks hold it. What a track produces is said once, in
+  the track's own file, and is not repeated here.
 - A process with one track says so and names it; a track table is not omitted because there
   happens to be only one kind of work today.

@@ -357,7 +357,7 @@ test("a bullet before the first heading is a failure where the instance holds a 
 
   const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Achievements"));
   assert.ok(hit, `no failure named the entry; got: ${failures.join(" | ") || "none"}`);
-  assert.match(hit, /bullet/);
+  assert.match(hit, /an item before its first/);
 });
 
 // An instance that defines no kinds writes a flat list, and the schema says so: `Required` is
@@ -987,4 +987,123 @@ test("sectionsOf keys a page's sections as the parser heads them", () => {
   assert.deepEqual([...sectionsOf(text).keys()], ["", "What it means", "References"]);
   // The frontmatter stays where it was, in the part before the first heading.
   assert.ok(sectionsOf(text).get("").includes("source: Local"));
+});
+
+// A track is an entity its process owns, so that a phase's `### [Track]` heading is a declared
+// reference and not a word that happens to match a cell. Nothing below is a check written for
+// tracks: the fixtures declare a second owned type, a listing of it and a grouped heading typed
+// to it, and the checks that read declarations do the rest. They are pinned because a behavior
+// that arrives for free is one nobody notices leaving.
+const TRACKED_PROCESS_SCHEMA = [
+  "# Process Schema", "", "> A process.", "",
+  "## File Location", "", "`processes/<process>/<process>.md`", "",
+  "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |", "",
+  "## Sections", "",
+  "| Section | Required | Description |", "| --- | --- | --- |",
+  "| `## Tracks` | Yes | Table. The tracks. |",
+  "| `## Phases` | Yes | Table. The phases, in order. |", "",
+  "`## Tracks` is a table with these columns:", "",
+  "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
+  "| `Track` | Yes | ref → track | The track. |", "",
+  "`## Phases` is a table with these columns:", "",
+  "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
+  "| `Phase` | Yes | ref → phase | The phase. |", "",
+].join("\n");
+
+const TRACK_SCHEMA = schema("track", [], { owner: "process" });
+
+const TRACKED_PHASE_SCHEMA = schema("phase", [], {
+  owner: "process",
+  grouped: { section: "Activities", heading: "Track", type: "ref → track" },
+});
+
+const track = (name) => `# ${name}\n\n> What one pass leaves behind.\n`;
+const tracked = (name, tracks, phases = ["Build"]) =>
+  `# ${name}\n\n> A process.\n\n## Tracks\n\n| Track |\n| --- |\n${tracks.map((t) => `| ${t} |`).join("\n")}\n\n` +
+  `## Phases\n\n| Phase |\n| --- |\n${phases.map((p) => `| ${p} |`).join("\n")}\n`;
+const building = (headings) =>
+  `# Build\n\n> Make it.\n\n## Activities\n\n${headings.map((h) => `### ${h}\n\n1. Do the work.\n`).join("\n")}`;
+
+const withTracks = (files) =>
+  checkInstance(
+    new Map([
+      ["meta/core/process-schema.md", TRACKED_PROCESS_SCHEMA],
+      ["meta/core/track-schema.md", TRACK_SCHEMA],
+      ["meta/core/phase-schema.md", TRACKED_PHASE_SCHEMA],
+      ...files,
+    ]),
+    { core: "meta/core" },
+  ).failures;
+
+const DELIVERY = [
+  ["model/processes/delivery/delivery.md", tracked("Delivery", ["Code", "Docs"])],
+  ["model/processes/delivery/tracks/code.md", track("Code")],
+  ["model/processes/delivery/tracks/docs.md", track("Docs")],
+  ["model/processes/delivery/phases/build.md", building(["Code", "Docs"])],
+];
+
+test("a phase's track headings that name tracks of its own process are not a failure", () => {
+  assert.deepEqual(withTracks(DELIVERY).filter((f) => /Tracks|Activities|tracks\//.test(f)), []);
+});
+
+test("a track renamed leaves a phase's heading naming nothing, and that is a failure naming the heading", () => {
+  const failures = withTracks([
+    ["model/processes/delivery/delivery.md", tracked("Delivery", ["Code2", "Docs"])],
+    ["model/processes/delivery/tracks/code2.md", track("Code2")],
+    ["model/processes/delivery/tracks/docs.md", track("Docs")],
+    ["model/processes/delivery/phases/build.md", building(["Code", "Docs"])],
+  ]);
+  const hit = failures.find((f) => f.startsWith("model/processes/delivery/phases/build.md: ") && f.includes("`### Code`"));
+  assert.ok(hit, `no failure named the heading; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /"## Activities"/);
+  assert.match(hit, /ref → track/);
+});
+
+test("a heading naming another process's track is a failure, though the name resolves", () => {
+  const failures = withTracks([
+    ...DELIVERY.slice(0, 3),
+    ["model/processes/delivery/phases/build.md", building(["Code", "Contract"])],
+    ["model/processes/hiring/hiring.md", tracked("Hiring", ["Contract"], ["Screen"])],
+    ["model/processes/hiring/tracks/contract.md", track("Contract")],
+    ["model/processes/hiring/phases/screen.md", "# Screen\n\n> First.\n"],
+  ]);
+  const hit = failures.find((f) => f.includes("phases/build.md") && f.includes("Contract"));
+  assert.ok(hit, `no failure named the foreign track; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /R5/);
+});
+
+test("a process's table of tracks is held to its tracks folder: one left out, one that is not there, one twice", () => {
+  const leftOut = withTracks([["model/processes/delivery/delivery.md", tracked("Delivery", ["Code"])], ...DELIVERY.slice(1)]);
+  assert.ok(leftOut.some((f) => f.includes('"## Tracks"') && f.includes('does not list "Docs"')), leftOut.join("\n"));
+
+  const notThere = withTracks([["model/processes/delivery/delivery.md", tracked("Delivery", ["Code", "Docs", "Video"])], ...DELIVERY.slice(1)]);
+  assert.ok(notThere.some((f) => f.includes("delivery.md") && f.includes('"Video"') && f.includes("ref → track")), notThere.join("\n"));
+
+  const twice = withTracks([["model/processes/delivery/delivery.md", tracked("Delivery", ["Code", "Docs", "Code"])], ...DELIVERY.slice(1)]);
+  assert.ok(twice.some((f) => f.includes('"## Tracks"') && f.includes('lists "Code" twice')), twice.join("\n"));
+});
+
+// The two halves of "a grouped section's items stand under its headings" mean different things
+// for a phase. An activity above the first track heading belongs to no track, as a bullet above
+// the first kind belongs to none, so the first half reads a numbered item too. A phase with no
+// track heading at all is the legal way to say the work is the same on every track, so the
+// second half is left reading bullets only, and a numbered list under no heading passes on
+// purpose and not by its list marker.
+test("an activity above the first track heading is a failure, numbered though it is", () => {
+  const failures = withTracks([
+    ...DELIVERY.slice(0, 3),
+    ["model/processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n1. Belongs to no track.\n\n### Code\n\n1. Do the work.\n"],
+  ]);
+  const hit = failures.find((f) => f.includes("phases/build.md") && f.includes("before its first `###` heading"));
+  assert.ok(hit, `no failure named the item; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /an item/);
+  assert.match(hit, /a track/);
+});
+
+test("a phase with no track heading passes where the instance holds a track: its work is the same on every track", () => {
+  const failures = withTracks([
+    ...DELIVERY.slice(0, 3),
+    ["model/processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n1. One thing.\n2. Another.\n"],
+  ]);
+  assert.deepEqual(failures.filter((f) => f.includes("Activities")), []);
 });

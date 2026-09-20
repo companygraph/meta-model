@@ -34,10 +34,16 @@ to be renamed through the whole folder whenever a phase was inserted.
 | `# [Phase]` | Yes | The canonical name of the phase. The owning process's `## Phases` table and the previous phase's `gate-to` reference it by this exact string. |
 | `> [Goal]` | Yes | One-paragraph statement of what the phase is for |
 | `## What it takes` | Yes | What enters the phase, and what it refuses to start without |
-| `## Activities` | Yes | A numbered list of what is done; where the work differs by track, one `### [Track]` heading per track, each with its own numbered list |
+| `## Activities` | Yes | Grouped. A numbered list of what is done; where the work differs by track, one `### [Track]` heading per track, each with its own numbered list |
 | `## What it produces` | Yes | Table. What leaves the phase; its columns are declared below. |
 | `## What it never does` | Yes | A list, one sentence each, of what the phase refuses |
 | `## Gate` | Yes | The criteria that must be satisfied to leave the phase, as a list, and what happens when they cannot be |
+
+`## Activities` is grouped under these headings:
+
+| Heading | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Track` | No | ref → track | The track the numbered list below it is the work of, by its canonical name: the H1 of a file in the owning process's `tracks/` |
 
 `## What it produces` is a table with these columns:
 
@@ -58,9 +64,14 @@ its end does not scale at all.
 
 - A gate criterion is a sentence that can fail: "the checks pass on the branch" can, "quality
   is good" cannot.
-- A `### [Track]` heading under `## Activities` names a track the owning process declares, spelled
-  as that track's `Track` cell spells it.
-- A phase whose activities are the same for every track carries no track headings at all.
+- A phase whose activities are the same for every track carries no track headings at all, and
+  one that carries any puts every activity under one: an activity above the first heading
+  belongs to no track, and the instance checks say so.
+- Activities are a numbered list, because their order is the order the work is done in, and the
+  instance checks read the marker. A numbered list under no track heading is a phase whose work
+  is the same on every track. Bullets under no heading are reported as standing under no track,
+  as an entry's achievements under no kind are, and the answer is to number them and not to add
+  a heading.
 - `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
   where the two disagree the model is wrong, not the reader, and the instance checks say so.
 - The last phase has no `gate-to`, and its gate is the one that releases the work.
