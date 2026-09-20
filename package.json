@@ -11,6 +11,7 @@
     "test:instance": "node --test verify/instance.test.mjs",
     "test:instance-checks": "node --test verify/instance-checks.test.mjs",
     "test:instance-files": "node --test verify/instance-files.test.mjs",
+    "test:plan": "node --test verify/plan.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs"
   }
 }
