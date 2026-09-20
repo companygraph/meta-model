@@ -105,8 +105,20 @@ export function checkPath(path) {
 // The direct-run entry, behaving exactly as this file always has: a guard failure prints its
 // message with the same "✗ " prefix and exits 1, and a checked run exits on the failure count.
 // The guard excludes an import — `bin/companygraph.mjs` takes `checkPath` without ever reaching
-// this block — by comparing the resolved path actually run to this module's own.
-if (process.argv[1] && realpathSync(process.argv[1]) === fileURLToPath(import.meta.url)) {
+// this block — by comparing the resolved path actually run to this module's own. Resolving
+// argv[1] can itself fail (a test harness's argv[1] need not be a real file on disk), and that
+// failure means "not run directly," not a crash — importing this module must never throw for a
+// reason that has nothing to do with the check it runs.
+function ranDirectly() {
+  if (!process.argv[1]) return false;
+  try {
+    return realpathSync(process.argv[1]) === fileURLToPath(import.meta.url);
+  } catch {
+    return false;
+  }
+}
+
+if (ranDirectly()) {
   try {
     process.exit(checkPath(process.argv[2] ?? ".") ? 1 : 0);
   } catch (error) {

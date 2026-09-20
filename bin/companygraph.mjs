@@ -8,7 +8,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, statSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, initPlan } from "../lib/plan.mjs";
@@ -27,15 +27,27 @@ init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --
 `;
 
 // The core inside this release, which is what `init` vendors unless a tag says otherwise.
+// Recursive, to match `extractCore`: `core/` is flat today, but a future subfolder must not be
+// dropped from a bundled init while a fetched one keeps it.
 export function coreOfThisRelease() {
   const from = join(HERE, "..", "core");
   const files = new Map();
-  for (const name of readdirSync(from)) {
-    const full = join(from, name);
-    if (statSync(full).isFile()) files.set(name, readFileSync(full, "utf8"));
-  }
+  const walk = (rel) => {
+    for (const entry of readdirSync(join(from, rel || "."), { withFileTypes: true })) {
+      const child = rel ? `${rel}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) walk(child);
+      else files.set(child, readFileSync(join(from, child), "utf8"));
+    }
+  };
+  walk("");
   return files;
 }
+
+// Toggles carry no value; `upgrade`, the next task, also reads --force and --dry-run, so both
+// are named here once rather than teaching this parser about them a second time. Everything
+// else takes a value, and a value that is missing or looks like another flag is refused by name
+// rather than silently eaten or handed to a prompt further down.
+const TOGGLES = new Set(["here", "force", "dry-run"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -43,8 +55,12 @@ function flags(argv) {
     const arg = argv[i];
     if (!arg.startsWith("--")) { out._.push(arg); continue; }
     const name = arg.slice(2);
-    if (name === "here") out.here = true;
-    else out[name] = argv[++i];
+    if (TOGGLES.has(name)) { out[name] = true; continue; }
+    const value = argv[i + 1];
+    if (value === undefined) throw new Error(`--${name} needs a value`);
+    if (value.startsWith("--")) throw new Error(`--${name} needs a value, not ${value}`);
+    out[name] = value;
+    i++;
   }
   return out;
 }
@@ -76,7 +92,10 @@ async function ask(question) {
 async function init(argv) {
   const given = flags(argv);
   const root = given._[0] ?? ".";
-  if (!given.here && existsSync(root) && present(root).size > 0)
+  // Walked once: the pre-flight guard and the plan's own conflict check both need it, and a
+  // repository is not read twice for the price of one decision.
+  const found = present(root);
+  if (!given.here && found.size > 0)
     throw new Error(`${root} is not empty; pass --here to add an instance to it.`);
   const agent = given.agent ?? (AGENTS.length === 1 ? AGENTS[0] : await ask(`Which agent? (${AGENTS.join(", ")}) `));
   const name = given.name ?? (await ask("What is this instance called? "));
@@ -89,7 +108,7 @@ async function init(argv) {
     name,
     agent,
     units: given.schemas ?? "meta",
-    present: present(root),
+    present: found,
     fetched: Boolean(given.core),
   });
   if (plan.refused) throw new Error(plan.refused);
@@ -104,8 +123,15 @@ const [command, ...rest] = process.argv.slice(2);
 try {
   if (command === "init") await init(rest);
   else if (command === "check") {
+    // A second door to the same code, so a guard failure must read exactly as it does through
+    // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
     const { checkPath } = await import("./check-instance.mjs");
-    if (checkPath(rest[0] ?? ".") > 0) process.exit(1);
+    try {
+      if (checkPath(rest[0] ?? ".") > 0) process.exit(1);
+    } catch (error) {
+      console.error(`✗ ${error.message}`);
+      process.exit(1);
+    }
   } else if (command === "--help" || command === "-h" || command === undefined) console.log(USAGE);
   else throw new Error(`${command} is no command of this tooling.\n\n${USAGE}`);
 } catch (error) {

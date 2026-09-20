@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "engines": { "node": ">=22" },
-  "files": ["lib", "bin"],
+  "files": ["lib", "bin", "core"],
   "bin": { "companygraph": "./bin/companygraph.mjs" },
   "exports": {
     "./instance": "./lib/instance.mjs",
@@ -20,6 +20,7 @@
     "test:plan": "node --test verify/plan.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs",
     "test:cli": "node --test verify/cli.test.mjs",
-    "test:untar": "node --test verify/untar.test.mjs"
+    "test:untar": "node --test verify/untar.test.mjs",
+    "test:fetch-core": "node --test verify/fetch-core.test.mjs"
   }
 }

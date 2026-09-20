@@ -21,9 +21,12 @@ function releaseTarball(prefix) {
   fs.writeFileSync(path.join(root, "lib", "checks.mjs"), "// not the core\n");
   const tarball = path.join(stage, "release.tar.gz");
   // COPYFILE_DISABLE keeps macOS's bsdtar from writing AppleDouble `._name` sidecar entries for
-  // extended attributes — noise no Linux-built release tarball carries, and not what this test
-  // means to fix.
-  execFileSync("tar", ["-czf", tarball, "-C", stage, prefix], { env: { ...process.env, COPYFILE_DISABLE: "1" } });
+  // extended attributes, and --format=ustar keeps it from wrapping every entry in a pax extended
+  // header of its own — both are macOS/libarchive defaults, and neither is what a Linux-built
+  // GitHub release tarball (or this test) is about.
+  execFileSync("tar", ["--format=ustar", "-czf", tarball, "-C", stage, prefix], {
+    env: { ...process.env, COPYFILE_DISABLE: "1" },
+  });
   return fs.readFileSync(tarball);
 }
 
@@ -38,4 +41,21 @@ test("extractCore keeps only the regular files under <prefix>/core/, keyed relat
 test("nothing outside core/ comes back, whatever the release's top-level folder is called", () => {
   const core = extractCore(new Uint8Array(releaseTarball("meta-model-v0.30.0")));
   assert.ok(![...core.keys()].some((rel) => rel.startsWith("lib")));
+});
+
+test("a GNU long-name header refuses rather than mis-keying the entry it introduces", () => {
+  // A path over 100 bytes forces bsdtar's gnutar writer to precede the real entry with a
+  // "././@LongLink" record (type flag "L") carrying the path this reader's fixed-width name
+  // field cannot hold; reading past it would key the file that follows by its truncated name.
+  const stage = fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-tar-"));
+  const prefix = "meta-model-v0.31.0";
+  const longName = "a".repeat(90);
+  const root = path.join(stage, prefix, "core", longName);
+  fs.mkdirSync(root, { recursive: true });
+  fs.writeFileSync(path.join(root, "deep.md"), "# Deep\n");
+  const tarball = path.join(stage, "release.tar.gz");
+  execFileSync("tar", ["--format=gnutar", "-czf", tarball, "-C", stage, prefix], {
+    env: { ...process.env, COPYFILE_DISABLE: "1" },
+  });
+  assert.throws(() => extractCore(new Uint8Array(fs.readFileSync(tarball))), /long-name/i);
 });
