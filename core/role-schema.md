@@ -7,8 +7,7 @@
 `model/roles/*.md`
 
 A role owns nothing and nothing owns it, so it is a file. A profile holds one by listing it,
-and the role never names its holder; what a role names is the skills it requires, and nothing
-else.
+and the role never names its holder; what a role names is the skills the seat requires.
 
 ## Frontmatter
 
