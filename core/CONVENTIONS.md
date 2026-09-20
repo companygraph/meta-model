@@ -286,6 +286,22 @@ a row draws is a matter of the schema, never of the order somebody typed the col
 parser draws from the declared column wherever it is. A table declaring no reference at all
 draws nothing and is data, which is a table's other legal shape.
 
+A schema may declare two joins between what its tables hold, each as the opening of a
+Description, where a reader and a check both find it, as R8 has an enum's values. A column typed
+`qualifier → <type>` whose Description opens with a field in backticks, the word `lists` and a
+column in backticks — `` `skills` lists `Skill`. `` — declares that the entity the cell names
+carries, in that field, the entity the same row's column names. The field is one the qualifier's
+type declares `ref → <type>` or `array of ref → <type>`, the column is one of this table typed
+to the same type, and a declaration naming anything else is an error in the schema. A section
+whose Description goes on from `Table.` with `` Under `## <Section>`. `` declares that its table
+and the one it names reference the same entities, both ways: no row here stands under something
+the other never names, and nothing named there is left without a row here. Both sections are
+table sections of the one schema, and each has its reference to the same type; which column is
+meant is not said, because a column table declares at most one. R16 says what an instance is
+held to. A Description that opens any other way declares nothing, so a declaration misspelled
+is prose and switches nothing on: a schema that means one is read back once after it is
+written, by running the checks against a page that breaks it.
+
 `## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
 cannot: what the type is *for*, and what separates a good entity of it from one that merely
 has the shape. Purpose is one paragraph — the sentence someone needs before writing their
@@ -413,6 +429,14 @@ it is written as digits.
 A heading declared `ref → <type>` draws an edge from the page to the entity each `###` heading
 in that section names, via `<Section>.<Heading>`, and a heading that names nothing of its type
 is R4.
+
+Where a column declares that a field `lists` another column (R9), a filled cell is held to it:
+the entity it names carries the row's other entity in that field, read within the owner the page
+is written in where the type is owned (R4). A blank cell names nothing and is held to nothing.
+Where a section is declared `Under` another, every entity either table references has a row in
+the other, and a page that carries the table above and leaves out the one under it has every
+row above reported, since leaving the section out is how nothing gets written under a claim.
+Both hold what a schema says and name no type themselves.
 
 The difference between a reference and a qualifier is not how hard it resolves; both must. It
 is what the row is saying. A row that names a skill and a level makes one claim about both, so
