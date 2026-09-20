@@ -357,7 +357,7 @@ test("a bullet before the first heading is a failure where the instance holds a 
 
   const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Achievements"));
   assert.ok(hit, `no failure named the entry; got: ${failures.join(" | ") || "none"}`);
-  assert.match(hit, /bullet/);
+  assert.match(hit, /an item before its first/);
 });
 
 // An instance that defines no kinds writes a flat list, and the schema says so: `Required` is
@@ -1081,4 +1081,29 @@ test("a process's table of tracks is held to its tracks folder: one left out, on
 
   const twice = withTracks([["model/processes/delivery/delivery.md", tracked("Delivery", ["Code", "Docs", "Code"])], ...DELIVERY.slice(1)]);
   assert.ok(twice.some((f) => f.includes('"## Tracks"') && f.includes('lists "Code" twice')), twice.join("\n"));
+});
+
+// The two halves of "a grouped section's items stand under its headings" mean different things
+// for a phase. An activity above the first track heading belongs to no track, as a bullet above
+// the first kind belongs to none, so the first half reads a numbered item too. A phase with no
+// track heading at all is the legal way to say the work is the same on every track, so the
+// second half is left reading bullets only, and a numbered list under no heading passes on
+// purpose and not by its list marker.
+test("an activity above the first track heading is a failure, numbered though it is", () => {
+  const failures = withTracks([
+    ...DELIVERY.slice(0, 3),
+    ["model/processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n1. Belongs to no track.\n\n### Code\n\n1. Do the work.\n"],
+  ]);
+  const hit = failures.find((f) => f.includes("phases/build.md") && f.includes("before its first `###` heading"));
+  assert.ok(hit, `no failure named the item; got: ${failures.join(" | ") || "none"}`);
+  assert.match(hit, /an item/);
+  assert.match(hit, /a track/);
+});
+
+test("a phase with no track heading passes where the instance holds a track: its work is the same on every track", () => {
+  const failures = withTracks([
+    ...DELIVERY.slice(0, 3),
+    ["model/processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n1. One thing.\n2. Another.\n"],
+  ]);
+  assert.deepEqual(failures.filter((f) => f.includes("Activities")), []);
 });
