@@ -8,7 +8,7 @@
   "exports": { "./instance": "./lib/instance.mjs", "./checks": "./lib/checks.mjs" },
   "scripts": {
     "verify": "node verify/check.mjs",
-    "test:instance": "node --test verify/instance.test.mjs",
+    "test:instance": "node --test verify/instance.test.mjs verify/constraints.test.mjs",
     "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs"
   }
