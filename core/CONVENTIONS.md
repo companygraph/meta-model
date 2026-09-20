@@ -236,6 +236,12 @@ The `?` is not `Required`, though the two read as one thing on a first pass. `Re
 whether the field may be absent; `ref?` says whether a value that is present must resolve. A
 field can be both, and `organization` is.
 
+A required list that is present and empty is absent in every sense that matters: nothing
+resolves, no edge is drawn, and the page reads as though it had answered a question it did not.
+So a required field typed `array` or `array of ref → <type>` carries at least one entry. An
+optional list written empty is how an author says none yet, and that is theirs to say, since
+the field could have been left out.
+
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
 states and never at more; an author may deliberately record less. A shorter form is an
 interval, not a point: `2002` is the whole year. A comparison takes the bound the field names —
