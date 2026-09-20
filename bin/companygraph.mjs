@@ -4,14 +4,15 @@
 //
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>]
 //   companygraph check [<folder>]
+//   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { dirname, join, relative } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTS, initPlan } from "../lib/plan.mjs";
+import { AGENTS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 
@@ -20,10 +21,12 @@ const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"
 
 const USAGE = `companygraph <command>
 
-  init [<folder>]   write a new instance, or add one to this folder with --here
-  check [<folder>]  the mechanical checks over an instance
+  init [<folder>]     write a new instance, or add one to this folder with --here
+  check [<folder>]    the mechanical checks over an instance
+  upgrade [<folder>]  move an instance's vendored core, manifest and workflow tag together
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>
+upgrade: --core <tag>  --force  --dry-run
 `;
 
 // The core inside this release, which is what `init` vendors unless a tag says otherwise.
@@ -43,10 +46,10 @@ export function coreOfThisRelease() {
   return files;
 }
 
-// Toggles carry no value; `upgrade`, the next task, also reads --force and --dry-run, so both
-// are named here once rather than teaching this parser about them a second time. Everything
-// else takes a value, and a value that is missing or looks like another flag is refused by name
-// rather than silently eaten or handed to a prompt further down.
+// Toggles carry no value; `upgrade` also reads --force and --dry-run, so both are named here
+// once rather than teaching this parser about them a second time. Everything else takes a value,
+// and a value that is missing or looks like another flag is refused by name rather than silently
+// eaten or handed to a prompt further down.
 const TOGGLES = new Set(["here", "force", "dry-run"]);
 
 function flags(argv) {
@@ -119,9 +122,56 @@ async function init(argv) {
   console.log(`  run "npx companygraph-meta-model check ${root}" whenever it changes`);
 }
 
+async function upgrade(argv) {
+  const given = flags(argv);
+  const root = given._[0] ?? ".";
+  const manifestPath = join(root, ".companygraph/manifest.json");
+  if (!existsSync(manifestPath)) throw new Error(`${root} is no instance: it has no .companygraph/manifest.json.`);
+  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  const held = new Map();
+  for (const path of Object.keys(manifest.files ?? {}))
+    if (existsSync(join(root, path))) held.set(path, readFileSync(join(root, path), "utf8"));
+  const workflowPath = join(root, ".github/workflows/companygraph.yml");
+  const workflow = existsSync(workflowPath) ? readFileSync(workflowPath, "utf8") : null;
+  const tag = given.core ?? `v${PACKAGE.version}`;
+  const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
+  const plan = upgradePlan({
+    core,
+    tooling: PACKAGE.version,
+    tag,
+    manifest,
+    held,
+    workflow,
+    fetched: Boolean(given.core),
+    force: Boolean(given.force),
+  });
+  if (plan.refused) throw new Error(plan.refused);
+  if (plan.writes.size === 0 && plan.removes.length === 0) {
+    console.log(`already on core ${plan.to}; nothing to do.`);
+    return;
+  }
+  if (given["dry-run"]) {
+    console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
+    for (const path of plan.writes.keys()) console.log(`  write   ${path}`);
+    for (const path of plan.removes) console.log(`  remove  ${path}`);
+    return;
+  }
+  const written = writePlan(root, plan.writes);
+  for (const path of plan.removes) rmSync(join(root, path), { force: true });
+  console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${plan.removes.length} removed`);
+  if (plan.edited.length) console.log(`  overwritten, as --force asked: ${plan.edited.join(", ")}`);
+  // A release can make a valid instance invalid, so the instance is checked where it now stands
+  // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
+  // failed. The files are the release's; the work the check names is the owner's to do.
+  const { checkPath } = await import("./check-instance.mjs");
+  const owed = checkPath(root);
+  if (owed > 0) console.log(`  the upgrade stands; ${owed} problem${owed > 1 ? "s" : ""} above are the model's to fix`);
+}
+
 const [command, ...rest] = process.argv.slice(2);
 try {
   if (command === "init") await init(rest);
+  else if (command === "upgrade") await upgrade(rest);
   else if (command === "check") {
     // A second door to the same code, so a guard failure must read exactly as it does through
     // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.

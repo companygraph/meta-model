@@ -87,3 +87,23 @@ test("a command it does not know, and no command at all, print what it can do", 
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
   assert.match(run(["--help"]), /init/);
 });
+
+test("upgrade moves an instance, says what it did, and leaves the model alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "model/skills/java.md"), "---\nsource: Local\n---\n\n# Java\n\n> A language.\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /already on core/i);
+  assert.ok(fs.existsSync(path.join(root, "model/skills/java.md")));
+});
+
+test("upgrade refuses when core was edited inside the instance, and --dry-run writes nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const conventions = path.join(root, "meta/core/CONVENTIONS.md");
+  fs.writeFileSync(conventions, `${fs.readFileSync(conventions, "utf8")}\nedited\n`);
+  assert.throws(() => run(["upgrade", root], { stdio: "pipe" }), /CONVENTIONS\.md/);
+  const before = fs.readFileSync(conventions, "utf8");
+  run(["upgrade", root, "--force", "--dry-run"]);
+  assert.equal(fs.readFileSync(conventions, "utf8"), before);
+});
