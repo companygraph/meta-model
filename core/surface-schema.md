@@ -28,9 +28,9 @@ and a surface owns nothing.
 | --- | --- | --- |
 | `# [Surface]` | Yes | The canonical name. Everything references the surface by this exact string. |
 | `> [Description]` | Yes | One-paragraph description of what this surface is and who reaches it |
-| `## What it shows` | Yes | One line per unit the surface presents, naming the unit and what fills it |
-| `## Projection rules` | No | How the model becomes this surface: what is carried, what is left out and why. Required for a `written` surface, absent for a `built` one. |
-| `## Constraints` | No | What the published result must satisfy, each written so a reader can pass or fail it |
+| `## What it shows` | Yes | Bulleted. One item per unit the surface presents, naming the unit and what fills it |
+| `## Projection rules` | No | Bulleted. How the model becomes this surface: what is carried, what is left out and why. Required for a `written` surface, absent for a `built` one. |
+| `## Constraints` | No | Bulleted. What the published result must satisfy, each written so a reader can pass or fail it |
 
 ## Purpose
 

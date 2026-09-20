@@ -218,6 +218,16 @@ rules when a page writes it ungrouped although the instance does. A section mark
 with no heading table, and a heading table for a section not marked `Grouped.`, are both
 errors, as with `Table.`.
 
+A section that holds a list may declare which kind, because the two kinds mean different
+things: a numbered list is a sequence, the order a phase's work is done in, and a bulleted list
+is a set. Its Description begins with `Bulleted.` or `Numbered.`, or carries the word directly
+after `Grouped.` where the list stands under headings — `Grouped. Numbered.` — and never after
+`Table.`, since a table holds rows. The kind governs the list and not the section: a section may
+open its list with a sentence and close it with a paragraph, as a gate does, and only the items
+are held. A section that declares neither is held to nothing, as one that says neither `Table.`
+nor `Grouped.` is prose: a page's own sections, and numbered steps inside a paragraph of
+reasoning, are nobody's to judge. R16 says what an instance is held to.
+
 Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
 `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`,
 `qualifier → <type>`. A reference names
@@ -416,6 +426,12 @@ it is written as digits.
 A heading declared `ref → <type>` draws an edge from the page to the entity each `###` heading
 in that section names, via `<Section>.<Heading>`, and a heading that names nothing of its type
 is R4.
+
+Where a section declares its list `Bulleted.` or `Numbered.` (R9), every item at the left
+margin of that section carries the declared marker. An indented item is a sub-point of the one
+above it and may be of either kind, and what stands in a fenced block is not the page's list. A
+section that is required and declares a kind carries at least one item, as a required list field
+carries at least one entry.
 
 Where a column declares that a field `lists` another column (R9), a filled cell is held to it:
 the entity it names carries the row's other entity in that field, read within the owner the page

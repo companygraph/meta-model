@@ -39,7 +39,7 @@ two together must be unique in the folder.
 | --- | --- | --- |
 | `# [Title]` | Yes | The canonical name of this period |
 | `> [Tagline]` | Yes | One-paragraph summary of the period |
-| `## Achievements` | No | Grouped. What was accomplished in this period, as bullets under `###` headings that name achievement kinds |
+| `## Achievements` | No | Grouped. Bulleted. What was accomplished in this period, under `###` headings that name achievement kinds |
 | `## Ending` | No | Why the period ended, where a bare `end` date would otherwise be read into. One or two sentences. |
 | `## References` | No | Table. What a reader can check this entry against |
 
