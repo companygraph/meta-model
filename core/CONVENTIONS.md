@@ -297,6 +297,13 @@ reader that checks the shape stops at the tables, so nothing that reads a schema
 sees them; the agent pass does, which is the point of putting them in the schema rather than
 in a document beside it.
 
+A schema declares the references its type makes and none it receives. Which types reference
+this one is read from the tables of every other schema, so a sentence here saying that nothing
+does, or that one edge is the only one, is a second copy of a fact held elsewhere, and it stops
+being true the day another schema declares a reference and nobody rereads this one. Prose may
+name a referrer to explain a design — a skill outlives the profile that claims it — and never
+says that the ones it names are all there are.
+
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
 `:---`, `---:` or `:---:`.
 
