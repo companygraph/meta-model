@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { AGENTS, initPlan, upgradePlan } from "../lib/plan.mjs";
+import { hashOf } from "../lib/instance-files.mjs";
 
 const core = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
@@ -133,4 +134,66 @@ test("a workflow the instance does not have is not written by an upgrade", () =>
   const { manifest, held } = instance();
   const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow: null });
   assert.ok(!plan.writes.has(".github/workflows/companygraph.yml"));
+});
+
+// Defect 3: without a global match, a workflow pinning the reusable job twice — two jobs, or one
+// left over from a copy-paste — only had its first occurrence moved, leaving the second pinned to
+// the old tag and failing the pin guard with no upgrade left to run to fix it.
+test("a workflow pinning the reusable job twice has both occurrences moved", () => {
+  const { manifest, held } = instance();
+  const workflow =
+    "jobs:\n  a:\n    uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.31.1\n" +
+    "  b:\n    uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.31.1\n";
+  const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
+  const next = plan.writes.get(".github/workflows/companygraph.yml");
+  assert.equal((next.match(/instance-check\.yml@v0\.32\.0/g) ?? []).length, 2);
+  assert.ok(!next.includes("v0.31.1"));
+});
+
+// Defect 4: `\S+` runs straight through a closing quote, corrupting the YAML, and the shorter
+// anchor "instance-check.yml@" also matches a differently named workflow's pin, moving a tag that
+// upgrade has no business touching.
+test("the workflow's tag is matched up to its closing quote, and a differently named workflow is left alone", () => {
+  const { manifest, held } = instance();
+  const workflow =
+    'jobs:\n  a:\n    uses: "companygraph/meta-model/.github/workflows/instance-check.yml@v0.31.1"\n' +
+    "  b:\n    uses: companygraph/meta-model/.github/workflows/model-instance-check.yml@v3\n";
+  const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
+  const next = plan.writes.get(".github/workflows/companygraph.yml");
+  assert.ok(next.includes('"companygraph/meta-model/.github/workflows/instance-check.yml@v0.32.0"'));
+  assert.ok(next.includes("model-instance-check.yml@v3"));
+});
+
+// Defect 1: `manifest.files` is untrusted, and a correct hash next to a path outside the upgrade's
+// own core is not a reason to trust it. The hash and the held text below are made to match on
+// purpose: the pre-existing edited-file check would already refuse a hash mismatch or a missing
+// file for the wrong reason, so this proves the new check catches it even when the hash is right.
+test("a manifest naming a file outside its own core refuses the whole upgrade, hash and all", () => {
+  const { manifest, held, workflow } = instance();
+  const identity = "# Acme\n\n> One paragraph.\n";
+  const hostileHeld = new Map(held).set("model/identity.md", identity);
+  const hostile = { ...manifest, files: { ...manifest.files, "model/identity.md": hashOf(identity) } };
+  const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest: hostile, held: hostileHeld, workflow });
+  assert.ok(refused.refused.includes("model/identity.md"));
+  assert.equal(refused.writes, undefined);
+});
+
+test("a manifest naming a `..` path in files refuses the whole upgrade even with a correct hash", () => {
+  const { manifest, held, workflow } = instance();
+  const victim = "do not delete me\n";
+  const hostileHeld = new Map(held).set("../victim.txt", victim);
+  const hostile = { ...manifest, files: { ...manifest.files, "../victim.txt": hashOf(victim) } };
+  const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest: hostile, held: hostileHeld, workflow });
+  assert.ok(refused.refused.includes("../victim.txt"));
+  assert.equal(refused.writes, undefined);
+});
+
+// Defect 2: `units` is also untrusted, and an upgrade must refuse it rather than write core files
+// through an escaping relative path.
+test("a manifest whose units escapes the instance refuses the whole upgrade", () => {
+  const { manifest, held, workflow } = instance();
+  const hostile = { ...manifest, units: "../escaped" };
+  const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest: hostile, held, workflow });
+  assert.ok(refused.refused.includes("units"));
+  assert.equal(refused.writes, undefined);
 });

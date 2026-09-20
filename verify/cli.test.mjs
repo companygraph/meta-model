@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { execFileSync } from "node:child_process";
+import { execFileSync, spawnSync } from "node:child_process";
 import { createHash } from "node:crypto";
 import fs from "node:fs";
 import os from "node:os";
@@ -106,4 +106,82 @@ test("upgrade refuses when core was edited inside the instance, and --dry-run wr
   const before = fs.readFileSync(conventions, "utf8");
   run(["upgrade", root, "--force", "--dry-run"]);
   assert.equal(fs.readFileSync(conventions, "utf8"), before);
+});
+
+const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
+
+// Defect 1: a manifest is a file inside the instance, and can name anything in `files` with a
+// correct hash next to it. Unfiltered, that list became a delete list: this proves both halves —
+// the whole upgrade refuses, and neither targeted file is touched, not just that the call throws.
+test("upgrade refuses a manifest that names files outside its own core, and deletes neither", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const identityPath = path.join(root, "model/identity.md");
+  const identity = fs.readFileSync(identityPath, "utf8");
+  const victimPath = path.join(path.dirname(root), `${path.basename(root)}-victim.txt`);
+  const victim = "do not delete me\n";
+  fs.writeFileSync(victimPath, victim);
+  try {
+    manifest.files["model/identity.md"] = sha256(identity);
+    manifest.files[`../${path.basename(victimPath)}`] = sha256(victim);
+    fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+    assert.throws(() => run(["upgrade", root], { stdio: "pipe" }), /model\/identity\.md/);
+    assert.equal(fs.readFileSync(identityPath, "utf8"), identity);
+    assert.ok(fs.existsSync(victimPath));
+    assert.equal(fs.readFileSync(victimPath, "utf8"), victim);
+  } finally {
+    fs.rmSync(victimPath, { force: true });
+  }
+});
+
+// Defect 2: `units` also comes from the manifest, and is interpolated straight into every write
+// path. A relative escape must refuse the whole upgrade before anything is written, not just fail
+// to create the escaped folder as a side effect of some other check.
+test("upgrade refuses a manifest whose units escapes the instance, and writes nothing outside it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  // Named after this run's own root, not a fixed "../escaped", so a run that failed to refuse
+  // (the very bug under test) cannot leave a folder behind for a later run to find already there
+  // and pass against.
+  const folder = `${path.basename(root)}-escaped`;
+  manifest.units = `../${folder}`;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const escaped = path.join(path.dirname(root), folder);
+  try {
+    assert.throws(() => run(["upgrade", root], { stdio: "pipe" }), /units/);
+    assert.ok(!fs.existsSync(escaped));
+  } finally {
+    fs.rmSync(escaped, { recursive: true, force: true });
+  }
+});
+
+function tempPackage() {
+  const dir = temp();
+  for (const part of ["bin", "lib", "core"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
+  return dir;
+}
+
+// Defect 5: checkPath's own pin guard can throw for the same reason `check` already prints with a
+// "✗ " prefix — a vendored core newer than the checker — and an upgrade landing one is the real
+// route there. A private copy of the package stands in for a genuinely newer release, since
+// nothing here may reach the network for one: only its bundled core/manifest.json's version is
+// raised, so the copy's own checker (built from the same, unmoved package.json) refuses it exactly
+// as a real newer release would.
+test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const pkg = tempPackage();
+  const coreManifestPath = path.join(pkg, "core/manifest.json");
+  const coreManifest = JSON.parse(fs.readFileSync(coreManifestPath, "utf8"));
+  coreManifest.version = "99.99.99";
+  fs.writeFileSync(coreManifestPath, `${JSON.stringify(coreManifest)}\n`);
+  const result = spawnSync(process.execPath, [path.join(pkg, "bin/companygraph.mjs"), "upgrade", root], { encoding: "utf8" });
+  assert.equal(result.status, 0);
+  assert.match(result.stderr, /✗/);
+  assert.match(result.stdout, /the upgrade stands/);
 });

@@ -10,7 +10,7 @@
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
 import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
-import { dirname, join, relative } from "node:path";
+import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
@@ -127,7 +127,12 @@ async function upgrade(argv) {
   const root = given._[0] ?? ".";
   const manifestPath = join(root, ".companygraph/manifest.json");
   if (!existsSync(manifestPath)) throw new Error(`${root} is no instance: it has no .companygraph/manifest.json.`);
-  const manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  let manifest;
+  try {
+    manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
+  } catch (error) {
+    throw new Error(`${manifestPath} could not be read as JSON: ${error.message}`);
+  }
   const held = new Map();
   for (const path of Object.keys(manifest.files ?? {}))
     if (existsSync(join(root, path))) held.set(path, readFileSync(join(root, path), "utf8"));
@@ -156,16 +161,36 @@ async function upgrade(argv) {
     for (const path of plan.removes) console.log(`  remove  ${path}`);
     return;
   }
+  // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
+  // core: a plan is data, a delete cannot be undone, and this is checked before a single file
+  // moves rather than trusting that the refusal above can never have a gap of its own.
+  const rootResolved = resolve(root);
+  for (const path of plan.removes) {
+    const target = resolve(root, path);
+    if (target !== rootResolved && !target.startsWith(rootResolved + sep))
+      throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
+  }
+
   const written = writePlan(root, plan.writes);
   for (const path of plan.removes) rmSync(join(root, path), { force: true });
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${plan.removes.length} removed`);
   if (plan.edited.length) console.log(`  overwritten, as --force asked: ${plan.edited.join(", ")}`);
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
-  // failed. The files are the release's; the work the check names is the owner's to do.
+  // failed. The files are the release's; the work the check names is the owner's to do. checkPath
+  // can itself throw — a fetched core newer than this checker is exactly the pin guard `check`
+  // already refuses on, and an upgrade that lands one is not a reason to hide that the upgrade
+  // stood: the throw is caught here, printed the way a guard failure always is, and does not
+  // reach the top-level handler, which would print it bare and say nothing about the upgrade.
   const { checkPath } = await import("./check-instance.mjs");
-  const owed = checkPath(root);
-  if (owed > 0) console.log(`  the upgrade stands; ${owed} problem${owed > 1 ? "s" : ""} above are the model's to fix`);
+  try {
+    const owed = checkPath(root);
+    if (owed > 0)
+      console.log(`  the upgrade stands; ${owed} problem${owed === 1 ? "" : "s"} above ${owed === 1 ? "is" : "are"} the model's to fix`);
+  } catch (error) {
+    console.error(`✗ ${error.message}`);
+    console.log("  the upgrade stands; the check above could not be run");
+  }
 }
 
 const [command, ...rest] = process.argv.slice(2);
