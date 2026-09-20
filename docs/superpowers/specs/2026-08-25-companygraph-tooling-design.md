@@ -4,8 +4,15 @@
 > mechanically checks an instance, and the agent skills it installs. It never interprets a
 > schema's prose; the agent remains what enforces the model.
 
-Status: design agreed, nothing built. This spec lives here because the `tooling` repository
-does not exist yet. When it does, the spec moves with it and this file becomes a link.
+Status: design agreed, and partly superseded on September 20, 2026 by
+[`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md), which is the one being built.
+Three things there are later decisions and win over this note: the tooling lives in this
+repository rather than a `tooling` repository of its own, since the premise that kept it out, a
+repository of Markdown and nothing else, is gone; `add` is dropped, since an editor scaffolds an
+entity; and `init` writes the instance's CI workflow, which did not exist when this was written.
+Everything else here stands and is not restated there: the layout of §3, the manifest, the
+release contract of §2, the skills and the sync slot of §5, where §6 draws the line at the
+validator, and the non-goals of §1.
 
 Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §5
 (schemas, and the rejected validator), §6 (splitting the agent instructions), §7 (an instance
