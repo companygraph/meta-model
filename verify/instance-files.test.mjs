@@ -46,7 +46,7 @@ test("an instance starts with a source and its two singular entities, naming the
   assert.match(files.get("model/sources/local.md"), /^# Local\n/);
 });
 
-test("the workflow calls the reusable check at the tag whose core was vendored", () => {
+test("the workflow calls the reusable check at the release it is given", () => {
   const text = workflowFor("v0.31.2");
   assert.match(text, /uses: companygraph\/meta-model\/\.github\/workflows\/instance-check\.yml@v0\.31\.2\n/);
   assert.match(text, /^name: companygraph\n/);

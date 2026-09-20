@@ -154,6 +154,23 @@ test("a vendored file the instance no longer has refuses the same as an edit, bu
   const forced = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: goneFromDisk, workflow, force: true });
   assert.deepEqual(forced.missing, ["meta/core/gone-schema.md"]);
   assert.deepEqual(forced.edited, []);
+  // And this one is not written fresh either: the new core no longer ships it, so it is removed.
+  // Reporting every missing file as written fresh was the same false claim in another place,
+  // which is why what a report says is read from the writes, not from this list.
+  assert.ok(!forced.writes.has("meta/core/gone-schema.md"));
+  assert.ok(forced.removes.includes("meta/core/gone-schema.md"));
+});
+
+// A file the instance deleted that the new core DOES still ship is the other half of that pair:
+// this one really is written fresh, and a report may say so.
+test("a vendored file the instance deleted that the new core still ships is written fresh", () => {
+  const { manifest, held, workflow } = instance();
+  const goneFromDisk = new Map(held);
+  goneFromDisk.delete("meta/core/CONVENTIONS.md");
+  const forced = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held: goneFromDisk, workflow, force: true });
+  assert.ok(forced.missing.includes("meta/core/CONVENTIONS.md"));
+  assert.equal(forced.writes.get("meta/core/CONVENTIONS.md"), newer.get("CONVENTIONS.md"));
+  assert.ok(!forced.removes.includes("meta/core/CONVENTIONS.md"));
 });
 
 test("an instance already on that core is said so, and nothing is written", () => {

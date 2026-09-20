@@ -182,7 +182,13 @@ async function upgrade(argv) {
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
   // said of a file it does not fit.
   if (plan.edited.length) console.log(`  overwritten, as --force asked: ${plan.edited.join(", ")}`);
-  if (plan.missing.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${plan.missing.join(", ")}`);
+  // A file the instance had deleted is written fresh only where the new core still ships it; one
+  // the new core has dropped as well is not written at all, and saying so is the difference
+  // between naming what happened and naming what was planned.
+  const rewritten = plan.missing.filter((path) => plan.writes.has(path));
+  const dropped = plan.missing.filter((path) => !plan.writes.has(path));
+  if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
+  if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
   // failed. The files are the release's; the work the check names is the owner's to do. checkPath

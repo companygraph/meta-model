@@ -57,8 +57,14 @@ It writes the layout the August design fixes, which this note does not restate, 
 that design did not name:
 
 - **The workflow.** `.github/workflows/companygraph.yml`, calling this repository's reusable
-  `instance-check.yml` at the tag whose core was vendored. An instance is checkable from its
-  first commit, and the tag in that file is one of the three places an upgrade must move.
+  `instance-check.yml` at the release whose checker runs, which is the release of this tooling
+  and never the tag a core was fetched from. Those two are separate facts: the workflow's `ref`
+  chooses a checker, the manifest's `tooling` names the checker the instance asks for, and the
+  checker refuses the two when they differ, so pinning a fetched core's tag made an instance
+  whose own CI failed on its first commit. Which core is vendored is recorded by `core.version`
+  and `core.source` instead, and a core behind the checker is legal by design. An instance is
+  checkable from its first commit, and the tag in that file is one of the three places an
+  upgrade must move.
 - **The agent's own files**, for the agent the owner chooses.
 - **The skills**, in that agent's format.
 
@@ -144,10 +150,12 @@ would go, the versions and the tag line. That is what a CI drift check wants.
   overwriting, and a tag that does not exist refusing.
 - **The instance it writes passes the checks.** The test runs `init` into a temporary folder and
   then `checkInstance` over the result: an empty instance is a valid instance, its manifest's
-  hashes match the bytes on disk, and its workflow names the tag whose core it vendored.
-- **An upgrade between two real releases is tested end to end**, from a fixture instance built by
-  `init` at an older core to the current one, with the manifest, the hashes and the workflow line
-  all moved, and the checks run after.
+  hashes match the bytes on disk, and its workflow names this tooling's own release.
+- **An upgrade that really moves is tested end to end**, at the command line and without a
+  network: `init` writes an instance, the instance is then set back to an older core by hand, and
+  `upgrade` moves it, with the vendored bytes, every hash, `tooling`, `core.version` and the
+  workflow line all asserted to have moved and the checks run after. Two published releases are
+  not used, because reaching for one would put the network in the suite.
 - **The network is not in the tests.** Fetching a tag is one function, and the tests pass a
   fetcher that answers from a fixture, as the plugin's runner takes its process starter.
 

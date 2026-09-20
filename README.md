@@ -147,8 +147,9 @@ entities no instance can pass the checks without — `model/sources/local.md`,
 `model/identity.md`, `model/vision.md` — a workflow pinned to the release of this checker the
 instance's manifest names as its `tooling`, and the chosen agent's own files. That pin is never
 the tag of a fetched core: which checker runs and which core is vendored are two separate facts,
-and a core behind the checker is legal by design, so only the first belongs on the workflow line. Claude is the only agent this release writes for,
-asked for with `--agent claude`, and asking for another is refused by name. The core it vendors
+and a core behind the checker is legal by design, so only the first belongs on the workflow
+line. Claude is the only agent this release writes for, asked for with `--agent claude`, named
+in what `init` prints, and asking for another is refused by name. The core it vendors
 is the one inside the release that runs, unless `--core <tag>` names one to fetch from GitHub
 instead, and the manifest records which, as `bundled` or `fetched:<tag>`. The fact worth stating
 plainly: an instance `init` writes passes the checks on its first day, with nothing in its model
