@@ -28,7 +28,7 @@ in.
 | `> [Purpose]` | Yes | One-paragraph statement of what the process is for |
 | `## Tracks` | Yes | Table. The kinds of thing this process makes, one row each; its columns are declared below. |
 | `## Phases` | Yes | Table. The phases of the process, one row each, in the order the work passes through them; its columns are declared below. |
-| `## What it never does` | Yes | A list, one sentence each, of what the process refuses in every phase |
+| `## What it never does` | Yes | Bulleted. One sentence each, of what the process refuses in every phase |
 | `## References` | No | Table. The rulebooks the process is run by; its columns are declared below. |
 
 `## Tracks` is a table with these columns:

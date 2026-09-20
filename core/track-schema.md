@@ -44,3 +44,6 @@ nothing. Which seats work a track and what they do on it are said by the phases.
   (R4).
 - A track carries no order: the order a process lists its tracks in is the order a reader meets
   them and nothing more.
+- A track carries its name and what it produces, and nothing more. R9 lets a page hold sections
+  of its own, so no script refuses one here; what a track would say in it belongs to the phase
+  that does the work or to the process that owns the track.
