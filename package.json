@@ -5,13 +5,21 @@
   "type": "module",
   "engines": { "node": ">=22" },
   "files": ["lib", "bin"],
-  "exports": { "./instance": "./lib/instance.mjs", "./checks": "./lib/checks.mjs" },
+  "bin": { "companygraph": "./bin/companygraph.mjs" },
+  "exports": {
+    "./instance": "./lib/instance.mjs",
+    "./checks": "./lib/checks.mjs",
+    "./plan": "./lib/plan.mjs",
+    "./write": "./lib/write.mjs"
+  },
   "scripts": {
     "verify": "node verify/check.mjs",
     "test:instance": "node --test verify/instance.test.mjs",
     "test:instance-checks": "node --test verify/instance-checks.test.mjs",
     "test:instance-files": "node --test verify/instance-files.test.mjs",
     "test:plan": "node --test verify/plan.test.mjs",
-    "test:rules": "node --test verify/rule-citations.test.mjs"
+    "test:rules": "node --test verify/rule-citations.test.mjs",
+    "test:cli": "node --test verify/cli.test.mjs",
+    "test:untar": "node --test verify/untar.test.mjs"
   }
 }
