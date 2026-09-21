@@ -28,7 +28,7 @@ Every command exits non-zero on any problem, writes nothing when its pre-flight 
 ## `init`
 
 ```
-companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--schemas <dir>] [--name <instance>]
+companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--schemas <dir>] [--name <instance>] [--folders <a,b>]
 ```
 
 It writes the layout the August design fixes, which this note does not restate, and three things that design did not name:
@@ -49,7 +49,9 @@ It writes the layout the August design fixes, which this note does not restate, 
 
 For Claude, `init` writes `AGENTS.md` and `CLAUDE.md`, which say where the vendored core sits and that the instance's own rules belong there, and `.claude/skills/companygraph-{validate,export,surface}/`.
 
-**The core it vendors** is the one inside the release that runs, so `init` needs no network and the version is never in doubt. `--core vX.Y.Z` fetches that tag from GitHub instead. The manifest records which, as `bundled` or `fetched:vX.Y.Z`.
+**The core it vendors** is the one inside the release that runs, so `init` needs no network and the version is never in doubt. `--core vX.Y.Z` fetches that tag from GitHub instead. The manifest records which, as `bundled` or `fetched:vX.Y.Z`. A tag whose core is newer than the tooling that runs is refused before anything is written, and the refusal names the tag to run `init` from instead: `tooling` can only name the release that runs, that release's checker refuses a core newer than itself, and the release that could run the core refuses a manifest naming another, so the tool would have no value to write that any checker accepts. A core at or behind the tooling stays legal.
+
+**The folders are the ones asked for.** Without `--folders`, `init` writes a folder for every root type core declares; `--folders values,processes` writes only those, and `sources/` always, because the instance's starting source is written there. A company that has none of a thing should not carry a folder implying it forgot, and a folder core does not declare is refused by name, listing the ones it does. Each folder gets a README that names the schema its files are written against, under a sentence-case heading, and a folder whose type owns others names their schemas too: `processes/` names the process, phase and track schemas.
 
 **It refuses rather than merges.** `--here` writes into an existing repository and refuses when `meta/` (or `--schemas`) or `.companygraph/` is already there. Every conflict is found before anything is written, so a refusal leaves nothing behind.
 
@@ -76,7 +78,7 @@ Ported from the reference instance's, which is where they were written and prove
 companygraph upgrade [<folder>] [--core <tag>] [--dry-run] [--force]
 ```
 
-It moves an instance from the core its manifest names to the core of the release that runs, or to `--core <tag>`, and it owns exactly what the tooling wrote:
+It moves an instance from the core its manifest names to the core of the release that runs, or to `--core <tag>`, refusing a core newer than itself for the reason `init` does, and it owns exactly what the tooling wrote:
 
 - the vendored core under the manifest's `units` path,
 - the skills it installed,
@@ -87,6 +89,8 @@ It moves an instance from the core its manifest names to the core of the release
 `AGENTS.md`, `CLAUDE.md`, the model and everything else are the instance's, and are never touched.
 
 **An edited vendored file stops it.** Before writing, every file the manifest lists is hashed. A file whose hash differs was edited inside the instance, and core is not the instance's to edit: `upgrade` names every such file and writes nothing, so an instance is never half old and half new. `--force` overwrites them and says which it overwrote. There is no three-way merge, as the August design decided.
+
+**`check` names the same edit first.** The hashes are read on the one command every commit runs as well, so an edited or missing vendored file fails the instance's own CI on the commit that made it, rather than being met by whoever upgrades next. A manifest that recorded no hashes has nothing to be held to.
 
 **It ends by checking.** A core release can make a valid instance invalid — 0.31.1's required sections would have — so `upgrade` runs the checks over the instance it has just moved and prints what the instance now owes. The upgrade is not undone by a failing check: the files are the release's, and the work is the owner's to do.
 
@@ -112,6 +116,10 @@ It moves an instance from the core its manifest names to the core of the release
   `upgrade` moves it, with the vendored bytes, every hash, `tooling`, `core.version` and the
   workflow line all asserted to have moved and the checks run after. Two published releases are
   not used, because reaching for one would put the network in the suite.
+- **What making the second instance found is tested**: a core newer than the tooling refused by
+  both commands with nothing written, `--folders` writing what it names and `sources/`, a README
+  naming its schemas, `check` failing on an edited and on a missing vendored file, and the
+  core-newer refusal naming both pins.
 - **The network is not in the tests.** Fetching a tag is one function, and the tests pass a
   fetcher that answers from a fixture, as the plugin's runner takes its process starter.
 

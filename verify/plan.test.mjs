@@ -93,6 +93,33 @@ test("a name with nothing to write refuses", () => {
   assert.ok(initPlan({ ...ask, name: "  " }).refused.includes("name"));
 });
 
+// Found by running `init --core v0.35.0` from a 0.32.0 tree to make companygraph/mental-model:
+// `tooling` can only name this release, which refuses a core newer than itself, and the release
+// that could run that core refuses a manifest naming another. Nothing is written.
+test("a core newer than this tooling is refused by init before anything is written, naming the release to run", () => {
+  const ahead = new Map([...core, ["manifest.json", '{ "version": "0.34.0", "shape": 3 }\n']]);
+  const refused = initPlan({ ...ask, core: ahead, tag: "v0.35.0", fetched: true });
+  assert.equal(refused.writes, undefined);
+  assert.ok(refused.refused.includes("0.34.0") && refused.refused.includes(ask.tooling) && refused.refused.includes("v0.35.0"));
+  // A core at or behind the tooling is legal by design.
+  assert.ok(initPlan({ ...ask, core: new Map([...core, ["manifest.json", '{ "version": "0.31.2", "shape": 3 }\n']]) }).writes);
+});
+
+test("--folders writes only the folders named, and sources always, since the starting source lives there", () => {
+  const { writes } = initPlan({ ...ask, folders: ["values", "processes"] });
+  const readmes = [...writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).sort();
+  assert.deepEqual(readmes, ["model/processes/README.md", "model/sources/README.md", "model/values/README.md"]);
+  assert.ok(writes.has("model/sources/local.md"));
+  // Absent, every root folder is written.
+  assert.ok(initPlan(ask).writes.has("model/skills/README.md"));
+});
+
+test("--folders naming a folder core has not is refused by name, listing the ones it has", () => {
+  const refused = initPlan({ ...ask, folders: ["values", "people"] });
+  assert.equal(refused.writes, undefined);
+  assert.ok(refused.refused.includes("people") && refused.refused.includes("skills"));
+});
+
 const older = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
   ["manifest.json", '{ "version": "0.31.1", "shape": 3 }\n'],
@@ -118,6 +145,13 @@ test("an upgrade writes what changed, removes what the new core dropped, and lea
   assert.equal(plan.writes.get("meta/core/CONVENTIONS.md"), "# Conventions, moved on\n");
   assert.ok(plan.writes.has("meta/core/skill-schema.md"));
   assert.deepEqual(plan.removes, ["meta/core/gone-schema.md"]);
+});
+
+test("an upgrade to a core newer than this tooling is refused before anything is written", () => {
+  const { manifest, held, workflow } = instance();
+  const plan = upgradePlan({ core: newer, tooling: "0.31.2", tag: "v0.33.0", manifest, held, workflow, fetched: true });
+  assert.equal(plan.writes, undefined);
+  assert.ok(plan.refused.includes("0.32.0") && plan.refused.includes("v0.33.0"));
 });
 
 test("the manifest and the workflow move with the files", () => {

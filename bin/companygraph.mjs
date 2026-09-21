@@ -2,7 +2,7 @@
 // The CompanyGraph tooling: making an instance, and the checks over one. Subcommands, each
 // exiting non-zero on any problem and writing nothing when its pre-flight fails:
 //
-//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>]
+//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
 //
@@ -25,7 +25,7 @@ const USAGE = `companygraph <command>
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, manifest and workflow tag together
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
 `;
 
@@ -113,6 +113,8 @@ async function init(argv) {
     name,
     agent,
     units: given.schemas ?? "meta",
+    // A comma-separated list of root folders; absent means every one core declares.
+    folders: given.folders?.split(",").map((f) => f.trim()).filter(Boolean),
     present: found,
     fetched: Boolean(given.core),
   });
@@ -121,6 +123,8 @@ async function init(argv) {
   console.log(`${written.length} files written into ${root}`);
   console.log(`  written for ${agent}`);
   console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
+  const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
+  console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its two singular entities`);
   console.log(`  run "npx companygraph-meta-model check ${root}" whenever it changes`);
 }

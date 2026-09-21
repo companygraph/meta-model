@@ -18,6 +18,9 @@
 // itself for the same reason: a release that adds a type adds a folder an older checker has
 // never heard of.
 //
+// It also holds the vendored core to the per-file hashes the manifest records, because core is
+// not the instance's to edit and this is the one command every commit runs.
+//
 // The checking itself lives in `checkPath(root)`, which returns the number of failures and
 // throws rather than exiting, so `bin/companygraph.mjs` can stand a `check` command on the same
 // code without every invocation of that CLI running these checks against the current directory
@@ -29,6 +32,7 @@ import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "n
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, isNewer, MODEL } from "../lib/checks.mjs";
+import { hashOf } from "../lib/instance-files.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8")).version;
@@ -64,7 +68,7 @@ export function checkPath(path) {
   if (vendored && /^\d+\.\d+\.\d+$/.test(vendored) && isNewer(vendored, VERSION))
     die(
       `this checker is ${VERSION} and .companygraph/manifest.json vendors core ${vendored} — ` +
-        `a checker cannot hold an instance to a core newer than itself; move the workflow pin to v${vendored}`,
+        `a checker cannot hold an instance to a core newer than itself; move the manifest's tooling and the workflow pin to v${vendored} together`,
     );
 
   // R13: one container, and the manifest names where the vendored units sit beside it.
@@ -85,6 +89,18 @@ export function checkPath(path) {
   walk(core);
 
   const { failures, skipped } = checkInstance(files, { core, model: MODEL });
+
+  // The manifest's per-file hashes, read on the one command every commit runs. Core is not the
+  // instance's to edit, and an edit found only by the next `upgrade` is refused there, on whoever
+  // upgrades rather than on whoever made it; found here, it is named on the commit that made it.
+  // A manifest with no `files` recorded none, and there is nothing to hold it to.
+  for (const [path, recorded] of Object.entries(manifest.files ?? {})) {
+    const text = files.get(path);
+    if (text === undefined)
+      failures.push(`${path}: named in .companygraph/manifest.json and not in the instance's vendored core`);
+    else if (hashOf(text) !== recorded)
+      failures.push(`${path}: not as the release vendored it, and core is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
+  }
   const against = `${MODEL}/ against ${core}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
 
   if (failures.length) {

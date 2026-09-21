@@ -34,7 +34,26 @@ test("the root folders are the types that have one, and no owned type", () => {
 test("every folder gets a README, and so does the model, since an empty folder is no folder", () => {
   const files = readmesFor(["skills", "values"]);
   assert.deepEqual([...files.keys()].sort(), ["model/README.md", "model/skills/README.md", "model/values/README.md"]);
-  assert.match(files.get("model/skills/README.md"), /^# skills\n/);
+});
+
+test("a folder's README names the schema its files are written against, in a sentence-case heading", () => {
+  const files = readmesFor(["strategic-objectives", "skills"], "meta");
+  assert.equal(
+    files.get("model/strategic-objectives/README.md"),
+    "# Strategic objectives\n\nOne file per strategic objective, written against `meta/core/strategic-objective-schema.md`.\n",
+  );
+  assert.match(files.get("model/skills/README.md"), /^# Skills\n/);
+  // Another schemas folder is the one named.
+  assert.ok(readmesFor(["skills"], "schemas").get("model/skills/README.md").includes("`schemas/core/skill-schema.md`"));
+});
+
+test("a folder whose type owns others names every schema it holds", () => {
+  const files = readmesFor(["processes", "profiles"], "meta");
+  const processes = files.get("model/processes/README.md");
+  assert.match(processes, /^# Processes\n\nOne folder per process, written against `meta\/core\/process-schema\.md`/);
+  assert.ok(processes.includes("its phases in `phases/` against `meta/core/phase-schema.md`"));
+  assert.ok(processes.includes("its tracks in `tracks/` against `meta/core/track-schema.md`"));
+  assert.ok(files.get("model/profiles/README.md").includes("its experiences in `experiences/` against `meta/core/experience-schema.md`"));
 });
 
 test("an instance starts with a source and its two singular entities, naming the instance", () => {

@@ -212,22 +212,85 @@ function tempPackage() {
   return dir;
 }
 
-// Defect 5: checkPath's own pin guard can throw for the same reason `check` already prints with a
-// "✗ " prefix — a vendored core newer than the checker — and an upgrade landing one is the real
-// route there. A private copy of the package stands in for a genuinely newer release, since
-// nothing here may reach the network for one: only its bundled core/manifest.json's version is
-// raised, so the copy's own checker (built from the same, unmoved package.json) refuses it exactly
-// as a real newer release would.
-test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
+// Found making companygraph/mental-model: a core newer than the tooling leaves an instance no
+// released checker runs, so `upgrade` refuses it before writing, as `init` does. A private copy
+// of the package stands in for a genuinely newer release, since nothing here may reach the
+// network for one: only its bundled core/manifest.json's version is raised.
+test("upgrade refuses a core newer than itself, and writes nothing", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const before = filesOf(root);
   const pkg = tempPackage();
   const coreManifestPath = path.join(pkg, "core/manifest.json");
   const coreManifest = JSON.parse(fs.readFileSync(coreManifestPath, "utf8"));
   coreManifest.version = "99.99.99";
   fs.writeFileSync(coreManifestPath, `${JSON.stringify(coreManifest)}\n`);
   const result = spawnSync(process.execPath, [path.join(pkg, "bin/companygraph.mjs"), "upgrade", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /99\.99\.99[\s\S]*nothing was written/);
+  assert.deepEqual(filesOf(root), before);
+});
+
+// Defect 5: checkPath can still throw after a real move — here because the model is gone — and
+// an upgrade that stood is not to be hidden by it: the throw is printed with the "✗ " prefix
+// `check` uses, and the upgrade is said to stand.
+test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  const older = "# Conventions\n\nAs an older release shipped it.\n";
+  fs.writeFileSync(path.join(root, "meta/core/CONVENTIONS.md"), older);
+  manifest.core.version = "0.1.0";
+  manifest.files["meta/core/CONVENTIONS.md"] = sha256(older);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.rmSync(path.join(root, "model"), { recursive: true });
+  const result = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
   assert.equal(result.status, 0);
-  assert.match(result.stderr, /✗/);
+  assert.match(result.stderr, /✗ .*has no model\//);
   assert.match(result.stdout, /the upgrade stands/);
+});
+
+test("init --folders writes the folders named and sources, and what it writes passes the checks", () => {
+  const root = temp();
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude", "--folders", "values,processes"]);
+  assert.match(said, /folders: processes, sources, values/);
+  const folders = fs.readdirSync(path.join(root, "model"), { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort();
+  assert.deepEqual(folders, ["processes", "sources", "values"]);
+  assert.deepEqual(checkInstance(filesOf(root), { core: "meta/core", model: "model" }).failures, []);
+});
+
+// Found making companygraph/mental-model: nothing on the gate read the hashes, so a reflow of the
+// vendored core passed every check and was met only by the next `upgrade`, which refused.
+test("check fails on a vendored file that is not as the release vendored it, or is gone, naming it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+
+  const conventions = path.join(root, "meta/core/CONVENTIONS.md");
+  fs.writeFileSync(conventions, `${fs.readFileSync(conventions, "utf8")}\nedited\n`);
+  fs.rmSync(path.join(root, "meta/core/LICENSE"));
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /meta\/core\/CONVENTIONS\.md: not as the release vendored it/);
+  assert.match(result.stderr, /meta\/core\/LICENSE: named in \.companygraph\/manifest\.json and not in the instance/);
+
+  // A manifest that recorded no hashes has nothing to be held to.
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  delete manifest.files;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+});
+
+test("a core newer than the checker is refused naming both pins, the manifest's and the workflow's", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  manifest.core.version = "99.99.99";
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
