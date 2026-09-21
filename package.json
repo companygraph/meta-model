@@ -4,7 +4,7 @@
   "license": "Apache-2.0",
   "type": "module",
   "engines": { "node": ">=22" },
-  "files": ["lib", "bin", "core"],
+  "files": ["lib", "bin", "core", "agents"],
   "bin": { "companygraph": "./bin/companygraph.mjs" },
   "exports": {
     "./instance": "./lib/instance.mjs",

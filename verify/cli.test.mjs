@@ -207,7 +207,7 @@ test("upgrade refuses a manifest whose units escapes the instance, and writes no
 
 function tempPackage() {
   const dir = temp();
-  for (const part of ["bin", "lib", "core"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  for (const part of ["bin", "lib", "core", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
   fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
   return dir;
 }
@@ -262,7 +262,7 @@ test("init --folders writes the folders named and sources, and what it writes pa
 
 // Found making companygraph/mental-model: nothing on the gate read the hashes, so a reflow of the
 // vendored core passed every check and was met only by the next `upgrade`, which refused.
-test("check fails on a vendored file that is not as the release vendored it, or is gone, naming it", () => {
+test("check fails on a vendored file that is not as the tooling wrote it, or is gone, naming it", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
@@ -272,7 +272,7 @@ test("check fails on a vendored file that is not as the release vendored it, or 
   fs.rmSync(path.join(root, "meta/core/LICENSE"));
   const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.equal(result.status, 1);
-  assert.match(result.stderr, /meta\/core\/CONVENTIONS\.md: not as the release vendored it/);
+  assert.match(result.stderr, /meta\/core\/CONVENTIONS\.md: not as the tooling wrote it/);
   assert.match(result.stderr, /meta\/core\/LICENSE: named in \.companygraph\/manifest\.json and not in the instance/);
 
   // A manifest that recorded no hashes has nothing to be held to.
@@ -294,3 +294,90 @@ test("a core newer than the checker is refused naming both pins, the manifest's 
   assert.equal(result.status, 1);
   assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
+
+const SKILL_NAMES = ["companygraph-export", "companygraph-surface", "companygraph-validate"];
+
+test("init writes the three skills, hashed into the manifest like the core, and tells how to run the checks", () => {
+  const root = temp();
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".claude/skills")).sort(), SKILL_NAMES);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  for (const file of ["companygraph-validate/SKILL.md", "companygraph-export/build.py", "companygraph-surface/facts.py"])
+    assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
+  assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
+  assert.match(said, /Python 3/);
+  assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
+});
+
+test("check fails on a skill edited inside the instance, as on edited core", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.appendFileSync(path.join(root, ".claude/skills/companygraph-validate/SKILL.md"), "\nedited\n");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /\.claude\/skills\/companygraph-validate\/SKILL\.md: not as the tooling wrote it/);
+});
+
+test("upgrade gives no skills to an instance init did not give them to, and leaves its own alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // An instance made by hand: its manifest records core alone, and it keeps a skill of its own
+  // under a name the tooling also uses.
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  for (const key of Object.keys(manifest.files)) if (key.startsWith(".claude/")) delete manifest.files[key];
+  const older = "# Conventions\n\nAs an older release shipped it.\n";
+  fs.writeFileSync(path.join(root, "meta/core/CONVENTIONS.md"), older);
+  manifest.files["meta/core/CONVENTIONS.md"] = sha256(older);
+  manifest.core.version = "0.1.0";
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.rmSync(path.join(root, ".claude/skills/companygraph-export"), { recursive: true });
+  const own = path.join(root, ".claude/skills/companygraph-validate/SKILL.md");
+  fs.writeFileSync(own, "# The instance's own validate\n");
+
+  run(["upgrade", root]);
+  assert.equal(fs.readFileSync(own, "utf8"), "# The instance's own validate\n");
+  assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export")));
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.ok(!Object.keys(moved.files).some((key) => key.startsWith(".claude/")));
+});
+
+test("upgrade refuses a skill of the instance's own under a name it would write, and --force takes it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // The release ships a skill file this instance's manifest never recorded, and the instance
+  // holds a file of its own at that path.
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  delete manifest.files[".claude/skills/companygraph-surface/facts.py"];
+  const older = "# Conventions\n\nAs an older release shipped it.\n";
+  fs.writeFileSync(path.join(root, "meta/core/CONVENTIONS.md"), older);
+  manifest.files["meta/core/CONVENTIONS.md"] = sha256(older);
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  const facts = path.join(root, ".claude/skills/companygraph-surface/facts.py");
+  fs.writeFileSync(facts, "# the instance's own\n");
+
+  assert.throws(() => run(["upgrade", root], { stdio: "pipe" }), /did not write them[\s\S]*companygraph-surface\/facts\.py/);
+  assert.equal(fs.readFileSync(facts, "utf8"), "# the instance's own\n");
+  const said = run(["upgrade", root, "--force"]);
+  assert.match(said, /overwritten, as --force asked: .*facts\.py/);
+  assert.equal(fs.readFileSync(facts, "utf8"), fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-surface/facts.py"), "utf8"));
+});
+
+// The export skill's scripts are ported from the reference instance, where they only ever ran
+// over one model; here they run over the smallest instance `init` makes, with one entity added,
+// and over an instance whose units sit somewhere other than meta/.
+for (const schemas of ["meta", "schemas"])
+  test(`the export skill builds and verifies an instance init made, its units under ${schemas}/`, () => {
+    const root = path.join(temp(), "acme");
+    run(["init", root, "--name", "Acme", "--agent", "claude", "--schemas", schemas]);
+    fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\n> A company, described.\n");
+    fs.writeFileSync(path.join(root, "model/values/candor.md"), "---\nsource: Local\n---\n\n# Candor\n\n> Say it.\n");
+    const build = spawnSync("python3", [".claude/skills/companygraph-export/build.py"], { cwd: root, encoding: "utf8" });
+    assert.equal(build.status, 0, build.stdout + build.stderr);
+    const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
+    assert.equal(verify.status, 0, verify.stdout + verify.stderr);
+    assert.match(verify.stdout, /PASS .*zip agrees/);
+    const facts = spawnSync("python3", [".claude/skills/companygraph-surface/facts.py"], { cwd: root, encoding: "utf8" });
+    assert.equal(facts.status, 0, facts.stdout + facts.stderr);
+  });

@@ -18,8 +18,9 @@
 // itself for the same reason: a release that adds a type adds a folder an older checker has
 // never heard of.
 //
-// It also holds the vendored core to the per-file hashes the manifest records, because core is
-// not the instance's to edit and this is the one command every commit runs.
+// It also holds what the tooling wrote — the vendored core, and the skills where it installed
+// them — to the per-file hashes the manifest records, because neither is the instance's to edit
+// and this is the one command every commit runs.
 //
 // The checking itself lives in `checkPath(root)`, which returns the number of failures and
 // throws rather than exiting, so `bin/companygraph.mjs` can stand a `check` command on the same
@@ -90,16 +91,24 @@ export function checkPath(path) {
 
   const { failures, skipped } = checkInstance(files, { core, model: MODEL });
 
-  // The manifest's per-file hashes, read on the one command every commit runs. Core is not the
-  // instance's to edit, and an edit found only by the next `upgrade` is refused there, on whoever
-  // upgrades rather than on whoever made it; found here, it is named on the commit that made it.
-  // A manifest with no `files` recorded none, and there is nothing to hold it to.
+  // The manifest's per-file hashes, read on the one command every commit runs. What the tooling
+  // wrote — the vendored core, and the skills where it installed them — is not the instance's to
+  // edit, and an edit found only by the next `upgrade` is refused there, on whoever upgrades
+  // rather than on whoever made it; found here, it is named on the commit that made it. Each
+  // file is read from disk by its own path, since the skills sit outside the folders walked
+  // above, and a path that is not plain and relative is refused rather than read. A manifest
+  // with no `files` recorded none, and there is nothing to hold it to.
   for (const [path, recorded] of Object.entries(manifest.files ?? {})) {
-    const text = files.get(path);
+    const plain = path.split("/").every((part) => part !== "" && part !== "." && part !== "..");
+    if (!plain) {
+      failures.push(`${path}: named in .companygraph/manifest.json, and not a plain path inside the instance`);
+      continue;
+    }
+    const text = files.get(path) ?? (existsSync(join(root, path)) ? readFileSync(join(root, path), "utf8") : undefined);
     if (text === undefined)
-      failures.push(`${path}: named in .companygraph/manifest.json and not in the instance's vendored core`);
+      failures.push(`${path}: named in .companygraph/manifest.json and not in the instance`);
     else if (hashOf(text) !== recorded)
-      failures.push(`${path}: not as the release vendored it, and core is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
+      failures.push(`${path}: not as the tooling wrote it, and it is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
   }
   const against = `${MODEL}/ against ${core}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
 

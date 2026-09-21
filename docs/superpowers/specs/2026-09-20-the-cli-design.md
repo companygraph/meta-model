@@ -5,7 +5,7 @@
 > One program, in this repository, released with the core it carries; every editor and every CI
 > runs the same commands, and the Obsidian plugin calls the same code rather than writing its own.
 
-Status: designed with the owner on September 20, 2026, and built the same day, in the plan at [`docs/superpowers/plans/2026-09-20-the-cli.md`](../plans/2026-09-20-the-cli.md). It supersedes the parts of `2026-08-25-companygraph-tooling-design.md` that place the tooling in a repository of its own and keep this one free of code; its layout, its manifest and its reasons for them stand and are not restated here. Where the two differ, this note is the later decision. The three skills this note describes below are not in what was built: `init` writes none of them, and porting them is a plan of its own, still to be written.
+Status: designed with the owner on September 20, 2026, and built the same day, in the plan at [`docs/superpowers/plans/2026-09-20-the-cli.md`](../plans/2026-09-20-the-cli.md). It supersedes the parts of `2026-08-25-companygraph-tooling-design.md` that place the tooling in a repository of its own and keep this one free of code; its layout, its manifest and its reasons for them stand and are not restated here. Where the two differ, this note is the later decision. The three skills this note describes below were built after the rest, on September 21, 2026, once the findings from making a second instance were fixed.
 
 ## Why here, and why now
 
@@ -15,7 +15,7 @@ What is missing is the making of an instance. Today an empty vault becomes an in
 
 ## What it is
 
-One entry point, `bin/companygraph.mjs`, with subcommands, published by the package this repository already publishes and run as `npx companygraph-meta-model <command>`:
+One entry point, `bin/companygraph.mjs`, with subcommands. It is the package's `bin`, run straight from a release tag as `npx github:companygraph/meta-model#<tag> <command>`, since nothing here is published to npm:
 
 - `init` — write a new instance.
 - `upgrade` — move an instance's vendored core, skills, manifest and workflow tag.
@@ -59,7 +59,7 @@ For Claude, `init` writes `AGENTS.md` and `CLAUDE.md`, which say where the vendo
 
 Ported from the reference instance's, which is where they were written and proven, and made portable on the way. Three things change:
 
-- **No instance is named.** The instance's name comes from the manifest; no path is baked in;
+- **No instance is named.** The instance's name comes from the folder it sits in; no path is baked in;
   the comments lose the examples that name a profile or a repository. This repository publishes
   nothing instance-specific, and porting them is how that rule is kept.
 - **Validate names the mechanical half rather than repeating it.** Its steps 1 to 7 today walk
@@ -68,9 +68,11 @@ Ported from the reference instance's, which is where they were written and prove
   `## Writing rules`, the gap lines, and the lines only reading can judge. It is shorter and it
   cannot drift from the checker.
 - **Export and surface carry their scripts**, which need Python 3 on the machine; validate needs
-  nothing. `init` says so once, when it writes them.
+  Node, for the check it runs. `init` says so once, when it writes them.
 
 `companygraph-add-entity` is not ported: the owner never used it, and an editor scaffolds an entity now.
+
+**Where they live, and whose they are.** The release carries them under `agents/claude/skills/`, and `init` writes them to `.claude/skills/` and records a hash for every file in the manifest, as it does for the vendored core. They are the tooling's from then on: `upgrade` moves them, an edited one stops it as an edited schema does, and `check` fails on it. They come from the release that runs whatever core is vendored, because they read the rules from the instance's own core rather than carrying them, and they read the folder the core sits in from the manifest's `units`. An instance whose manifest records no skill made its own arrangements, and `upgrade` gives it none; a file of the instance's own at a path `upgrade` would write is refused rather than replaced, and `--force` takes it. An instance's own skills go beside them under any other name, as the August design's sync slot has it.
 
 ## `upgrade`
 
@@ -116,6 +118,9 @@ It moves an instance from the core its manifest names to the core of the release
   `upgrade` moves it, with the vendored bytes, every hash, `tooling`, `core.version` and the
   workflow line all asserted to have moved and the checks run after. Two published releases are
   not used, because reaching for one would put the network in the suite.
+- **The skills run where they land.** The export and surface scripts run over the smallest
+  instance `init` makes, with its units in `meta/` and elsewhere, and verify passes; over the
+  reference instance the ported scripts produce artifacts byte-identical to its own copies'.
 - **What making the second instance found is tested**: a core newer than the tooling refused by
   both commands with nothing written, `--folders` writing what it names and `sources/`, a README
   naming its schemas, `check` failing on an edited and on a missing vendored file, and the

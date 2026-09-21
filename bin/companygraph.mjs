@@ -12,7 +12,7 @@ import { createInterface } from "node:readline/promises";
 import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTS, initPlan, upgradePlan } from "../lib/plan.mjs";
+import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 
@@ -23,19 +23,18 @@ const USAGE = `companygraph <command>
 
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
-  upgrade [<folder>]  move an instance's vendored core, manifest and workflow tag together
+  upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
 `;
 
-// The core inside this release, which is what `init` vendors unless a tag says otherwise.
-// Recursive, to match `extractCore`: `core/` is flat today, but a future subfolder must not be
-// dropped from a bundled init while a fetched one keeps it. Not exported: importing this module
-// runs the argv dispatcher at the foot of the file, so nothing outside it could ever call this
-// anyway; it stays local until something needs to.
-function coreOfThisRelease() {
-  const from = join(HERE, "..", "core");
+// Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
+// match `extractCore`: `core/` is flat today, but a future subfolder must not be dropped from a
+// bundled init while a fetched one keeps it. Not exported: importing this module runs the argv
+// dispatcher at the foot of the file, so nothing outside it could ever call this anyway.
+function filesOfThisRelease(folder) {
+  const from = join(HERE, "..", folder);
   const files = new Map();
   const walk = (rel) => {
     for (const entry of readdirSync(join(from, rel || "."), { withFileTypes: true })) {
@@ -47,6 +46,13 @@ function coreOfThisRelease() {
   walk("");
   return files;
 }
+
+// The core inside this release, which is what `init` vendors unless a tag says otherwise.
+const coreOfThisRelease = () => filesOfThisRelease("core");
+
+// The agent's skills always come from the release that runs, whatever core is vendored: they are
+// the tooling's, and they read the rules from the instance's own core rather than carrying them.
+const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 
 // Toggles carry no value; `upgrade` also reads --force and --dry-run, so both are named here
 // once rather than teaching this parser about them a second time. Everything else takes a value,
@@ -108,6 +114,7 @@ async function init(argv) {
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const plan = initPlan({
     core,
+    skills: skillsFor(agent),
     tooling: PACKAGE.version,
     tag,
     name,
@@ -121,12 +128,12 @@ async function init(argv) {
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, plan.writes);
   console.log(`${written.length} files written into ${root}`);
-  console.log(`  written for ${agent}`);
+  console.log(`  written for ${agent}, with the companygraph-validate, -export and -surface skills; export and surface need Python 3`);
   console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its two singular entities`);
-  console.log(`  run "npx companygraph-meta-model check ${root}" whenever it changes`);
+  console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
 }
 
 async function upgrade(argv) {
@@ -143,12 +150,20 @@ async function upgrade(argv) {
   const held = new Map();
   for (const path of Object.keys(manifest.files ?? {}))
     if (existsSync(join(root, path))) held.set(path, readFileSync(join(root, path), "utf8"));
+  // The skills this release would write, read where they already exist, so the plan can tell a
+  // file this tooling wrote from one the instance wrote under the same name.
+  const skills = skillsFor("claude");
+  for (const path of skills.keys()) {
+    const at = `${SKILLS}${path}`;
+    if (!held.has(at) && existsSync(join(root, at))) held.set(at, readFileSync(join(root, at), "utf8"));
+  }
   const workflowPath = join(root, ".github/workflows/companygraph.yml");
   const workflow = existsSync(workflowPath) ? readFileSync(workflowPath, "utf8") : null;
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const plan = upgradePlan({
     core,
+    skills,
     tooling: PACKAGE.version,
     tag,
     manifest,

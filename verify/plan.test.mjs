@@ -25,7 +25,7 @@ test("a plan writes the vendored core, the manifest, the folders, the entities, 
   assert.ok(paths.includes("model/identity.md") && paths.includes("model/vision.md") && paths.includes("model/sources/local.md"));
   assert.ok(paths.includes(".github/workflows/companygraph.yml"));
   assert.ok(paths.includes("AGENTS.md") && paths.includes("CLAUDE.md"));
-  // Nothing of the skills, which are a release of their own.
+  // The skills are the caller's to pass, read from this release's agents/; none given, none written.
   assert.ok(!paths.some((p) => p.includes(".claude/skills")));
 });
 
@@ -282,4 +282,34 @@ test("a manifest whose units escapes the instance refuses the whole upgrade", ()
   const refused = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest: hostile, held, workflow });
   assert.ok(refused.refused.includes("units"));
   assert.equal(refused.writes, undefined);
+});
+
+const skills = new Map([["companygraph-validate/SKILL.md", "# Validate\n"]]);
+
+test("init writes the agent's skills under .claude/skills/ and hashes them like the core", () => {
+  const { writes } = initPlan({ ...ask, skills });
+  assert.equal(writes.get(".claude/skills/companygraph-validate/SKILL.md"), "# Validate\n");
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  assert.equal(manifest.files[".claude/skills/companygraph-validate/SKILL.md"], hashOf("# Validate\n"));
+});
+
+test("an upgrade moves the skills of an instance init gave them to, and edits refuse as core's do", () => {
+  const { writes } = initPlan({ core: older, skills, tooling: "0.31.2", tag: "v0.31.2", name: "Acme", agent: "claude", present: new Set() });
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  const held = new Map([...writes].filter(([path]) => manifest.files[path]));
+  const next = new Map([["companygraph-validate/SKILL.md", "# Validate, moved on\n"], ["companygraph-export/SKILL.md", "# Export\n"]]);
+  const plan = upgradePlan({ core: newer, skills: next, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow: null });
+  assert.equal(plan.writes.get(".claude/skills/companygraph-validate/SKILL.md"), "# Validate, moved on\n");
+  assert.equal(plan.writes.get(".claude/skills/companygraph-export/SKILL.md"), "# Export\n");
+
+  held.set(".claude/skills/companygraph-validate/SKILL.md", "# Validate, edited here\n");
+  const refused = upgradePlan({ core: newer, skills: next, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow: null });
+  assert.ok(refused.refused.includes(".claude/skills/companygraph-validate/SKILL.md"));
+});
+
+test("an upgrade gives no skills to an instance whose manifest records none", () => {
+  const { manifest, held, workflow } = instance();
+  const plan = upgradePlan({ core: newer, skills, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
+  assert.ok(![...plan.writes.keys()].some((path) => path.startsWith(".claude/")));
+  assert.ok(!Object.keys(JSON.parse(plan.writes.get(".companygraph/manifest.json")).files).some((path) => path.startsWith(".claude/")));
 });
