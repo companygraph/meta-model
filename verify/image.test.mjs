@@ -32,6 +32,28 @@ test("the header reader reads both formats and refuses anything else", () => {
   assert.equal(imageInfoOf("a string, as a reader that read an image as text hands it"), null);
   assert.ok(IMAGE_FILE.test("a.jpeg") && IMAGE_FILE.test("a.jpg") && IMAGE_FILE.test("a.png"));
   assert.ok(!IMAGE_FILE.test("a.gif") && !IMAGE_FILE.test("a.JPG"));
+  // A PNG signature is not enough on its own: what follows it has to be IHDR, or the offsets
+  // this reader trusts for width and height belong to some other chunk.
+  const notIhdr = new Uint8Array(24);
+  notIhdr.set([0x89, 0x50, 0x4e, 0x47, 0x0d, 0x0a, 0x1a, 0x0a, 0, 0, 0, 13, 0x49, 0x44, 0x41, 0x54]);
+  assert.equal(imageInfoOf(notIhdr), null);
+});
+
+test("a .jpeg name with JPEG bytes passes", () => {
+  assert.deepEqual(run("mira.jpeg", [["model/profiles/mira/mira.jpeg", jpeg(512, 512)]]), []);
+});
+
+test("the header reader steps over EXIF, fill bytes and a DHT segment to an SOF2 frame", () => {
+  const b = [
+    0xff, 0xd8, // SOI
+    // APP1 (EXIF): marker, length (8, including itself), "Exif\0\0"
+    0xff, 0xe1, 0x00, 0x08, 0x45, 0x78, 0x69, 0x66, 0x00, 0x00,
+    // FF fill bytes before the marker, then a DHT (C4) segment with no payload
+    0xff, 0xff, 0xff, 0xc4, 0x00, 0x02,
+    // SOF2 (C2): length, precision, height 768, width 1024
+    0xff, 0xc2, 0x00, 0x11, 0x08, 0x03, 0x00, 0x04, 0x00,
+  ];
+  assert.deepEqual(imageInfoOf(new Uint8Array(b)), { format: "jpeg", width: 1024, height: 768 });
 });
 
 const PROFILE_SCHEMA = [
@@ -84,6 +106,54 @@ test("an image no page names fails, and does not also fail the container", () =>
   const got = run(null, [["model/profiles/mira/old.png", png(512, 512)]]);
   assert.ok(got.some((f) => /old\.png: no page's `image` names it/.test(f)), got.join(" | "));
   assert.ok(!got.some((f) => /not a folder a profile owns/.test(f)), got.join(" | "));
+});
+
+test("an image field written as a YAML list fails, and its listed name is not also reported as unnamed", () => {
+  const text = "---\nimage:\n  - mira.png\n---\n\n# Mira\n\n> A person.\n";
+  const got = checkInstance(
+    new Map([
+      ["meta/core/profile-schema.md", PROFILE_SCHEMA],
+      ["model/profiles/mira/mira.md", text],
+      ["model/profiles/mira/experiences/README.md", "# Experiences\n"],
+      ["model/profiles/mira/mira.png", png(512, 512)],
+    ]),
+    { core: "meta/core", model: "model" },
+  ).failures;
+  assert.ok(got.some((f) => /mira\.md: `image` is a list; an image names one file \(R9\)/.test(f)), got.join(" | "));
+  assert.ok(!got.some((f) => /no page's `image` names it/.test(f)), got.join(" | "));
+});
+
+const IDENTITY_IMAGE_SCHEMA = [
+  "# Identity Schema", "", "> A company.", "",
+  "## File Location", "", "`identity.md`", "",
+  "## Frontmatter", "",
+  "| Field | Required | Type | Description |",
+  "| --- | --- | --- | --- |",
+  "| `image` | No | image | The company's logo. |", "",
+  "## Sections", "",
+  "| Section | Required | Description |",
+  "| --- | --- | --- |", "",
+].join("\n");
+
+const runIdentity = (image, extra = []) =>
+  checkInstance(
+    new Map([
+      ["meta/core/identity-schema.md", IDENTITY_IMAGE_SCHEMA],
+      ["model/identity.md", `${image === null ? "" : `---\nimage: ${image}\n---\n\n`}# Acme\n\n> A company.\n`],
+      ...extra,
+    ]),
+    { core: "meta/core", model: "model" },
+  ).failures;
+
+test("an image field on a singular type: a named image at the container root passes", () => {
+  const got = runIdentity("identity.png", [["model/identity.png", png(512, 512)]]);
+  assert.ok(!got.some((f) => f.includes("identity.png")), got.join(" | "));
+});
+
+test("an image field on a singular type: an unnamed image at the container root fails only as unnamed", () => {
+  const got = runIdentity(null, [["model/identity.png", png(512, 512)]]);
+  assert.ok(got.some((f) => /identity\.png: no page's `image` names it/.test(f)), got.join(" | "));
+  assert.ok(!got.some((f) => /identity\.png.*not a folder of any type/.test(f)), got.join(" | "));
 });
 
 // `imagesOf` is what a site calls after parsing: read the example the way a site reads its
