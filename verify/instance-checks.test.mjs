@@ -249,6 +249,37 @@ test("a column typed enum is held to the values its schema lists", () => {
   );
 });
 
+test("a column enum with no readable list fails once at the schema, not once per row", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | How sure this is. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |",
+      "| It compiles | high |",
+      "| It runs | low |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hits = failures.filter(
+    (f) => f.includes("skill-schema.md") && f.includes("Confidence") && f.includes("no readable list"),
+  );
+  assert.equal(hits.length, 1, `expected exactly one schema failure, got: ${failures.join(" | ")}`);
+});
+
 test("a required list field with no items fails, and one with an item passes", () => {
   const PHASE_SCHEMA = schema("phase", [
     "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
