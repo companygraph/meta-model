@@ -207,7 +207,7 @@ async function init(argv, { menu = false } = {}) {
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, plan.writes);
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
-  console.log(`  written for ${agent}, with the companygraph-validate, -export and -surface skills; export and surface need Python 3`);
+  console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface and -profile skills; export and surface need Python 3`);
   console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
