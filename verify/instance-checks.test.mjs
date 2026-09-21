@@ -249,6 +249,34 @@ test("a column typed enum is held to the values its schema lists", () => {
   );
 });
 
+test("a blank required column enum is named with its permitted values", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | `high` or `low`. How sure. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |", "| It compiles | |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("has no confidence"));
+  assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
+  assert.match(hit, /one of `high`, `low`/);
+});
+
 test("a column enum with no readable list fails once at the schema, not once per row", () => {
   const files = new Map([
     ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
