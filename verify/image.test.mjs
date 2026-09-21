@@ -189,3 +189,70 @@ test("imagesOf refuses an image read as text, rather than publish a corrupted fi
   const data = parseInstance(files, { sub: "model/", schemas });
   assert.throws(() => imagesOf(files, data, { sub: "model/", schemas }), /ai-agent\.png.*read as text/);
 });
+
+// The container's allowance is for a file. A directory listing names folders too, and a folder
+// named like an image holds files the image check never sees, so letting the name through would
+// open the container to anything put inside one.
+test("a folder named like an image is still refused, wherever it stands", () => {
+  const failures = checkInstance(
+    new Map([
+      ["meta/core/profile-schema.md", PROFILE_SCHEMA],
+      ["model/profiles/mira/mira.md", page(null)],
+      ["model/profiles/mira/experiences/README.md", "# Experiences\n"],
+      ["model/junk.png/notes.txt", "x"],
+      ["model/skills/shot.png/notes.md", "# Notes\n\n> x\n"],
+      ["model/profiles/mira/old.jpg/notes.txt", "x"],
+    ]),
+    { core: "meta/core", model: "model" },
+  ).failures;
+  assert.ok(failures.some((f) => /model\/junk\.png is not a folder of any type/.test(f)), failures.join(" | "));
+  assert.ok(failures.some((f) => /model\/skills\/shot\.png should be a \.md file/.test(f)), failures.join(" | "));
+  assert.ok(failures.some((f) => /mira\/old\.jpg is not a folder a profile owns/.test(f)), failures.join(" | "));
+});
+
+// The bounds are inclusive, and a test at each edge is what holds `<` from becoming `<=`.
+test("the bounds are inclusive at both ends, and the byte cap at its own value", () => {
+  assert.deepEqual(run("mira.png", [["model/profiles/mira/mira.png", png(256, 256)]]), []);
+  assert.deepEqual(run("mira.png", [["model/profiles/mira/mira.png", png(1024, 1024)]]), []);
+  assert.deepEqual(run("mira.png", [["model/profiles/mira/mira.png", png(512, 512, 300 * 1024)]]), []);
+  fails("mira.png", png(255, 255), /255×255; an image is 256 to 1024/);
+  fails("mira.png", png(1025, 1025), /1025×1025; an image is 256 to 1024/);
+});
+
+// Bytes are a Uint8Array, which a Node Buffer is, or the ArrayBuffer a fetch hands back. Text is
+// a reader's mistake and not the file's, and the message has to say whose it is.
+test("an ArrayBuffer is bytes, and an image read as text is reported as the reader's mistake", () => {
+  assert.deepEqual(run("mira.png", [["model/profiles/mira/mira.png", png(512, 512).buffer]]), []);
+  const got = run("mira.png", [["model/profiles/mira/mira.png", "�PNG as text"]]);
+  assert.ok(got.some((f) => /mira\.png: was read as text, not bytes/.test(f)), got.join(" | "));
+  assert.ok(!got.some((f) => /is not a PNG/.test(f)), got.join(" | "));
+});
+
+test("imagesOf takes an ArrayBuffer, hands back a Uint8Array, and names a missing file as missing", () => {
+  const files = tree("example/model");
+  const schemas = tree("core");
+  const data = parseInstance(files, { sub: "model/", schemas });
+  const at = "profiles/ai-agent/ai-agent.png";
+  const u8 = files.get(at);
+  files.set(at, u8.buffer.slice(u8.byteOffset, u8.byteOffset + u8.byteLength));
+  const [image] = imagesOf(files, data, { sub: "model/", schemas });
+  assert.ok(image.bytes instanceof Uint8Array);
+  assert.deepEqual(imageInfoOf(image.bytes), { format: "png", width: 256, height: 256 });
+  files.delete(at);
+  assert.throws(() => imagesOf(files, data, { sub: "model/", schemas }), /ai-agent\.png, named by .*ai-agent\.md, is not there/);
+});
+
+// Two image fields on one entity with one extension would publish under one name, and a site
+// would overwrite the first with the second in silence.
+test("imagesOf refuses two images that would publish under one name", () => {
+  const schemas = new Map([
+    ["identity-schema.md", IDENTITY_IMAGE_SCHEMA.replace("| `image` | No | image | The company's logo. |", "| `image` | No | image | The company's logo. |\n| `banner` | No | image | The banner. |")],
+  ]);
+  const files = new Map([
+    ["identity.md", "---\nimage: mark.png\nbanner: banner.png\n---\n\n# Acme\n\n> A company.\n"],
+    ["mark.png", png(512, 512)],
+    ["banner.png", png(512, 512)],
+  ]);
+  const data = parseInstance(files, { schemas });
+  assert.throws(() => imagesOf(files, data, { schemas }), /identity\.png.*both `image` and `banner`/);
+});

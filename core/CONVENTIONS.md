@@ -54,7 +54,7 @@ Every entity lives under `model/`, and nothing else does. What sits beside it �
 
 The container is what makes the rule closed. Without it, whatever walks an instance needs a list of folders that are *not* content, and such a list is an enumeration: it goes stale the first time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe. With it, "is this an entity?" is answered by where the file is.
 
-A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
+A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6), or an image such an entity names (R9). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
 
 ### R14 — Names and prose are American English
 
