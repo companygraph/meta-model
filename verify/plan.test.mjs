@@ -307,9 +307,18 @@ test("an upgrade moves the skills of an instance init gave them to, and edits re
   assert.ok(refused.refused.includes(".claude/skills/companygraph-validate/SKILL.md"));
 });
 
-test("an upgrade gives no skills to an instance whose manifest records none", () => {
+// An instance `init` made before the skills existed records none and holds none: it is given
+// them. One that wrote skills of its own under the tooling's names keeps them, and the upgrade
+// is not refused over them.
+test("an instance whose manifest records no skills is given them where it holds none, and keeps its own where it holds any", () => {
   const { manifest, held, workflow } = instance();
-  const plan = upgradePlan({ core: newer, skills, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
-  assert.ok(![...plan.writes.keys()].some((path) => path.startsWith(".claude/")));
-  assert.ok(!Object.keys(JSON.parse(plan.writes.get(".companygraph/manifest.json")).files).some((path) => path.startsWith(".claude/")));
+  const given = upgradePlan({ core: newer, skills, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
+  assert.equal(given.writes.get(".claude/skills/companygraph-validate/SKILL.md"), "# Validate\n");
+  assert.ok(Object.keys(JSON.parse(given.writes.get(".companygraph/manifest.json")).files).includes(".claude/skills/companygraph-validate/SKILL.md"));
+
+  const own = new Map([...held, [".claude/skills/companygraph-validate/SKILL.md", "# Our own validate\n"]]);
+  const kept = upgradePlan({ core: newer, skills, tooling: "0.32.0", tag: "v0.32.0", manifest, held: own, workflow });
+  assert.equal(kept.refused, undefined);
+  assert.ok(![...kept.writes.keys()].some((path) => path.startsWith(".claude/")));
+  assert.ok(!Object.keys(JSON.parse(kept.writes.get(".companygraph/manifest.json")).files).some((path) => path.startsWith(".claude/")));
 });
