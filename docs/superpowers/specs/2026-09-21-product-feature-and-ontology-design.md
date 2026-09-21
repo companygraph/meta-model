@@ -50,11 +50,15 @@ The role name is load-bearing, not decoration. Fourteen pairs of concepts carry 
 
 Cardinality is an enum and not an entity. `proficiency-level` set the test when it was promoted: a token whose members carry a definition of their own belongs in a file, and a closed set of bare tokens belongs in the schema under R8. `one` and `many` define nothing; they are the tokens.
 
-## 5. A domain owns its concepts
+## 5. A concept names its domain, and is not owned by it
 
-A concept belongs to one domain, and the instance already says which one in prose. The twenty-seven `See Domain …` stubs are exactly that statement: this concept's home is elsewhere, and what you are reading is a pointer. Nesting makes the pointer structural, so a domain removed takes its concepts with it and an orphan concept cannot be written at all.
+A concept belongs to one domain, and the instance already says which one in prose. The twenty-seven `See Domain …` stubs are exactly that statement: this concept's home is elsewhere, and what you are reading is a pointer. The first shape this design took made the pointer structural — `domains/<domain>/concepts/`, a domain owning its concepts as a process owns its phases — and the model refused it.
 
-That a concept then has one home and not several is the constraint, and it is the one the instance was already living under. A relation crosses a domain boundary freely, because a reference resolves by canonical name and R3 knows nothing about folders.
+It was refused by a rule decided on 2026-09-19, that a name of an owned type is unique within its owner and the parser resolves an owned name inside the owner it is written in. Nested, a concept in one domain cannot name a concept in another, and the checker says so: "concept entities are named only within the domain that owns them (R5)". That was run against a prototype of the nested shape before this section was rewritten. It makes the ontology one disconnected island per domain, and cross-domain relation is what the twenty-seven stubs *are*, so the shape that best preserved them was the shape that made them unwritable.
+
+So a concept is flat, in `model/concepts/`, and names its domain in a required field. A domain is then a file rather than a folder, because it owns nothing. The argument nesting was chosen for does not survive the comparison either: an orphan concept is impossible either way, since a required `domain` reference must resolve under R4, and the only thing lost is that deleting a domain leaves its concepts naming a missing one — which is a loud error rather than silent garbage.
+
+The cost is real and is the one to weigh. A concept's name is now unique across the whole instance, so two domains cannot each keep a `Status`. That is R2 doing what it does everywhere else, and a company whose two domains mean different things by one word has found something worth a conversation rather than two files.
 
 `Platform` is both a domain and a concept in that repository, and `Company` likewise. Typed resolution handles it — a `ref → concept` and a `ref → domain` are different questions — and this design states that it does rather than leaving a reader to work it out.
 
@@ -87,11 +91,15 @@ Sections are the H1, a tagline saying what the product is and who uses it, and n
 
 Sections are the H1, a tagline carrying the business value in one line, and a required `## Description`. `products` is required because a feature nothing ships is a plan, and the type for a plan is not this one. `concepts` is the one join between the two halves of this design, and it is the field to watch: optional and unpopulated is how a field rots, and it is kept anyway because it is what makes "which features touch Folio?" a question the graph can answer at all.
 
-`domain-schema.md` — `model/domains/<domain>/<domain>.md`, a folder by R6, owning `concept`.
+`domain-schema.md` — `model/domains/*.md`, a file, owning nothing.
 
-Sections are the H1 and a tagline stating what the domain covers. There is no concept table and no diagram. The H1 is the domain's name and not its type — `# Booking`, never `# Domain Booking` — because nothing else in the model prefixes a name with what it is.
+Sections are the H1 and a tagline stating what the domain covers and what it leaves to a neighbor. There is no concept table and no diagram: what a domain holds is what names it, derived as every other inverse here is. The H1 is the domain's name and not its type — `# Booking`, never `# Domain Booking` — because nothing else in the model prefixes a name with what it is.
 
-`concept-schema.md` — `model/domains/<domain>/concepts/*.md`, a file, `**Owner:** domain`.
+`concept-schema.md` — `model/concepts/*.md`, a file, owned by nothing.
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| `domain` | Yes | ref → domain | The domain this concept belongs to |
 
 Sections are the H1, a one-paragraph definition as the tagline, then two optional tables.
 
@@ -120,13 +128,13 @@ The kinds are four because the instance has four cases and they behave different
 
 ## 9. What ships
 
-Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, with `domain` carrying `owns: ["concept"]` and `concept` carrying `owner: "domain"`, which is the shape `process` already has with `phase` and `track`. The instance checks gain the rule that `As` is required where a pair repeats. The README's type list gains the four. Core goes to 0.36.0 and the package with it, 0.35.0 having already gone out as a package-only release.
+Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, all four flat, which is the shape `skill` and `value` already have. The instance checks gain the rule that `As` is required where a pair repeats. The README's type list gains the four. Core goes to 0.36.0 and the package with it, 0.35.0 having already gone out as a package-only release.
 
 The parser needs no change. `products`, `concepts` and a relation's `Concept` cell are references it resolves by declared type, and the declared-columns table is the shape `phase` already writes.
 
 One check does need one, and it is a rule already written rather than a new one. R9 says a column table is read "on the same terms as the frontmatter table except for the list types", and the R8 check reads frontmatter alone — it says so in its own comment, and adds that no column enum exists in core. `Cardinality` and `Kind` are the first two. So the check learns to read a column table, which holds every column enum written after these and can break nothing written before them, because there are none.
 
-`example/` is where this runs before it is called done. The fictional company gains three products, six features across them including one feature assembled into two, and two domains holding eight concepts between them — carrying at least one pair of parallel edges, one relation that crosses the domain boundary, one alias of each of the four kinds, and one concept with no relations at all, so both optional tables are exercised in both states.
+`example/` is where this runs before it is called done. The fictional company gains three products, six features across them including one feature assembled into two, two domains and eight concepts naming them — carrying at least one pair of parallel edges, one relation that crosses the domain boundary, one alias of each of the four kinds, and one concept with no relations at all, so both optional tables are exercised in both states.
 
 This is a minor release and it breaks nothing: an instance that writes none of the four folders is as valid after it as before, which is the difference between a core type and a pack.
 
