@@ -111,7 +111,16 @@ test("the menu shows an upgrade before it runs one, and a pick it does not have 
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   assert.match(run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" }), /nothing to do/);
-  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-4/);
+  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-5/);
+});
+
+test("the menu comes back after a pick and stays until Quit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const said = run(["menu"], { input: `\n2\n${root}\n9\nq\n1\n`, stdio: "pipe" });
+  assert.equal(said.match(/5 {2}Quit/g).length, 4);
+  assert.doesNotMatch(said, /Which folder\?.*\n.*Which folder\?/s);
+  assert.match(run(["menu"], { input: "5\n", stdio: "pipe" }), /5 {2}Quit/);
 });
 
 test("obsidian --from puts a build into a vault and switches it on", () => {

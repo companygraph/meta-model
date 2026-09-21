@@ -8,7 +8,7 @@
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>]
 //
 // Run with no command at a terminal, it opens a menu over the same four, which asks what the
-// flags would say and calls the same code.
+// flags would say and calls the same code, and stays open until Quit or Ctrl+C.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
@@ -27,7 +27,7 @@ const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"
 
 const USAGE = `companygraph [<command>]
 
-  (none)              at a terminal, a menu over the four below
+  (none)              at a terminal, a menu over the four below, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
@@ -129,15 +129,19 @@ const banner = () => [
 // One reader over stdin for the whole run, and the lines it reads kept until a question takes
 // them: a reader opened per question drops what the one before it had already buffered, which is
 // every answer after the first when the answers are piped in. At the end of the input a question
-// is answered with nothing, so a menu run from a pipe ends rather than waits.
+// is answered with nothing and `ended` is set, so a menu run from a pipe ends rather than waits.
 let reader = null;
+let ended = false;
 const lines = [];
 const waiting = [];
 function ask(question) {
   if (!reader) {
     reader = createInterface({ input: process.stdin });
     reader.on("line", (line) => (waiting.length ? waiting.shift()(line) : lines.push(line)));
-    reader.on("close", () => { while (waiting.length) waiting.shift()(""); });
+    reader.on("close", () => {
+      ended = true;
+      while (waiting.length) waiting.shift()("");
+    });
   }
   process.stdout.write(question);
   if (lines.length) return Promise.resolve(lines.shift().trim());
@@ -367,21 +371,29 @@ async function menu() {
     }],
   ];
   console.log(`\n${banner()}\n`);
-  const width = Math.max(...entries.map(([label]) => label.length));
-  entries.forEach(([label, what], i) => console.log(`  ${accent(i + 1)}  ${label.padEnd(width)}  ${dim(what)}`));
-  console.log();
-  const pick = await ask(prompt(`Pick 1-${entries.length}`, "Enter to leave"));
-  if (!pick) return 0;
-  const entry = entries[Number(pick) - 1];
-  if (!entry || !/^\d+$/.test(pick)) throw new Error(`${pick} is not one of 1-${entries.length}; nothing was done.`);
-  console.log();
-  try {
-    const code = await entry[2]();
+  const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);
+  // The menu comes back after every pick, so one run does several things; it ends on Quit, on q,
+  // on Ctrl+C, or at the end of piped input. Quit exits 0, since leaving is what was asked; the end
+  // of piped input exits with the last pick's code, which is how a test reads what a pick did.
+  let code = 0;
+  for (;;) {
+    entries.forEach(([label, what], i) => console.log(`  ${accent(i + 1)}  ${label.padEnd(width)}  ${dim(what)}`));
+    console.log(`  ${accent(entries.length + 1)}  ${"Quit".padEnd(width)}  ${dim("or q, or Ctrl+C")}`);
     console.log();
-    return code;
-  } catch (error) {
-    console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
-    return 1;
+    const pick = await ask(prompt(`Pick 1-${entries.length + 1}`));
+    if (!pick && ended && !lines.length) return code;
+    if (!pick) continue;
+    if (/^q(uit)?$/i.test(pick) || pick === String(entries.length + 1)) return 0;
+    const entry = /^\d+$/.test(pick) ? entries[Number(pick) - 1] : undefined;
+    console.log();
+    try {
+      if (!entry) throw new Error(`${pick} is not one of 1-${entries.length + 1}; nothing was done.`);
+      code = await entry[2]();
+    } catch (error) {
+      console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
+      code = 1;
+    }
+    console.log();
   }
 }
 
