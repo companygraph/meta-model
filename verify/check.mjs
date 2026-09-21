@@ -29,7 +29,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
-import { TYPES, MODEL, TYPE_VOCABULARY, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
+import { TYPES, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -52,7 +52,8 @@ function filesUnder(...roots) {
     for (const entry of readdirSync(p)) {
       const child = `${rel}/${entry}`;
       if (statSync(join(ROOT, child)).isDirectory()) walk(child);
-      else files.set(child, readFileSync(join(ROOT, child), "utf8"));
+      // An image is bytes, as the instance's own checker reads it (R9).
+      else files.set(child, readFileSync(join(ROOT, child), IMAGE_FILE.test(child) ? undefined : "utf8"));
     }
   };
   for (const root of roots) walk(root);
@@ -342,8 +343,9 @@ const CHECKS = [
         // it is read here with them: the type a heading points at is held to the vocabulary and
         // to the list of types, or a schema could group a section under a type nobody defines.
         const s = sectionsOf(text);
+        const frontmatter = tableOf((s.get("Frontmatter") ?? "").trim());
         const typed = [
-          tableOf((s.get("Frontmatter") ?? "").trim()),
+          frontmatter,
           ...blocksOf(s.get("Sections") ?? "")
             .filter((b) => b.section || b.grouped)
             .map((b) => b.table),
@@ -351,6 +353,12 @@ const CHECKS = [
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = (row[2] ?? "").replace(/`/g, "").trim();
+            // R9: an image is a file beside its page, and a row of a table has no folder of its
+            // own for one to sit in, so `image` is a frontmatter type only.
+            if (declared === "image" && fm !== frontmatter) {
+              fail(`${path}: ${row[0]} is "image"; an image is a frontmatter field, never a column`);
+              continue;
+            }
             // `array of ref?` is rejected by its own message rather than left to fall through:
             // the `?` asks whether one value resolves, and a list has no single value to ask
             // it of, so the combination is never a form the regex below should accept.

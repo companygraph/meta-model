@@ -6,19 +6,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance } from "../lib/checks.mjs";
+import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
 
-// Every file under a folder, as the checks read one: path relative to the root, text.
+// Every file under a folder, as the checks read one: path relative to the root, text, and bytes
+// for an image (R9).
 function filesOf(root, base = root, into = new Map()) {
   for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
     const full = path.join(base, entry.name);
     if (entry.isDirectory()) filesOf(root, full, into);
-    else into.set(path.relative(root, full), fs.readFileSync(full, "utf8"));
+    else into.set(path.relative(root, full), fs.readFileSync(full, IMAGE_FILE.test(entry.name) ? undefined : "utf8"));
   }
   return into;
 }

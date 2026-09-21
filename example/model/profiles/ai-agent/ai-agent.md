@@ -3,6 +3,7 @@ source: Local
 nature: agent
 roles:
   - Reviewer
+image: ai-agent.png
 ---
 
 # AI Agent
