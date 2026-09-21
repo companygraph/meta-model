@@ -3,7 +3,10 @@
 // to a length is all a case needs, and building it here keeps a binary file out of the tests.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { readFileSync, readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
 import { checkInstance, imageInfoOf, IMAGE_FILE } from "../lib/checks.mjs";
+import { parseInstance, imagesOf } from "../lib/instance.mjs";
 
 const png = (w, h, length = 64) => {
   const b = new Uint8Array(Math.max(length, 24));
@@ -81,4 +84,38 @@ test("an image no page names fails, and does not also fail the container", () =>
   const got = run(null, [["model/profiles/mira/old.png", png(512, 512)]]);
   assert.ok(got.some((f) => /old\.png: no page's `image` names it/.test(f)), got.join(" | "));
   assert.ok(!got.some((f) => /not a folder a profile owns/.test(f)), got.join(" | "));
+});
+
+// `imagesOf` is what a site calls after parsing: read the example the way a site reads its
+// model, bytes for an image and text for the rest, and ask it what to publish.
+const ROOT = new URL("..", import.meta.url).pathname;
+const tree = (rel, { asText = false } = {}) => {
+  const out = new Map();
+  const walk = (d) => {
+    for (const name of readdirSync(join(ROOT, rel, d))) {
+      const child = d ? `${d}/${name}` : name;
+      if (statSync(join(ROOT, rel, child)).isDirectory()) walk(child);
+      else out.set(child, readFileSync(join(ROOT, rel, child), IMAGE_FILE.test(child) && !asText ? undefined : "utf8"));
+    }
+  };
+  walk("");
+  return out;
+};
+
+test("imagesOf names each image a page carries, where it came from and where a site puts it", () => {
+  const files = tree("example/model");
+  const schemas = tree("core");
+  const data = parseInstance(files, { sub: "model/", schemas });
+  const images = imagesOf(files, data, { sub: "model/", schemas });
+  assert.deepEqual(images.map(({ bytes, ...rest }) => rest), [
+    { id: "profiles/ai-agent", field: "image", from: "profiles/ai-agent/ai-agent.png", to: "profiles/ai-agent.png" },
+  ]);
+  assert.deepEqual(imageInfoOf(images[0].bytes), { format: "png", width: 256, height: 256 });
+});
+
+test("imagesOf refuses an image read as text, rather than publish a corrupted file", () => {
+  const files = tree("example/model", { asText: true });
+  const schemas = tree("core");
+  const data = parseInstance(files, { sub: "model/", schemas });
+  assert.throws(() => imagesOf(files, data, { sub: "model/", schemas }), /ai-agent\.png.*read as text/);
 });
