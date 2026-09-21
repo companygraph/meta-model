@@ -6,9 +6,7 @@
 
 `model/profiles/<profile>/<profile>.md`
 
-A profile owns experiences, so it is a folder rather than a file: `profiles/<profile>/` holds
-the profile's own file and an `experiences/` folder beside it. Removing a person is then one
-operation and an orphaned experience is unrepresentable.
+A profile owns experiences, so it is a folder rather than a file: `profiles/<profile>/` holds the profile's own file and an `experiences/` folder beside it. Removing a person is then one operation and an orphaned experience is unrepresentable.
 
 ## Frontmatter
 
@@ -39,10 +37,7 @@ operation and an orphaned experience is unrepresentable.
 | `Skill` | Yes | ref → skill | Must match the H1 of a file in `skills/` exactly |
 | `Level` | Yes | qualifier → proficiency-level | Must match the H1 of a file in `proficiency-levels/` exactly |
 
-An assessment is a table row rather than a frontmatter field because it is a claim with prose
-attached, not a short fact, and the evidence under it is a table for the reason stated below.
-A table renders where a reader looks, has no quoting hazard around a colon or a wrapped line,
-and declares its columns here exactly as a frontmatter field does.
+An assessment is a table row rather than a frontmatter field because it is a claim with prose attached, not a short fact, and the evidence under it is a table for the reason stated below. A table renders where a reader looks, has no quoting hazard around a colon or a wrapped line, and declares its columns here exactly as a frontmatter field does.
 
 `## Evidence` is a table with these columns:
 
@@ -52,24 +47,11 @@ and declares its columns here exactly as a frontmatter field does.
 | `What it shows` | Yes | string | One sentence naming the thing done, concrete enough that a reader could check it |
 | `Experience` | No | qualifier → experience | `skills` lists `Skill`. The period the fact comes from — the H1 of a file in this profile's `experiences/` |
 
-Evidence is a table of its own rather than a third column of `## Skills` because a claim rests
-on more than one thing and a cell holds one line. A paragraph listing four engagements cannot be
-counted, and breadth is one of the things a level is read from: a capability shown in three
-engagements has held where the people, the constraints and the stakes changed, which one
-engagement cannot show however well it went. One fact per row is what makes that breadth
-readable by anyone, including a machine.
+Evidence is a table of its own rather than a third column of `## Skills` because a claim rests on more than one thing and a cell holds one line. A paragraph listing four engagements cannot be counted, and breadth is one of the things a level is read from: a capability shown in three engagements has held where the people, the constraints and the stakes changed, which one engagement cannot show however well it went. One fact per row is what makes that breadth readable by anyone, including a machine.
 
-`Experience` is the optional column and sits last. It is optional because a claim at the lower
-rungs can rest on having been near work rather than on having owned a period of it, and such a
-row leaves the cell blank rather than inventing a period to fill it. Where the cell is filled,
-the experience's period is read from the experience and is not written into the sentence as
-well: a date copied beside a fact the experience already owns is a second copy that nothing
-keeps true. A period shorter than the experience's is different. The years a practice ran inside
-a longer role are not a copy of the role's dates but a fact of their own, and the sentence is the
-only place that holds them, so they stay.
+`Experience` is the optional column and sits last. It is optional because a claim at the lower rungs can rest on having been near work rather than on having owned a period of it, and such a row leaves the cell blank rather than inventing a period to fill it. Where the cell is filled, the experience's period is read from the experience and is not written into the sentence as well: a date copied beside a fact the experience already owns is a second copy that nothing keeps true. A period shorter than the experience's is different. The years a practice ran inside a longer role are not a copy of the role's dates but a fact of their own, and the sentence is the only place that holds them, so they stay.
 
-The column is `What it shows` rather than `Evidence` so that it does not restate the section it
-sits in, which is the same reason `## References` calls its first column `What`.
+The column is `What it shows` rather than `Evidence` so that it does not restate the section it sits in, which is the same reason `## References` calls its first column `What`.
 
 `## Also at` is a table with these columns:
 
@@ -78,19 +60,11 @@ sits in, which is the same reason `## References` calls its first column `What`.
 | `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |
 | `URL` | Yes | string | The person's own page there |
 
-A presence is a place the person maintains a page on, named by the place and addressed by that
-page — never a single post, an article or a recording, which document an experience and belong
-in that experience's `## References`.
+A presence is a place the person maintains a page on, named by the place and addressed by that page — never a single post, an article or a recording, which document an experience and belong in that experience's `## References`.
 
 ## Purpose
 
-A profile is the one page that says who a person or an agent is and what they claim — the
-entity every experience is owned by, every skill claim is made from and every role is held by.
-It answers "who is this, what can they do, and what is that judgment resting on?" for
-someone deciding whether to work with them. It is not a curriculum vitae: what happened, when
-and where lives in the experiences the profile owns, and what a capability *is* lives in the
-skill. What only the profile can hold is the claim — this person, this skill, at this level,
-on this evidence.
+A profile is the one page that says who a person or an agent is and what they claim — the entity every experience is owned by, every skill claim is made from and every role is held by. It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with them. It is not a curriculum vitae: what happened, when and where lives in the experiences the profile owns, and what a capability *is* lives in the skill. What only the profile can hold is the claim — this person, this skill, at this level, on this evidence.
 
 ## Writing rules
 

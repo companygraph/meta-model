@@ -10,14 +10,11 @@ requires:
 
 ## What it takes
 
-A bounded context with a name and the invoices it has to get right. A change request that
-says what is wrong for a customer, not which class to edit. A turn on the pager, because the
-seat answers for what it ships.
+A bounded context with a name and the invoices it has to get right. A change request that says what is wrong for a customer, not which class to edit. A turn on the pager, because the seat answers for what it ships.
 
 ## What it produces
 
-A service that stays up, and a change small enough that a reviewer reads it in one sitting,
-with the tests that show the invoice is still right.
+A service that stays up, and a change small enough that a reviewer reads it in one sitting, with the tests that show the invoice is still right.
 
 ## What it never does
 

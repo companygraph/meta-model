@@ -6,12 +6,7 @@
 
 `model/sources/*.md`
 
-A source is where a page's facts come from: the repository itself, or a system the company
-already runs that a sync writes from. One file per source, so a page can name where it was
-mastered by canonical name rather than restating a system's name and address on every entry.
-Nothing owns a source and a source owns nothing. Every other core type carries a required
-`source` field naming one, so no page is of unknown origin, and an optional `source-id` —
-the page's identifier inside that source — so a sync can find it again.
+A source is where a page's facts come from: the repository itself, or a system the company already runs that a sync writes from. One file per source, so a page can name where it was mastered by canonical name rather than restating a system's name and address on every entry. Nothing owns a source and a source owns nothing. Every other core type carries a required `source` field naming one, so no page is of unknown origin, and an optional `source-id` — the page's identifier inside that source — so a sync can find it again.
 
 ## Frontmatter
 
@@ -28,11 +23,7 @@ the page's identifier inside that source — so a sync can find it again.
 
 ## Purpose
 
-A source is the answer to "if this page is wrong, where does it get fixed?" Every other core
-type names one, so no page is of unknown origin, and naming it by canonical name means a
-system's name and address are written once rather than on every page that came from it. A
-source is where a fact is *mastered* — the place with the authority to change it — not merely
-where it was seen.
+A source is the answer to "if this page is wrong, where does it get fixed?" Every other core type names one, so no page is of unknown origin, and naming it by canonical name means a system's name and address are written once rather than on every page that came from it. A source is where a fact is *mastered* — the place with the authority to change it — not merely where it was seen.
 
 ## Writing rules
 

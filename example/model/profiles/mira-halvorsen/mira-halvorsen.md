@@ -29,8 +29,7 @@ location: Bergen
 
 ## Summary
 
-Eight years across two companies, both of them small enough that the boundary between
-building a thing and running it never really existed.
+Eight years across two companies, both of them small enough that the boundary between building a thing and running it never really existed.
 
 ## Also at
 

@@ -8,8 +8,7 @@
 
 `model/processes/<process>/tracks/*.md`
 
-A track is owned by a process and cannot exist without it, so it nests inside the process's
-folder beside `phases/`. The filename is R12's default, the slug of the H1.
+A track is owned by a process and cannot exist without it, so it nests inside the process's folder beside `phases/`. The filename is R12's default, the slug of the H1.
 
 ## Frontmatter
 
@@ -27,12 +26,7 @@ folder beside `phases/`. The filename is R12's default, the slug of the H1.
 
 ## Purpose
 
-A track is one kind of thing a process makes, and it answers “which of the things this process
-makes is this step about?” for a reader of a phase whose work differs by what is being made. It
-is an entity so that the answer is a reference rather than a word: a phase that heads its
-activities with a track names something that exists, a track renamed is renamed in one place
-with every mention held to it, and the tracks are visible in the graph as nodes. It points at
-nothing. Which seats work a track and what they do on it are said by the phases.
+A track is one kind of thing a process makes, and it answers “which of the things this process makes is this step about?” for a reader of a phase whose work differs by what is being made. It is an entity so that the answer is a reference rather than a word: a phase that heads its activities with a track names something that exists, a track renamed is renamed in one place with every mention held to it, and the tracks are visible in the graph as nodes. It points at nothing. Which seats work a track and what they do on it are said by the phases.
 
 ## Writing rules
 

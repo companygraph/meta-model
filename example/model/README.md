@@ -2,14 +2,9 @@
 
 > A fictional company, described in CompanyGraph. Nothing here is real.
 
-Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes
-and the agent that holds the Reviewer seat. The content is invented so the shape can be read
-end to end without anyone's actual client or revenue data being published.
+Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`,
-`achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`,
-`strategic-objective`, `strategy`, `role`, `process`, `phase`, `track` — and declares no packs.
-That is what core ships, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `role`, `process`, `phase`, `track` — and declares no packs. That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -37,15 +32,8 @@ profiles/ai-agent/               ai-agent.md — an agent, holding the Reviewer 
   experiences/                   empty
 ```
 
-`profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a
-folder of files because nothing owns a skill. `identity.md` and `vision.md` are files directly
-in the container because a company has one of each: the filesystem carries the cardinality, so
-no rule has to state it (R6, R13).
+`profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a folder of files because nothing owns a skill. `identity.md` and `vision.md` are files directly in the container because a company has one of each: the filesystem carries the cardinality, so no rule has to state it (R6, R13).
 
-Everything here sits under `model/`. What an instance keeps beside it — the vendored `meta/`,
-its tooling, its working documents — is not content and is never walked as content.
+Everything here sits under `model/`. What an instance keeps beside it — the vendored `meta/`, its tooling, its working documents — is not content and is never walked as content.
 
-There are no schemas here. This instance is read beside `core/` and is written against the
-schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away
-has no such neighbor and keeps a copy; where is theirs to decide, so long as it is not inside
-a folder named for a type.
+There are no schemas here. This instance is read beside `core/` and is written against the schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away has no such neighbor and keeps a copy; where is theirs to decide, so long as it is not inside a folder named for a type.
