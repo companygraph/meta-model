@@ -24,3 +24,15 @@ jobs:
         run: npm run test:instance-checks
       - name: Every rule the shipped files cite still exists
         run: npm run test:rules
+      # The CLI: what a command would do, the files an instance starts with, the command itself
+      # run over temporary folders, and the tarball and fetch it takes another release's core
+      # through. The command's tests also run the export skill's scripts, which need the runner's
+      # own Python 3.
+      - name: The plan decides what init and upgrade write
+        run: npm run test:plan
+      - name: The files an instance starts with
+        run: npm run test:instance-files
+      - name: The command, run over real folders
+        run: npm run test:cli
+      - name: Another release's core is read from its tarball
+        run: npm run test:untar && npm run test:fetch-core

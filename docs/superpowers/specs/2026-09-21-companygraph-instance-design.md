@@ -205,4 +205,8 @@ Two things to put to the author. Should `check` read the hashes it already holds
 
 **Nothing now exercises an instance that declares no profile.** §3 called that case a finding in its own right, and the agent profile ended it. Every check that walks profiles is still untested against an instance with none; recorded so that the coverage is not assumed to continue.
 
+**`init` wrote folder READMEs that name no schema.** Each said `# <slug>` and "One file per entity of this type.", where the reference instance's say, under a sentence-case heading, which `meta/core/<type>-schema.md` the folder's files are written against, so a reader arriving in a folder does not have to know it already. Every instance `init` made needed them rewritten by hand, and this one did.
+
+**What #105 did with the findings against the tooling.** The branch acts on all five rather than leaving them to a later follow-up: `init` and `upgrade` refuse a core newer than the tooling that runs before writing anything, and name the tag to run instead; `--folders` writes only the folders named, and `sources/` always; the core-newer refusal names the manifest's `tooling` and the workflow pin together; `check` holds the vendored core to the manifest's hashes, which both instances already match; and each folder README names its schemas.
+
 Further findings are added as the work produces them.

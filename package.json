@@ -1,15 +1,26 @@
 {
   "name": "companygraph-meta-model",
-  "version": "0.38.0",
+  "version": "0.39.0",
   "license": "Apache-2.0",
   "type": "module",
   "engines": { "node": ">=22" },
-  "files": ["lib", "bin"],
-  "exports": { "./instance": "./lib/instance.mjs", "./checks": "./lib/checks.mjs" },
+  "files": ["lib", "bin", "core", "agents"],
+  "bin": { "companygraph": "./bin/companygraph.mjs" },
+  "exports": {
+    "./instance": "./lib/instance.mjs",
+    "./checks": "./lib/checks.mjs",
+    "./plan": "./lib/plan.mjs",
+    "./write": "./lib/write.mjs"
+  },
   "scripts": {
     "verify": "node verify/check.mjs",
     "test:instance": "node --test verify/instance.test.mjs verify/constraints.test.mjs",
     "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs",
-    "test:rules": "node --test verify/rule-citations.test.mjs"
+    "test:instance-files": "node --test verify/instance-files.test.mjs",
+    "test:plan": "node --test verify/plan.test.mjs",
+    "test:rules": "node --test verify/rule-citations.test.mjs",
+    "test:cli": "node --test verify/cli.test.mjs",
+    "test:untar": "node --test verify/untar.test.mjs",
+    "test:fetch-core": "node --test verify/fetch-core.test.mjs"
   }
 }
