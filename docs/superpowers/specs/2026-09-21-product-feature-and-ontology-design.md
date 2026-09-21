@@ -120,9 +120,11 @@ The kinds are four because the instance has four cases and they behave different
 
 ## 9. What ships
 
-Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, with `domain` carrying `owns: ["concept"]` and `concept` carrying `owner: "domain"`, which is the shape `process` already has with `phase` and `track`. The instance checks gain the two column enums under R8 and the rule that `As` is required where a pair repeats. The README's type list gains the four. Core and the package go to 0.35.0.
+Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, with `domain` carrying `owns: ["concept"]` and `concept` carrying `owner: "domain"`, which is the shape `process` already has with `phase` and `track`. The instance checks gain the rule that `As` is required where a pair repeats. The README's type list gains the four. Core goes to 0.36.0 and the package with it, 0.35.0 having already gone out as a package-only release.
 
 The parser needs no change. `products`, `concepts` and a relation's `Concept` cell are references it resolves by declared type, and the declared-columns table is the shape `phase` already writes.
+
+One check does need one, and it is a rule already written rather than a new one. R9 says a column table is read "on the same terms as the frontmatter table except for the list types", and the R8 check reads frontmatter alone — it says so in its own comment, and adds that no column enum exists in core. `Cardinality` and `Kind` are the first two. So the check learns to read a column table, which holds every column enum written after these and can break nothing written before them, because there are none.
 
 `example/` is where this runs before it is called done. The fictional company gains three products, six features across them including one feature assembled into two, and two domains holding eight concepts between them — carrying at least one pair of parallel edges, one relation that crosses the domain boundary, one alias of each of the four kinds, and one concept with no relations at all, so both optional tables are exercised in both states.
 
