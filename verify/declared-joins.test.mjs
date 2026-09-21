@@ -8,6 +8,7 @@
 // declaration onto other sections and another field to show it.
 import test from "node:test";
 import assert from "node:assert/strict";
+import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
 
 const head = (type, owner) => [
@@ -157,7 +158,7 @@ test("a declaration that names nothing fails by name, in the schema, and never i
 test("core's profile schema declares both joins, and the example breaks them when broken", async () => {
   const fs = await import("node:fs");
   const path = await import("node:path");
-  const root = new URL("..", import.meta.url).pathname;
+  const root = fileURLToPath(new URL("..", import.meta.url));
   const files = new Map();
   const walk = (dir, prefix) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true }))
