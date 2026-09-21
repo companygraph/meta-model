@@ -78,9 +78,12 @@ Four files in `core/`, following R9's fixed shape. Every one carries `source` an
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `domain` | Yes | ref → domain | The area of the company this product belongs to |
 | `audience` | No | string | Free-text grouping, e.g. `Staff`. Whether an audience becomes an entity of its own is deliberately open. |
 
 Sections are the H1, a tagline saying what the product is and who uses it, and nothing else. It lists no features, because §6 derives them. The `audience` field copies `skill`'s `group` field including its openness: three values across six products is not the data that question needs.
+
+A product names its domain exactly as a concept does — one, required, a reference and not a nesting. The multi-person instance already files its applications this way: its `Platform` domain is the one holding Guest Journey, Operations Platform, the kiosk and the rest, so the edge was in the data before it was in the schema. A product that works across two domains still names one, the one whose concepts its users came to it for, and the concepts its features name show the rest. That keeps the edge one fact rather than a set, and it is the choice to revisit if real products keep refusing it: the example's own Billing Console names four concepts of Invoicing and five of Pricing, and belongs to Pricing because the company exists for pricing that outgrew a spreadsheet.
 
 `feature-schema.md` — `model/features/*.md`, a file, owning nothing.
 
@@ -93,7 +96,7 @@ Sections are the H1, a tagline carrying the business value in one line, and a re
 
 `domain-schema.md` — `model/domains/*.md`, a file, owning nothing.
 
-Sections are the H1 and a tagline stating what the domain covers and what it leaves to a neighbor. There is no concept table and no diagram: what a domain holds is what names it, derived as every other inverse here is. The H1 is the domain's name and not its type — `# Booking`, never `# Domain Booking` — because nothing else in the model prefixes a name with what it is.
+Sections are the H1 and a tagline stating what the domain covers and what it leaves to a neighbor. There is no concept table, no product table and no diagram: what a domain holds is what names it, concepts and products both, derived as every other inverse here is. A domain is therefore an area of the company rather than of its vocabulary alone — the words it means something exact by there and the products it ships there. The H1 is the domain's name and not its type — `# Booking`, never `# Domain Booking` — because nothing else in the model prefixes a name with what it is.
 
 `concept-schema.md` — `model/concepts/*.md`, a file, owned by nothing.
 
