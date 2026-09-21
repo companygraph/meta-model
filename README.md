@@ -62,9 +62,9 @@ flowchart TB
     PACK --> CORE
 ```
 
-An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server and whatever tooling gets built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
+An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server and the tooling built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
 
-The server sits beside the tooling rather than between core and an instance: it depends on the parser this package ships and on nothing an instance declares, and a deployment of it names the instance and the release it serves. `companygraph/mcp-server` is the package, `robertblust/mcp-blust-ch` is the deployment that runs it over the reference instance.
+The server sits beside the tooling rather than between core and an instance: it depends on the parser this package ships and on nothing an instance declares, and a deployment of it names the instance and the release it serves. `companygraph/mcp-server` is the package, and `robertblust/mcp-blust-ch` and `companygraph/mcp-companygraph-io` are the deployments that run it over the two instances.
 
 ## Status
 
@@ -125,6 +125,6 @@ What has shipped, what comes next and what was deliberately deferred are on the 
 
 ## License
 
-[Apache 2.0](LICENSE) — the meta-model is open source and stays that way, and so is any tooling built for it. Consulting is the one thing that costs money; what it costs and how it is billed is on [companygraph.io/billing](https://companygraph.io/billing/).
+[Apache 2.0](LICENSE) — the meta-model is open source and stays that way, and so is the tooling built for it. Consulting is the one thing that costs money; what it costs and how it is billed is on [companygraph.io/billing](https://companygraph.io/billing/).
 
 Copying `core/` into a repository of your own is the intended use, and Apache 2.0's conditions attach to distribution: if you publish that repository, carry the license and its attribution alongside the schema files you took. This project claims no interest in the company content you write against them — that is your work, and describing it in this vocabulary does not change whose it is.
