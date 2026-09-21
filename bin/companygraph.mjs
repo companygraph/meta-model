@@ -19,6 +19,7 @@ import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
+import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, installed, newestRelease, place, readLocal } from "../lib/obsidian.mjs";
 
@@ -49,7 +50,7 @@ function filesOfThisRelease(folder) {
     for (const entry of readdirSync(join(from, rel || "."), { withFileTypes: true })) {
       const child = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) walk(child);
-      else files.set(child, readFileSync(join(from, child), "utf8"));
+      else files.set(child, unixLines(readFileSync(join(from, child), "utf8")));
     }
   };
   walk("");
@@ -86,6 +87,8 @@ function flags(argv) {
 }
 
 // Everything the target folder holds, for the plan's pre-flight; nothing is read of what it says.
+// Keyed with `/` as the plan's paths are: on Windows `relative` answers with `\`, and a key that
+// never matched the plan's let `init --here` see nothing already there.
 function present(root) {
   const found = new Set();
   const walk = (base) => {
@@ -93,7 +96,7 @@ function present(root) {
       const full = join(base, entry.name);
       if (entry.name === ".git") continue;
       if (entry.isDirectory()) walk(full);
-      else found.add(relative(root, full));
+      else found.add(relative(root, full).split(sep).join("/"));
     }
   };
   if (existsSync(root)) walk(root);
@@ -228,18 +231,20 @@ async function upgrade(argv) {
   } catch (error) {
     throw new Error(`${manifestPath} could not be read as JSON: ${error.message}`);
   }
+  // Read with `\n` line ends, as the hashes they are compared against were taken.
+  const read = (path) => unixLines(readFileSync(path, "utf8"));
   const held = new Map();
   for (const path of Object.keys(manifest.files ?? {}))
-    if (existsSync(join(root, path))) held.set(path, readFileSync(join(root, path), "utf8"));
+    if (existsSync(join(root, path))) held.set(path, read(join(root, path)));
   // The skills this release would write, read where they already exist, so the plan can tell a
   // file this tooling wrote from one the instance wrote under the same name.
   const skills = skillsFor("claude");
   for (const path of skills.keys()) {
     const at = `${SKILLS}${path}`;
-    if (!held.has(at) && existsSync(join(root, at))) held.set(at, readFileSync(join(root, at), "utf8"));
+    if (!held.has(at) && existsSync(join(root, at))) held.set(at, read(join(root, at)));
   }
   const workflowPath = join(root, ".github/workflows/companygraph.yml");
-  const workflow = existsSync(workflowPath) ? readFileSync(workflowPath, "utf8") : null;
+  const workflow = existsSync(workflowPath) ? read(workflowPath) : null;
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const plan = upgradePlan({

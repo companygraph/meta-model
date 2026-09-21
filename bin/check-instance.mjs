@@ -33,7 +33,7 @@ import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "n
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, isNewer, MODEL, IMAGE_FILE } from "../lib/checks.mjs";
-import { hashOf } from "../lib/instance-files.mjs";
+import { hashOf, unixLines } from "../lib/instance-files.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8")).version;
@@ -84,8 +84,8 @@ export function checkPath(path) {
       const child = `${rel}/${entry}`;
       if (statSync(join(root, child)).isDirectory()) walk(child);
       // An image is bytes, and read as text it is corrupted before the check that reads its
-      // header sees it (R9).
-      else files.set(child, readFileSync(join(root, child), IMAGE_FILE.test(child) ? undefined : "utf8"));
+      // header sees it (R9). Text is read with `\n` line ends, whatever the checkout wrote.
+      else files.set(child, IMAGE_FILE.test(child) ? readFileSync(join(root, child)) : unixLines(readFileSync(join(root, child), "utf8")));
     }
   };
   walk(MODEL);
@@ -106,7 +106,7 @@ export function checkPath(path) {
       failures.push(`${path}: named in .companygraph/manifest.json, and not a plain path inside the instance`);
       continue;
     }
-    const text = files.get(path) ?? (existsSync(join(root, path)) ? readFileSync(join(root, path), "utf8") : undefined);
+    const text = files.get(path) ?? (existsSync(join(root, path)) ? unixLines(readFileSync(join(root, path), "utf8")) : undefined);
     if (text === undefined)
       failures.push(`${path}: named in .companygraph/manifest.json and not in the instance`);
     else if (hashOf(text) !== recorded)
