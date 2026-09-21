@@ -27,8 +27,10 @@ The reference instance answered whether the vocabulary could hold a real company
 
 **Non-goals:**
 
-- any person, skill, experience, role or proficiency level in the instance. Decided, not
-  deferred: §3 says why, and the finding it would produce is worth more than the coverage
+- any person in the instance: no profile, skill, experience or proficiency level. Decided, not
+  deferred: §3 says why, and the finding it would produce is worth more than the coverage.
+  `role` was named here too and is not a non-goal, because it could not be one — §3 says what
+  building the instance established
 - an MCP server over this instance. mcp.blust.ch serves the reference instance; a second
   deployment is its own decision and nothing here depends on it
 - per-entity pages on companygraph.io. The site renders no entity pages for `/model/` or
@@ -60,7 +62,8 @@ Two things the run leaves to be corrected by hand, both recorded as findings in 
   `model/proficiency-levels/`, `model/experience-kinds/` and `model/achievement-kinds/` whether
   or not it will populate them. The meta-model README's own words are that a consultancy "has
   none of those and should not carry empty folders implying it forgot." The six this instance
-  does not populate are removed after the run.
+  did not then populate were removed after the run, and `model/roles/` came back when the
+  process was written, for the reason §3 gives.
 
 On top of what `init` writes, the repository joins the conventions family: the vendored `conventions/`, a `conventions.json` pin, `.markdownlint-cli2.jsonc` at the root, and the `check.yml` that calls the shared `conventions / conventions` job beside the instance check. Its `README.md` is titled `CompanyGraph — Mental Model`, and `REPOSITORIES.md` carries that title in the row §6 adds.
 
@@ -70,7 +73,7 @@ Licensed as the reference instance is: CC BY 4.0 for everything written in `mode
 
 ## 3. Content
 
-Direction, operation and surfaces, and no organization at all. In folders:
+Direction, operation and surfaces, and of organization the seats alone. In folders:
 
 ```text
 model/identity.md            CompanyGraph, and where it can be found
@@ -80,10 +83,11 @@ model/values/                what it will and will not do
 model/strategic-objectives/  what must become true for the vision to be reached
 model/strategies/            how one gets reached, and what the route rules out
 model/surfaces/              one file per place the model is published
+model/roles/                 the seats its work is done from, each naming no holder
 model/processes/             its one kind of work, phase by phase, with tracks
 ```
 
-**No person appears in this instance.** CompanyGraph is operated by the company of one that `robertblust/mental-model` describes, and that is where the person is described. Writing a `profiles/robert-blust/` here would put one person's canonical name in two instances with two sets of facts behind it, and the second set would go stale without a sound. An instance that declares no `profile` is legal by design — core defines a type without obliging an instance to populate it — and this is the first instance to exercise that, which is a finding in its own right: every check that walks profiles now has a case where there are none.
+**No person appears in this instance.** CompanyGraph is operated by the company of one that `robertblust/mental-model` describes, and that is where the person is described. Writing a `profiles/robert-blust/` here would put one person's canonical name in two instances with two sets of facts behind it, and the second set would go stale without a sound. An instance that declares no `profile` is legal by design — core defines a type without obliging an instance to populate it — and this is the first instance to exercise that, which is a finding in its own right: every check that walks profiles now has a case where there are none. A `role` is written and a person is not, and that distinction was established by building the instance rather than chosen ahead of it: a process names a required `owner` which is a `ref → role`, so a process cannot exist without a seat, while the role schema forbids a role to name its holder. Seats add no person, and the instance carries the seats its process names and no others.
 
 What each entry says is drawn from prose that is already published and already reviewed: the organization profile at github.com/companygraph, this repository's README and the specs beside this file, the pages of companygraph.io, and the twelve-minute introduction. Nothing is invented, and a claim that cannot be traced to one of those does not go in. The surfaces are the ones that exist, classified by how each is produced, under the rule that a surface is named for the page and never for the place.
 
