@@ -6,10 +6,7 @@
 
 `model/processes/<process>/<process>.md`
 
-A process owns its phases and its tracks and cannot be read without them, so it is a folder
-rather than a file, as a profile is. The folder is named for the process and holds its own file
-under that same name, plus the `phases/` and `tracks/` collections the phases and tracks nest
-in.
+A process owns its phases and its tracks and cannot be read without them, so it is a folder rather than a file, as a profile is. The folder is named for the process and holds its own file under that same name, plus the `phases/` and `tracks/` collections the phases and tracks nest in.
 
 ## Frontmatter
 
@@ -52,11 +49,7 @@ in.
 
 ## Purpose
 
-A process is the path work takes through the company's seats — one folder, the phases in the
-order they are passed through, and the gate between each pair — and it answers "what happens
-next, who does it, and what has to be true before it moves on?" for someone doing the work or
-waiting on it. It is not a seat, which says what one role takes and produces whenever it acts,
-and it is not a record of work that happened, which is an experience.
+A process is the path work takes through the company's seats — one folder, the phases in the order they are passed through, and the gate between each pair — and it answers "what happens next, who does it, and what has to be true before it moves on?" for someone doing the work or waiting on it. It is not a seat, which says what one role takes and produces whenever it acts, and it is not a record of work that happened, which is an experience.
 
 ## Writing rules
 

@@ -4,27 +4,15 @@
 > meta-model in the meta-model's own vocabulary; and companygraph.io drawing it on the
 > landing page, where a picture of the shape stands today.
 
-Status: designed, not built. The instance is a new repository; this spec lives here because
-what it produces is about core and the tooling, not about one company's copy. It is the second
-instance and the first one the tooling creates, so it tests `init` the way the reference
-instance tested the layout.
+Status: designed, not built. The instance is a new repository; this spec lives here because what it produces is about core and the tooling, not about one company's copy. It is the second instance and the first one the tooling creates, so it tests `init` the way the reference instance tested the layout.
 
-Reads against
-[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) — §1 (what
-an instance spec owns), §3 (the layout), §7 (what an instance teaches) — and
-[`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) — §2 (`init`), §3 (the plan).
-Where this spec and either of those disagree, their decisions stand and this one records the
-disagreement as a finding in §8.
+Reads against [`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) — §1 (what an instance spec owns), §3 (the layout), §7 (what an instance teaches) — and [`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) — §2 (`init`), §3 (the plan). Where this spec and either of those disagree, their decisions stand and this one records the disagreement as a finding in §8.
 
 ---
 
 ## 1. Purpose and non-goals
 
-The reference instance answered whether the vocabulary could hold a real company. It could not
-answer whether the vocabulary holds a company that is not a person, because the company it
-describes is one: its vision, its strategies and its processes are all a person's, and nothing
-in it shows which parts of the vocabulary need a person behind them and which do not. A second
-instance with no people in it separates the two.
+The reference instance answered whether the vocabulary could hold a real company. It could not answer whether the vocabulary holds a company that is not a person, because the company it describes is one: its vision, its strategies and its processes are all a person's, and nothing in it shows which parts of the vocabulary need a person behind them and which do not. A second instance with no people in it separates the two.
 
 **Owns:**
 
@@ -55,20 +43,9 @@ instance with no people in it separates the two.
 
 ## 2. The instance
 
-`companygraph/mental-model`, named for what every instance in the family is called rather than
-for what distinguishes it. The cost is real and was weighed: `companygraph/mental-model` and
-`companygraph/meta-model` differ by one letter in the same organization list. The alternatives,
-`company-model` and `model`, each buy that back and spend a family-wide name to do it, and
-`model` collides with the site's `/model/` page, which is the core vocabulary and a different
-thing. One name for one kind of repository is worth more than one letter of distance.
+`companygraph/mental-model`, named for what every instance in the family is called rather than for what distinguishes it. The cost is real and was weighed: `companygraph/mental-model` and `companygraph/meta-model` differ by one letter in the same organization list. The alternatives, `company-model` and `model`, each buy that back and spend a family-wide name to do it, and `model` collides with the site's `/model/` page, which is the core vocabulary and a different thing. One name for one kind of repository is worth more than one letter of distance.
 
-**It is created by running the tooling, not by copying the reference instance.** `init` is
-designed and built on the open pull request #105 and exists in no release, so the run is
-`node ../meta-model/bin/companygraph.mjs init` against that working tree. That is the point
-rather than a shortcut around a missing release: the tooling's own spec is not done until the
-tool has made something, and a second instance made by hand would prove the layout twice and
-the tool not at all. What the run gets wrong is a finding against #105 while #105 is still
-open, which is the cheapest moment it will ever be.
+**It is created by running the tooling, not by copying the reference instance.** `init` is designed and built on the open pull request #105 and exists in no release, so the run is `node ../meta-model/bin/companygraph.mjs init` against that working tree. That is the point rather than a shortcut around a missing release: the tooling's own spec is not done until the tool has made something, and a second instance made by hand would prove the layout twice and the tool not at all. What the run gets wrong is a finding against #105 while #105 is still open, which is the cheapest moment it will ever be.
 
 Two things the run leaves to be corrected by hand, both recorded as findings in §8:
 
@@ -84,15 +61,9 @@ Two things the run leaves to be corrected by hand, both recorded as findings in 
   none of those and should not carry empty folders implying it forgot." The six this instance
   does not populate are removed after the run.
 
-On top of what `init` writes, the repository joins the conventions family: the vendored
-`conventions/`, a `conventions.json` pin, `.markdownlint-cli2.jsonc` at the root, and the
-`check.yml` that calls the shared `conventions / conventions` job beside the instance check.
-Its `README.md` is titled `CompanyGraph — Mental Model`, and `REPOSITORIES.md` carries that
-title in the row §6 adds.
+On top of what `init` writes, the repository joins the conventions family: the vendored `conventions/`, a `conventions.json` pin, `.markdownlint-cli2.jsonc` at the root, and the `check.yml` that calls the shared `conventions / conventions` job beside the instance check. Its `README.md` is titled `CompanyGraph — Mental Model`, and `REPOSITORIES.md` carries that title in the row §6 adds.
 
-Licensed as the reference instance is: CC BY 4.0 for everything written in `model/` and
-`docs/`, with `meta/core/` staying under its own Apache 2.0. The content is prose describing a
-company, which is what a content license is for, and the vendored core is not written here.
+Licensed as the reference instance is: CC BY 4.0 for everything written in `model/` and `docs/`, with `meta/core/` staying under its own Apache 2.0. The content is prose describing a company, which is what a content license is for, and the vendored core is not written here.
 
 ---
 
@@ -111,124 +82,64 @@ model/surfaces/              one file per place the model is published
 model/processes/             its one kind of work, phase by phase, with tracks
 ```
 
-**No person appears in this instance.** CompanyGraph is operated by the company of one that
-`robertblust/mental-model` describes, and that is where the person is described. Writing a
-`profiles/robert-blust/` here would put one person's canonical name in two instances with two
-sets of facts behind it, and the second set would go stale without a sound. An instance that
-declares no `profile` is legal by design — core defines a type without obliging an instance to
-populate it — and this is the first instance to exercise that, which is a finding in its own
-right: every check that walks profiles now has a case where there are none.
+**No person appears in this instance.** CompanyGraph is operated by the company of one that `robertblust/mental-model` describes, and that is where the person is described. Writing a `profiles/robert-blust/` here would put one person's canonical name in two instances with two sets of facts behind it, and the second set would go stale without a sound. An instance that declares no `profile` is legal by design — core defines a type without obliging an instance to populate it — and this is the first instance to exercise that, which is a finding in its own right: every check that walks profiles now has a case where there are none.
 
-What each entry says is drawn from prose that is already published and already reviewed: the
-organization profile at github.com/companygraph, this repository's README and the specs beside
-this file, the pages of companygraph.io, and the twelve-minute introduction. Nothing is
-invented, and a claim that cannot be traced to one of those does not go in. The surfaces are
-the ones that exist, classified by how each is produced, under the rule that a surface is named
-for the page and never for the place.
+What each entry says is drawn from prose that is already published and already reviewed: the organization profile at github.com/companygraph, this repository's README and the specs beside this file, the pages of companygraph.io, and the twelve-minute introduction. Nothing is invented, and a claim that cannot be traced to one of those does not go in. The surfaces are the ones that exist, classified by how each is produced, under the rule that a surface is named for the page and never for the place.
 
-The entries are written and reviewed one at a time — what it says, the case against it, a
-proposal, the owner's decision — because these are editorial facts about the company rather
-than a schema being filled in. Nothing is committed ahead of that review.
+The entries are written and reviewed one at a time — what it says, the case against it, a proposal, the owner's decision — because these are editorial facts about the company rather than a schema being filled in. Nothing is committed ahead of that review.
 
-The count is not written here. It is what `model/` holds on the day someone looks, and a number
-in this paragraph would be true for a week.
+The count is not written here. It is what `model/` holds on the day someone looks, and a number in this paragraph would be true for a week.
 
 ---
 
 ## 4. The site's second source
 
-companygraph.io draws two artifacts today, both from one pin: `example.json` from the
-meta-model's `example/` and `model.json` from its `core/`. A third artifact comes from a
-different repository, so the site needs a second pin, and `source.json` grows into the shape
-guestgraph.io's `api-sources.json` already uses for the same reason:
+companygraph.io draws two artifacts today, both from one pin: `example.json` from the meta-model's `example/` and `model.json` from its `core/`. A third artifact comes from a different repository, so the site needs a second pin, and `source.json` grows into the shape guestgraph.io's `api-sources.json` already uses for the same reason:
 
 ```json
 { "meta-model":   { "repo": "companygraph/meta-model",   "commit": "…" },
   "mental-model": { "repo": "companygraph/mental-model", "commit": "…" } }
 ```
 
-One file still holds every pin the site has, which is the property the site's own history was
-protecting when it consolidated `example/source.json` into a root `source.json`. A second file
-beside it would have kept `build.mjs` and `pages.mjs` untouched and left a reader two files
-that differ only in which repository they name.
+One file still holds every pin the site has, which is the property the site's own history was protecting when it consolidated `example/source.json` into a root `source.json`. A second file beside it would have kept `build.mjs` and `pages.mjs` untouched and left a reader two files that differ only in which repository they name.
 
-`build/build.mjs` gains a third target: `parseInstance`, files from `model/`, schemas from the
-instance's own `meta/core/`, which is how blust.ch reads the reference instance and not how the
-example target works — the example is parsed against the core it sits beside in the same
-commit, and an instance carries its own. Each target names the pin it reads. `MENTAL_MODEL`
-joins `META_MODEL` as the local-checkout escape hatch, and refuses a checkout whose `HEAD` is
-not the commit the pin names, exactly as the first one does.
+`build/build.mjs` gains a third target: `parseInstance`, files from `model/`, schemas from the instance's own `meta/core/`, which is how blust.ch reads the reference instance and not how the example target works — the example is parsed against the core it sits beside in the same commit, and an instance carries its own. Each target names the pin it reads. `MENTAL_MODEL` joins `META_MODEL` as the local-checkout escape hatch, and refuses a checkout whose `HEAD` is not the commit the pin names, exactly as the first one does.
 
-The artifact is `company.json`. `model.json` is taken by the core vocabulary and `instance.json`
-says less than either. `build/pages.mjs` adds it to the loop it already runs and compares each
-artifact's commit against its own pin rather than against one; `pin-check.mjs` reports both
-pins, which `pinDrift` already supports by taking a `pin` argument. Both pins are editorial, and
-neither moves without a commit that says why.
+The artifact is `company.json`. `model.json` is taken by the core vocabulary and `instance.json` says less than either. `build/pages.mjs` adds it to the loop it already runs and compares each artifact's commit against its own pin rather than against one; `pin-check.mjs` reports both pins, which `pinDrift` already supports by taking a `pin` argument. Both pins are editorial, and neither moves without a commit that says why.
 
-The JSON-LD the site writes names `example.json` as a `Dataset`. `company.json` is the same kind
-of thing on the landing page and is named the same way.
+The JSON-LD the site writes names `example.json` as a `Dataset`. `company.json` is the same kind of thing on the landing page and is named the same way.
 
 ---
 
 ## 5. The page
 
-The landing page carries a drawn figure: two trees in `--c-weak` and the shape they share in
-`--c-firm`, with a caption that makes the page's argument in words. It is replaced by the model
-it argues for.
+The landing page carries a drawn figure: two trees in `--c-weak` and the shape they share in `--c-firm`, with a caption that makes the page's argument in words. It is replaced by the model it argues for.
 
-The stage is the one component `/model/` and `/example/` already share — `stage.css`,
-`d3.v7.min.js`, `stage.js` and a generated contract block of CSS, all copied byte-identical,
-with `<link rel="preload" as="fetch" href="company.json" data-stage crossorigin>` pointing it at
-the artifact. It goes **inside the existing `<figure class="figure">`**, replacing the `<svg
-class="fig">` and keeping the `<figcaption>`. A new section under the hero would have meant
-deleting the figure's CSS, rebuilding the caption and teaching the card recipe a new selector,
-for the same result in the same place.
+The stage is the one component `/model/` and `/example/` already share — `stage.css`, `d3.v7.min.js`, `stage.js` and a generated contract block of CSS, all copied byte-identical, with `<link rel="preload" as="fetch" href="company.json" data-stage crossorigin>` pointing it at the artifact. It goes **inside the existing `<figure class="figure">`**, replacing the `<svg class="fig">` and keeping the `<figcaption>`. A new section under the hero would have meant deleting the figure's CSS, rebuilding the caption and teaching the card recipe a new selector, for the same result in the same place.
 
-The `.fig` rules, the three `@keyframes` blocks and the figure's reduced-motion block go with
-the drawing they styled. The caption stays and gets new words: that this is CompanyGraph's own
-model, drawn from the repository the page links to. Every string the stage adds carries a
-`data-de` attribute, taken from `/example/` where it is the same string, and made by the
-translator where it is not.
+The `.fig` rules, the three `@keyframes` blocks and the figure's reduced-motion block go with the drawing they styled. The caption stays and gets new words: that this is CompanyGraph's own model, drawn from the repository the page links to. Every string the stage adds carries a `data-de` attribute, taken from `/example/` where it is the same string, and made by the translator where it is not.
 
-**The share card does not change.** `HOME_HIDE` is `.figure{display:none}`, so a stage inside
-that figure is hidden by the rule that hid the drawing, and the card goes on showing the
-headline and the call to action. That was weighed against making it the third stage card: the
-two stage pages show their stage because the stage is what those pages are about, and the
-landing card's job is the claim and the way in, which is the reasoning already written into
-`og-recipe.mjs` and is not weakened by the drawing underneath becoming real.
+**The share card does not change.** `HOME_HIDE` is `.figure{display:none}`, so a stage inside that figure is hidden by the rule that hid the drawing, and the card goes on showing the headline and the call to action. That was weighed against making it the third stage card: the two stage pages show their stage because the stage is what those pages are about, and the landing card's job is the claim and the way in, which is the reasoning already written into `og-recipe.mjs` and is not weakened by the drawing underneath becoming real.
 
-The header mark is derived from the figure that leaves, and the caption is where that
-derivation was stated. It is not restated. A mark does not need a footnote, and the caption's
-words are better spent on the model that is now drawn under it; the derivation stays in the
-source comments for a reader who looks.
+The header mark is derived from the figure that leaves, and the caption is where that derivation was stated. It is not restated. A mark does not need a footnote, and the caption's words are better spent on the model that is now drawn under it; the derivation stays in the source comments for a reader who looks.
 
-The navigation is unchanged. The graph is on the landing page, so it needs no entry pointing at
-itself, and `/example/` keeps the entry it has.
+The navigation is unchanged. The graph is on the landing page, so it needs no entry pointing at itself, and `/example/` keeps the entry it has.
 
 ---
 
 ## 6. What this reaches beyond the three repositories
 
-The site's `README.md` and `AGENTS.md` both say the site has one pin and stop being true; both
-say which artifact is built from what, and gain the third.
+The site's `README.md` and `AGENTS.md` both say the site has one pin and stop being true; both say which artifact is built from what, and gain the third.
 
-The organization profile at `companygraph/.github` carries the repository table a reader meets
-before choosing a repository, and the diagram of which repository holds what. Both gain
-`companygraph/mental-model` and the edges it sits on: core vendored at a release, and the site
-pinning it by commit.
+The organization profile at `companygraph/.github` carries the repository table a reader meets before choosing a repository, and the diagram of which repository holds what. Both gain `companygraph/mental-model` and the edges it sits on: core vendored at a release, and the site pinning it by commit.
 
-`conventions/REPOSITORIES.md` names every member of the family and what pins what, and a
-tripwire holds each member to its row. A new member is an edit there, a conventions release and
-a re-sync — which is the one part of this work that reaches every member rather than these
-three. Whether that re-sync is its own wave or rides the next one is the owner's call and not
-this spec's.
+`conventions/REPOSITORIES.md` names every member of the family and what pins what, and a tripwire holds each member to its row. A new member is an edit there, a conventions release and a re-sync — which is the one part of this work that reaches every member rather than these three. Whether that re-sync is its own wave or rides the next one is the owner's call and not this spec's.
 
 ---
 
 ## 7. Order of work and verification
 
-The instance ships first and merges first. The site cannot pin a commit that does not exist,
-and a pin added to an unmerged branch is a pin to a commit that may be rewritten.
+The instance ships first and merges first. The site cannot pin a commit that does not exist, and a pin added to an unmerged branch is a pin to a commit that may be rewritten.
 
 1. **The instance.** Run `init` from #105's working tree, correct the two things §2 names,
    add the conventions member files, then write the content entry by entry under review.
@@ -248,16 +159,13 @@ and a pin added to an unmerged branch is a pin to a commit that may be rewritten
    re-render, and `npm run sitemap` run because a page was edited.
 5. **The documents.** The site's README and agent file, and the organization profile.
 
-CI never writes what the repository commits, so `company.json` is built locally and committed,
-and the check proves the committed copy is what the pin parses to.
+CI never writes what the repository commits, so `company.json` is built locally and committed, and the check proves the committed copy is what the pin parses to.
 
 ---
 
 ## 8. What it teaches
 
-Findings against core, the tooling or the conventions, recorded here rather than acted on;
-each is its own follow-up. Two are known before the work starts, both against the CLI of
-[`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) and both open while #105 is:
+Findings against core, the tooling or the conventions, recorded here rather than acted on; each is its own follow-up. Two are known before the work starts, both against the CLI of [`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) and both open while #105 is:
 
 - **`init` writes a folder for every root type.** `readmesFor(rootFolders())` gives a fresh
   instance a folder for every root type core declares, whether or not it will populate them,

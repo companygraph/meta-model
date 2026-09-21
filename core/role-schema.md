@@ -6,8 +6,7 @@
 
 `model/roles/*.md`
 
-A role owns nothing and nothing owns it, so it is a file. A profile holds one by listing it,
-and the role never names its holder; what a role names is the skills the seat requires.
+A role owns nothing and nothing owns it, so it is a file. A profile holds one by listing it, and the role never names its holder; what a role names is the skills the seat requires.
 
 ## Frontmatter
 
@@ -37,11 +36,7 @@ and the role never names its holder; what a role names is the skills the seat re
 
 ## Purpose
 
-A role is a seat the company needs filled — one file, named once, held by whichever profile
-lists it. It answers "what does this seat take, produce and refuse, and what must whoever holds
-it be able to do?" for someone filling it, holding it or handing work to it. It is not a
-person's history in the seat, which lives on the profile and in its experiences, and it is not
-a process, which says when the seat acts.
+A role is a seat the company needs filled — one file, named once, held by whichever profile lists it. It answers "what does this seat take, produce and refuse, and what must whoever holds it be able to do?" for someone filling it, holding it or handing work to it. It is not a person's history in the seat, which lives on the profile and in its experiences, and it is not a process, which says when the seat acts.
 
 ## Writing rules
 

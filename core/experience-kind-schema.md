@@ -6,14 +6,9 @@
 
 `model/experience-kinds/*.md`
 
-A kind owns nothing and nothing owns it: many experiences claim the same few, and what each
-kind means lives here rather than being restated on every period. It sits at the container
-root beside `skills/` rather than inside a profile, because the same kinds are claimed by
-every profile in the instance.
+A kind owns nothing and nothing owns it: many experiences claim the same few, and what each kind means lives here rather than being restated on every period. It sits at the container root beside `skills/` rather than inside a profile, because the same kinds are claimed by every profile in the instance.
 
-The set is deliberately the instance's own. A career acquires categories — a self-directed
-period, an advisory seat, a board — and a kind arriving later is one file here, not a change to
-this metamodel and a release of it.
+The set is deliberately the instance's own. A career acquires categories — a self-directed period, an advisory seat, a board — and a kind arriving later is one file here, not a change to this metamodel and a release of it.
 
 ## Frontmatter
 
@@ -32,11 +27,7 @@ this metamodel and a release of it.
 
 ## Purpose
 
-A kind answers "what sort of period is this?" — the question a reader cannot otherwise ask of a
-folder that holds a degree, a conference talk and a decade of employment side by side. Its
-value is that the answer is a reference rather than a word: two experiences of the same kind
-mean the same thing, the kinds are visible in the graph as nodes, and changing what a kind
-covers is one edit rather than a scan of every period.
+A kind answers "what sort of period is this?" — the question a reader cannot otherwise ask of a folder that holds a degree, a conference talk and a decade of employment side by side. Its value is that the answer is a reference rather than a word: two experiences of the same kind mean the same thing, the kinds are visible in the graph as nodes, and changing what a kind covers is one edit rather than a scan of every period.
 
 ## Writing rules
 

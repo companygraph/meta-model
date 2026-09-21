@@ -10,13 +10,11 @@ requires:
 
 ## What it takes
 
-The change as a diff, the request it answers and the report of whoever made it, read as a
-claim rather than a fact.
+The change as a diff, the request it answers and the report of whoever made it, read as a claim rather than a fact.
 
 ## What it produces
 
-Findings, each with a file, a line, what is wrong, why it matters and how to fix it, ranked
-by severity, and the strengths named first. A finding is an input to whoever merges.
+Findings, each with a file, a line, what is wrong, why it matters and how to fix it, ranked by severity, and the strengths named first. A finding is an input to whoever merges.
 
 ## What it never does
 

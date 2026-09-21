@@ -7,38 +7,21 @@
 > that career, not about the meta-model. So the groups are entities an instance defines, and an
 > experience's `###` headings reference them.
 
-Status: proposed. Decided on 2026-09-17 against this repository at `4c65e24`, core 0.27.0, and
-against `robertblust/mental-model` at `eae807a`, where every experience's `## Achievements` was
-read bullet by bullet for its order and for the groups it falls into.
+Status: proposed. Decided on 2026-09-17 against this repository at `4c65e24`, core 0.27.0, and against `robertblust/mental-model` at `eae807a`, where every experience's `## Achievements` was read bullet by bullet for its order and for the groups it falls into.
 
 ---
 
 ## 1. The gap
 
-`experience-schema.md` says `## Achievements` holds "what was accomplished in this period" and
-that a bullet states an outcome, one idea each. It says nothing about order, and nothing about
-structure inside the section.
+`experience-schema.md` says `## Achievements` holds "what was accomplished in this period" and that a bullet states an outcome, one idea each. It says nothing about order, and nothing about structure inside the section.
 
-The reference instance shows what that leaves. Its entries hold 291 bullets at `eae807a`, from
-two to 38 an entry, and their order follows no one rule. Projects mostly run from what the work
-was, through what was designed and built, to what came of it, yet several put the design after
-the build. Roles are ordered by whatever thread the writer followed. The longest entry puts its
-headline scale seventh, among leadership bullets, and ends on a stack list that is not an
-achievement at all. None of this is wrong under the schema, which is the gap.
+The reference instance shows what that leaves. Its entries hold 291 bullets at `eae807a`, from two to 38 an entry, and their order follows no one rule. Projects mostly run from what the work was, through what was designed and built, to what came of it, yet several put the design after the build. Roles are ordered by whatever thread the writer followed. The longest entry puts its headline scale seventh, among leadership bullets, and ends on a stack list that is not an achievement at all. None of this is wrong under the schema, which is the gap.
 
 ## 2. Why the groups are not core's
 
-A first design wrote seven group names into `experience-schema.md` — the seven that fit every
-bullet of the reference instance. They fit that career and would not fit most others: a
-researcher's work groups by publication and grant, a salesperson's by territory and account.
-Core is the vocabulary every instance shares, and a list that holds one person's career is
-exactly what `AGENTS.md` keeps out of it.
+A first design wrote seven group names into `experience-schema.md` — the seven that fit every bullet of the reference instance. They fit that career and would not fit most others: a researcher's work groups by publication and grant, a salesperson's by territory and account. Core is the vocabulary every instance shares, and a list that holds one person's career is exactly what `AGENTS.md` keeps out of it.
 
-Core already has the answer twice. `experience-kind` makes "what sort of period is this?" an
-entity: "the set is deliberately the instance's own … a kind arriving later is one file here,
-not a change to this metamodel and a release of it." `proficiency-level` makes an ordered set an
-entity, its order a `rank` field "spaced in tens so a rung can be added without renumbering the
-others." An achievement kind is both: an instance's own set, in an order.
+Core already has the answer twice. `experience-kind` makes "what sort of period is this?" an entity: "the set is deliberately the instance's own … a kind arriving later is one file here, not a change to this metamodel and a release of it." `proficiency-level` makes an ordered set an entity, its order a `rank` field "spaced in tens so a rung can be added without renumbering the others." An achievement kind is both: an instance's own set, in an order.
 
 ## 3. The type
 
@@ -65,9 +48,7 @@ others." An achievement kind is both: an instance's own set, in an order.
 
 ## 4. How an experience references it
 
-A `###` heading is not a field and not a table cell, and today a schema can declare a reference
-in only those two places (R9, R16). A heading that names an entity needs a declaration of the
-same standing, or R4 — an unresolvable reference is an error — stops being true for it.
+A `###` heading is not a field and not a table cell, and today a schema can declare a reference in only those two places (R9, R16). A heading that names an entity needs a declaration of the same standing, or R4 — an unresolvable reference is an error — stops being true for it.
 
 **R9 gains a third declared shape, the grouped section**, on the pattern of `Table.`:
 
@@ -80,9 +61,7 @@ same standing, or R4 — an unresolvable reference is an error — stops being t
 - A section marked `Grouped.` with no heading table, and a heading table for a section not so
   marked, are both errors, as with `Table.`.
 
-**R16 gains one sentence**: a heading declared `ref → <type>` draws an edge from the page to the
-entity each `###` heading in that section names, via `<Section>.<Heading>`, and a heading that
-names nothing of its type is R4.
+**R16 gains one sentence**: a heading declared `ref → <type>` draws an edge from the page to the entity each `###` heading in that section names, via `<Section>.<Heading>`, and a heading that names nothing of its type is R4.
 
 `experience-schema.md` then says:
 
@@ -110,8 +89,7 @@ and its writing rules gain what holds for any instance:
 - A list of tools or a stack is not an achievement: what was built with a tool says so in the
   bullet that built it.
 
-`Required` is `No` because an instance that defines no kinds has no headings; the first rule is
-what makes grouping mandatory where kinds exist.
+`Required` is `No` because an instance that defines no kinds has no headings; the first rule is what makes grouping mandatory where kinds exist.
 
 ## 5. Parser and checks
 
@@ -134,11 +112,7 @@ what makes grouping mandatory where kinds exist.
 
 ## 6. The example instance
 
-It gains `model/achievement-kinds/` with a set of its own, drawn from its five experiences:
-`Decisions` (10), `Delivery` (20), `Sharing` (30), `Results` (40). Its bullets fall as:
-Mira at Northwind — Delivery, Results; Mira at Beacon — Delivery, Results; Tomas at Beacon —
-Decisions, Results; Tomas at Northwind — Decisions twice; Tomas at Orbit — Sharing. A set that
-differs from the reference instance's is the point: it shows the kinds are the instance's.
+It gains `model/achievement-kinds/` with a set of its own, drawn from its five experiences: `Decisions` (10), `Delivery` (20), `Sharing` (30), `Results` (40). Its bullets fall as: Mira at Northwind — Delivery, Results; Mira at Beacon — Delivery, Results; Tomas at Beacon — Decisions, Results; Tomas at Northwind — Decisions twice; Tomas at Orbit — Sharing. A set that differs from the reference instance's is the point: it shows the kinds are the instance's.
 
 ## 7. Cost
 
@@ -165,14 +139,6 @@ differs from the reference instance's is the point: it shows the kinds are the i
 
 ## 9. Open questions
 
-None on the design itself. The type name `achievement-kind`, parser resolution of headings,
-headings on every entry, the removal of stack lists and a minor release were settled with the
-Owner on 2026-09-17.
+None on the design itself. The type name `achievement-kind`, parser resolution of headings, headings on every entry, the removal of stack lists and a minor release were settled with the Owner on 2026-09-17.
 
-One thing this document got wrong and a whole-branch review then fixed rather than reopening:
-§5 said the instance checks were two, and three shipped — the R16 heading-hold was real work,
-just work this design did not think to count. The review that followed the branch added a
-fourth, generic over any type whose schema declares a `number` field named `rank`: two entities
-of one sharing a rank is a writing rule §3 states and nothing had checked. §5 now says three and
-names the fourth's origin here rather than in §5 itself, so a reader of the design sees the
-count it shipped with and the one count added after.
+One thing this document got wrong and a whole-branch review then fixed rather than reopening: §5 said the instance checks were two, and three shipped — the R16 heading-hold was real work, just work this design did not think to count. The review that followed the branch added a fourth, generic over any type whose schema declares a `number` field named `rank`: two entities of one sharing a rank is a writing rule §3 states and nothing had checked. §5 now says three and names the fourth's origin here rather than in §5 itself, so a reader of the design sees the count it shipped with and the one count added after.

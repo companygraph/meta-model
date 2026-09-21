@@ -9,5 +9,4 @@ rank: 40
 
 ## What it means
 
-Someone at this level knows where it breaks down and where it is simply wrong. They have worked
-below its surface, shaped it, or taught it.
+Someone at this level knows where it breaks down and where it is simply wrong. They have worked below its surface, shaped it, or taught it.

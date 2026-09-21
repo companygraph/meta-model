@@ -8,11 +8,7 @@
 
 `model/processes/<process>/phases/*.md`
 
-A phase is owned by a process and cannot exist without it, so it nests inside the process's
-folder rather than sitting at the root with a `process:` field pointing back. The filename is
-R12's default, the slug of the H1. It carries no position prefix: the order is the owning
-process's `## Phases` table and the `gate-to` chain, and a third copy on the filename would have
-to be renamed through the whole folder whenever a phase was inserted.
+A phase is owned by a process and cannot exist without it, so it nests inside the process's folder rather than sitting at the root with a `process:` field pointing back. The filename is R12's default, the slug of the H1. It carries no position prefix: the order is the owning process's `## Phases` table and the `gate-to` chain, and a third copy on the filename would have to be renamed through the whole folder whenever a phase was inserted.
 
 ## Frontmatter
 
@@ -54,11 +50,7 @@ to be renamed through the whole folder whenever a phase was inserted.
 
 ## Purpose
 
-A phase is one step of a process and the gate at its end — what enters, what is done, what
-leaves, and what must be true for it to leave. It answers "am I done, and who says so?" for
-whoever is in it. The gate is the part the model enforces: the document a phase produces scales
-with the size of the change and may be a conversation rather than a file, and the approval at
-its end does not scale at all.
+A phase is one step of a process and the gate at its end — what enters, what is done, what leaves, and what must be true for it to leave. It answers "am I done, and who says so?" for whoever is in it. The gate is the part the model enforces: the document a phase produces scales with the size of the change and may be a conversation rather than a file, and the approval at its end does not scale at all.
 
 ## Writing rules
 
