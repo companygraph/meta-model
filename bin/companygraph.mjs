@@ -5,28 +5,37 @@
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
+//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>]
+//
+// Run with no command at a terminal, it opens a menu over the same four, which asks what the
+// flags would say and calls the same code.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, rmSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, rmSync, statSync } from "node:fs";
+import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
+import { download, installed, newestRelease, place, readLocal } from "../lib/obsidian.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
 
-const USAGE = `companygraph <command>
+const USAGE = `companygraph [<command>]
 
+  (none)              at a terminal, a menu over the four below
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
+  obsidian [<vault>]  install the Obsidian plugin's newest release in a vault, or update it there
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
+obsidian: --release <tag>  --from <dir>
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -91,13 +100,23 @@ function present(root) {
   return found;
 }
 
-async function ask(question) {
-  const rl = createInterface({ input: process.stdin, output: process.stdout });
-  try {
-    return (await rl.question(question)).trim();
-  } finally {
-    rl.close();
+// One reader over stdin for the whole run, and the lines it reads kept until a question takes
+// them: a reader opened per question drops what the one before it had already buffered, which is
+// every answer after the first when the answers are piped in. At the end of the input a question
+// is answered with nothing, so a menu run from a pipe ends rather than waits.
+let reader = null;
+const lines = [];
+const waiting = [];
+function ask(question) {
+  if (!reader) {
+    reader = createInterface({ input: process.stdin });
+    reader.on("line", (line) => (waiting.length ? waiting.shift()(line) : lines.push(line)));
+    reader.on("close", () => { while (waiting.length) waiting.shift()(""); });
   }
+  process.stdout.write(question);
+  if (lines.length) return Promise.resolve(lines.shift().trim());
+  if (reader.closed) return Promise.resolve("");
+  return new Promise((done) => waiting.push(done)).then((line) => line.trim());
 }
 
 async function init(argv) {
@@ -134,6 +153,7 @@ async function init(argv) {
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its two singular entities`);
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
+  console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
 }
 
 async function upgrade(argv) {
@@ -175,13 +195,13 @@ async function upgrade(argv) {
   if (plan.refused) throw new Error(plan.refused);
   if (plan.writes.size === 0 && plan.removes.length === 0) {
     console.log(`already on core ${plan.to}; nothing to do.`);
-    return;
+    return "nothing";
   }
   if (given["dry-run"]) {
     console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
     for (const path of plan.writes.keys()) console.log(`  write   ${path}`);
     for (const path of plan.removes) console.log(`  remove  ${path}`);
-    return;
+    return "planned";
   }
   // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
   // core: a plan is data, a delete cannot be undone, and this is checked before a single file
@@ -224,25 +244,104 @@ async function upgrade(argv) {
     console.error(`✗ ${error.message}`);
     console.log("  the upgrade stands; the check above could not be run");
   }
+  return "done";
+}
+
+// Installs or updates, which are one act: the three files written over whatever release was there,
+// and the plugin switched on if it was not. A vault that is not an instance takes the plugin too,
+// since the plugin's own `Make this vault an instance` is one way to make one.
+async function obsidian(argv) {
+  const given = flags(argv);
+  const vault = given._[0] ?? ".";
+  const now = installed(vault);
+  let files;
+  if (given.from) files = readLocal(given.from);
+  else {
+    const release = given.release ?? (await newestRelease());
+    if (now.release === release && now.enabled) {
+      console.log(`CompanyGraph ${release}, the ${given.release ? "release asked for" : "newest release"}, is installed and switched on in ${vault}; nothing to do.`);
+      return;
+    }
+    files = await download(release);
+  }
+  const done = place(vault, files);
+  const moved = done.from === null ? `CompanyGraph ${done.to} installed` : done.from === done.to ? `CompanyGraph ${done.to} written again` : `CompanyGraph ${done.from} → ${done.to}`;
+  console.log(`${moved} in ${done.folder}${done.enabled ? ", and switched on" : ""}`);
+  console.log("  open the vault in Obsidian and trust its author when asked; a vault Obsidian has open already takes it on Reload app without saving");
+}
+
+async function check(argv) {
+  // A second door to the same code, so a guard failure must read exactly as it does through
+  // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
+  const { checkPath } = await import("./check-instance.mjs");
+  try {
+    return checkPath(argv[0] ?? ".") > 0 ? 1 : 0;
+  } catch (error) {
+    console.error(`✗ ${error.message}`);
+    return 1;
+  }
+}
+
+// A path as a person types it at the prompt, where no shell expands `~` first.
+const typed = (answer) => (answer === "~" || answer.startsWith("~/") ? join(homedir(), answer.slice(1)) : answer);
+const yes = (answer) => /^y(es)?$/i.test(answer);
+
+async function folder(question, fallback) {
+  const answer = typed(await ask(fallback ? `${question} (Enter for ${fallback}) ` : `${question} `));
+  if (answer) return answer;
+  if (fallback) return fallback;
+  throw new Error("no folder was given; nothing was done.");
+}
+
+async function menu() {
+  const entries = [
+    ["Make a model", async () => {
+      const root = await folder("Which folder? A path; it is made if it is missing.");
+      const args = [root];
+      if (existsSync(root) && statSync(root).isDirectory() && readdirSync(root).some((entry) => entry !== ".git")) {
+        if (!yes(await ask("It holds files already. Add the model beside them? (y/N) "))) return 0;
+        args.push("--here");
+      }
+      await init(args);
+      if (yes(await ask("Install the Obsidian plugin in it, to write it in Obsidian? (y/N) "))) await obsidian([root]);
+      return 0;
+    }],
+    ["Check a model", async () => check([await folder("Which folder?", ".")])],
+    [`Move a model to this release, ${PACKAGE.version}`, async () => {
+      const root = await folder("Which folder?", ".");
+      if ((await upgrade([root, "--dry-run"])) !== "planned") return 0;
+      if (yes(await ask("Go ahead? (y/N) "))) await upgrade([root]);
+      return 0;
+    }],
+    ["Install or update the Obsidian plugin in a vault", async () => {
+      await obsidian([await folder("Which vault?", ".")]);
+      return 0;
+    }],
+  ];
+  console.log(`CompanyGraph tooling ${PACKAGE.version}\n`);
+  entries.forEach(([label], i) => console.log(`  ${i + 1}  ${label}`));
+  const pick = await ask(`\nWhich one? (1-${entries.length}, Enter to leave) `);
+  if (!pick) return 0;
+  const entry = entries[Number(pick) - 1];
+  if (!entry || !/^\d+$/.test(pick)) throw new Error(`${pick} is not one of 1-${entries.length}; nothing was done.`);
+  return entry[1]();
 }
 
 const [command, ...rest] = process.argv.slice(2);
 try {
   if (command === "init") await init(rest);
   else if (command === "upgrade") await upgrade(rest);
-  else if (command === "check") {
-    // A second door to the same code, so a guard failure must read exactly as it does through
-    // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
-    const { checkPath } = await import("./check-instance.mjs");
-    try {
-      if (checkPath(rest[0] ?? ".") > 0) process.exit(1);
-    } catch (error) {
-      console.error(`✗ ${error.message}`);
-      process.exit(1);
-    }
-  } else if (command === "--help" || command === "-h" || command === undefined) console.log(USAGE);
+  else if (command === "obsidian") await obsidian(rest);
+  else if (command === "check") process.exitCode = await check(rest);
+  // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
+  // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
+  // is tested with its answers piped in.
+  else if (command === "menu" || (command === undefined && process.stdin.isTTY && process.stdout.isTTY)) process.exitCode = await menu();
+  else if (command === "--help" || command === "-h" || command === undefined) console.log(USAGE);
   else throw new Error(`${command} is no command of this tooling.\n\n${USAGE}`);
 } catch (error) {
   console.error(error instanceof Error ? error.message : String(error));
-  process.exit(1);
+  process.exitCode = 1;
+} finally {
+  reader?.close();
 }

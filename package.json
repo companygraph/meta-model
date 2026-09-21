@@ -10,7 +10,8 @@
     "./instance": "./lib/instance.mjs",
     "./checks": "./lib/checks.mjs",
     "./plan": "./lib/plan.mjs",
-    "./write": "./lib/write.mjs"
+    "./write": "./lib/write.mjs",
+    "./obsidian": "./lib/obsidian.mjs"
   },
   "scripts": {
     "verify": "node verify/check.mjs",
@@ -21,6 +22,7 @@
     "test:rules": "node --test verify/rule-citations.test.mjs",
     "test:cli": "node --test verify/cli.test.mjs",
     "test:untar": "node --test verify/untar.test.mjs",
-    "test:fetch-core": "node --test verify/fetch-core.test.mjs"
+    "test:fetch-core": "node --test verify/fetch-core.test.mjs",
+    "test:obsidian": "node --test verify/obsidian.test.mjs"
   }
 }

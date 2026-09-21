@@ -89,6 +89,40 @@ test("a command it does not know, and no command at all, print what it can do", 
   assert.match(run(["--help"]), /init/);
 });
 
+test("the menu makes an instance from answers alone, and what it made passes the checks", () => {
+  const root = path.join(temp(), "acme");
+  const said = run(["menu"], { input: `1\n${root}\nAcme\nn\n`, stdio: "pipe" });
+  assert.match(said, /1 {2}Make a model/);
+  assert.match(said, /files written into/);
+  const { failures } = checkInstance(filesOf(root), { core: "meta/core", model: "model" });
+  assert.deepEqual(failures, []);
+  assert.equal(fs.existsSync(path.join(root, ".obsidian")), false);
+});
+
+test("the menu asks before it adds to a folder that holds files, and a no writes nothing", () => {
+  const root = temp();
+  fs.writeFileSync(path.join(root, "notes.md"), "# Notes\n");
+  run(["menu"], { input: `1\n${root}\nn\n`, stdio: "pipe" });
+  assert.deepEqual(fs.readdirSync(root), ["notes.md"]);
+});
+
+test("the menu shows an upgrade before it runs one, and a pick it does not have is refused", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.match(run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" }), /nothing to do/);
+  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-4/);
+});
+
+test("obsidian --from puts a build into a vault and switches it on", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  assert.match(run(["obsidian", root, "--from", build], { stdio: "pipe" }), /CompanyGraph 1\.0\.0 installed .*, and switched on/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "community-plugins.json"), "utf8")), ["companygraph"]);
+});
+
 test("upgrade moves an instance, says what it did, and leaves the model alone", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

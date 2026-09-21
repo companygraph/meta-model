@@ -36,3 +36,5 @@ jobs:
         run: npm run test:cli
       - name: Another release's core is read from its tarball
         run: npm run test:untar && npm run test:fetch-core
+      - name: The Obsidian plugin is put into a vault
+        run: npm run test:obsidian
