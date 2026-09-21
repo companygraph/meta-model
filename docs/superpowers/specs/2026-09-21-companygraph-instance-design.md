@@ -27,8 +27,10 @@ The reference instance answered whether the vocabulary could hold a real company
 
 **Non-goals:**
 
-- any person, skill, experience, role or proficiency level in the instance. Decided, not
-  deferred: §3 says why, and the finding it would produce is worth more than the coverage
+- any person in the instance: no skill, experience or proficiency level, and no profile of a
+  person. Decided, not deferred: §3 says why. `role` and `profile` were named here as types and
+  neither could be excluded as one — §3 says what building the instance established, and §8
+  records why this list was the wrong shape
 - an MCP server over this instance. mcp.blust.ch serves the reference instance; a second
   deployment is its own decision and nothing here depends on it
 - per-entity pages on companygraph.io. The site renders no entity pages for `/model/` or
@@ -60,7 +62,8 @@ Two things the run leaves to be corrected by hand, both recorded as findings in 
   `model/proficiency-levels/`, `model/experience-kinds/` and `model/achievement-kinds/` whether
   or not it will populate them. The meta-model README's own words are that a consultancy "has
   none of those and should not carry empty folders implying it forgot." The six this instance
-  does not populate are removed after the run.
+  did not then populate were removed after the run, and `model/roles/` came back when the
+  process was written, for the reason §3 gives.
 
 On top of what `init` writes, the repository joins the conventions family: the vendored `conventions/`, a `conventions.json` pin, `.markdownlint-cli2.jsonc` at the root, and the `check.yml` that calls the shared `conventions / conventions` job beside the instance check. Its `README.md` is titled `CompanyGraph — Mental Model`, and `REPOSITORIES.md` carries that title in the row §6 adds.
 
@@ -70,7 +73,7 @@ Licensed as the reference instance is: CC BY 4.0 for everything written in `mode
 
 ## 3. Content
 
-Direction, operation and surfaces, and no organization at all. In folders:
+Direction, operation and surfaces, and of organization the seats and what holds them. In folders:
 
 ```text
 model/identity.md            CompanyGraph, and where it can be found
@@ -80,10 +83,12 @@ model/values/                what it will and will not do
 model/strategic-objectives/  what must become true for the vision to be reached
 model/strategies/            how one gets reached, and what the route rules out
 model/surfaces/              one file per place the model is published
-model/processes/             its one kind of work, phase by phase, with tracks
+model/roles/                 the seats its work is done from, each naming no holder
+model/profiles/ai-agent/     the agent, and the seats it holds
+model/processes/             how work moves through the seats, from inside and from outside
 ```
 
-**No person appears in this instance.** CompanyGraph is operated by the company of one that `robertblust/mental-model` describes, and that is where the person is described. Writing a `profiles/robert-blust/` here would put one person's canonical name in two instances with two sets of facts behind it, and the second set would go stale without a sound. An instance that declares no `profile` is legal by design — core defines a type without obliging an instance to populate it — and this is the first instance to exercise that, which is a finding in its own right: every check that walks profiles now has a case where there are none.
+**No person appears in this instance.** CompanyGraph is operated by the company of one that `robertblust/mental-model` describes, and that is where the person is described. Writing a `profiles/robert-blust/` here would put one person's canonical name in two instances with two sets of facts behind it, and the second set would go stale without a sound. A `role` is written and a person is not, and that distinction was established by building the instance rather than chosen ahead of it: a process names a required `owner` which is a `ref → role`, so a process cannot exist without a seat, while the role schema forbids a role to name its holder. Seats add no person, and the instance carries the seats its processes name and no others. What holds a seat is said by a profile, because `nature` is a field of `profile` and of nothing else, so the instance carries one profile, an agent's, listing the seats an agent holds. A seat no profile names is held by a person, and which person is a fact this instance does not carry. A profile whose `nature` is `agent` describes nobody, so the constraint that was wanted still holds.
 
 What each entry says is drawn from prose that is already published and already reviewed: the organization profile at github.com/companygraph, this repository's README and the specs beside this file, the pages of companygraph.io, and the twelve-minute introduction. Nothing is invented, and a claim that cannot be traced to one of those does not go in. The surfaces are the ones that exist, classified by how each is produced, under the rule that a surface is named for the page and never for the place.
 
@@ -193,5 +198,11 @@ This section predicted that the core-newer guard would fire. It does, but only f
 That path is the family's own rather than a hypothetical. `conventions-format fix` rewrites every Markdown file it is not told to skip, `.vscode/` asks VS Code to run the same library on save, and `conventions.json`'s `format-exclude` is the only thing holding either off `meta/core/` — which an instance `init` makes does not have, because joining the conventions is a later step. When the rewrite is finally met, `upgrade` does not report it but refuses, with "These vendored files are not as this tooling last wrote them, so nothing was written:" and the list, and the refusal lands on whoever next upgrades rather than on whoever made the edit.
 
 Two things to put to the author. Should `check` read the hashes it already holds, at one `createHash` per vendored file, on the only command that runs on every commit? If not, should `init` write into every instance a record that one unreleased command reads, which reads to a maintainer like an integrity guarantee the repository does not have? There is an argument on the other side that the author may already hold: core's bytes are not a modeling rule, and a checker failing on whitespace would fail an instance for as long as the family's Markdown form and core's committed bytes disagree — which is exactly the window this work is in, with conventions v1.23.0's reflow merged into core here and no release carrying it.
+
+**The non-goal list was chosen by what a person is, and the schemas decide by what a type references.** §1 excluded every type that would put a person in the instance and named `role` and `profile` among them, while §3 put `processes/` in scope. A process requires an `owner` that resolves to a role, and so do a phase's `executed-by`, `gate-approvers` and `escalation-authority`, so the first exclusion failed when the first process was written. A role cannot say what holds it — `nature` is a field of `profile` and of nothing else — so an instance with seats and no profile cannot say whether any seat is held by a person or an agent, and the second exclusion failed when that was asked. Each was corrected where the work met it, which is the wrong grain for two failures with one cause: the list named types, and the constraint was about people. What survives is the constraint itself, because a role never names its holder and an agent's profile describes no one. A scope written for the next instance should name what it will not describe and let the schemas say which types that rules out.
+
+**Whether a seat may say what holds it is left to the owner of core.** Staffing is a fact about a profile, and `role` is right not to name a holder. But a seat only a person may take — the one that merges, tags and signs — is a fact about the seat and not about whoever holds it, and today it can only be said by listing every other seat on an agent's profile and letting the omission speak. Whether `role` should carry that, or whether the omission is the intended way to say it, is put as a question and is not proposed.
+
+**Nothing now exercises an instance that declares no profile.** §3 called that case a finding in its own right, and the agent profile ended it. Every check that walks profiles is still untested against an instance with none; recorded so that the coverage is not assumed to continue.
 
 Further findings are added as the work produces them.

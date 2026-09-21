@@ -1,4 +1,4 @@
-<!-- conventions · v1.24.0 -->
+<!-- conventions · v1.25.0 -->
 Shared conventions of the robertblust, guestgraph and companygraph organizations live in `conventions/`, vendored from robertblust/conventions at the release `conventions.json` names. Read them before writing or committing anything here.
 
 - `conventions/WRITING.md` — how we write: one voice, three registers, English and German.
@@ -34,15 +34,20 @@ When writing here, describe the *pattern*. "The multi-person instance keeps a th
 
 ## Decisions that are settled
 
-- **Schemas are Markdown, enforced by agents.** Not a stage on the way to JSON Schema — it
-  is the working architecture of a model with several hundred files, and it is what the
-  talk this comes from argues: with the right meta-model you describe the facts as
-  Markdown. A formal schema language would contradict the thesis the model ships under.
+- **Schemas are Markdown, read by agents and by the checker alike.** Not a stage on the way
+  to JSON Schema — it is the working architecture of a model with several hundred files, and
+  it is what the talk this comes from argues: with the right meta-model you describe the
+  facts as Markdown. A formal schema language would contradict the thesis the model ships
+  under, and so would a second format kept for the checker.
 - **Write the schema tables to a fixed shape** — same columns, same type vocabulary, same
-  word for "required" — so a validator can be built against them later without a rewrite.
-- **Do not build a validator that parses the Markdown schemas as its source of truth.**
-  Rejected in the spec, §5. It makes prose load-bearing before anything enforces the
-  prose's shape, and it fails silently rather than loudly.
+  word for "required" — because the fixed shape is what the checker reads, and `verify`
+  holds every schema to it.
+- **The schemas are the checker's source of truth, and only because their shape is
+  checked.** The spec's §5 rejected that while nothing enforced the shape: prose that
+  carries weight before its shape is checked breaks silently. `verify` now fails loudly on
+  a schema off the shape or outside the vocabulary, so R16 holds an instance to what its
+  schemas declare, and the instance checks read the core the instance vendored. What a
+  script cannot read — a schema's writing rules — stays with the agent pass (R0).
 - **Core defines a type; it does not oblige you to populate it.** A company of one has no
   `group`; the type stays in core, unused.
 - **A pack adds vocabulary only some kinds of company need at all** — types that are
