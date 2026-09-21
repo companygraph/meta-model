@@ -342,6 +342,25 @@ test("upgrade gives no skills to an instance init did not give them to, and leav
   assert.ok(!Object.keys(moved.files).some((key) => key.startsWith(".claude/")));
 });
 
+// companygraph/mental-model is this case: made by init before the skills existed, its manifest
+// records none and it holds none, and an upgrade gives it all three.
+test("upgrade gives the skills to an instance that records none and holds none, and check passes after", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  for (const key of Object.keys(manifest.files)) if (key.startsWith(".claude/")) delete manifest.files[key];
+  manifest.tooling = "0.1.0";
+  fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
+  fs.rmSync(path.join(root, ".claude"), { recursive: true });
+
+  const said = run(["upgrade", root]);
+  assert.match(said, /mechanical checks pass/);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".claude/skills")).sort(), SKILL_NAMES);
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.equal(moved.files[".claude/skills/companygraph-validate/SKILL.md"], sha256(fs.readFileSync(path.join(root, ".claude/skills/companygraph-validate/SKILL.md"), "utf8")));
+});
+
 test("upgrade refuses a skill of the instance's own under a name it would write, and --force takes it", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
