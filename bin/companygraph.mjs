@@ -144,9 +144,38 @@ function ask(question) {
     });
   }
   process.stdout.write(question);
-  if (lines.length) return Promise.resolve(lines.shift().trim());
-  if (reader.closed) return Promise.resolve("");
-  return new Promise((done) => waiting.push(done)).then((line) => line.trim());
+  const answered = lines.length ? Promise.resolve(lines.shift()) : reader.closed ? Promise.resolve("") : new Promise((done) => waiting.push(done));
+  // The terminal echoes what is typed, so the menu's record of a pick keeps the answer itself.
+  return answered.then((line) => {
+    const answer = line.trim();
+    record?.push(`${answer || dim("Enter")}\n`);
+    return answer;
+  });
+}
+
+// At a terminal the menu clears the screen before it draws, so what is on it is the latest pick
+// and what that pick said, never the log of every one before it. `record` collects what a pick
+// writes while it runs, which the next screen draws again as one panel.
+const SCREEN = Boolean(process.stdout.isTTY);
+let record = null;
+function recorded(stream) {
+  const write = stream.write.bind(stream);
+  stream.write = (chunk, ...rest) => {
+    record?.push(String(chunk));
+    return write(chunk, ...rest);
+  };
+}
+const clear = () => process.stdout.write("\x1b[H\x1b[2J\x1b[3J");
+
+// The latest pick and what it said, behind a bar in green when it went through and red when not.
+function panel(label, ok, text) {
+  const bar = ok ? good : bad;
+  const said = text.replace(/^\s*\n/, "").trimEnd().split("\n");
+  return [
+    `  ${bar("╭─")} ${bar(ok ? "✓" : "✗")} ${bold(label)}`,
+    ...said.map((line) => `  ${bar("│")} ${line}`),
+    `  ${bar("╰─")}`,
+  ].join("\n");
 }
 
 // `menu` is set when the menu calls it, which says what comes next itself.
@@ -370,22 +399,37 @@ async function menu() {
       return 0;
     }],
   ];
-  console.log(`\n${banner()}\n`);
   const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);
+  if (SCREEN) {
+    recorded(process.stdout);
+    recorded(process.stderr);
+  }
   // The menu comes back after every pick, so one run does several things; it ends on Quit, on q,
   // on Ctrl+C, or at the end of piped input. Quit exits 0, since leaving is what was asked; the end
   // of piped input exits with the last pick's code, which is how a test reads what a pick did.
   let code = 0;
+  let latest = null;
   for (;;) {
+    if (SCREEN) clear();
+    console.log(`\n${banner()}\n`);
+    if (latest) console.log(`${panel(...latest)}\n`);
     entries.forEach(([label, what], i) => console.log(`  ${accent(i + 1)}  ${label.padEnd(width)}  ${dim(what)}`));
     console.log(`  ${accent(entries.length + 1)}  ${"Quit".padEnd(width)}  ${dim("or q, or Ctrl+C")}`);
     console.log();
     const pick = await ask(prompt(`Pick 1-${entries.length + 1}`));
     if (!pick && ended && !lines.length) return code;
     if (!pick) continue;
-    if (/^q(uit)?$/i.test(pick) || pick === String(entries.length + 1)) return 0;
+    if (/^q(uit)?$/i.test(pick) || pick === String(entries.length + 1)) {
+      if (SCREEN) clear();
+      return 0;
+    }
     const entry = /^\d+$/.test(pick) ? entries[Number(pick) - 1] : undefined;
-    console.log();
+    const label = entry ? entry[0] : `Pick ${pick}`;
+    if (SCREEN) {
+      clear();
+      console.log(`\n${banner()}\n\n  ${accent("›")} ${bold(label)}\n`);
+    } else console.log();
+    record = SCREEN ? [] : null;
     try {
       if (!entry) throw new Error(`${pick} is not one of 1-${entries.length + 1}; nothing was done.`);
       code = await entry[2]();
@@ -393,7 +437,9 @@ async function menu() {
       console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
       code = 1;
     }
-    console.log();
+    if (record) latest = [label, code === 0, record.join("")];
+    record = null;
+    if (!SCREEN) console.log();
   }
 }
 
