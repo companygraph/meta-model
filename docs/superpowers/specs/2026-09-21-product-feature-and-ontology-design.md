@@ -131,7 +131,7 @@ The kinds are four because the instance has four cases and they behave different
 
 ## 9. What ships
 
-Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, all four flat, which is the shape `skill` and `value` already have. The instance checks gain the rule that `As` is required where a pair repeats. The README's type list gains the four. Core goes to 0.36.0 and the package with it, 0.35.0 having already gone out as a package-only release.
+Four schema files in `core/`. Four entries in the `TYPES` list of `lib/checks.mjs`, all four flat, which is the shape `skill` and `value` already have. The instance checks gain the rule that `As` is required where a pair repeats. The README's type list gains the four. Core goes to 0.37.0 and the package with it. 0.35.0 went out as a package-only release before this began, and 0.36.0 as a release of main's own while it was open.
 
 The parser needs no change. `products`, `concepts` and a relation's `Concept` cell are references it resolves by declared type, and the declared-columns table is the shape `phase` already writes.
 
