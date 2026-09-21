@@ -20,8 +20,9 @@ core/              the shipped unit, copied whole into an instance
 example/           a fictional company, described in those types
 lib/instance.mjs   the instance parser, the module a site imports
 lib/checks.mjs     the checks an instance is held to, shared by the suite and the checker
+lib/obsidian.mjs   the plugin's install, shared by the command and the plugin's e2e suite
 bin/check-instance.mjs     the mechanical half of R0, run over one instance by its workflow
-bin/companygraph.mjs       the command: init, upgrade and check
+bin/companygraph.mjs       the command: init, upgrade, check and obsidian, and a menu over them
 agents/claude/skills/      the skills init writes for Claude and upgrade moves
 verify/
   check.mjs                npm run verify — asserts this repo's own shape
@@ -50,8 +51,9 @@ flowchart TB
         CONS["Consulting — help building one"]
     end
     subgraph oss["Open source — Apache 2.0, forever"]
-        TOOL["Tooling — scaffolding, checks, upgrades"]
+        TOOL["Tooling — a menu, scaffolding, checks, upgrades, the plugin's install"]
         SERVER["MCP server — read-only access for agents"]
+        PLUGIN["Obsidian plugin — the checks while a file is edited"]
         PACK["Pack — vocabulary only some kinds of company need"]
         CORE["Core — types, schemas, CONVENTIONS.md"]
     end
@@ -60,13 +62,14 @@ flowchart TB
     CONS -.-> INST
     TOOL --> CORE
     SERVER --> CORE
+    PLUGIN --> CORE
     INST --> TOOL & PACK & CORE
     PACK --> CORE
 ```
 
-An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server and the tooling built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
+An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server, the plugin and the tooling built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
 
-The server sits beside the tooling rather than between core and an instance: it depends on the parser this package ships and on nothing an instance declares, and a deployment of it names the instance and the release it serves. `companygraph/mcp-server` is the package, and `robertblust/mcp-blust-ch` and `companygraph/mcp-companygraph-io` are the deployments that run it over the two instances.
+The server and the plugin sit beside the tooling rather than between core and an instance: each depends on what this package ships and on nothing an instance declares. A deployment of the server names the instance and the release it serves; `companygraph/mcp-server` is the package, and `robertblust/mcp-blust-ch` and `companygraph/mcp-companygraph-io` are the deployments that run it over the two instances. `companygraph/obsidian-plugin` bundles this package's checker, and the tooling's `obsidian` installs it in a vault without pinning it, because the plugin already pins this package.
 
 ## Status
 
