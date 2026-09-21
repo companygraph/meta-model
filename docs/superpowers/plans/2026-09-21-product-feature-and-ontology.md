@@ -53,14 +53,14 @@ Write the two totals down. Every later step states its change as a delta, becaus
 
 - [ ] **Step 2: Write the failing test**
 
-Add to `verify/instance-checks.test.mjs`, beside the other cases. It uses the file's own `schema` helper and its `checkInstance` fixture style.
+Add to `verify/instance-checks.test.mjs`, beside the other cases. It uses the file's own `schema` helper and its `checkInstance` fixture style: a `Map`, real type names — a fixture type absent from `TYPES` is skipped and asserts nothing — and `{ core: "meta/core", model: "model" }`.
 
 ```js
-test("a column typed enum is held to the tokens its Description lists", () => {
-  const files = {
-    "core/thing-schema.md": schema("thing", ["| `source` | Yes | ref → source | Where. |"], {
+test("a column typed enum is held to the values its schema lists", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
       sections: [
-        "| `## Facts` | No | Table. What this thing states. |",
+        "| `## Facts` | No | Table. What this states. |",
         "",
         "`## Facts` is a table with these columns:",
         "",
@@ -69,18 +69,19 @@ test("a column typed enum is held to the tokens its Description lists", () => {
         "| `Claim` | Yes | string | The claim |",
         "| `Confidence` | Yes | enum | `high` or `low`. How sure. |",
       ],
-    }),
-    "model/things/one.md": [
-      "---", "source: Local", "---", "", "# One", "", "> A thing.", "",
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
       "## Facts", "",
-      "| Claim | Confidence |", "| --- | --- |", "| It rains | maybe |",
-    ].join("\n"),
-  };
-  const problems = [];
-  checkInstance({ files, fail: (m) => problems.push(m) });
+      "| Claim | Confidence |", "| --- | --- |", "| It compiles | maybe |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
   assert.ok(
-    problems.some((m) => m.includes("Confidence") && m.includes("maybe") && m.includes("R8")),
-    `expected a column enum failure, got: ${problems.join(" | ")}`,
+    failures.some((f) => f.includes("Confidence") && f.includes("maybe") && f.includes("R8")),
+    `expected a column enum failure, got: ${failures.join(" | ")}`,
   );
 });
 ```
@@ -89,7 +90,7 @@ test("a column typed enum is held to the tokens its Description lists", () => {
 
 Run: `node --test verify/instance-checks.test.mjs`
 
-Expected: FAIL. The assertion message prints the problems actually raised, and none of them mentions `Confidence`, because no check reads a column enum yet.
+Expected: FAIL. The assertion message prints the failures actually raised, and none mentions `Confidence`, because no check reads a column enum yet.
 
 - [ ] **Step 4: Carry the Description through the column reader**
 
@@ -632,9 +633,9 @@ The check names no type. It reads every column table every schema declares, find
 - [ ] **Step 1: Write the failing test**
 
 ```js
-test("a repeated reference in a relations table needs its role named", () => {
-  const files = {
-    "core/thing-schema.md": schema("thing", ["| `source` | Yes | ref → source | Where. |"], {
+test("a repeated reference in a table names the role each row plays", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
       sections: [
         "| `## Relations` | No | Table. What this points at. |",
         "",
@@ -642,29 +643,30 @@ test("a repeated reference in a relations table needs its role named", () => {
         "",
         "| Column | Required | Type | Description |",
         "| --- | --- | --- | --- |",
-        "| `Thing` | Yes | ref → thing | What this points at |",
-        "| `As` | No | string | The role it plays. Required where two rows name the same thing. |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. Required where two rows name the same skill. |",
       ],
-    }),
-    "model/things/one.md": [
-      "---", "source: Local", "---", "", "# One", "", "> A thing.", "",
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
       "## Relations", "",
-      "| Thing | As |", "| --- | --- |", "| Two | |", "| Two | |",
-    ].join("\n"),
-    "model/things/two.md": ["---", "source: Local", "---", "", "# Two", "", "> A thing."].join("\n"),
-  };
-  const problems = [];
-  checkInstance({ files, fail: (m) => problems.push(m) });
+      "| Skill | As |", "| --- | --- |", "| Maven | builds |", "| Maven | |",
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
   assert.ok(
-    problems.some((m) => m.includes("Two") && m.includes("As")),
-    `expected a repeated-reference failure, got: ${problems.join(" | ")}`,
+    failures.some((f) => f.includes("Maven") && f.includes("As")),
+    `expected a repeated-reference failure, got: ${failures.join(" | ")}`,
   );
 });
 ```
 
 - [ ] **Step 2: Run it and watch it fail**
 
-Run: `node --test verify/instance-checks.test.mjs` Expected: FAIL, the assertion printing problems none of which mentions `As`.
+Run: `node --test verify/instance-checks.test.mjs` Expected: FAIL, the assertion printing failures none of which mentions `As`.
 
 - [ ] **Step 3: Write the check**
 
