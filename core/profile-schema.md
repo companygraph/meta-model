@@ -18,7 +18,7 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 | `roles` | No | array of ref → role | The seats this profile holds, each the H1 of a file in `roles/`. Absent for a profile without a seat. |
 | `email` | No | string | Contact address |
 | `location` | No | string | Where the person works from |
-| `image` | No | image | The person's picture, a file in this profile's folder: square, 512×512 recommended, 256–1024 pixels on a side, at most 300 KB |
+| `image` | No | image | The person's picture, a file in this profile's folder — square, 512×512 recommended, 256–1024 pixels on a side, at most 300 KB |
 
 ## Sections
 
@@ -110,7 +110,8 @@ A profile is the one page that says who a person or an agent is and what they cl
   nothing here invents a row to close it.
 - The image is the person, recognizably, as the tagline is their own voice: not a logo, a team
   or an illustration standing in for them. A profile whose nature is `agent` may carry one, and
-  then it shows what holds the profile.
+  then it shows what holds the profile; the rule below that an agent claims no skill does not
+  reach it.
 - `nature` says what holds the profile, never how well. A profile whose nature is `agent`
   claims no skill and carries neither a Skills table nor an Evidence table: a claim is a
   person's history with a capability, evidenced by work that stays true after the next

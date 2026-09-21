@@ -38,7 +38,7 @@ A type that cannot exist without another lives inside that owner's folder and ne
 
 ### R6 — An entity that owns collections is a folder
 
-The folder is named for the entity, holds the entity's own file — also named for the entity — and one folder per owned type beside it. An entity that owns nothing is a file. `README.md` is never an entity's file.
+The folder is named for the entity, holds the entity's own file — also named for the entity — one folder per owned type beside it, and any image a page in it names (R9). An entity that owns nothing is a file. `README.md` is never an entity's file.
 
 A type with exactly one entity is a file too, sitting directly in the container: a company has one identity and one vision, and a folder that will never hold a second entity is a plural that never arrives. The filesystem then enforces the cardinality — there is nowhere to put a second one — which is a constraint no rule has to state and nobody can forget.
 
@@ -134,7 +134,7 @@ A schema declares the references its type makes and none it receives. Which type
 
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as `:---`, `---:` or `:---:`.
 
-A schema is not an entity, so it never lives in a folder named for a type: such a folder holds entities of that type and nothing else, and a schema sitting in one would be read as an entity by anything walking it. Where the schemas do live is the repository's own business — this says only where they cannot.
+A schema is not an entity, so it never lives in a folder named for a type: such a folder holds entities of that type, any image a page in it names (R9), and nothing else, and a schema sitting in one would be read as an entity by anything walking it. Where the schemas do live is the repository's own business — this says only where they cannot.
 
 ### R10 — An owned type declares its owner
 
