@@ -32,7 +32,7 @@
 import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance, isNewer, MODEL } from "../lib/checks.mjs";
+import { checkInstance, isNewer, MODEL, IMAGE_FILE } from "../lib/checks.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -83,7 +83,9 @@ export function checkPath(path) {
     for (const entry of readdirSync(join(root, rel))) {
       const child = `${rel}/${entry}`;
       if (statSync(join(root, child)).isDirectory()) walk(child);
-      else files.set(child, readFileSync(join(root, child), "utf8"));
+      // An image is bytes, and read as text it is corrupted before the check that reads its
+      // header sees it (R9).
+      else files.set(child, readFileSync(join(root, child), IMAGE_FILE.test(child) ? undefined : "utf8"));
     }
   };
   walk(MODEL);

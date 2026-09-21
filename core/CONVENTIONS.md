@@ -38,7 +38,7 @@ A type that cannot exist without another lives inside that owner's folder and ne
 
 ### R6 — An entity that owns collections is a folder
 
-The folder is named for the entity, holds the entity's own file — also named for the entity — and one folder per owned type beside it. An entity that owns nothing is a file. `README.md` is never an entity's file.
+The folder is named for the entity, holds the entity's own file — also named for the entity — one folder per owned type beside it, and any image a page in it names (R9). An entity that owns nothing is a file. `README.md` is never an entity's file.
 
 A type with exactly one entity is a file too, sitting directly in the container: a company has one identity and one vision, and a folder that will never hold a second entity is a plural that never arrives. The filesystem then enforces the cardinality — there is nowhere to put a second one — which is a constraint no rule has to state and nobody can forget.
 
@@ -54,7 +54,7 @@ Every entity lives under `model/`, and nothing else does. What sits beside it �
 
 The container is what makes the rule closed. Without it, whatever walks an instance needs a list of folders that are *not* content, and such a list is an enumeration: it goes stale the first time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe. With it, "is this an entity?" is answered by where the file is.
 
-A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
+A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6), or an image such an entity names (R9). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
 
 ### R14 — Names and prose are American English
 
@@ -100,7 +100,7 @@ A section whose content is grouped under `###` headings that name entities decla
 
 A section that holds a list may declare which kind, because the two kinds mean different things: a numbered list is a sequence, the order a phase's work is done in, and a bulleted list is a set. Its Description begins with `Bulleted.` or `Numbered.`, or carries the word directly after `Grouped.` where the list stands under headings — `Grouped. Numbered.` — and never after `Table.`, since a table holds rows. The kind governs the list and not the section: a section may open its list with a sentence and close it with a paragraph, as a gate does, and only the items are held. A section that declares neither is held to nothing, as one that says neither `Table.` nor `Grouped.` is prose: a page's own sections, and numbered steps inside a paragraph of reasoning, are nobody's to judge. R16 says what an instance is held to.
 
-Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`. A reference names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`, `image`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`. A reference names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 
 `rank` is the vocabulary's name for an entity's order within its type, wherever a schema needs one: a field so named is typed `number`, and two entities of one type never share a rank — there is nothing left to order them by if they do.
 
@@ -113,6 +113,8 @@ A required list that is present and empty is absent in every sense that matters:
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source states and never at more; an author may deliberately record less. A shorter form is an interval, not a point: `2002` is the whole year. A comparison takes the bound the field names — a `start` the interval's first instant, an `end` its last — so a period starting `2002` orders before one starting `2002-03`, and a period ending `2002` orders after one ending `2002-03`. One rule for both fields reads an end as its first instant, which says a period that ended sometime in 2002 ended before one that ended that March. The model does not know that, and it is the opposite of what a reader takes from the value.
 
 The form is stated here rather than in the description of whichever field happens to use it, because a type in a closed vocabulary that means different things in two schemas is not closed. `date` was the only member whose lexical form was never written down, and while it went unsaid one schema's description fixed it at `YYYY-MM` — which made an instance invent a month for a diploma that states a year, and left a talk's known day in prose because no field could hold it. A rule that forces both an invention and a discard is the wrong rule.
+
+`image` is a file name with no path, and the file sits in the folder of the page that names it: for a profile, `profiles/<profile>/` beside the profile's own file, so the picture goes with the person in the one operation R6 makes of removing them. A name with a `/` in it is a reference by location, which R3 forbids. The file is `.jpg`, `.jpeg` or `.png`, lowercase, and its first bytes are the signature of what the name says. **An image is square, 256 to 1024 pixels on a side and at most 300 KB (307,200 bytes).** Square because every place that draws one draws a circle, and a circle cut from a rectangle cuts whichever face is off-center; the floor is what a dense screen needs for a small avatar and the ceiling and the cap keep a page from loading a photograph. `image` is a frontmatter type: a row of a table has no folder of its own for a file to sit in. An image in the container that no page's `image` field names is an error, because it is a file nothing copies and no reader reaches.
 
 Where each form is legal follows from one distinction: **a frontmatter field may hold one value or a list; a table cell holds one value.** The whole vocabulary is therefore open to a frontmatter field, and both `ref → <type>` and `array of ref → <type>` there must resolve. In a column table the list types — `array` and `array of ref → <type>` — are an error, not something to be read leniently, because there is nothing for them to mean: a column that references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter field (R8); it never becomes a column.
 
@@ -132,7 +134,7 @@ A schema declares the references its type makes and none it receives. Which type
 
 A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as `:---`, `---:` or `:---:`.
 
-A schema is not an entity, so it never lives in a folder named for a type: such a folder holds entities of that type and nothing else, and a schema sitting in one would be read as an entity by anything walking it. Where the schemas do live is the repository's own business — this says only where they cannot.
+A schema is not an entity, so it never lives in a folder named for a type: such a folder holds entities of that type, any image a page in it names (R9), and nothing else, and a schema sitting in one would be read as an entity by anything walking it. Where the schemas do live is the repository's own business — this says only where they cannot.
 
 ### R10 — An owned type declares its owner
 

@@ -6,7 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
-import { checkInstance, sectionsOf, blocksOf } from "../lib/checks.mjs";
+import { checkInstance, sectionsOf, blocksOf, IMAGE_FILE } from "../lib/checks.mjs";
 
 const roleSchema = (rows) => ["# Role Schema", "", "> A seat.", "", "## File Location", "", "`model/roles/*.md`", "",
   "## Frontmatter", "", "No YAML frontmatter.", "",
@@ -89,7 +89,7 @@ const shipped = () => {
   const walk = (dir, prefix) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true }))
       if (e.isDirectory()) walk(path.join(dir, e.name), `${prefix}${e.name}/`);
-      else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), "utf8"));
+      else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
   walk(path.join(root, "example", "model"), "model/");

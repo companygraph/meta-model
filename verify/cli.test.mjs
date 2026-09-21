@@ -6,19 +6,20 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance } from "../lib/checks.mjs";
+import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
 
-// Every file under a folder, as the checks read one: path relative to the root, text.
+// Every file under a folder, as the checks read one: path relative to the root, text, and bytes
+// for an image (R9).
 function filesOf(root, base = root, into = new Map()) {
   for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
     const full = path.join(base, entry.name);
     if (entry.isDirectory()) filesOf(root, full, into);
-    else into.set(path.relative(root, full), fs.readFileSync(full, "utf8"));
+    else into.set(path.relative(root, full), fs.readFileSync(full, IMAGE_FILE.test(entry.name) ? undefined : "utf8"));
   }
   return into;
 }
@@ -438,3 +439,25 @@ for (const schemas of ["meta", "schemas"])
     const facts = spawnSync("python3", [".claude/skills/companygraph-surface/facts.py"], { cwd: root, encoding: "utf8" });
     assert.equal(facts.status, 0, facts.stdout + facts.stderr);
   });
+
+// The command is the reader every instance's CI runs, and it has a walker of its own. An image
+// read there as text reaches the check corrupted, and no suite that feeds the check a map would
+// see it, so this goes through the command: a real PNG beside the profile that names it.
+test("check reads an image as bytes: a named PNG passes, and the same bytes named .jpg fail by name", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const png = fs.readFileSync(path.join(here, "..", "example/model/profiles/ai-agent/ai-agent.png"));
+  const dir = path.join(root, "model/profiles/mira");
+  fs.mkdirSync(path.join(dir, "experiences"), { recursive: true });
+  const page = (image) => `---\nsource: Local\nnature: human\nimage: ${image}\n---\n\n# Mira\n\n> A person.\n`;
+  fs.writeFileSync(path.join(dir, "mira.md"), page("mira.png"));
+  fs.writeFileSync(path.join(dir, "mira.png"), png);
+  const passing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.doesNotMatch(passing.stdout + passing.stderr, /mira\.png/);
+
+  fs.renameSync(path.join(dir, "mira.png"), path.join(dir, "mira.jpg"));
+  fs.writeFileSync(path.join(dir, "mira.md"), page("mira.jpg"));
+  const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.match(failing.stdout + failing.stderr, /mira\.jpg: is a PNG named as a JPEG \(R9\)/);
+  assert.equal(failing.status, 1);
+});

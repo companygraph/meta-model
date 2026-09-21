@@ -8,7 +8,7 @@
 // declaration onto other sections and another field to show it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { checkInstance } from "../lib/checks.mjs";
+import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
 
 const head = (type, owner) => [
   `# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "",
@@ -162,7 +162,7 @@ test("core's profile schema declares both joins, and the example breaks them whe
   const walk = (dir, prefix) => {
     for (const e of fs.readdirSync(dir, { withFileTypes: true }))
       if (e.isDirectory()) walk(path.join(dir, e.name), `${prefix}${e.name}/`);
-      else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), "utf8"));
+      else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
   walk(path.join(root, "example", "model"), "model/");

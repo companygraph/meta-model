@@ -62,3 +62,26 @@ test("a short row in a heading table fails the run instead of crashing it", () =
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+// R9 makes `image` a frontmatter type: a row of a table has no folder of its own for a file to
+// sit in. The vocabulary check reads frontmatter and column tables in one loop, so this holds
+// that it still tells them apart.
+test("a column typed image fails the vocabulary check by name", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
+  try {
+    cpSync(join(ROOT, "core"), join(tmp, "core"), { recursive: true });
+    cpSync(join(ROOT, "example"), join(tmp, "example"), { recursive: true });
+    cpSync(join(ROOT, "lib"), join(tmp, "lib"), { recursive: true });
+    mkdirSync(join(tmp, "verify"));
+    cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    const schemaPath = join(tmp, "core", "profile-schema.md");
+    const before = readFileSync(schemaPath, "utf8");
+    const target = "| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |";
+    assert.ok(before.includes(target), "core/profile-schema.md no longer carries the row this test mutates — update the fixture");
+    writeFileSync(schemaPath, before.replace(target, "| `Where` | Yes | image | The place. |"));
+    const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
+    assert.match(result.stdout + result.stderr, /profile-schema\.md: `Where` is "image"; an image is a frontmatter field, never a column/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
