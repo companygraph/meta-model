@@ -86,7 +86,7 @@ Setting that up and keeping it current is the tooling's job — roadmap item 5, 
 
 ## Packs
 
-Core is the vocabulary any company can be described in. A **pack** adds vocabulary that only some kinds of company need *at all* — types that are absent rather than optional. A company that builds a product has features, architecture decisions and roadmaps; a consultancy has none of those and should not carry empty folders implying it forgot.
+Core is the vocabulary any company can be described in. A **pack** adds vocabulary that only some kinds of company need *at all* — types that are absent rather than optional. A company that builds software keeps architecture decisions and roadmaps; a consultancy has neither and should not carry empty folders implying it forgot.
 
 That is the difference between a pack and an unused core type. Core defines a type without obliging you to populate it: a company that does not group what its people have achieved writes no `achievement-kind`, and the type stays in core either way. A pack is for vocabulary that would not belong at all.
 
