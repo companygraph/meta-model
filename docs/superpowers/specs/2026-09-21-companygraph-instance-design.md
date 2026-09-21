@@ -49,11 +49,12 @@ The reference instance answered whether the vocabulary could hold a real company
 
 Two things the run leaves to be corrected by hand, both recorded as findings in §8:
 
-- the workflow pin. `init` writes `.github/workflows/companygraph.yml` pinned to `v${tooling}`,
-  the version of the checker that ran — and the checker that ran is an unreleased working tree
-  whose `package.json` reads a version that is already tagged from other code. The pin is set
-  to the newest release whose checker this instance actually passes, and moved to the release
-  that carries #105 once there is one.
+- the two pins. `init` records the release it is as `tooling` in `.companygraph/manifest.json`
+  and pins `.github/workflows/companygraph.yml` to that same release by design, and a `--core`
+  naming a newer one leaves that pair unable to check the core it just vendored, so neither pin
+  is wrong by itself and both move together — §8 records what the run did. Both are set to the
+  newest release whose checker this instance actually passes, and moved to the release that
+  carries #105 once there is one.
 - the empty folders. `readmesFor(rootFolders())` writes a README into every root type folder,
   so a fresh instance carries `model/profiles/`, `model/skills/`, `model/roles/`,
   `model/proficiency-levels/`, `model/experience-kinds/` and `model/achievement-kinds/` whether
