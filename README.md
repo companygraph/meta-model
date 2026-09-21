@@ -104,9 +104,10 @@ No pack ships yet. The mechanism arrives when a second kind of company asks for 
    no fallback chain between them.
 4. **Every reference is by canonical name, never by path** — so moving a file breaks nothing,
    and renaming an entity breaks loudly rather than quietly.
-5. **Schemas are Markdown, enforced by agents** — not a stage on the way to JSON Schema. With
-   the right meta-model you describe the facts as Markdown, and a formal schema language would
-   contradict the thesis the model ships under.
+5. **Schemas are Markdown, read by agents and by the checker alike** — not a stage on the way
+   to JSON Schema. With the right meta-model you describe the facts as Markdown, and a formal
+   schema language would contradict the thesis the model ships under. The checker reads the
+   same tables an agent does, so there is no second format to keep beside them.
 
 ## Roadmap
 
