@@ -1,8 +1,9 @@
 // The deliverable is a graph of Markdown files, so the tests are assertions against the
 // files themselves. No dependencies, no build step: node verify/check.mjs
 //
-// This is NOT the validator the design defers (spec §5). It never reads a schema as truth
-// about somebody's instance, and it checks far less than CONVENTIONS.md states. It asserts
+// It checks far less than CONVENTIONS.md states, and it is the gate that makes the schemas
+// safe to read as truth: spec §5 rejected a checker that took them as its source of truth
+// while nothing held them to their shape, and this is what holds them now. It asserts
 // that this repository's own schema files match the fixed shape, that example/ has the
 // folder and filename shape the types imply, and that the references under example/profiles/
 // resolve — every frontmatter field a schema types `ref → <type>` or `array of ref → <type>`,
@@ -11,9 +12,9 @@
 // core/ declares, field by field and column by column (R16): a declared reference resolves,
 // a field declared anything else does not, and a `number` is written as digits. A body table
 // is reached by the caption naming its section, so no table is named in this file — the
-// hardcoded "## Skills" that used to be the one body table it knew to look for is gone. What
-// is still not validated is a document's shape: no file is checked for the sections its
-// schema requires. A
+// hardcoded "## Skills" that used to be the one body table it knew to look for is gone. A
+// file is checked for the sections its schema requires, and a section for the kind of list
+// it declares. What no check reaches is a schema's writing rules. A
 // date field's form is checked (R9), and an unknown frontmatter field is an error (R15) —
 // which is also the first check to read example/values/, for its field names and nothing
 // else. A file under example/profiles/ whose folder matches no type's File Location has its
