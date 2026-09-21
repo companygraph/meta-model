@@ -165,18 +165,32 @@ CI never writes what the repository commits, so `company.json` is built locally 
 
 ## 8. What it teaches
 
-Findings against core, the tooling or the conventions, recorded here rather than acted on; each is its own follow-up. Two are known before the work starts, both against the CLI of [`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) and both open while #105 is:
+Findings against core, the tooling or the conventions, recorded here rather than acted on; each is its own follow-up. They are observations rather than predictions now: the instance was created by running `init`, the command [`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md) designs, from the head of `the-cli-design`, which is [#105](https://github.com/companygraph/meta-model/pull/105)'s head commit, as `node bin/companygraph.mjs init . --here --agent claude --name CompanyGraph --core v0.35.0`, from a package whose own version reads `0.32.0`. It wrote forty files and exited 0, and everything below is what that run and the checks after it produced. The two findings this section carried before the run are both superseded — the first by what the tool wrote, the second by a comment in the tool that answers it.
 
-- **`init` writes a folder for every root type.** `readmesFor(rootFolders())` gives a fresh
-  instance a folder for every root type core declares, whether or not it will populate them,
-  and the meta-model's own README says a company that does not have those things should not
-  carry folders implying it forgot.
-  An instance that declares no people has to delete six folders the tool just made. Whether the
-  remedy is a flag, a prompt or writing only the three required folders is the follow-up's to
-  decide.
-- **`init` pins the workflow to a version that need not be a release.** The pin is
-  `v${tooling}`, the running checker's `package.json` version, which on an unreleased working
-  tree names either a tag that exists and carries different code or a tag that does not exist
-  at all. Either way the instance's first CI run is against something other than what made it.
+**The `--core` path leaves nothing able to say which checker should run the instance it just made.** The run wrote `"tooling": "0.32.0"` into `.companygraph/manifest.json`, beside `"core": { "version": "0.34.0", "shape": 3, "source": "fetched:v0.35.0" }`, and pinned the workflow it wrote to `instance-check.yml@v0.32.0`. Both halves of that pin refuse what it made. The `0.32.0` checker — the release the instance names, and the one its own CI would run — exits 1 with
+
+```text
+✗ this checker is 0.32.0 and .companygraph/manifest.json vendors core 0.34.0 — a checker cannot hold an instance to a core newer than itself; move the workflow pin to v0.34.0
+```
+
+and the `0.35.0` checker, which can run core `0.34.0`, exits 1 with
+
+```text
+✗ this checker is 0.35.0 and .companygraph/manifest.json names 0.32.0 — move the pin and the workflow together, or call the release the manifest names
+```
+
+This section predicted that the core-newer guard would fire. It does, but only from the older side: the tooling-version guard fires from the newer one, so both fire, and an `init --core <tag>` whose fetched release is newer than the package fetching it produces a repository no released checker runs. It went green only after the two lines the tool itself wrote were edited by hand, which is the correction §2 has the instance make. Nothing here is a pin written carelessly: `tooling` can only name the release `init` is, that release cannot check the core it was told to vendor, and the tool has no third value to write. Whether `init` should refuse `--core <tag>` before writing anything when the fetched core is newer than the core the running package carries — on the reasoning `check-instance.mjs` already gives, that a checker may lag its core's vocabulary in one direction only — or whether `--core` is usable only for a release at or below the running package's own and should say so, is the follow-up's to decide.
+
+**`init` pinning the workflow to its own version is deliberate, and the finding that stood here is withdrawn.** This section called that pin a defect because `v${tooling}` need not name a release carrying the code that ran. `lib/plan.mjs:49-56` writes it under a comment recording that the alternative was tried and reverted: "pinning the workflow to the fetched tag instead made an instance's own CI red on its first commit whenever `--core` named a release older than this package's own version." The workflow ref and `tooling` are one pin by design, which is what the checker's first guard compares itself against, and the fetched tag feeds `core.source` alone because which core is vendored is a separate fact from which checker runs it. That comment reasons about `--core` naming an older release; the case this run hit is the newer one, where both pins fail together because they are the same pin. That is the finding above, and this is not one.
+
+**`init` writes a folder for every root type core declares.** `readmesFor(rootFolders())` gave this instance `model/profiles/`, `model/skills/`, `model/roles/`, `model/proficiency-levels/`, `model/experience-kinds/` and `model/achievement-kinds/`, each holding a `README.md` and nothing else, and an instance that declares no people deleted all six by hand after the run. Empty folders are legal — the check passes before the deletion and after it — but this repository's own README says a company that has none of those things should not carry folders implying it forgot. Whether the remedy is a flag, a prompt or writing only the folders an instance asks for is the follow-up's to decide.
+
+**The `0.32.0` refusal names the workflow and not the manifest.** Its remedy, "move the workflow pin to v0.34.0", points at a real release whose checker can run core `0.34.0`, so it works as far as it goes. It names one of the two pins: `.companygraph/manifest.json`'s `tooling` is the field the other guard then refuses on, so a reader following it literally moves one line and meets the next refusal. The `0.35.0` wording, "move the pin and the workflow together", says both.
+
+**The manifest's per-file hashes are read by no released command and by no gate.** `init` writes a sha256 for every vendored file into `.companygraph/manifest.json` — twenty entries in this instance — and the only code that reads them is `companygraph upgrade`, at `lib/plan.mjs:107-110`. That code is in no release: `bin/` at `v0.35.0` holds `check-instance.mjs` alone and `bin/companygraph.mjs` does not exist there at all, and the checker reads `tooling`, `core.version` and `units` from the manifest and nothing else. The reusable workflow an instance pins runs that one command, so the gate on every commit does not read them either. Observed on this instance: one run of `sh conventions/conventions-format fix` with `meta` out of `format-exclude` rewrote eighteen of the twenty hashed files, and the instance check, `conventions-format` and `conventions-check` each exited 0 afterwards.
+
+That path is the family's own rather than a hypothetical. `conventions-format fix` rewrites every Markdown file it is not told to skip, `.vscode/` asks VS Code to run the same library on save, and `conventions.json`'s `format-exclude` is the only thing holding either off `meta/core/` — which an instance `init` makes does not have, because joining the conventions is a later step. When the rewrite is finally met, `upgrade` does not report it but refuses, with "These vendored files are not as this tooling last wrote them, so nothing was written", and the refusal lands on whoever next upgrades rather than on whoever made the edit.
+
+Two things to put to the author. Should `check` read the hashes it already holds, at one `createHash` per vendored file, on the only command that runs on every commit? If not, should `init` write into every instance a record that one unreleased command reads, which reads to a maintainer like an integrity guarantee the repository does not have? There is an argument on the other side that the author may already hold: core's bytes are not a modeling rule, and a checker failing on whitespace would fail an instance for as long as the family's Markdown form and core's committed bytes disagree — which is exactly the window this work is in, with conventions v1.23.0's reflow merged into core here and no release carrying it.
 
 Further findings are added as the work produces them.
