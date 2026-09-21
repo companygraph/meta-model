@@ -5,38 +5,19 @@
 > entities. This proposes one new section per schema, and writes the first one — for
 > `skill` — from the rules the instance settled.
 
-Status: done, in `v0.3.0`. §4 landed first as R11 and R12 in `v0.2.0`, with two corrections it
-needed and one placement reversed — the note at the end of §4. All six schemas then carried the
-pair, one PR each, written against their own evidence: of the five sketches in §5, one was
-right in every part, three gained rules the sketch did not have, and one had a rule reversed by
-the files it was written about.
+Status: done, in `v0.3.0`. §4 landed first as R11 and R12 in `v0.2.0`, with two corrections it needed and one placement reversed — the note at the end of §4. All six schemas then carried the pair, one PR each, written against their own evidence: of the five sketches in §5, one was right in every part, three gained rules the sketch did not have, and one had a rule reversed by the files it was written about.
 
-Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) §5
-(schemas are Markdown, enforced by agents) and `CONVENTIONS.md` R9 (the fixed shape). It
-adds to the shape; it changes nothing the fixed-shape reader depends on.
+Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) §5 (schemas are Markdown, enforced by agents) and `CONVENTIONS.md` R9 (the fixed shape). It adds to the shape; it changes nothing the fixed-shape reader depends on.
 
 ---
 
 ## 1. The finding
 
-The reference instance wrote 23 skills against `core/skill-schema.md`, which describes
-`## In practice` as "what someone using this skill actually does". Every one of the 23 read
-that as *what this person did*: one person's employers, years and numbers, in a file that
-many profiles are meant to claim. The schema's shape was satisfied in every file; every file
-was wrong.
+The reference instance wrote 23 skills against `core/skill-schema.md`, which describes `## In practice` as "what someone using this skill actually does". Every one of the 23 read that as *what this person did*: one person's employers, years and numbers, in a file that many profiles are meant to claim. The schema's shape was satisfied in every file; every file was wrong.
 
-The same instance then found that the profile's Skills table — level plus evidence, per
-person — is where that history belongs, and that a skill file has to be **person-neutral** to
-be claimable by a second profile at all. Nothing in the schema said so, because a schema in
-the R9 shape has nowhere to say it: it lists fields and sections, and a one-cell Description
-per row.
+The same instance then found that the profile's Skills table — level plus evidence, per person — is where that history belongs, and that a skill file has to be **person-neutral** to be claimable by a second profile at all. Nothing in the schema said so, because a schema in the R9 shape has nowhere to say it: it lists fields and sections, and a one-cell Description per row.
 
-That is a gap in every core type, not only `skill`. A `value` schema that says `## In practice`
-is "what following this value looks like, and what breaking it looks like" is already
-half-way to a writing rule; a `profile` schema that says Evidence is required "because the
-adjective on its own measures confidence rather than skill" is stating a purpose. They are
-scattered in Description cells and in the prose under `## File Location`, where the reader
-that checks the shape does not look and the agent that writes an entity may not either.
+That is a gap in every core type, not only `skill`. A `value` schema that says `## In practice` is "what following this value looks like, and what breaking it looks like" is already half-way to a writing rule; a `profile` schema that says Evidence is required "because the adjective on its own measures confidence rather than skill" is stating a purpose. They are scattered in Description cells and in the prose under `## File Location`, where the reader that checks the shape does not look and the agent that writes an entity may not either.
 
 ---
 
@@ -76,9 +57,7 @@ Decisions inside that:
 
 ## 3. The first one: `skill`
 
-Written from what `robertblust/mental-model` settled in re-cutting its 23 skills to 75, and
-reviewed row by row over all of them. The instance's findings are recorded in
-[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7.
+Written from what `robertblust/mental-model` settled in re-cutting its 23 skills to 75, and reviewed row by row over all of them. The instance's findings are recorded in [`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7.
 
 ```markdown
 ## Purpose
@@ -110,12 +89,7 @@ level and an evidence cell, and in the experiences that list the skill.
 
 ## 4. A convention, not a writing rule: lists of references are block sequences
 
-Found while building the same instance. Three of its skill names contain a comma —
-`Software modeling (UML, SysML, C4)` — and in a YAML flow list, `skills: [A, B (C, D)]`, such a
-name splits into fragments with no parse error. R4 caught it only because the fragments
-resolved to nothing; the day `SysML` is a skill of its own, the fragments resolve and the
-claim is wrong with nothing to say so. Quoting the entry fixes one file and is a rule people
-forget. A block sequence has no quoting hazard at all:
+Found while building the same instance. Three of its skill names contain a comma — `Software modeling (UML, SysML, C4)` — and in a YAML flow list, `skills: [A, B (C, D)]`, such a name splits into fragments with no parse error. R4 caught it only because the fragments resolved to nothing; the day `SysML` is a skill of its own, the fragments resolve and the claim is wrong with nothing to say so. Quoting the entry fixes one file and is a rule people forget. A block sequence has no quoting hazard at all:
 
 ```yaml
 skills:
@@ -123,31 +97,13 @@ skills:
   - Software modeling (UML, SysML, C4)
 ```
 
-Proposed for `CONVENTIONS.md`, as a new rule under Schemas: **an `array` or `array of ref`
-frontmatter field is written as a block sequence, one entry per line; a flow list is an
-error.** It is a shape rule, so the tooling's `check` enforces it mechanically — any `[` after
-such a field — and the agent pass never reasons about commas. A diff then shows one line
-per reference added or removed, which is the other reason to want it. The reference
-instance already writes its lists this way.
+Proposed for `CONVENTIONS.md`, as a new rule under Schemas: **an `array` or `array of ref` frontmatter field is written as a block sequence, one entry per line; a flow list is an error.** It is a shape rule, so the tooling's `check` enforces it mechanically — any `[` after such a field — and the agent pass never reasons about commas. A diff then shows one line per reference added or removed, which is the other reason to want it. The reference instance already writes its lists this way.
 
 ### Filenames: one derivation, written down
 
-The same instance filed `Data protection (GDPR)` as `data-protection-gdpr.md` and `CI/CD` as
-`ci-cd.md`. Three documents say "the filename is the kebab-case of the H1" — the tooling spec's
-`add`, the instance's spec, the validate skill, which asserts it — and none says what
-kebab-case does to a parenthesis, a slash, an ampersand, an umlaut or a comma. R2 and R3
-rightly make the filename *not* the name; but once `add` computes it and `check` verifies the
-folder form ("an entity's own file is named for its folder"), the derivation must be exact or
-two tools disagree about the same file.
+The same instance filed `Data protection (GDPR)` as `data-protection-gdpr.md` and `CI/CD` as `ci-cd.md`. Three documents say "the filename is the kebab-case of the H1" — the tooling spec's `add`, the instance's spec, the validate skill, which asserts it — and none says what kebab-case does to a parenthesis, a slash, an ampersand, an umlaut or a comma. R2 and R3 rightly make the filename *not* the name; but once `add` computes it and `check` verifies the folder form ("an entity's own file is named for its folder"), the derivation must be exact or two tools disagree about the same file.
 
-Proposed, as the one definition, in the tooling spec's `add` with `CONVENTIONS.md` pointing to
-it: **the filename is the H1 lower-cased, with every run of characters outside `a–z` and `0–9`
-replaced by a single `-`, and leading or trailing `-` removed; an experience is prefixed with
-its start year and `-`.** Examples: `Data protection (GDPR)` → `data-protection-gdpr`,
-`CI/CD` → `ci-cd`, `Software modeling (UML, SysML, C4)` → `software-modeling-uml-sysml-c4`,
-`Zürich office` → `z-rich-office` — the last is ugly and is the point: a non-ASCII letter
-drops rather than being transliterated, so two implementations cannot differ on how. Two H1s
-that derive to the same filename are an error, reported by `check`.
+Proposed, as the one definition, in the tooling spec's `add` with `CONVENTIONS.md` pointing to it: **the filename is the H1 lower-cased, with every run of characters outside `a–z` and `0–9` replaced by a single `-`, and leading or trailing `-` removed; an experience is prefixed with its start year and `-`.** Examples: `Data protection (GDPR)` → `data-protection-gdpr`, `CI/CD` → `ci-cd`, `Software modeling (UML, SysML, C4)` → `software-modeling-uml-sysml-c4`, `Zürich office` → `z-rich-office` — the last is ugly and is the point: a non-ASCII letter drops rather than being transliterated, so two implementations cannot differ on how. Two H1s that derive to the same filename are an error, reported by `check`.
 
 ---
 
@@ -179,8 +135,7 @@ Both halves landed in `v0.2.0`, and building them corrected the proposal twice.
 
 ## 5. The other five, to be written
 
-The instance's build reports carry the material for each; the texts are not drafted here so
-that each is written against its own evidence, not by analogy with `skill`:
+The instance's build reports carry the material for each; the texts are not drafted here so that each is written against its own evidence, not by analogy with `skill`:
 
 - ✅ **`profile`** — written. The three sketched here held, and the instance's table added
   three the sketch did not have: a level is weighed against the evidence beside it rather than

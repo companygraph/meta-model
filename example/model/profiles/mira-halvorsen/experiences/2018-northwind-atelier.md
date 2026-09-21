@@ -27,5 +27,4 @@ skills:
 
 ## Ending
 
-Left in January 2022 when the pipeline work was done and the next problem worth four years was
-somewhere else.
+Left in January 2022 when the pipeline work was done and the next problem worth four years was somewhere else.

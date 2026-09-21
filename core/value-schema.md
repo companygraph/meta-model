@@ -6,9 +6,7 @@
 
 `model/values/*.md`
 
-One file per value. Both source instances kept their values in a single document with a
-heading per value, and a heading has no canonical name — so no strategy, role or process
-could cite the value it upholds, which is the one thing a company's values are for.
+One file per value. Both source instances kept their values in a single document with a heading per value, and a heading has no canonical name — so no strategy, role or process could cite the value it upholds, which is the one thing a company's values are for.
 
 ## Frontmatter
 
@@ -27,11 +25,7 @@ could cite the value it upholds, which is the one thing a company's values are f
 
 ## Purpose
 
-A value is something the company holds itself to, written so that a strategy, a role or a
-process can cite it — which is why it is one file rather than a heading in a list. It answers
-"what does this company refuse to trade away, and how would anyone know?" for someone deciding
-whether to work here, or deciding a hard case where two good options disagree. It is not an
-aspiration and not a slogan: a value nobody could act against is decoration.
+A value is something the company holds itself to, written so that a strategy, a role or a process can cite it — which is why it is one file rather than a heading in a list. It answers "what does this company refuse to trade away, and how would anyone know?" for someone deciding whether to work here, or deciding a hard case where two good options disagree. It is not an aspiration and not a slogan: a value nobody could act against is decoration.
 
 ## Writing rules
 

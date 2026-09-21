@@ -30,5 +30,4 @@ location: Lisbon
 
 ## Summary
 
-Six years across the same two companies as the engineers he works with, on the other side of
-the table: deciding what gets built rather than building it.
+Six years across the same two companies as the engineers he works with, on the other side of the table: deciding what gets built rather than building it.

@@ -9,5 +9,4 @@ rank: 30
 
 ## What it means
 
-Someone at this level makes judgment calls in it and can explain why the alternatives are
-worse. Other people bring them their questions.
+Someone at this level makes judgment calls in it and can explain why the alternatives are worse. Other people bring them their questions.

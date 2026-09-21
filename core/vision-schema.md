@@ -6,8 +6,7 @@
 
 `model/vision.md`
 
-A company has one vision, so the type is a file directly in the container rather than a folder
-(R6, R13), named for the type rather than for the slug of its H1 (R12).
+A company has one vision, so the type is a file directly in the container rather than a folder (R6, R13), named for the type rather than for the slug of its H1 (R12).
 
 ## Frontmatter
 
@@ -26,9 +25,7 @@ A company has one vision, so the type is a file directly in the container rather
 
 ## Purpose
 
-A vision is the future state the company is working toward, stated so that a decision can be
-weighed against it. It is not a plan and not a strategy: it says where, never how, and it holds
-still while the ways of getting there change.
+A vision is the future state the company is working toward, stated so that a decision can be weighed against it. It is not a plan and not a strategy: it says where, never how, and it holds still while the ways of getting there change.
 
 ## Writing rules
 

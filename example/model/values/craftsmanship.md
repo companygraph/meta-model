@@ -8,7 +8,6 @@ source: Local
 
 ## In practice
 
-We refuse a deadline that can only be met by leaving something half-built, and we say so early
-enough that the date can still move.
+We refuse a deadline that can only be met by leaving something half-built, and we say so early enough that the date can still move.
 
 We never ship on time while knowing privately which part will be rewritten within the quarter.

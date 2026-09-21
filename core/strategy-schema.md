@@ -6,8 +6,7 @@
 
 `model/strategies/*.md`
 
-One file per strategy. Nothing owns a strategy and a strategy owns nothing, as with
-`strategic-objective`.
+One file per strategy. Nothing owns a strategy and a strategy owns nothing, as with `strategic-objective`.
 
 ## Frontmatter
 
@@ -31,9 +30,7 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 
 ## Purpose
 
-A strategy is how an objective gets reached — one route among routes that could all have been
-taken, written so that the choice is visible as a choice. It answers "why this way and not the
-other way?" for someone who arrives after the decision and would otherwise re-open it.
+A strategy is how an objective gets reached — one route among routes that could all have been taken, written so that the choice is visible as a choice. It answers "why this way and not the other way?" for someone who arrives after the decision and would otherwise re-open it.
 
 ## Writing rules
 

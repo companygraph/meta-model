@@ -8,16 +8,7 @@
 
 `model/profiles/<profile>/experiences/*.md`
 
-An experience is owned by a profile and cannot exist without it, so it nests inside the
-profile's folder rather than sitting at the root with a `profile:` field pointing back.
-The filename is not the slug of the H1, which is what R12 does by default. It is the start
-year, then a `-`, then a slug naming the period — chosen, not derived: the H1 says what happened
-and makes a long name that neither sorts nor scans, `organization` is optional so a required
-filename cannot come from it, and one organization covers several periods anyway. Whoever writes
-the file picks the shortest thing that identifies it — `2018-northwind-atelier.md`,
-`2019-orbit-conference.md`, `2026-career-break.md` — and the folder then sorts chronologically and
-reads as a career. The year must be the year in `start`, the rest must be a slug by R12, and the
-two together must be unique in the folder.
+An experience is owned by a profile and cannot exist without it, so it nests inside the profile's folder rather than sitting at the root with a `profile:` field pointing back. The filename is not the slug of the H1, which is what R12 does by default. It is the start year, then a `-`, then a slug naming the period — chosen, not derived: the H1 says what happened and makes a long name that neither sorts nor scans, `organization` is optional so a required filename cannot come from it, and one organization covers several periods anyway. Whoever writes the file picks the shortest thing that identifies it — `2018-northwind-atelier.md`, `2019-orbit-conference.md`, `2026-career-break.md` — and the folder then sorts chronologically and reads as a career. The year must be the year in `start`, the rest must be a slug by R12, and the two together must be unique in the folder.
 
 ## Frontmatter
 
@@ -39,21 +30,13 @@ two together must be unique in the folder.
 | --- | --- | --- |
 | `# [Title]` | Yes | The canonical name of this period |
 | `> [Tagline]` | Yes | One-paragraph summary of the period |
-| `## Achievements` | No | Grouped. What was accomplished in this period, as bullets under `###` headings that name achievement kinds |
+| `## Achievements` | No | Grouped. Bulleted. What was accomplished in this period, under `###` headings that name achievement kinds |
 | `## Ending` | No | Why the period ended, where a bare `end` date would otherwise be read into. One or two sentences. |
 | `## References` | No | Table. What a reader can check this entry against |
 
-An `end` date with nothing beside it is read anyway: the reader supplies a reason, and usually a
-worse one than the truth. The section is optional because most periods need none — a talk ends
-when it has been given — and a required one would manufacture noise, or invent. It is only
-meaningful where `end` is set; an ongoing period has not ended.
+An `end` date with nothing beside it is read anyway: the reader supplies a reason, and usually a worse one than the truth. The section is optional because most periods need none — a talk ends when it has been given — and a required one would manufacture noise, or invent. It is only meaningful where `end` is set; an ongoing period has not ended.
 
-It is prose rather than a frontmatter field because a reason is a sentence: it wraps, it may
-carry a colon, and R8 keeps frontmatter for short facts. It is deliberately not an enum either.
-A closed set of endings — resigned, redundancy, contract end — flattens the one thing that
-carries the meaning, does not survive the move between employment cultures, and would be the
-most sensitive field in the model to filter on. What is worth recording here is a sentence
-someone wrote on purpose, not a token someone selected.
+It is prose rather than a frontmatter field because a reason is a sentence: it wraps, it may carry a colon, and R8 keeps frontmatter for short facts. It is deliberately not an enum either. A closed set of endings — resigned, redundancy, contract end — flattens the one thing that carries the meaning, does not survive the move between employment cultures, and would be the most sensitive field in the model to filter on. What is worth recording here is a sentence someone wrote on purpose, not a token someone selected.
 
 `## References` is a table with these columns:
 
@@ -70,11 +53,7 @@ someone wrote on purpose, not a token someone selected.
 
 ## Purpose
 
-An experience is one dated period in a profile's history, and the place a skill claim gets its
-evidence. It answers "what did this person do here, and what does that show?" — so it is
-written from the person's side, not the organization's. What the organization is, what a skill
-means and how strongly the person claims it are all somewhere else; what only this file holds
-is what happened, when, and what it evidences.
+An experience is one dated period in a profile's history, and the place a skill claim gets its evidence. It answers "what did this person do here, and what does that show?" — so it is written from the person's side, not the organization's. What the organization is, what a skill means and how strongly the person claims it are all somewhere else; what only this file holds is what happened, when, and what it evidences.
 
 ## Writing rules
 

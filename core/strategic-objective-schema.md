@@ -6,9 +6,7 @@
 
 `model/strategic-objectives/*.md`
 
-One file per objective. Nothing owns an objective and an objective owns nothing, as with
-`value` — and a strategy cites the objective it serves by name, which a heading in a shared
-document could not offer.
+One file per objective. Nothing owns an objective and an objective owns nothing, as with `value` — and a strategy cites the objective it serves by name, which a heading in a shared document could not offer.
 
 ## Frontmatter
 
@@ -29,10 +27,7 @@ document could not offer.
 
 ## Purpose
 
-A strategic objective is what must become true for the vision to be reached — the layer between
-a direction that holds still and the strategies that change under it. It answers "what are we
-trying to make true, that we are not sure of yet?" for someone weighing whether a piece of work
-is worth doing at all.
+A strategic objective is what must become true for the vision to be reached — the layer between a direction that holds still and the strategies that change under it. It answers "what are we trying to make true, that we are not sure of yet?" for someone weighing whether a piece of work is worth doing at all.
 
 ## Writing rules
 
