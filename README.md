@@ -14,7 +14,7 @@ core/              the shipped unit, copied whole into an instance
   *-schema.md      one per type: identity, vision, profile, experience,
                    experience-kind, achievement-kind, skill, proficiency-level,
                    value, source, surface, strategic-objective, strategy, role,
-                   process, phase, track
+                   process, phase, track, product, feature, domain, concept
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
 example/           a fictional company, described in those types
@@ -64,7 +64,7 @@ The server sits beside the tooling rather than between core and an instance: it 
 
 ## Status
 
-Past its first release and in use by a real instance, with the tooling and some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, role, process, phase and track. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. What is not there yet is the tooling, designed and not built, and the rest of the types the design names; the roadmap below says which.
+Past its first release and in use by a real instance, with the tooling and some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, role, process, phase, track, product, feature, domain and concept. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. What is not there yet is the tooling, designed and not built, and the rest of the types the design names; the roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md), and the specs that followed sit beside it in `docs/superpowers/specs/`.
 
@@ -86,7 +86,7 @@ Setting that up and keeping it current is the tooling's job — roadmap item 5, 
 
 ## Packs
 
-Core is the vocabulary any company can be described in. A **pack** adds vocabulary that only some kinds of company need *at all* — types that are absent rather than optional. A company that builds a product has features, architecture decisions and roadmaps; a consultancy has none of those and should not carry empty folders implying it forgot.
+Core is the vocabulary any company can be described in. A **pack** adds vocabulary that only some kinds of company need *at all* — types that are absent rather than optional. A company that builds software keeps architecture decisions and roadmaps; a consultancy has neither and should not carry empty folders implying it forgot.
 
 That is the difference between a pack and an unused core type. Core defines a type without obliging you to populate it: a company that does not group what its people have achieved writes no `achievement-kind`, and the type stays in core either way. A pack is for vocabulary that would not belong at all.
 

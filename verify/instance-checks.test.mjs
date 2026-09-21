@@ -220,6 +220,94 @@ test("a missing enum field is named with its permitted values", () => {
   assert.match(hit, /agent/);
 });
 
+test("a column typed enum is held to the values its schema lists", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | `high` or `low`. How sure. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |", "| It compiles | maybe |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.ok(
+    failures.some((f) => f.includes("Confidence") && f.includes("maybe") && f.includes("R8")),
+    `expected a column enum failure, got: ${failures.join(" | ")}`,
+  );
+});
+
+test("a blank required column enum is named with its permitted values", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | `high` or `low`. How sure. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |", "| It compiles | |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("has no confidence"));
+  assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
+  assert.match(hit, /one of `high`, `low`/);
+});
+
+test("a column enum with no readable list fails once at the schema, not once per row", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | How sure this is. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |",
+      "| It compiles | high |",
+      "| It runs | low |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hits = failures.filter(
+    (f) => f.includes("skill-schema.md") && f.includes("Confidence") && f.includes("no readable list"),
+  );
+  assert.equal(hits.length, 1, `expected exactly one schema failure, got: ${failures.join(" | ")}`);
+});
+
 test("a required list field with no items fails, and one with an item passes", () => {
   const PHASE_SCHEMA = schema("phase", [
     "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
@@ -1106,4 +1194,88 @@ test("a phase with no track heading passes where the instance holds a track: its
     ["model/processes/delivery/phases/build.md", "# Build\n\n> Make it.\n\n## Activities\n\n1. One thing.\n2. Another.\n"],
   ]);
   assert.deepEqual(failures.filter((f) => f.includes("Activities")), []);
+});
+
+test("a repeated reference in a table names the role each row plays", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. Required where two rows name the same skill. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", "| Maven | builds |", "| Maven | |",
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.ok(
+    failures.some((f) => f.includes("Maven") && f.includes("As")),
+    `expected a repeated-reference failure, got: ${failures.join(" | ")}`,
+  );
+});
+
+// The same schema as the test above, with the relation rows supplied per case, so each test
+// below differs from it in the rows alone.
+const relationsFiles = (rows) =>
+  new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. Required where two rows name the same skill. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", ...rows,
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+test("two rows naming one entity with the same role fail", () => {
+  const { failures } = checkInstance(relationsFiles(["| Maven | builds |", "| Maven | builds |"]), {
+    core: "meta/core",
+    model: "model",
+  });
+  const hits = failures.filter((f) => f.includes('"Maven"'));
+  assert.equal(hits.length, 1, `expected one shared-role failure, got: ${failures.join(" | ")}`);
+  assert.match(hits[0], /java\.md/);
+  assert.match(hits[0], /## Relations/);
+  assert.match(hits[0], /more than one carries `As` "builds"/);
+});
+
+test("a repeated entity with one blank role is reported once, not once per row", () => {
+  const { failures } = checkInstance(
+    relationsFiles(["| Maven | builds |", "| Maven | tests |", "| Maven | |"]),
+    { core: "meta/core", model: "model" },
+  );
+  const hits = failures.filter((f) => f.includes('"Maven"'));
+  assert.equal(hits.length, 1, `expected exactly one failure for Maven, got: ${failures.join(" | ")}`);
+  assert.match(hits[0], /in 3 rows and 1 of them leaves `As` blank/);
+});
+
+test("two rows naming one entity with distinct roles pass", () => {
+  const { failures } = checkInstance(relationsFiles(["| Maven | builds |", "| Maven | tests |"]), {
+    core: "meta/core",
+    model: "model",
+  });
+  assert.deepEqual(failures.filter((f) => f.includes("Maven")), []);
 });
