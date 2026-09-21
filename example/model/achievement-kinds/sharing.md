@@ -10,9 +10,6 @@ rank: 30
 
 ## What it means
 
-An achievement whose claim is that people outside the work now know something: a conference
-talk, a published case, a workshop for another team. The audience is the point of the bullet
-and the bullet names it.
+An achievement whose claim is that people outside the work now know something: a conference talk, a published case, a workshop for another team. The audience is the point of the bullet and the bullet names it.
 
-Explaining a decision to the people who had to accept it is part of Decisions, not this. A
-talk about work done elsewhere is this kind even when the entry exists only for the talk.
+Explaining a decision to the people who had to accept it is part of Decisions, not this. A talk about work done elsewhere is this kind even when the entry exists only for the talk.

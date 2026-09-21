@@ -9,23 +9,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Ship the first release of the CompanyGraph meta-model — four core schemas
-(`profile`, `experience`, `skill`, `value`), the portable conventions extracted from a source
-instance's agent-instruction file, and a synthetic example instance that reads end to end.
+**Goal:** Ship the first release of the CompanyGraph meta-model — four core schemas (`profile`, `experience`, `skill`, `value`), the portable conventions extracted from a source instance's agent-instruction file, and a synthetic example instance that reads end to end.
 
-**Architecture:** The deliverable is a graph of Markdown files, not code. Verification is a
-zero-dependency Node script (`verify/check.mjs`) that asserts two things only: this
-repository's own schema files match the fixed shape, and `example/` obeys the conventions. It
-is deliberately **not** the validator the spec defers — it never reads a schema as truth about
-somebody else's instance. Each task adds its check first (red), then the content that
-satisfies it (green).
+**Architecture:** The deliverable is a graph of Markdown files, not code. Verification is a zero-dependency Node script (`verify/check.mjs`) that asserts two things only: this repository's own schema files match the fixed shape, and `example/` obeys the conventions. It is deliberately **not** the validator the spec defers — it never reads a schema as truth about somebody else's instance. Each task adds its check first (red), then the content that satisfies it (green).
 
 **Tech Stack:** Markdown. Node 18+ for `verify/check.mjs`, no dependencies, no build step.
 
-**Spec:** [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](../specs/2026-08-23-companygraph-design.md)
-— read §4 (Types, Naming, Edges), §5 (Schemas), §6 (Splitting the agent instructions) and §9
-(First release) before starting. The plan argues from the spec; where they disagree, the spec
-wins and the plan is wrong.
+**Spec:** [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](../specs/2026-08-23-companygraph-design.md) — read §4 (Types, Naming, Edges), §5 (Schemas), §6 (Splitting the agent instructions) and §9 (First release) before starting. The plan argues from the spec; where they disagree, the spec wins and the plan is wrong.
 
 ## Global Constraints
 
@@ -71,15 +61,13 @@ example/profiles/<person>/          1 profile folder, its own file + experiences
 README.md                           modified: status, how to instantiate
 ```
 
-`verify/check.mjs` stays one file. It is small, every check shares the same loaded-file
-helpers, and splitting it by check type would separate things that change together.
+`verify/check.mjs` stays one file. It is small, every check shares the same loaded-file helpers, and splitting it by check type would separate things that change together.
 
 ---
 
 ### Task 1: Verify harness and the first schema
 
-The simplest type first: `skill` owns nothing, has one optional frontmatter field, and
-exercises the fixed shape without the owner or enum branches.
+The simplest type first: `skill` owns nothing, has one optional frontmatter field, and exercises the fixed shape without the owner or enum branches.
 
 **Files:**
 
@@ -241,8 +229,7 @@ console.log(`✓ ${CHECKS.length} checks passed`);
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `core/meta/skill-schema.md is missing`, exit code 1.
+Run: `npm run verify` Expected: FAIL with `core/meta/skill-schema.md is missing`, exit code 1.
 
 - [ ] **Step 3: Write the schema**
 
@@ -277,8 +264,7 @@ a role requires one, and it outlives both.
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 2 checks passed`, exit code 0.
+Run: `npm run verify` Expected: PASS — `✓ 2 checks passed`, exit code 0.
 
 - [ ] **Step 5: Commit**
 
@@ -291,8 +277,7 @@ git commit -m "Check the repository's own shape, starting with one schema"
 
 ### Task 2: The value schema and the no-frontmatter branch
 
-`value` has no frontmatter at all. The shape check currently demands a frontmatter table, so
-it will reject a legitimate schema — that is the red.
+`value` has no frontmatter at all. The shape check currently demands a frontmatter table, so it will reject a legitimate schema — that is the red.
 
 **Files:**
 
@@ -319,8 +304,7 @@ export const TYPES = [
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `core/meta/value-schema.md is missing`.
+Run: `npm run verify` Expected: FAIL with `core/meta/value-schema.md is missing`.
 
 - [ ] **Step 3: Write the schema**
 
@@ -354,9 +338,7 @@ No YAML frontmatter.
 
 - [ ] **Step 4: Run it to verify it still fails, for the right reason**
 
-Run: `npm run verify`
-Expected: FAIL with `core/meta/value-schema.md: "## Frontmatter" has no table`. This is the
-check being wrong, not the schema.
+Run: `npm run verify` Expected: FAIL with `core/meta/value-schema.md: "## Frontmatter" has no table`. This is the check being wrong, not the schema.
 
 - [ ] **Step 5: Fix the check**
 
@@ -379,8 +361,7 @@ In `verify/check.mjs`, replace the frontmatter branch inside `schema fixed shape
         }
 ```
 
-Then delete the old `const fm = tableOf(...)` block and remove `fm` from the trailing
-`for (const t of [fm, sec])` loop, leaving:
+Then delete the old `const fm = tableOf(...)` block and remove `fm` from the trailing `for (const t of [fm, sec])` loop, leaving:
 
 ```js
         for (const row of sec?.rows ?? [])
@@ -390,8 +371,7 @@ Then delete the old `const fm = tableOf(...)` block and remove `fm` from the tra
 
 - [ ] **Step 6: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 2 checks passed`.
+Run: `npm run verify` Expected: PASS — `✓ 2 checks passed`.
 
 - [ ] **Step 7: Commit**
 
@@ -404,8 +384,7 @@ git commit -m "Give a value its own file, and the checker a way to say 'no field
 
 ### Task 3: The profile schema, a folder entity
 
-`profile` is the first type whose entities are folders, and the first with an `object array`
-carrying an `enum`.
+`profile` is the first type whose entities are folders, and the first with an `object array` carrying an `enum`.
 
 **Files:**
 
@@ -466,8 +445,7 @@ Add a third entry to `CHECKS`:
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `core/meta/profile-schema.md is missing`.
+Run: `npm run verify` Expected: FAIL with `core/meta/profile-schema.md is missing`.
 
 - [ ] **Step 3: Write the schema**
 
@@ -512,10 +490,7 @@ operation and an orphaned experience is unrepresentable.
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 3 checks passed`. The `skills` entries table is a second table in the
-section; `tableOf` reads only the first, which is the frontmatter table, so `object array` is
-what gets vocabulary-checked.
+Run: `npm run verify` Expected: PASS — `✓ 3 checks passed`. The `skills` entries table is a second table in the section; `tableOf` reads only the first, which is the frontmatter table, so `object array` is what gets vocabulary-checked.
 
 - [ ] **Step 5: Commit**
 
@@ -591,8 +566,7 @@ Add a fourth entry to `CHECKS`:
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `core/meta/experience-schema.md is missing`.
+Run: `npm run verify` Expected: FAIL with `core/meta/experience-schema.md is missing`.
 
 - [ ] **Step 3: Write the schema**
 
@@ -634,8 +608,7 @@ Filenames are prefixed with the start year so the folder sorts chronologically:
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 4 checks passed`.
+Run: `npm run verify` Expected: PASS — `✓ 4 checks passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -648,9 +621,7 @@ git commit -m "Nest an experience in its profile, and say so once"
 
 ### Task 5: CONVENTIONS.md, extracted rule by rule
 
-The spec calls this the main work of the first release (§6) and the point where publishing
-most easily goes wrong. Each rule gets an id, and the checker's `rule:` fields are verified
-against them — so a check enforcing a rule nobody wrote down is a failure.
+The spec calls this the main work of the first release (§6) and the point where publishing most easily goes wrong. Each rule gets an id, and the checker's `rule:` fields are verified against them — so a check enforcing a rule nobody wrote down is a failure.
 
 **Files:**
 
@@ -664,8 +635,7 @@ against them — so a check enforcing a rule nobody wrote down is a failure.
 
 - [ ] **Step 1: Write the failing test**
 
-In `verify/check.mjs`, add a fifth entry to `CHECKS`. It needs to see the `CHECKS` array, so
-place it last and reference `CHECKS` lazily inside `run()`:
+In `verify/check.mjs`, add a fifth entry to `CHECKS`. It needs to see the `CHECKS` array, so place it last and reference `CHECKS` lazily inside `run()`:
 
 ```js
   {
@@ -684,8 +654,7 @@ place it last and reference `CHECKS` lazily inside `run()`:
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `CONVENTIONS.md is missing`.
+Run: `npm run verify` Expected: FAIL with `CONVENTIONS.md is missing`.
 
 - [ ] **Step 3: Write the conventions**
 
@@ -772,8 +741,7 @@ is really about modelling rather than about one company's tooling.
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 5 checks passed`.
+Run: `npm run verify` Expected: PASS — `✓ 5 checks passed`.
 
 - [ ] **Step 5: Commit**
 
@@ -786,8 +754,7 @@ git commit -m "Extract the portable rules, and make the checker cite them"
 
 ### Task 6: The example instance
 
-A small fictional company that reads end to end, and the checks that prove the schemas
-describe something real rather than something plausible.
+A small fictional company that reads end to end, and the checks that prove the schemas describe something real rather than something plausible.
 
 **Files:**
 
@@ -806,8 +773,7 @@ describe something real rather than something plausible.
 
 - [ ] **Step 1: Write the failing test**
 
-In `verify/check.mjs`, add `readdirSync` and `statSync` to the `node:fs` import, then add two
-checks before the `rules are written down` entry:
+In `verify/check.mjs`, add `readdirSync` and `statSync` to the `node:fs` import, then add two checks before the `rules are written down` entry:
 
 ```js
   {
@@ -898,8 +864,7 @@ checks before the `rules are written down` entry:
 
 - [ ] **Step 2: Run it to verify it fails**
 
-Run: `npm run verify`
-Expected: FAIL with `example/ is missing`.
+Run: `npm run verify` Expected: FAIL with `example/ is missing`.
 
 - [ ] **Step 3: Write the example instance**
 
@@ -1060,21 +1025,15 @@ the part that is not finished.
 
 - [ ] **Step 4: Run it to verify it passes**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 7 checks passed`.
+Run: `npm run verify` Expected: PASS — `✓ 7 checks passed`.
 
 - [ ] **Step 5: Prove the checks bite**
 
-Temporarily change `level: medior` to `level: expert` in
-`example/profiles/mira-halvorsen/mira-halvorsen.md` and run `npm run verify`.
-Expected: FAIL with `level "expert" is not beginner, medior or senior`.
+Temporarily change `level: medior` to `level: expert` in `example/profiles/mira-halvorsen/mira-halvorsen.md` and run `npm run verify`. Expected: FAIL with `level "expert" is not beginner, medior or senior`.
 
-Temporarily change `skills: [Java Programming]` to `skills: [Java]` in
-`example/profiles/mira-halvorsen/experiences/2018-northwind-atelier.md` and run again.
-Expected: FAIL with `skill "Java" resolves to nothing in example/skills/`.
+Temporarily change `skills: [Java Programming]` to `skills: [Java]` in `example/profiles/mira-halvorsen/experiences/2018-northwind-atelier.md` and run again. Expected: FAIL with `skill "Java" resolves to nothing in example/skills/`.
 
-Revert both edits and confirm `npm run verify` passes again. A check that has never failed is
-not known to work.
+Revert both edits and confirm `npm run verify` passes again. A check that has never failed is not known to work.
 
 - [ ] **Step 6: Commit**
 
@@ -1087,8 +1046,7 @@ git commit -m "Describe a fictional company, and prove the checks bite"
 
 ### Task 7: README
 
-The repository's front door has said "design agreed, nothing built yet" since the first
-commit. It is now wrong.
+The repository's front door has said "design agreed, nothing built yet" since the first commit. It is now wrong.
 
 **Files:**
 
@@ -1144,8 +1102,7 @@ See [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpower
 
 - [ ] **Step 2: Run the checks one final time**
 
-Run: `npm run verify`
-Expected: PASS — `✓ 7 checks passed`.
+Run: `npm run verify` Expected: PASS — `✓ 7 checks passed`.
 
 - [ ] **Step 3: Commit**
 

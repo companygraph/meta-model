@@ -96,8 +96,7 @@ In `lib/checks.mjs`, insert both entries immediately after the `role` line and b
 
 - [ ] **Step 2: Run verify to see it fail**
 
-Run: `cd ~/git/companygraph/meta-model && npm run verify`
-Expected: FAIL, exactly two problems:
+Run: `cd ~/git/companygraph/meta-model && npm run verify` Expected: FAIL, exactly two problems:
 
 ```
 ✗ 2 problems
@@ -257,8 +256,7 @@ its end does not scale at all.
 
 - [ ] **Step 5: Run verify to see it pass**
 
-Run: `cd ~/git/companygraph/meta-model && npm run verify`
-Expected: PASS, `✓ 15 checks passed`.
+Run: `cd ~/git/companygraph/meta-model && npm run verify` Expected: PASS, `✓ 15 checks passed`.
 
 If `schema fixed shape` fails, the cause is almost always one of: a section in the wrong order, a `Table.` section with no column table (or the reverse), a column table whose caption line does not read exactly `` `## Tracks` is a table with these columns: ``, or a type outside the closed vocabulary.
 
@@ -362,8 +360,7 @@ Note: the fixture's `schema()` helper writes the File Location as `` `<type>s/` 
 
 - [ ] **Step 2: Run the tests to verify they fail**
 
-Run: `cd ~/git/companygraph/meta-model && npm run test:instance-checks`
-Expected: FAIL on the first test with "expected a failure for the empty list". The second test passes already, and stays as a guard.
+Run: `cd ~/git/companygraph/meta-model && npm run test:instance-checks` Expected: FAIL on the first test with "expected a failure for the empty list". The second test passes already, and stays as a guard.
 
 - [ ] **Step 3: Write the check**
 
@@ -411,8 +408,7 @@ In `lib/checks.mjs`, insert this object into the array returned by `instanceChec
 
 - [ ] **Step 4: Run the tests to verify they pass**
 
-Run: `cd ~/git/companygraph/meta-model && npm run test:instance-checks`
-Expected: PASS, both new tests green.
+Run: `cd ~/git/companygraph/meta-model && npm run test:instance-checks` Expected: PASS, both new tests green.
 
 - [ ] **Step 5: Run the whole suite**
 
@@ -474,9 +470,7 @@ cd ~/git/companygraph/meta-model
 grep -h '^# ' example/model/sources/*.md example/model/roles/*.md
 ```
 
-Expected: `Local`, `Google Workspace`, `Reviewer`, `Backend Engineer`. The files below use `Local`
-as the source and those two role names verbatim. If any of these four strings has changed since
-this plan was written, the files below must change with it or the references will not resolve.
+Expected: `Local`, `Google Workspace`, `Reviewer`, `Backend Engineer`. The files below use `Local` as the source and those two role names verbatim. If any of these four strings has changed since this plan was written, the files below must change with it or the references will not resolve.
 
 - [ ] **Step 2: Write the process file**
 
@@ -688,8 +682,7 @@ Where they cannot be met, the Reviewer decides whether the release is rolled bac
 
 - [ ] **Step 4: Run verify to see the example accepted**
 
-Run: `cd ~/git/companygraph/meta-model && npm run verify`
-Expected: PASS, `✓ 15 checks passed`.
+Run: `cd ~/git/companygraph/meta-model && npm run verify` Expected: PASS, `✓ 15 checks passed`.
 
 Likely failures and what they mean: `references resolve` naming a `source`, an `owner` or a `gate-approvers` means one of the four names from Step 1 is misspelled. `filenames derive` means a filename is not the slug of its H1. `the container holds what the types imply` means the folder is not `example/model/processes/<name>/<name>.md` plus `phases/`. `required list fields carry at least one item` means an `executed-by` or `gate-approvers` was written with no entries under it.
 

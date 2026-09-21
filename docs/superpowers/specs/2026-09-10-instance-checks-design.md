@@ -1,27 +1,16 @@
 # The instance checks ship from here, and read the instance's own core
 
-R16 is called *An instance is held to what its schema declares*. The check that enforces it is
-called *the example is held to what the schemas declare*, and `example/` is the only tree it
-has ever read. Eight of the fourteen checks in `verify/check.mjs` are that shape: written about
-an instance, bound to this repository by a constant, run against twenty-six Markdown files that
-were written to pass them.
+R16 is called *An instance is held to what its schema declares*. The check that enforces it is called *the example is held to what the schemas declare*, and `example/` is the only tree it has ever read. Eight of the fourteen checks in `verify/check.mjs` are that shape: written about an instance, bound to this repository by a constant, run against twenty-six Markdown files that were written to pass them.
 
-The reference instance holds one hundred thirty-one Markdown files under `model/` and nothing
-mechanical reads them. Run against those files, the eight report one failure, and the failure is
-published: a node in the graph blust.ch serves points at itself. This spec ships the eight checks
-from the package so an instance can run them, and settles the question that makes the move harder
-than the parser's: **which copy of core they validate against.**
+The reference instance holds one hundred thirty-one Markdown files under `model/` and nothing mechanical reads them. Run against those files, the eight report one failure, and the failure is published: a node in the graph blust.ch serves points at itself. This spec ships the eight checks from the package so an instance can run them, and settles the question that makes the move harder than the parser's: **which copy of core they validate against.**
 
-Status: proposed. Decided on 2026-09-10 against this repository at `main` at 0.19.0, and against
-`robertblust/mental-model` at `main`. Every number below was counted. It replaces a draft of
-2026-09-04 that was never merged and whose counts no longer hold.
+Status: proposed. Decided on 2026-09-10 against this repository at `main` at 0.19.0, and against `robertblust/mental-model` at `main`. Every number below was counted. It replaces a draft of 2026-09-04 that was never merged and whose counts no longer hold.
 
 ---
 
 ## What is true today, measured
 
-`npm run verify` reports fourteen checks. Eight of them read the content tree — `EX`, which
-`verify/check.mjs:65` defines as `example/${MODEL}` — and six read only `core/`.
+`npm run verify` reports fourteen checks. Eight of them read the content tree — `EX`, which `verify/check.mjs:65` defines as `example/${MODEL}` — and six read only `core/`.
 
 | Reads a content tree, and moves | Asserts about core itself, and stays |
 | --- | --- |
@@ -34,23 +23,15 @@ Status: proposed. Decided on 2026-09-10 against this repository at `main` at 0.1
 | date fields carry a date in one of the three forms | |
 | filenames derive, or take the form their schema states | |
 
-The split is not a judgment. A check moves if it reads a content tree, and the eighth mover
-arrived on 2026-09-08 with R16 — which is the rule most obviously written about somebody else's
-repository and the one most obviously checked only here.
+The split is not a judgment. A check moves if it reads a content tree, and the eighth mover arrived on 2026-09-08 with R16 — which is the rule most obviously written about somebody else's repository and the one most obviously checked only here.
 
-The six that stay assert that this repository's schema files hold the shape R9 states, that no
-schema types a field outside the vocabulary, that the manifest matches what ships, and that
-every check names a rule the prose still contains. An instance vendors core and may not edit
-it, so an instance running them would check bytes it is forbidden to change.
+The six that stay assert that this repository's schema files hold the shape R9 states, that no schema types a field outside the vocabulary, that the manifest matches what ships, and that every check names a rule the prose still contains. An instance vendors core and may not edit it, so an instance running them would check bytes it is forbidden to change.
 
-The moved eight keep running against `example/`, called from the package with this
-repository's own root. That is the point of the split rather than a concession to it: the code
-an instance depends on is exercised here on every commit, not only downstream.
+The moved eight keep running against `example/`, called from the package with this repository's own root. That is the point of the split rather than a concession to it: the code an instance depends on is exercised here on every commit, not only downstream.
 
 ## What the eight find, run once against the instance
 
-The eight were run against `robertblust/mental-model` at `main`, with the instance's `model/` as
-the content tree and its own vendored `meta/core/` as the rules. They report one failure:
+The eight were run against `robertblust/mental-model` at `main`, with the instance's `model/` as the content tree and its own vendored `meta/core/` as the rules. They report one failure:
 
 ```
 model/profiles/robert-blust/experiences/2019-aroov-realestate.md: `organization` is
@@ -58,10 +39,7 @@ declared `ref? → identity` and says "Aroov", which names an entity of type exp
 not identity; R16 lands a reference on the type it declares
 ```
 
-That file's H1 is `# Aroov` and its own frontmatter says `organization: Aroov`. The parser
-consults no schema, so a scalar becomes an edge when it matches any entity's H1 — here, the
-page's own — and `model.json` at `70496b0`, the commit blust.ch pins and publishes, carries the
-result:
+That file's H1 is `# Aroov` and its own frontmatter says `organization: Aroov`. The parser consults no schema, so a scalar becomes an edge when it matches any entity's H1 — here, the page's own — and `model.json` at `70496b0`, the commit blust.ch pins and publishes, carries the result:
 
 ```json
 {"from": "profiles/robert-blust/experiences/2019-aroov-realestate",
@@ -69,85 +47,35 @@ result:
  "via":  "organization"}
 ```
 
-It is the only `organization` edge among the graph's five hundred twenty-one. **The prose is
-correct and the graph is wrong**, which is the whole class of error a mechanical check exists
-for: the schema says `organization` draws an edge when it names the company the instance
-describes and stays a fact when it names anyone else, Aroov is a client, and it was written that
-way. Nothing in the diff looks wrong, because nothing in the diff is wrong. The R0 agent pass
-reads entities and did not find it; five hundred twenty-one edges are past what reading finds.
+It is the only `organization` edge among the graph's five hundred twenty-one. **The prose is correct and the graph is wrong**, which is the whole class of error a mechanical check exists for: the schema says `organization` draws an edge when it names the company the instance describes and stays a fact when it names anyone else, Aroov is a client, and it was written that way. Nothing in the diff looks wrong, because nothing in the diff is wrong. The R0 agent pass reads entities and did not find it; five hundred twenty-one edges are past what reading finds.
 
-The run also found something about the checks rather than the instance. Before reaching that
-failure the checker **threw** — `ENOTDIR` on `model/profiles/README.md`. The instance keeps a
-README in six type folders and `example/` keeps one only at the container root, so the
-`example structure` check walks a folder entity's name into `readdirSync` and meets a file. The eight have only
-ever read a tree written to pass them, and first contact with a hand-written one raised a stack
-trace. Two things follow, and they are requirements, not observations: the container's README
-shape is what an instance actually does and the checks have to know it, and **a check that meets
-a file where it expected a folder fails by name and never throws** — a stack trace names no rule,
-cites no file a maintainer can open, and turns a report that says what it did not check into no
-report at all.
+The run also found something about the checks rather than the instance. Before reaching that failure the checker **threw** — `ENOTDIR` on `model/profiles/README.md`. The instance keeps a README in six type folders and `example/` keeps one only at the container root, so the `example structure` check walks a folder entity's name into `readdirSync` and meets a file. The eight have only ever read a tree written to pass them, and first contact with a hand-written one raised a stack trace. Two things follow, and they are requirements, not observations: the container's README shape is what an instance actually does and the checks have to know it, and **a check that meets a file where it expected a folder fails by name and never throws** — a stack trace names no rule, cites no file a maintainer can open, and turns a report that says what it did not check into no report at all.
 
 ## Where the checker lives
 
 Two alternatives were already answered, and only one of the answers still stands.
 
-**The design package stays rejected**, on the reasoning the instance parser spec gave on
-2026-09-02: that package is "type, colour, chrome and shared checks", and a conventions checker
-sits nearer that boundary than a parser does, not further. It cites rule numbers by name; the
-rules are `core/CONVENTIONS.md`, in this repository.
+**The design package stays rejected**, on the reasoning the instance parser spec gave on 2026-09-02: that package is "type, colour, chrome and shared checks", and a conventions checker sits nearer that boundary than a parser does, not further. It cites rule numbers by name; the rules are `core/CONVENTIONS.md`, in this repository.
 
-**The tooling repository's claim is amended.** §6 of `2026-08-25-companygraph-tooling-design.md`
-put the shared reader in `companygraph/tooling` and had this repository vendor it byte-identical
-with a hash check, so that `tooling check` checked an instance and `verify/check.mjs` checked
-this repository on top of the same file. **The flow reverses: the reader lives here, and
-`tooling check` takes it from here when it is built.** Three facts decided that, all of them
-later than the spec being amended. `companygraph/tooling` does not exist, while the instance is
-published, pinned by a site and unchecked today. The parser settled the direction on 2026-09-02
-by moving into this repository rather than waiting for tooling, and it has a consumer: blust.ch
-carries `"companygraph-meta-model": "github:companygraph/meta-model#v0.19.0"` in
-`devDependencies` and imports `parseInstance` from it. And a CLI is a way to run a check, not
-the thing that decides what a rule means; nothing in §6's boundary — the three R9 tables read by
-position, a schema off the fixed shape refused rather than read leniently, no value typed and no
-judgment made — depends on which repository the reader ships from.
+**The tooling repository's claim is amended.** §6 of `2026-08-25-companygraph-tooling-design.md` put the shared reader in `companygraph/tooling` and had this repository vendor it byte-identical with a hash check, so that `tooling check` checked an instance and `verify/check.mjs` checked this repository on top of the same file. **The flow reverses: the reader lives here, and `tooling check` takes it from here when it is built.** Three facts decided that, all of them later than the spec being amended. `companygraph/tooling` does not exist, while the instance is published, pinned by a site and unchecked today. The parser settled the direction on 2026-09-02 by moving into this repository rather than waiting for tooling, and it has a consumer: blust.ch carries `"companygraph-meta-model": "github:companygraph/meta-model#v0.19.0"` in `devDependencies` and imports `parseInstance` from it. And a CLI is a way to run a check, not the thing that decides what a rule means; nothing in §6's boundary — the three R9 tables read by position, a schema off the fixed shape refused rather than read leniently, no value typed and no judgment made — depends on which repository the reader ships from.
 
 ## The root is a parameter, and so is core
 
-`ROOT` is computed from `import.meta.url` and `EX` from `ROOT`; `fieldsOf` reads
-`core/<type>-schema.md` under the same root. All three become arguments, for the reason the
-design package documents against itself: "`REPO_ROOT` belongs to the site, and `root` is always
-a parameter here. A package module that works out where it is resolves inside `node_modules`;
-that shipped once already, as `SITE_ROOT` in `verify/design.mjs`, and cost a release to undo."
+`ROOT` is computed from `import.meta.url` and `EX` from `ROOT`; `fieldsOf` reads `core/<type>-schema.md` under the same root. All three become arguments, for the reason the design package documents against itself: "`REPO_ROOT` belongs to the site, and `root` is always a parameter here. A package module that works out where it is resolves inside `node_modules`; that shipped once already, as `SITE_ROOT` in `verify/design.mjs`, and cost a release to undo."
 
-The second half is new, and it is the central decision of this spec. **The checker reads the
-schemas from the instance's own vendored `meta/`, never from the package's `core/`.**
+The second half is new, and it is the central decision of this spec. **The checker reads the schemas from the instance's own vendored `meta/`, never from the package's `core/`.**
 
-An instance sits on a version of core and stays there; `.companygraph/manifest.json` records
-which release, and a hash per file. If the checker validated against the core bundled with the
-package, a package upgrade would silently re-validate an instance against rules it never
-adopted — a field added upstream becoming required in a repository that pinned the release
-before it, and a green instance turning red for a change it did not make. In the other
-direction, a rule relaxed upstream would stop being enforced in an instance still claiming the
-stricter release.
+An instance sits on a version of core and stays there; `.companygraph/manifest.json` records which release, and a hash per file. If the checker validated against the core bundled with the package, a package upgrade would silently re-validate an instance against rules it never adopted — a field added upstream becoming required in a repository that pinned the release before it, and a green instance turning red for a change it did not make. In the other direction, a rule relaxed upstream would stop being enforced in an instance still claiming the stricter release.
 
-So the package ships the algorithm, and the instance supplies the content and the rules both.
-That inverts what a validator library usually does, and it is the only arrangement under which
-"an instance sits on a version of core" survives contact with tooling.
+So the package ships the algorithm, and the instance supplies the content and the rules both. That inverts what a validator library usually does, and it is the only arrangement under which "an instance sits on a version of core" survives contact with tooling.
 
 ## Version skew, and the slot the manifest reserves
 
-This repository has one version number today: `package.json` and `core/manifest.json` both read
-0.19.0. **They are the same number until a release changes no schema**, and the first one that
-does not — the release that ships these checks — separates them: `package.json` moves and
-`core/manifest.json` stays, because a core whose bytes did not change must not make every
-vendored copy read as behind. So the number to compare a vendored core against is core's own,
-never the package's, which is the reading the check below was going to take anyway.
+This repository has one version number today: `package.json` and `core/manifest.json` both read 0.19.0. **They are the same number until a release changes no schema**, and the first one that does not — the release that ships these checks — separates them: `package.json` moves and `core/manifest.json` stays, because a core whose bytes did not change must not make every vendored copy read as behind. So the number to compare a vendored core against is core's own, never the package's, which is the reading the check below was going to take anyway.
 
-Skew is therefore not between two release streams but between two pins in the same instance —
-the core it vendored and the release its workflow calls.
+Skew is therefore not between two release streams but between two pins in the same instance — the core it vendored and the release its workflow calls.
 
-Today those agree. `robertblust/mental-model` vendors core 0.19.0 at shape 2, which is this
-repository's current release, so the skew is zero and every check would run. That is the
-argument for settling the contract now rather than at the first upgrade that opens a gap.
+Today those agree. `robertblust/mental-model` vendors core 0.19.0 at shape 2, which is this repository's current release, so the skew is zero and every check would run. That is the argument for settling the contract now rather than at the first upgrade that opens a gap.
 
 The manifest already carries the slot:
 
@@ -159,49 +87,21 @@ The manifest already carries the slot:
 }
 ```
 
-The checker reads `core.version` before it runs. Where a check exists for a rule the vendored
-core predates, it is **skipped and named** — never silently, and never as a failure. That is the
-contract the agent pass already ends on: a report says what it did not check, so a clean report
-is never read as more than it is.
+The checker reads `core.version` before it runs. Where a check exists for a rule the vendored core predates, it is **skipped and named** — never silently, and never as a failure. That is the contract the agent pass already ends on: a report says what it did not check, so a clean report is never read as more than it is.
 
-`tooling` names the release the instance's workflow calls, and it is written by the same
-editorial act that moves the workflow's tag line, because the family's rule is that everything
-one repository takes from another is pinned by a visible line in the taking repository. Two
-lines, one decision, and the workflow guards that they agree.
+`tooling` names the release the instance's workflow calls, and it is written by the same editorial act that moves the workflow's tag line, because the family's rule is that everything one repository takes from another is pinned by a visible line in the taking repository. Two lines, one decision, and the workflow guards that they agree.
 
 ## What the instance side needs
 
-Two of the three gaps a reader would expect are already closed, by work that landed after the
-draft this replaces. `robertblust/mental-model` has carried `protect-main` since 2026-09-05 —
-deletion, non-fast-forward, a pull request and one required status check — and a
-`conventions.yml` calling `robertblust/conventions/.github/workflows/check.yml` at its pinned
-tag. What that job holds is the vendored copy against its release and the repository's own
-Markdown against `WRITING.md`: American spelling and the spaced em-dash. It reads no
-frontmatter and resolves no reference. R0 through R17 are enforced there by an agent
-remembering to run a skill.
+Two of the three gaps a reader would expect are already closed, by work that landed after the draft this replaces. `robertblust/mental-model` has carried `protect-main` since 2026-09-05 — deletion, non-fast-forward, a pull request and one required status check — and a `conventions.yml` calling `robertblust/conventions/.github/workflows/check.yml` at its pinned tag. What that job holds is the vendored copy against its release and the repository's own Markdown against `WRITING.md`: American spelling and the spaced em-dash. It reads no frontmatter and resolves no reference. R0 through R17 are enforced there by an agent remembering to run a skill.
 
-What is still missing is only the check itself, and the instance has no `package.json`, no
-lockfile and no build step to hang one on. **It gets a reusable workflow rather than a package
-manifest.** This repository publishes `.github/workflows/instance-check.yml`; an instance calls
-it at a tag, exactly as every member calls the conventions job, and holds one file and one pin.
-Nothing is installed: the workflow checks out the caller, checks out this repository at the
-release it declares, and runs the checker, which has no dependencies — the same reason the CI
-here has no install step.
+What is still missing is only the check itself, and the instance has no `package.json`, no lockfile and no build step to hang one on. **It gets a reusable workflow rather than a package manifest.** This repository publishes `.github/workflows/instance-check.yml`; an instance calls it at a tag, exactly as every member calls the conventions job, and holds one file and one pin. Nothing is installed: the workflow checks out the caller, checks out this repository at the release it declares, and runs the checker, which has no dependencies — the same reason the CI here has no install step.
 
-That also answers the question the draft left hardest. A maintainer with no Node still gets the
-gate, because nothing runs locally; the local pass stays the agent's, which is what R0 asks for
-anyway.
+That also answers the question the draft left hardest. A maintainer with no Node still gets the gate, because nothing runs locally; the local pass stays the agent's, which is what R0 asks for anyway.
 
-The guard is the conventions guard, and it is needed for the same mechanical reason: the runner
-exposes nothing about the called workflow to its steps, so it cannot see how the caller spelled
-the ref. The workflow declares its own release, compares it with `tooling` in the manifest, and
-fails when they differ.
+The guard is the conventions guard, and it is needed for the same mechanical reason: the runner exposes nothing about the called workflow to its steps, so it cannot see how the caller spelled the ref. The workflow declares its own release, compares it with `tooling` in the manifest, and fails when they differ.
 
-One trap, restated because it is silent: **a ruleset requires a status check by its job id, not
-by the workflow's name.** The required contexts here are `verify` and `conventions /
-conventions`; the instance's ruleset requires `conventions / conventions` alone and will require
-the new job beside it. Rename a job and the branch still looks protected while nothing ever
-reports again.
+One trap, restated because it is silent: **a ruleset requires a status check by its job id, not by the workflow's name.** The required contexts here are `verify` and `conventions / conventions`; the instance's ruleset requires `conventions / conventions` alone and will require the new job beside it. Rename a job and the branch still looks protected while nothing ever reports again.
 
 ## What this is not
 

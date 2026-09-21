@@ -110,8 +110,7 @@ In the `"rules are written down"` check, change the loop to skip a check that ci
           fail(`check "${check.name}" enforces ${check.rule}, which CONVENTIONS.md does not define`);
 ```
 
-Run: `npm run verify`
-Expected: `✗ 1 problem` — `core/manifest.json is missing`.
+Run: `npm run verify` Expected: `✗ 1 problem` — `core/manifest.json is missing`.
 
 - [ ] **Step 3: Write the manifest, run again**
 
@@ -121,8 +120,7 @@ Expected: `✗ 1 problem` — `core/manifest.json is missing`.
 { "version": "0.1.0", "shape": 1 }
 ```
 
-Run: `npm run verify`
-Expected: `✓ N checks passed` (N is one more than before).
+Run: `npm run verify` Expected: `✓ N checks passed` (N is one more than before).
 
 - [ ] **Step 4: Prove the tag check both ways with a throwaway tag**
 
@@ -270,15 +268,7 @@ meta-model's
 
 ```
 
-.companygraph/manifest.json    which core this vendors, and a hash per vendored file
-meta/                          core 0.1.0: CONVENTIONS.md, LICENSE, one schema per type — never edited here
-sources/                       where each page's facts are mastered
-proficiency-levels/            the four-rung ladder every skill claim uses
-skills/                        one file per capability
-values/                        one file per value
-profiles/robert-blust/         the profile, and the experiences it owns
-AGENTS.md                      the instance's own rules; every modelling rule is in meta/CONVENTIONS.md
-.claude/skills/companygraph-*  the portable skills: validate, add an entity, export as a skill
+.companygraph/manifest.json    which core this vendors, and a hash per vendored file meta/                          core 0.1.0: CONVENTIONS.md, LICENSE, one schema per type — never edited here sources/                       where each page's facts are mastered proficiency-levels/            the four-rung ladder every skill claim uses skills/                        one file per capability values/                        one file per value profiles/robert-blust/         the profile, and the experiences it owns AGENTS.md                      the instance's own rules; every modelling rule is in meta/CONVENTIONS.md .claude/skills/companygraph-*  the portable skills: validate, add an entity, export as a skill
 
 ```
 

@@ -9,5 +9,4 @@ rank: 20
 
 ## What it means
 
-Someone at this level works with it unsupervised and the result is predictable. They recognize
-the common failure modes, having run into them.
+Someone at this level works with it unsupervised and the result is predictable. They recognize the common failure modes, having run into them.

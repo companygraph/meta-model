@@ -6,9 +6,7 @@
 
 `model/proficiency-levels/*.md`
 
-A level owns nothing and nothing owns it: many profiles claim the same few, and the definition
-of each lives here rather than being restated on every assessment. Changing what a level means
-is then one edit, in one file.
+A level owns nothing and nothing owns it: many profiles claim the same few, and the definition of each lives here rather than being restated on every assessment. Changing what a level means is then one edit, in one file.
 
 ## Frontmatter
 
@@ -28,11 +26,7 @@ is then one edit, in one file.
 
 ## Purpose
 
-A proficiency level is one rung of the single ladder every claim in the instance is made
-against. It answers "what does this word mean when someone claims a skill at it?" — for the
-person making the claim, and for the person weighing it. Its whole value is that the definition
-sits in one file: two assessments at the same rung mean the same thing, and changing what a
-rung means is one edit rather than a hundred.
+A proficiency level is one rung of the single ladder every claim in the instance is made against. It answers "what does this word mean when someone claims a skill at it?" — for the person making the claim, and for the person weighing it. Its whole value is that the definition sits in one file: two assessments at the same rung mean the same thing, and changing what a rung means is one edit rather than a hundred.
 
 ## Writing rules
 

@@ -10,14 +10,8 @@ horizon: 2027-06
 
 ## What it makes true
 
-A customer looking at an invoice can tell how each number was reached, in the words their own
-contract uses, so the question "why is this line 4,200" is answered where it is asked. Support
-still hears from customers, and what it hears about is their pricing rather than our arithmetic.
+A customer looking at an invoice can tell how each number was reached, in the words their own contract uses, so the question "why is this line 4,200" is answered where it is asked. Support still hears from customers, and what it hears about is their pricing rather than our arithmetic.
 
-We would know it holds by what stops arriving. An explanation ticket is one where the customer
-asks how a number was reached and nothing about the number is wrong; those are countable today
-and they are the measure. The invoice being correct is not what is in question and never was.
+We would know it holds by what stops arriving. An explanation ticket is one where the customer asks how a number was reached and nothing about the number is wrong; those are countable today and they are the measure. The invoice being correct is not what is in question and never was.
 
-What falls outside: a disagreement about what the contract says. An invoice that explains itself
-perfectly can still bill something the customer believes they did not buy, and that is a
-question for the contract, not for the page.
+What falls outside: a disagreement about what the contract says. An invoice that explains itself perfectly can still bill something the customer believes they did not buy, and that is a question for the contract, not for the page.

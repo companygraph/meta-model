@@ -17,8 +17,7 @@ gate-to: Build
 
 ## What it takes
 
-A request from the platform's users, and the part of the system it will touch, read rather than
-remembered.
+A request from the platform's users, and the part of the system it will touch, read rather than remembered.
 
 ## Activities
 

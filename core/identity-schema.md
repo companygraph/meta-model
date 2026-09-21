@@ -6,14 +6,9 @@
 
 `model/identity.md`
 
-A company has one identity, so the type is a file directly in the container rather than a
-folder (R6, R13). The filesystem carries the cardinality: there is nowhere to put a second one.
-The file is named for the type, not for the slug of its H1 (R12), which leaves the H1 free to
-be the company's name.
+A company has one identity, so the type is a file directly in the container rather than a folder (R6, R13). The filesystem carries the cardinality: there is nowhere to put a second one. The file is named for the type, not for the slug of its H1 (R12), which leaves the H1 free to be the company's name.
 
-The file is the graph's root as well as its subject: every other file in the instance is about
-the company it names, and none has to say so. A page names the identity only where the company
-is itself the fact, as an experience does when the period was spent there.
+The file is the graph's root as well as its subject: every other file in the instance is about the company it names, and none has to say so. A page names the identity only where the company is itself the fact, as an experience does when the period was spent there.
 
 ## Frontmatter
 
@@ -41,16 +36,11 @@ is itself the fact, as an experience does when the period was spent there.
 | `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn |
 | `URL` | Yes | string | The company's own page there |
 
-A presence is a place the company maintains a page on, named by the place and addressed by that
-page — never a single post, an article or a recording, which document an experience and belong
-in that experience's `## References`.
+A presence is a place the company maintains a page on, named by the place and addressed by that page — never a single post, an article or a recording, which document an experience and belong in that experience's `## References`.
 
 ## Purpose
 
-Identity is the company itself: the entity every other file in the instance is about. It
-answers "whose model is this?" — which nothing else does, because a repository folder's name is
-a path, and R2 and R3 exist to keep a canonical name out of a path. Without it an instance
-describes a company it never names.
+Identity is the company itself: the entity every other file in the instance is about. It answers "whose model is this?" — which nothing else does, because a repository folder's name is a path, and R2 and R3 exist to keep a canonical name out of a path. Without it an instance describes a company it never names.
 
 ## Writing rules
 

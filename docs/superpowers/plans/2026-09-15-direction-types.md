@@ -55,14 +55,9 @@ Expected: branch `direction-types`; ten type names with no `strategic-objective`
 
 - [ ] **Step 2: Add the type to `TYPES`, before the schema exists**
 
-The order matters and it is the opposite of what looks natural. An orphan `core/*-schema.md`
-with no `TYPES` entry passes verify silently — the suite iterates `TYPES` and asks whether each
-type's schema exists, never the reverse — so writing the schema first gives a green run that
-proves nothing. A `TYPES` entry with no schema fails loudly, which is the red this task starts
-from.
+The order matters and it is the opposite of what looks natural. An orphan `core/*-schema.md` with no `TYPES` entry passes verify silently — the suite iterates `TYPES` and asks whether each type's schema exists, never the reverse — so writing the schema first gives a green run that proves nothing. A `TYPES` entry with no schema fails loudly, which is the red this task starts from.
 
-In `lib/checks.mjs`, inside the `TYPES` array, add the entry after the `surface` line and before
-the `profile` line:
+In `lib/checks.mjs`, inside the `TYPES` array, add the entry after the `surface` line and before the `profile` line:
 
 ```javascript
   { type: "strategic-objective", folder: "strategic-objectives" },
@@ -74,9 +69,7 @@ the `profile` line:
 npm run verify; echo "exit: $?"
 ```
 
-Expected: `✗ 1 problem` and `core/strategic-objective-schema.md is missing`, exit non-zero. If
-it fails for any other reason, or passes, stop and report — something other than this change is
-wrong.
+Expected: `✗ 1 problem` and `core/strategic-objective-schema.md is missing`, exit non-zero. If it fails for any other reason, or passes, stop and report — something other than this change is wrong.
 
 - [ ] **Step 4: Write the schema**
 
@@ -191,9 +184,7 @@ MSG
 
 - [ ] **Step 1: Add the type to `TYPES`, before the schema exists**
 
-Same order as Task 1, for the same reason: an orphan schema passes verify silently, a `TYPES`
-entry with no schema fails loudly. In `lib/checks.mjs`, immediately after the
-`strategic-objective` entry:
+Same order as Task 1, for the same reason: an orphan schema passes verify silently, a `TYPES` entry with no schema fails loudly. In `lib/checks.mjs`, immediately after the `strategic-objective` entry:
 
 ```javascript
   { type: "strategy", folder: "strategies" },
@@ -277,10 +268,7 @@ started deciding things and why a retired one is deleted rather than marked.
 
 - [ ] **Step 4: Confirm the parser singularizes both folders correctly**
 
-`parseInstance` takes paths **relative to the container** — `sources/local.md`, not
-`model/sources/local.md` — and refuses an instance with no identity entity. Both are easy to get
-wrong and both fail loudly, which is why the fixture below carries an identity it does not
-otherwise need.
+`parseInstance` takes paths **relative to the container** — `sources/local.md`, not `model/sources/local.md` — and refuses an instance with no identity entity. Both are easy to get wrong and both fail loudly, which is why the fixture below carries an identity it does not otherwise need.
 
 ```bash
 node -e '
@@ -705,9 +693,7 @@ ls meta/core
 grep -n '"version"' meta/core/manifest.json
 ```
 
-`/tmp/cg-0210` is used again by Tasks 7 and 8, which run the instance checker out of it. If the
-clone is gone by then, run this one line again — the checker refuses a pin it is not, so it must
-be the one from `v0.21.0` and not whatever is in the working copy of the meta-model repository.
+`/tmp/cg-0210` is used again by Tasks 7 and 8, which run the instance checker out of it. If the clone is gone by then, run this one line again — the checker refuses a pin it is not, so it must be the one from `v0.21.0` and not whatever is in the working copy of the meta-model repository.
 
 Expected: twelve `*-schema.md` files plus `CONVENTIONS.md`, `LICENSE` and `manifest.json`; the manifest reads `0.21.0` and `"shape": 2`.
 
@@ -1063,10 +1049,7 @@ for (const f of fs.readdirSync("model/strategies").filter((f) => f.endsWith(".md
 process.exit(bad ? 1 : 0);'; echo "exit: $?"
 ```
 
-Expected: a count of canonical names in the low hundreds, then six `ok` lines and exit 0 — two
-`serves` and four `upholds`. A `MISS` means the reference does not match a canonical name
-exactly; fix the reference, never the target, because the target's H1 is the name every other
-page already uses.
+Expected: a count of canonical names in the low hundreds, then six `ok` lines and exit 0 — two `serves` and four `upholds`. A `MISS` means the reference does not match a canonical name exactly; fix the reference, never the target, because the target's H1 is the name every other page already uses.
 
 - [ ] **Step 7: Commit**
 
@@ -1130,14 +1113,9 @@ Report the pull request number, the check result, and the merge commit the owner
 
 ## Phase 3 — companygraph/companygraph.github.io
 
-Repository: `/Users/rob/git/companygraph/companygraph.github.io`. **Blocked until Phase 1 is
-merged.** It does not wait for Phase 2: this site pins the meta-model, not the instance, so the
-merge commit is all it needs.
+Repository: `/Users/rob/git/companygraph/companygraph.github.io`. **Blocked until Phase 1 is merged.** It does not wait for Phase 2: this site pins the meta-model, not the instance, so the merge commit is all it needs.
 
-This phase exists because the plan originally left it out, and the omission was load-bearing.
-`example/` was written so that a reader meets the two new types at companygraph.io/example,
-which is what the spec says the example is for — and the site draws that page from a pin of its
-own. Without this phase the example ships invisible.
+This phase exists because the plan originally left it out, and the omission was load-bearing. `example/` was written so that a reader meets the two new types at companygraph.io/example, which is what the spec says the example is for — and the site draws that page from a pin of its own. Without this phase the example ships invisible.
 
 ### Task 10: Re-pin companygraph.io onto the release
 
@@ -1159,9 +1137,7 @@ git checkout main && git pull
 cat source.json
 ```
 
-The pin is `238ee354...`, which predates v0.17.0. This is a twenty-four-commit jump, not a
-one-release one: the `surface` type, the Also-at work, the tagline change and these two types all
-arrive at once. Treat the artifact diff in Step 4 as something to read, not to wave through.
+The pin is `238ee354...`, which predates v0.17.0. This is a twenty-four-commit jump, not a one-release one: the `surface` type, the Also-at work, the tagline change and these two types all arrive at once. Treat the artifact diff in Step 4 as something to read, not to wave through.
 
 - [ ] **Step 2: Branch and take the merge commit**
 
@@ -1187,9 +1163,7 @@ grep -n "meta-model" package.json source.json
 grep -A3 '"node_modules/companygraph-meta-model"' package-lock.json
 ```
 
-Replace `<THE_SHA>` with the sha from Step 2. Both pins move together here, unlike blust.ch: this
-site parses `core/` as well as `example/`, so the parser and the content it parses should be the
-same release.
+Replace `<THE_SHA>` with the sha from Step 2. Both pins move together here, unlike blust.ch: this site parses `core/` as well as `example/`, so the parser and the content it parses should be the same release.
 
 - [ ] **Step 4: Rebuild and read the diff**
 
@@ -1199,10 +1173,7 @@ npm run build; echo "exit: $?"
 git diff --stat example.json model.json
 ```
 
-Expected: `model.json` gains the two new types and every schema change since v0.17.0;
-`example.json` gains the objective and the strategy and whatever the intervening releases added
-to Beacon Systems. Read the diff. A type or an entity appearing that nobody designed a page for
-is exactly what a jump this size surfaces, and the next step is where it shows.
+Expected: `model.json` gains the two new types and every schema change since v0.17.0; `example.json` gains the objective and the strategy and whatever the intervening releases added to Beacon Systems. Read the diff. A type or an entity appearing that nobody designed a page for is exactly what a jump this size surfaces, and the next step is where it shows.
 
 - [ ] **Step 5: Run the site's checks**
 
@@ -1216,8 +1187,7 @@ npm run pin:check; echo "exit: $?"
 sh conventions/conventions-check; echo "exit: $?"
 ```
 
-All must exit 0. If `pages:check` fails, a committed page no longer matches what the build
-produces — run `npm run pages` and commit the result with the rest.
+All must exit 0. If `pages:check` fails, a committed page no longer matches what the build produces — run `npm run pages` and commit the result with the rest.
 
 - [ ] **Step 6: Look at both pages**
 
@@ -1227,14 +1197,11 @@ open http://localhost:8000/example/
 open http://localhost:8000/model/
 ```
 
-Confirm by eye: `/example/` shows Beacon Systems with a strategic objective and a strategy, the
-strategy's `serves` and `upholds` edges drawn; `/model/` shows twelve types. Kill the server when
-done.
+Confirm by eye: `/example/` shows Beacon Systems with a strategic objective and a strategy, the strategy's `serves` and `upholds` edges drawn; `/model/` shows twelve types. Kill the server when done.
 
 - [ ] **Step 7: Commit, push, open the pull request, report and stop**
 
-Write the commit message in the git register, saying what moved and that the pin had been
-twenty-four commits behind. Then:
+Write the commit message in the git register, saying what moved and that the pin had been twenty-four commits behind. Then:
 
 ```bash
 git push -u origin direction-types
@@ -1244,10 +1211,7 @@ gh pr checks --watch; echo "exit: $?"
 
 Report the pull request number and the check result. **Do not merge.**
 
-**Not in this phase.** The ideas page's counts and the README's "What is here" block are stale
-on facts this re-pin does not touch, and they are a writer job with the translator after. The
-re-pin makes the contradiction visible — a page saying eight types beside a `/model/` drawing
-twelve — so that sweep is owed soon, and it is still not owed here.
+**Not in this phase.** The ideas page's counts and the README's "What is here" block are stale on facts this re-pin does not touch, and they are a writer job with the translator after. The re-pin makes the contradiction visible — a page saying eight types beside a `/model/` drawing twelve — so that sweep is owed soon, and it is still not owed here.
 
 ## Phase 4 — robertblust.github.io
 
@@ -1385,28 +1349,13 @@ Report the pull request number and the check result. **Do not merge.**
 
 ## What changed while this ran
 
-A plan is a record of what was intended, and two things here were wrong by the time the work
-finished. Both are corrected above rather than left for the next reader to discover.
+A plan is a record of what was intended, and two things here were wrong by the time the work finished. Both are corrected above rather than left for the next reader to discover.
 
-**One strategy, not two.** The plan wrote a go-to-market strategy beside the AI strategy, and the
-owner removed it before it shipped. Two reasons, both worth keeping. It contradicted its own
-instance: companygraph.io/billing says "Nothing is being sold today, and it may never be" and
-"There is no rate, and nobody to ask for one", where the strategy claimed a company that sells
-and prices in the open, and its earliest measure was traffic in logs that do not exist because
-nothing in the family runs analytics. And it treated CompanyGraph as the business while
-GuestGraph is an equally unfinished idea, which is a choice between two ideas that the model had
-no business making. Task 8's text below still writes both; what shipped is the first.
+**One strategy, not two.** The plan wrote a go-to-market strategy beside the AI strategy, and the owner removed it before it shipped. Two reasons, both worth keeping. It contradicted its own instance: companygraph.io/billing says "Nothing is being sold today, and it may never be" and "There is no rate, and nobody to ask for one", where the strategy claimed a company that sells and prices in the open, and its earliest measure was traffic in logs that do not exist because nothing in the family runs analytics. And it treated CompanyGraph as the business while GuestGraph is an equally unfinished idea, which is a choice between two ideas that the model had no business making. Task 8's text below still writes both; what shipped is the first.
 
-**`npm install --package-lock-only` does not re-resolve a git dependency.** It leaves the previous
-commit's sha in the lockfile while `package.json` names the new tag, so the build runs the old
-parser while every visible pin claims otherwise — and nothing catches it, because `model:check`
-and `build:check` compare the artifact against what the *current* parser produces, which makes a
-stale parser produce a self-consistent wrong answer. Caught on companygraph.io. Both re-pin tasks
-now say `npm update` and both ask for the lockfile to be grepped as proof.
+**`npm install --package-lock-only` does not re-resolve a git dependency.** It leaves the previous commit's sha in the lockfile while `package.json` names the new tag, so the build runs the old parser while every visible pin claims otherwise — and nothing catches it, because `model:check` and `build:check` compare the artifact against what the *current* parser produces, which makes a stale parser produce a self-consistent wrong answer. Caught on companygraph.io. Both re-pin tasks now say `npm update` and both ask for the lockfile to be grepped as proof.
 
-**The surviving strategy was also renamed**, from `AI Strategy` to `Model-First Strategy`: the
-instance already carries a skill whose H1 is `AI strategy`, and `parseInstance` refuses a name two
-types carry, so the model built only because of one capital letter.
+**The surviving strategy was also renamed**, from `AI Strategy` to `Model-First Strategy`: the instance already carries a skill whose H1 is `AI strategy`, and `parseInstance` refuses a name two types carry, so the model built only because of one capital letter.
 
 ## What this plan does not do
 

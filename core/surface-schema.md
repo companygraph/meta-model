@@ -6,11 +6,7 @@
 
 `model/surfaces/*.md`
 
-A surface is a place the company publishes from the model. A place is published when anyone
-can reach it without asking; a bundle handed to whoever requests it is not a surface. One file
-per surface, so every place the model reaches is named in the model, and a reader who finds no
-file for a place can take that as meaning the model does not reach it. Nothing owns a surface
-and a surface owns nothing.
+A surface is a place the company publishes from the model. A place is published when anyone can reach it without asking; a bundle handed to whoever requests it is not a surface. One file per surface, so every place the model reaches is named in the model, and a reader who finds no file for a place can take that as meaning the model does not reach it. Nothing owns a surface and a surface owns nothing.
 
 ## Frontmatter
 
@@ -34,13 +30,7 @@ and a surface owns nothing.
 
 ## Purpose
 
-A surface is a place the company publishes from the model. For a written surface, this file is
-what somebody needs in order to write it: which of the model's facts reach it, in what shape and
-what the result has to satisfy. For a built surface, it is what somebody needs in order to know
-the place exists, what it presents and which repository holds its rules. Either way it answers
-"if I had to rebuild this from the model today, what would I have to know, and where would I
-find it?" — for a person, and for an agent. It is not a record of what the surface currently
-shows, which is R17's business and belongs in a validation report.
+A surface is a place the company publishes from the model. For a written surface, this file is what somebody needs in order to write it: which of the model's facts reach it, in what shape and what the result has to satisfy. For a built surface, it is what somebody needs in order to know the place exists, what it presents and which repository holds its rules. Either way it answers "if I had to rebuild this from the model today, what would I have to know, and where would I find it?" — for a person, and for an agent. It is not a record of what the surface currently shows, which is R17's business and belongs in a validation report.
 
 ## Writing rules
 
