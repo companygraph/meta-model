@@ -71,3 +71,22 @@ test("the checks read the declarations through the same functions, never through
   assert.ok(patterns.length > 0, "the checks hold no regular expression at all — has this test gone blind?");
   assert.deepEqual(patterns.filter((p) => /lists|Under|Bulleted|Numbered/.test(p)), []);
 });
+
+// An enum is a constraint a page is held to (R8), and a column's is held on the same terms as a
+// field's (R9), so a consumer serving the vocabulary gets both, named the way references are.
+test("constraintsOf gives every enum its permitted values, a field's and a column's alike", () => {
+  const c = constraintsOf(core);
+  const en = (type, via) => c[type].enums.find((e) => e.via === via);
+  assert.deepEqual(en("profile", "nature"), { via: "nature", tokens: ["human", "agent"], required: true });
+  assert.deepEqual(en("concept", "Relations.Cardinality"), { via: "Relations.Cardinality", tokens: ["one", "maybe one", "many", "one to many"], required: true });
+  assert.deepEqual(en("concept", "Also known as.Kind"), { via: "Also known as.Kind", tokens: ["synonym", "abbreviation", "translation", "deprecated"], required: true });
+  assert.deepEqual(c.skill.enums, [], "a type with no enum says so with an empty list");
+});
+
+// R16: where a table's reference stands beside a column named `As`, two rows naming one entity
+// carry roles of their own. Found by shape, as the check finds it, so the join names no type.
+test("constraintsOf names the table whose repeated references carry distinct roles", () => {
+  const c = constraintsOf(core);
+  assert.deepEqual(c.concept.joins.filter((j) => j.kind === "roles"), [{ kind: "roles", section: "Relations", column: "As", by: "Concept" }]);
+  assert.equal(Object.values(c).flatMap((t) => t.joins).filter((j) => j.kind === "roles").length, 1, "no other core table has the shape");
+});
