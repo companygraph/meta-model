@@ -1,5 +1,6 @@
 ---
 source: Local
+domain: Invoicing
 audience: Payer
 ---
 
