@@ -88,7 +88,7 @@ model/             your company: identity.md, vision.md, and the folders the sch
 
 The schemas are the contract; `CONVENTIONS.md` is what an agent checks the result against, and both are inside `core/` so neither can be left behind. `example/` is there to be read, not copied — [companygraph.io/example](https://companygraph.io/example/) draws it.
 
-Setting that up and keeping it current is `bin/companygraph.mjs`'s job: one entry point with four subcommands, run from a release tag as `npx github:companygraph/meta-model#<tag> <command>`. Run with no command at a terminal, it opens a menu over the four instead:
+Setting that up and keeping it current is `bin/companygraph.mjs`'s job: one entry point with four subcommands, run from a release tag as `npx github:companygraph/meta-model#<tag> <command>`. Run with no command at a terminal, it opens a menu over the four instead, and comes back after each one until Quit, `q` or Ctrl+C. It clears the terminal before each screen, which shows the latest pick and what it said in one panel, green when it went through and red when not:
 
 ```sh
 npx --yes 'github:companygraph/meta-model#semver:*'
