@@ -1197,3 +1197,57 @@ test("a repeated reference in a table names the role each row plays", () => {
     `expected a repeated-reference failure, got: ${failures.join(" | ")}`,
   );
 });
+
+// The same schema as the test above, with the relation rows supplied per case, so each test
+// below differs from it in the rows alone.
+const relationsFiles = (rows) =>
+  new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. Required where two rows name the same skill. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", ...rows,
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+test("two rows naming one entity with the same role fail", () => {
+  const { failures } = checkInstance(relationsFiles(["| Maven | builds |", "| Maven | builds |"]), {
+    core: "meta/core",
+    model: "model",
+  });
+  const hits = failures.filter((f) => f.includes('"Maven"'));
+  assert.equal(hits.length, 1, `expected one shared-role failure, got: ${failures.join(" | ")}`);
+  assert.match(hits[0], /java\.md/);
+  assert.match(hits[0], /## Relations/);
+  assert.match(hits[0], /more than one carries `As` "builds"/);
+});
+
+test("a repeated entity with one blank role is reported once, not once per row", () => {
+  const { failures } = checkInstance(
+    relationsFiles(["| Maven | builds |", "| Maven | tests |", "| Maven | |"]),
+    { core: "meta/core", model: "model" },
+  );
+  const hits = failures.filter((f) => f.includes('"Maven"'));
+  assert.equal(hits.length, 1, `expected exactly one failure for Maven, got: ${failures.join(" | ")}`);
+  assert.match(hits[0], /in 3 rows and 1 of them leaves `As` blank/);
+});
+
+test("two rows naming one entity with distinct roles pass", () => {
+  const { failures } = checkInstance(relationsFiles(["| Maven | builds |", "| Maven | tests |"]), {
+    core: "meta/core",
+    model: "model",
+  });
+  assert.deepEqual(failures.filter((f) => f.includes("Maven")), []);
+});
