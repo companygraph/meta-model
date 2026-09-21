@@ -31,5 +31,5 @@ A product is something the company ships that somebody uses on its own, and it a
 
 - The tagline names what the product is and who opens it, in that order, and claims nothing about how well it does either.
 - A product is named as the people who use it name it, not as its repository or its internal project is named.
-- Two names for one thing a user opens once are one product; the second name is an alias on the concept that defines it.
+- Two names for one thing a user opens are one product, and the second name is not a second product; where a concept of the same name exists, the second name is recorded there as an alias.
 - Nothing about a release, a version or a roadmap goes here: a product outlives all three.
