@@ -1167,3 +1167,33 @@ test("a phase with no track heading passes where the instance holds a track: its
   ]);
   assert.deepEqual(failures.filter((f) => f.includes("Activities")), []);
 });
+
+test("a repeated reference in a table names the role each row plays", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. Required where two rows name the same skill. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", "| Maven | builds |", "| Maven | |",
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.ok(
+    failures.some((f) => f.includes("Maven") && f.includes("As")),
+    `expected a repeated-reference failure, got: ${failures.join(" | ")}`,
+  );
+});
