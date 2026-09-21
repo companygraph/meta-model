@@ -119,7 +119,11 @@ test("obsidian --from puts a build into a vault and switches it on", () => {
   fs.writeFileSync(path.join(build, "styles.css"), "");
   fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
   const root = temp();
-  assert.match(run(["obsidian", root, "--from", build], { stdio: "pipe" }), /CompanyGraph 1\.0\.0 installed .*, and switched on/);
+  const said = run(["obsidian", root, "--from", build], { stdio: "pipe" });
+  assert.match(said, /CompanyGraph 1\.0\.0 installed .*, and switched on/);
+  // The switch no file sets: a vault browsed in restricted mode lists no community plugin at all.
+  assert.match(said, /Settings → Community plugins → Turn on community plugins/);
+  assert.doesNotMatch(said, /\x1b\[/, "no color where there is no terminal");
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "community-plugins.json"), "utf8")), ["companygraph"]);
 });
 
