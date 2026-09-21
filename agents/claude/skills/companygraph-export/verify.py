@@ -32,10 +32,12 @@ def model_entities():
     A README is excluded on both halves of the walk. `meta/` carries none today, so leaving it
     in matched nothing and the asymmetry was invisible — until a core release adds one, when
     the bundle would have to claim it to pass.
+
+    Keyed with `/` as the bundle's entity markers are, which on Windows `str` of a path is not.
     """
-    out = {str(p.relative_to(ROOT)) for p in (ROOT / "model").rglob("*.md") if p.name != "README.md"}
+    out = {p.relative_to(ROOT).as_posix() for p in (ROOT / "model").rglob("*.md") if p.name != "README.md"}
     units = json.loads((ROOT / ".companygraph/manifest.json").read_text(encoding="utf-8")).get("units", "meta")
-    out |= {str(p.relative_to(ROOT)) for p in (ROOT / units).rglob("*.md") if p.name != "README.md"}
+    out |= {p.relative_to(ROOT).as_posix() for p in (ROOT / units).rglob("*.md") if p.name != "README.md"}
     return out
 
 def bundle_entities(files):
