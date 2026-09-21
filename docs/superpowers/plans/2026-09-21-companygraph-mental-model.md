@@ -187,7 +187,7 @@ Expected: the `companygraph` workflow completed successfully. Read the exit stat
 **Files:**
 
 - Create: `conventions/` (vendored), `conventions.json`, `.markdownlint-cli2.jsonc`,
-  `.github/workflows/check.yml`, `README.md`, `LICENSE`, `.gitignore`
+  `.github/workflows/conventions.yml`, `README.md`, `LICENSE`, `.gitignore`
 - Modify: `AGENTS.md`
 
 **Interfaces:**
@@ -214,10 +214,10 @@ git worktree add -b the-instance-joins-the-conventions \
 - [ ] **Step 3: Write `conventions.json` at the release the family is on**
 
 ```json
-{ "repo": "robertblust/conventions", "tag": "vX.Y.Z", "exclude": [], "format-exclude": [] }
+{ "repo": "robertblust/conventions", "tag": "vX.Y.Z", "exclude": ["meta"], "format-exclude": ["meta"] }
 ```
 
-Read the tag from `~/git/robertblust/conventions` — `git tag --sort=-v:refname | head -1` — and write that exact value. Do not copy a tag out of this plan; a version written into a document is stale by the time it is read.
+Read the tag from `~/git/robertblust/conventions` — `git tag --sort=-v:refname | head -1` — and write that exact value. Do not copy a tag out of this plan; a version written into a document is stale by the time it is read. `meta` is excluded from both lists because core is vendored and is not this repository's to rewrite: with them empty, `conventions-format fix` reflows the vendored schemas and drifts the sha256 hashes in `.companygraph/manifest.json`, and no check anywhere would notice.
 
 - [ ] **Step 4: Vendor the shared files**
 
@@ -231,7 +231,7 @@ On a repository with no `conventions/` yet, the script is taken from the convent
 
 - [ ] **Step 5: Add the shared check workflow**
 
-`.github/workflows/check.yml`:
+`.github/workflows/conventions.yml`:
 
 ```yaml
 name: check
@@ -244,7 +244,7 @@ jobs:
     uses: robertblust/conventions/.github/workflows/check.yml@vX.Y.Z
 ```
 
-The tag is the one `conventions.json` names, written out in full — a re-sync moves the pin, the vendored folder and this line together.
+The file is `conventions.yml`; `check.yml` in the `uses:` line is the CALLED workflow's name inside robertblust/conventions, and the two are not the same file — that repository's README instructs members to add `conventions.yml`, and the required context `conventions / conventions` is workflow-name over job-id either way. The tag is the one `conventions.json` names, written out in full — a re-sync moves the pin, the vendored folder and this line together.
 
 - [ ] **Step 6: Write `README.md` with the title `REPOSITORIES.md` will ask for**
 
