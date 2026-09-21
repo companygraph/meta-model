@@ -220,6 +220,35 @@ test("a missing enum field is named with its permitted values", () => {
   assert.match(hit, /agent/);
 });
 
+test("a column typed enum is held to the values its schema lists", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Facts` | No | Table. What this states. |",
+        "",
+        "`## Facts` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Claim` | Yes | string | The claim |",
+        "| `Confidence` | Yes | enum | `high` or `low`. How sure. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Facts", "",
+      "| Claim | Confidence |", "| --- | --- |", "| It compiles | maybe |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.ok(
+    failures.some((f) => f.includes("Confidence") && f.includes("maybe") && f.includes("R8")),
+    `expected a column enum failure, got: ${failures.join(" | ")}`,
+  );
+});
+
 test("a required list field with no items fails, and one with an item passes", () => {
   const PHASE_SCHEMA = schema("phase", [
     "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
