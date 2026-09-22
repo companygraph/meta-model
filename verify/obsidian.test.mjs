@@ -212,7 +212,8 @@ test("on Linux Obsidian is found on the path, as a Flatpak or a Snap, and nothin
 test("opening a vault hands each platform's opener the obsidian:// URL of the folder", () => {
   const ran = [];
   const run = (command, args) => (ran.push([command, ...args]), { status: 0 });
-  const url = `obsidian://open?path=${encodeURIComponent("/Users/rob/Desktop/my vault")}`;
+  // Resolved as the opener resolves it, since on Windows the folder gains a drive letter.
+  const url = `obsidian://open?path=${encodeURIComponent(path.resolve("/Users/rob/Desktop/my vault"))}`;
   openVault("/Users/rob/Desktop/my vault", { platform: "darwin", run });
   openVault("/Users/rob/Desktop/my vault", { platform: "win32", run });
   openVault("/Users/rob/Desktop/my vault", { platform: "linux", run });
