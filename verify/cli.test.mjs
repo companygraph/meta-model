@@ -155,8 +155,10 @@ test("the menu comes back from any question on b, and says so without calling it
 });
 
 // Ctrl+C while a pick is asking is the same way back, and only at the menu's own prompt does it
-// end the run. The child is sent the signal itself while it waits at the question.
-test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its own prompt", async () => {
+// end the run. The child is sent the signal itself while it waits at the question. Not on
+// Windows: there `kill` ends a process rather than signalling it, and a console's Ctrl+C, which
+// Node does hand to the same handler, cannot be sent through a pipe.
+test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its own prompt", { skip: process.platform === "win32" && "no signal to send on Windows", timeout: 20000 }, async () => {
   const { spawn } = await import("node:child_process");
   const child = spawn(process.execPath, [cli, "menu"], { stdio: ["pipe", "pipe", "pipe"] });
   let said = "";
