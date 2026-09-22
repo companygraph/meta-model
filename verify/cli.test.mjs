@@ -177,6 +177,24 @@ test("obsidian writes the graph and the panes for the model's folders, keeps the
 
 // --open with no opener on the path: the failure is said with the URL, and what is left to say
 // in Obsidian is still said, since every file was written by then.
+// Each recommended plugin is asked for by name, and a no leaves it out and says so; the answers
+// come through the pipe as the menu's do. A yes would reach the network, so none is given here.
+test("obsidian asks for each recommended plugin by name, and a no leaves it out", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  const said = run(["obsidian", root, "--from", build], { stdio: "pipe", input: "n\nn\n" });
+  assert.match(said, /Install Claudian, Claude Code in a pane\?/);
+  assert.match(said, /Install Terminal, a shell in a pane\?/);
+  assert.match(said, /Claudian left out/);
+  assert.match(said, /Terminal left out/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "community-plugins.json"), "utf8")), ["companygraph"]);
+  const quiet = run(["obsidian", root, "--from", build, "--no-plugins"], { stdio: "pipe" });
+  assert.doesNotMatch(quiet, /Install Claudian/);
+});
+
 // A folder that is not there yet is made, as Obsidian itself makes a vault of an empty folder;
 // a file in the way is still refused.
 test("obsidian makes the vault's folder when there is none, and refuses a file in its place", () => {

@@ -5,7 +5,7 @@
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
-//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--no-plugins] [--force] [--open]
+//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //
 // Run with no command at a terminal, it opens a menu over the same four, which asks what the
 // flags would say and calls the same code, and stays open until Quit or Ctrl+C.
@@ -37,7 +37,7 @@ const USAGE = `companygraph [<command>]
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
-obsidian: --release <tag>  --from <dir>  --no-plugins  --force  --open
+obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -69,7 +69,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "no-plugins", "open"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -315,7 +315,9 @@ async function upgrade(argv) {
 }
 
 // A vault made of an instance, in five steps, each said as it happens: CompanyGraph's plugin, the
-// two recommended beside it, the graph, the panes, and Obsidian itself. Each plugin is read and
+// two recommended beside it, each asked for by name unless --plugins or --no-plugins answers for
+// them, the graph, the panes, and Obsidian itself. The questions are asked whether or not stdin is
+// a terminal, as init asks for a name, since a pipe at its end answers no. Each plugin is read and
 // refused before its own files are written, and installed again it is updated, the three files
 // written over whatever release was there and the plugin switched on if it was not; the graph and
 // the panes are written where the vault has none and kept where it has, since Obsidian rewrites
@@ -348,14 +350,20 @@ async function obsidian(argv) {
   }
   if (files) said(place(vault, files), own, vault);
 
+  // One already there is updated unasked, as CompanyGraph's is; one not there is offered.
   if (!given["no-plugins"]) {
     for (const plugin of recommended) {
       const has = installed(vault, plugin);
+      const wanted = has.release !== null || given.plugins || yes(await ask(prompt(`Install ${plugin.name}, ${plugin.what}?`, "y/N")));
+      if (!wanted) {
+        console.log(`  ${plugin.name} left out${plugin.needs ? `; ${plugin.needs.replace(/^It/, "it").replace(/\.$/, "")}` : ""}`);
+        continue;
+      }
       const release = await newestRelease(fetch, plugin);
       if (has.release === release && has.enabled) console.log(`${good("✓")} ${plugin.name} ${release}, the newest release, is installed and switched on`);
       else said(place(vault, await download(release, fetch, plugin), plugin), plugin);
+      if (plugin.needs && has.release === null) console.log(dim(`  ${plugin.needs}`));
     }
-    console.log(dim("  Claudian is Claude Code in a pane, and needs Claude Code on this machine; Terminal is a shell in one."));
   }
 
   const model = join(vault, "model");
@@ -368,12 +376,11 @@ async function obsidian(argv) {
   console.log(`${good("✓")} workspace.json ${panes}${panes === "written" ? `: ${file} open, the plugin's views on the right` : ", as Obsidian has it"}`);
 
   const where = whereObsidian();
-  const terminal = Boolean(process.stdin.isTTY && process.stdout.isTTY);
   let app = where.app;
   if (app) console.log(`${good("✓")} Obsidian is at ${shown(app)}`);
   else {
     console.log(`${bad("✗")} Obsidian was not found${process.platform === "linux" ? " on the path, as a Flatpak or as a Snap; an AppImage is wherever it was put" : ""}`);
-    if (where.installer && terminal && yes(await ask(prompt(`Install it with ${where.installer.name}?`, "y/N")))) {
+    if (where.installer && yes(await ask(prompt(`Install it with ${where.installer.name}?`, "y/N")))) {
       const ran = spawnSync(where.installer.command[0], where.installer.command.slice(1), { stdio: "inherit" });
       if (ran.status === 0) {
         app = whereObsidian().app ?? where.installer.name;
@@ -389,7 +396,7 @@ async function obsidian(argv) {
   const known = knownVault(vault);
   const url = vaultUrl(vault);
   if (!known) console.log(`  Obsidian does not know this folder yet; once opened there, ${dim(url)} opens it`);
-  else if (given.open || (app && terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
+  else if (given.open || (app && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
     try {
       openVault(vault);
       console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
