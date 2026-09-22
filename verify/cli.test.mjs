@@ -134,6 +134,47 @@ test("the menu comes back after a pick and stays until Quit", () => {
   assert.match(run(["menu"], { input: "5\n", stdio: "pipe" }), /5 {2}Quit/);
 });
 
+// A question inside a pick is left with b, and the menu comes back with nothing more done: here
+// the folder was named and the company was not, so nothing was written. What a pick had already
+// written stays, and the menu says it went back rather than that the pick failed.
+test("the menu comes back from any question on b, and says so without calling it a failure", () => {
+  const root = path.join(temp(), "acme");
+  const said = run(["menu"], { input: `1\n${root}\nb\nq\n`, stdio: "pipe" });
+  assert.match(said, /What is the company called\?/);
+  assert.match(said, /back to the menu/);
+  assert.doesNotMatch(said, /✗/);
+  assert.equal(fs.existsSync(root), false);
+  assert.equal(said.match(/5 {2}Quit/g).length, 2);
+  // Outside the menu a b is an answer like any other: a no to a y/N, here.
+  const vault = temp();
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  assert.match(run(["obsidian", vault, "--from", build], { stdio: "pipe", input: "b\nb\n" }), /Claudian left out/);
+});
+
+// Ctrl+C while a pick is asking is the same way back, and only at the menu's own prompt does it
+// end the run. The child is sent the signal itself while it waits at the question.
+test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its own prompt", async () => {
+  const { spawn } = await import("node:child_process");
+  const child = spawn(process.execPath, [cli, "menu"], { stdio: ["pipe", "pipe", "pipe"] });
+  let said = "";
+  const until = (text) => new Promise((done) => {
+    const look = () => said.includes(text) && (child.stdout.off("data", look), done());
+    child.stdout.on("data", (chunk) => { said += chunk; look(); });
+    look();
+  });
+  child.stdin.write(`1\n${temp()}\n`);
+  await until("What is the company called?");
+  child.kill("SIGINT");
+  await until("back to the menu");
+  await until("Pick 1-5");
+  child.kill("SIGINT");
+  const code = await new Promise((done) => child.on("exit", done));
+  assert.equal(code, 130);
+});
+
 test("obsidian --from puts a build into a vault and switches it on", () => {
   const build = temp();
   fs.writeFileSync(path.join(build, "main.js"), "// main");

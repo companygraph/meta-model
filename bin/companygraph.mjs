@@ -138,6 +138,12 @@ let reader = null;
 let ended = false;
 const lines = [];
 const waiting = [];
+// Inside a pick of the menu, a question is left with b or back, or with Ctrl+C, and the menu comes
+// back: `Back` is thrown out of the pick and caught where the menu called it, and what the pick
+// had written by then stays. Outside the menu neither means that: b is an answer like any other,
+// and Ctrl+C ends the run as it always did.
+class Back extends Error {}
+let inPick = false;
 function ask(question) {
   if (!reader) {
     reader = createInterface({ input: process.stdin });
@@ -151,11 +157,22 @@ function ask(question) {
   const answered = lines.length ? Promise.resolve(lines.shift()) : reader.closed ? Promise.resolve("") : new Promise((done) => waiting.push(done));
   // The terminal echoes what is typed, so the menu's record of a pick keeps the answer itself.
   return answered.then((line) => {
+    if (line === BACK) throw new Back();
     const answer = line.trim();
     record?.push(`${answer || dim("Enter")}\n`);
+    if (inPick && /^b(ack)?$/i.test(answer)) throw new Back();
     return answer;
   });
 }
+// Ctrl+C while a pick is asking answers the question with this, and the menu comes back; at the
+// menu's own prompt, or outside the menu, it ends the run. A line a person could never type.
+const BACK = "\u0000back";
+process.on("SIGINT", () => {
+  if (inPick && waiting.length) {
+    process.stdout.write("\n");
+    waiting.shift()(BACK);
+  } else process.exit(130);
+});
 
 // At a terminal the menu clears the screen before it draws, so what is on it is the latest pick
 // and what that pick said, never the log of every one before it. `record` collects what a pick
@@ -531,7 +548,7 @@ async function menu() {
     entries.forEach(([label, what], i) => console.log(`  ${accent(i + 1)}  ${label.padEnd(width)}  ${dim(what)}`));
     console.log(`  ${accent(entries.length + 1)}  ${"Quit".padEnd(width)}  ${dim("or q, or Ctrl+C")}`);
     console.log();
-    const pick = await ask(prompt(`Pick 1-${entries.length + 1}`));
+    const pick = await ask(prompt(`Pick 1-${entries.length + 1}`, "b or Ctrl+C at any question comes back here"));
     if (!pick && ended && !lines.length) return code;
     if (!pick) continue;
     if (/^q(uit)?$/i.test(pick) || pick === String(entries.length + 1)) {
@@ -545,14 +562,24 @@ async function menu() {
       console.log(`\n${banner()}\n\n  ${accent("›")} ${bold(label)}\n`);
     } else console.log();
     record = SCREEN ? [] : null;
+    let back = false;
     try {
       if (!entry) throw new Error(`${pick} is not one of 1-${entries.length + 1}; nothing was done.`);
+      inPick = true;
       code = await entry[2]();
     } catch (error) {
-      console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
-      code = 1;
+      if (error instanceof Back) {
+        back = true;
+        code = 0;
+        console.log(`\n  back to the menu; what was written before stays`);
+      } else {
+        console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
+        code = 1;
+      }
+    } finally {
+      inPick = false;
     }
-    if (record) latest = [label, code === 0, record.join("")];
+    if (record) latest = [back ? `${label} · back` : label, code === 0, record.join("")];
     record = null;
     if (!SCREEN) console.log();
   }
