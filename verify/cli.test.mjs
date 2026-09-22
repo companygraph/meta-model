@@ -193,13 +193,32 @@ test("obsidian makes the vault's folder when there is none, and refuses a file i
   assert.throws(() => run(["obsidian", file, "--from", build, "--no-plugins"], { stdio: "pipe" }), /is not a folder/);
 });
 
+// Obsidian opens by URL only a folder it already lists as a vault, and that list is Obsidian's
+// own; a folder it does not know is told the one way in, and --open is not tried.
+test("obsidian tells a folder Obsidian does not know how it becomes a vault, and does not try to open it", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  const home = temp();
+  const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
+  assert.match(said, /Obsidian does not know this folder yet/);
+  assert.match(said, /Open folder as vault/);
+  assert.doesNotMatch(said, /could not open/);
+});
+
 test("obsidian --open says an opener that fails and still says what is left to do", () => {
   const build = temp();
   fs.writeFileSync(path.join(build, "main.js"), "// main");
   fs.writeFileSync(path.join(build, "styles.css"), "");
   fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
   const root = temp();
-  const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, PATH: temp() } });
+  const home = temp();
+  const list = path.join(home, process.platform === "darwin" ? "Library/Application Support/obsidian" : process.platform === "win32" ? "obsidian" : ".config/obsidian");
+  fs.mkdirSync(list, { recursive: true });
+  fs.writeFileSync(path.join(list, "obsidian.json"), JSON.stringify({ vaults: { aaaaaaaaaaaaaaaa: { path: path.resolve(root), ts: 1 } } }));
+  const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
   assert.match(said, /✗ could not open obsidian:\/\/open\?path=/);
   assert.match(said, /Then, in Obsidian/);
 });

@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 
 const vault = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-obsidian-"));
 const release = (version, id = "companygraph") => new Map([
@@ -225,4 +225,29 @@ test("opening a vault hands each platform's opener the obsidian:// URL of the fo
   assert.deepEqual(ran, [["open", url], ["rundll32", "url.dll,FileProtocolHandler", url], ["xdg-open", url]]);
   assert.equal(vaultUrl("/Users/rob/Desktop/my vault"), url);
   assert.throws(() => openVault("/v", { platform: "linux", run: () => ({ status: 1, error: new Error("ENOENT") }) }), /could not open/);
+});
+
+// Whether Obsidian knows a folder as a vault, read from the list Obsidian keeps outside every
+// vault, at its own place per platform. Read and never written: a folder Obsidian does not know
+// is opened once by hand, through Open folder as vault, and the URL opens it from then on.
+const registry = (...paths) => JSON.stringify({ vaults: Object.fromEntries(paths.map((p, i) => [`${i}`.padStart(16, "a"), { path: p, ts: 1 }])) });
+
+test("a vault is known where Obsidian's own list names its folder, at the list's place per platform", () => {
+  const home = "/Users/rob";
+  const files = new Map([["/Users/rob/Library/Application Support/obsidian/obsidian.json", registry("/Users/rob/Desktop/cv-yileny")]]);
+  const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p) };
+  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: home }, ...fsOf }), true);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-trial", { platform: "darwin", env: { HOME: home }, ...fsOf }), false);
+  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: "/Users/other" }, ...fsOf }), false);
+});
+
+test("the list is read from APPDATA on Windows and from .config or the Flatpak's config on Linux, and a broken list means not known", () => {
+  const win = new Map([["C:\\Users\\rob\\AppData\\Roaming\\obsidian\\obsidian.json", registry("C:\\Users\\rob\\vault")]]);
+  const winFs = { exists: (p) => win.has(p), read: (p) => win.get(p) };
+  assert.equal(knownVault("C:\\Users\\rob\\vault", { platform: "win32", env: { APPDATA: "C:\\Users\\rob\\AppData\\Roaming" }, ...winFs }), true);
+  const lin = new Map([["/home/rob/.var/app/md.obsidian.Obsidian/config/obsidian/obsidian.json", registry("/home/rob/vault")]]);
+  const linFs = { exists: (p) => lin.has(p), read: (p) => lin.get(p) };
+  assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...linFs }), true);
+  const broken = { exists: () => true, read: () => "not json" };
+  assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...broken }), false);
 });

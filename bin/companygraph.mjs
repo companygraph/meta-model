@@ -21,7 +21,7 @@ import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
-import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -320,9 +320,10 @@ async function upgrade(argv) {
 // written over whatever release was there and the plugin switched on if it was not; the graph and
 // the panes are written where the vault has none and kept where it has, since Obsidian rewrites
 // both as a person works, unless --force. Obsidian is found or, where a package manager puts it
-// there reliably, offered; the vault is then opened through Obsidian's own URL, which is what
-// makes it a vault there, on --open or on a yes at a terminal, and an opener that fails is said
-// and does not stop what is left to say. A vault that is not an instance takes all of it too,
+// there reliably, offered; a folder Obsidian already knows as a vault is then opened through
+// Obsidian's own URL, on --open or on a yes at a terminal, and an opener that fails is said and
+// does not stop what is left to say. A folder Obsidian does not know is told the one way in,
+// Open folder as vault, since the URL opens only what Obsidian lists and that list is Obsidian's. A vault that is not an instance takes all of it too,
 // since the plugin's own `Make this vault an instance` is one way to make one.
 async function obsidian(argv) {
   const given = flags(argv);
@@ -381,25 +382,32 @@ async function obsidian(argv) {
     } else if (where.installer) console.log(`  ${where.installer.name} installs it: ${dim(where.installer.command.join(" "))}`);
     else console.log(`  it is at ${dim(where.download)}`);
   }
-  // --open is honored whether or not Obsidian was found: on Linux not found is not not installed,
-  // and the opener answers for itself. An opener that fails is said, with the URL to use by hand.
+  // The URL opens only a folder Obsidian lists as a vault, and the list is Obsidian's own. Where
+  // it lists this one, --open is honored whether or not Obsidian was found, since on Linux not
+  // found is not not installed and the opener answers for itself; an opener that fails is said,
+  // with the URL to use by hand. Where it does not, the way in is Obsidian's own and is said.
+  const known = knownVault(vault);
   const url = vaultUrl(vault);
-  if (given.open || (app && terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
+  if (!known) console.log(`  Obsidian does not know this folder yet; once opened there, ${dim(url)} opens it`);
+  else if (given.open || (app && terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
     try {
       openVault(vault);
       console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
     } catch (error) {
       console.log(`${bad("✗")} ${error.message}`);
-      console.log(`  Obsidian opens it, and makes it a vault, at ${dim(url)}`);
+      console.log(`  Obsidian opens it at ${dim(url)}`);
     }
-  } else console.log(`  Obsidian opens it, and makes it a vault, at ${dim(url)}`);
+  } else console.log(`  Obsidian opens it at ${dim(url)}`);
   // What no file in the vault can do. Obsidian keeps whether a vault's community plugins run, its
   // restricted mode, in its own storage, and a vault once browsed in restricted mode lists none.
+  const steps = [
+    ...(known ? [] : [`Open the folder as a vault: ${dim(`Open another vault → Open folder as vault → ${shown(vault)}`)}`]),
+    "Trust the vault's author when Obsidian asks",
+    `The plugins not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}\n     ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}`,
+  ];
   console.log(`
 ${bold("Then, in Obsidian")}
-  ${accent("1")}  Trust the vault's author when Obsidian asks
-  ${accent("2")}  The plugins not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}
-     ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}
+${steps.map((step, i) => `  ${accent(String(i + 1))}  ${step}`).join("\n")}
   A vault Obsidian has open already takes the plugins on ${dim("Reload app without saving")}.`);
 }
 
