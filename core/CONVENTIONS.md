@@ -4,38 +4,23 @@
 > that names an issue tracker, a wiki, a chat tool or a mail domain belongs in the instance,
 > not here.
 
-Validation is agent-run. Invoke it in prose — *"check cross-references in this repository"* —
-and the rules below are what is being checked. Some of them can also be checked by a script,
-but whether such a script exists is a property of the repository, not of these rules. R0 says
-which ones the CompanyGraph repository checks that way.
+Validation is agent-run, and part of it is also a script's. Invoke it in prose — *"check cross-references in this repository"* — and the rules below are what is being checked. Where a rule's shape is fixed, a script reads it from the same schemas an agent reads; there is no second schema for the script. R0 says which rules a script reaches and where it runs.
 
 ## Structure
 
 ### R1 — One entity per file
 
-A file describes exactly one entity. A document with a heading per entity is not a
-collection: a heading has no canonical name, so nothing can reference it.
+A file describes exactly one entity. A document with a heading per entity is not a collection: a heading has no canonical name, so nothing can reference it.
 
 ### R2 — The canonical name of an entity is its H1
 
-Not the filename, not a frontmatter field, and not the first of several fallbacks. A fallback
-chain is what makes a reference unresolvable without running code.
+Not the filename, not a frontmatter field, and not the first of several fallbacks. A fallback chain is what makes a reference unresolvable without running code.
 
-A name identifies an entity within its type, not across the instance. Two entities of one type
-may not share a name; two of different types may. Every schema declares its references as
-`ref → <type>`, so a reference carries a type as well as a name, and the pair is what resolves
-— which is why R4 fails a name that exists under a type other than the one asked for.
+A name identifies an entity within its type, not across the instance, and for an owned type within its owner (R5). Two entities of one type may not share a name, unless the type is owned and their owners differ; two of different types may. Two processes may each have a phase called Review, and two people each a period of one title. Every schema declares its references as `ref → <type>`, so a reference carries a type as well as a name, and the pair is what resolves — which is why R4 fails a name that exists under a type other than the one asked for.
 
-The case that requires this is a company of one, where the company and the only person in it
-are the same human and are called the same thing. A name unique across the whole instance
-would force one of them to be called something nobody calls it, and the graph would then
-describe a naming workaround rather than the company.
+The case that requires this is a company of one, where the company and the only person in it are the same human and are called the same thing. A name unique across the whole instance would force one of them to be called something nobody calls it, and the graph would then describe a naming workaround rather than the company.
 
-A tool that resolves by name alone — one that recognizes a reference by the value happening to
-be a canonical name, rather than by reading the schema that declares it — cannot use the type
-to choose between two entities sharing one. It refuses rather than guesses: such a name is an
-error where it is used, naming the types it was found under. Resolving to the first match, or
-to the one in the nearest folder, is the failure this makes impossible.
+A tool resolves a reference by the type its schema declares and the name written, and looks in no other type; for an owned type it looks within the owner the reference is written in, which R4 fixes. A name that exists only under another type is therefore unresolvable, not ambiguous, and the error says which type was searched. Resolving to the first match, or to the one in the nearest folder, is the failure this makes impossible — and so is recognizing a reference by its value happening to be a canonical name, which is how a string field ends up drawing an edge nobody declared.
 
 ### R3 — Every reference is by canonical name
 
@@ -43,174 +28,119 @@ Never by file path and never by filename. Paths move; a canonical name is the en
 
 ### R4 — An unresolvable reference is an error
 
-Not a warning. A reference naming an entity that does not exist, or that exists under a
-different type, fails the check.
+Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.
+
+A reference to an owned type is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference core declares to an owned type is written there, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of. A name that is only another owner's entity is unresolvable from here, and one written outside every owner of the type has no owner to be resolved in and names nothing. Should a reference from outside ever be wanted, it names the owner as well, and that form is designed when it is.
 
 ### R5 — An owned collection nests inside its owner
 
-A type that cannot exist without another lives inside that owner's folder and never appears
-at the root. Removing the owner then removes what it owned, and an orphan cannot be
-represented.
+A type that cannot exist without another lives inside that owner's folder and never appears at the root. Removing the owner then removes what it owned, and an orphan cannot be represented.
 
 ### R6 — An entity that owns collections is a folder
 
-The folder is named for the entity, holds the entity's own file — also named for the entity —
-and one folder per owned type beside it. An entity that owns nothing is a file. `README.md`
-is never an entity's file.
+The folder is named for the entity, holds the entity's own file — also named for the entity — one folder per owned type beside it, and any image a page in it names (R9). An entity that owns nothing is a file. `README.md` is never an entity's file.
 
-A type with exactly one entity is a file too, sitting directly in the container: a company has
-one identity and one vision, and a folder that will never hold a second entity is a plural that
-never arrives. The filesystem then enforces the cardinality — there is nowhere to put a second
-one — which is a constraint no rule has to state and nobody can forget.
+A type with exactly one entity is a file too, sitting directly in the container: a company has one identity and one vision, and a folder that will never hold a second entity is a plural that never arrives. The filesystem then enforces the cardinality — there is nowhere to put a second one — which is a constraint no rule has to state and nobody can forget.
 
 ### R7 — Folders are the plural of the type
 
-The type is singular because it says what one entity is. No folder is shortened for
-readability: an abbreviated folder is an exception to the one rule that makes the two names
-predictable, bought with nothing.
+The type is singular because it says what one entity is. No folder is shortened for readability: an abbreviated folder is an exception to the one rule that makes the two names predictable, bought with nothing.
 
-A singular type has no folder at all (R6), so there is nothing to pluralise.
+A singular type has no folder at all (R6), so there is nothing to pluralize.
 
 ### R13 — The instance's content lives in one container
 
-Every entity lives under `model/`, and nothing else does. What sits beside it — the vendored
-metamodel, the tooling, the working documents, the packaging — is not content and is never
-walked as content.
+Every entity lives under `model/`, and nothing else does. What sits beside it — the vendored metamodel, the tooling, the working documents, the packaging — is not content and is never walked as content.
 
-The container is what makes the rule closed. Without it, whatever walks an instance needs a list
-of folders that are *not* content, and such a list is an enumeration: it goes stale the first
-time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe.
-With it, "is this an entity?" is answered by where the file is.
+The container is what makes the rule closed. Without it, whatever walks an instance needs a list of folders that are *not* content, and such a list is an enumeration: it goes stale the first time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe. With it, "is this an entity?" is answered by where the file is.
 
-A folder directly under `model/` is a type's folder and is named by a schema — core's, or any
-pack the instance declares. A file directly under `model/` is a singular type's entity (R6).
-Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs
-here.
+A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6), or an image such an entity names (R9). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
 
 ### R14 — Names and prose are American English
 
-Every name this vocabulary chooses is spelled in American English — a field, a type, a folder,
-a section heading a schema declares — and so is the prose of `core/` and of an instance's
-content. `organization`, `modeling`, `license`, `recognize`.
+Every name this vocabulary chooses is spelled in American English — a field, a type, a folder, a section heading a schema declares — and so is the prose of `core/` and of an instance's content. `organization`, `modeling`, `license`, `recognize`.
 
-Excepted: proper nouns, quoted matter, and any name fixed by something outside this
-vocabulary — a product, a standard, a legal entity, a `LICENSE` file whose name is what the
-ecosystem reads. The rule governs what this vocabulary calls things, not what the world has
-already named.
+Excepted: proper nouns, quoted matter, and any name fixed by something outside this vocabulary — a product, a standard, a legal entity, a `LICENSE` file whose name is what the ecosystem reads. The rule governs what this vocabulary calls things, not what the world has already named.
 
-*A name is not prose* is the argument for leaving one British spelling in place, and it loses:
-a reader meets both in the same file, and a vocabulary that spells its fields one way and its
-sentences another has no rule at all, only a habit with an exception.
+*A name is not prose* is the argument for leaving one British spelling in place, and it loses: a reader meets both in the same file, and a vocabulary that spells its fields one way and its sentences another has no rule at all, only a habit with an exception.
+
+### R17 — The model is the master
+
+Everything made from the model — a page, a profile, a document, a bundle — shows the model's facts and none of its own. Where a made thing and the model disagree, the model is corrected and the thing rebuilt; the made thing is never edited on its own. A fact that lives only on something made from the model is a fact no reader of the model can find, and the next rebuild deletes it.
+
+A file in the model therefore records the rules by which something is made, and never the state of the thing made. "The published page currently shows June" is an observation: true on the day it was written, and unfalsifiable afterwards by anything in the repository. The line falls between the shape of a made thing and its content. That a place has a headline, and caps it at a length, is a condition the rules are written against, and it holds until the place itself changes; a shape recorded with where it was read is a fact like any other. That the headline currently reads one thing rather than another is what the next rebuild replaces. It belongs in the report a validation pass produces (R0). What belongs in a file is what stays true after the next rebuild.
 
 ## Schemas
 
 ### R8 — Enum values are listed in the schema
 
-A field typed `enum` states its permitted values. Any other value is an error, which is the
-whole reason to type it `enum` rather than `string`.
+A field typed `enum` states its permitted values. Any other value is an error, which is the whole reason to type it `enum` rather than `string`.
 
-`enum` is for a closed set of bare tokens. A set whose members carry a definition of their own
-is not an enum — make it a type, so the definition lives in one file and everything references
-it by canonical name. Otherwise the definitions end up restated on every entry that uses one,
-or nowhere at all.
+The values are listed where a reader and a check both find them: the field's Description opens with the tokens in backticks, separated by commas or `or` — `` `human` or `agent`. `` — and the sentence after them says what the choice means. A check reads the tokens off the front of the cell, so a Description that opens with prose lists nothing, and an enum that lists nothing has nothing to hold a value to.
 
-The same test applies to frontmatter. A field whose value is a list of records is a table
-wearing YAML: put it in the body as a Markdown table and declare its columns in the schema. It
-renders where a reader looks, it has no quoting hazard, and it is checkable on identical terms.
-Frontmatter is for short facts.
+`enum` is for a closed set of bare tokens. A set whose members carry a definition of their own is not an enum — make it a type, so the definition lives in one file and everything references it by canonical name. Otherwise the definitions end up restated on every entry that uses one, or nowhere at all.
 
-So a list of *bare names* stays in frontmatter, typed `array of ref → <type>`; a list of
-*records* becomes a table in the body. The same reference therefore appears in both places and
-that is not an inconsistency — an experience naming the skills it used is a list of names and
-nothing more, while a profile's claim on a skill carries a level and its evidence. What decides
-the shape is whether the edge has attributes of its own.
+The same test applies to frontmatter. A field whose value is a list of records is a table wearing YAML: put it in the body as a Markdown table and declare its columns in the schema. It renders where a reader looks, it has no quoting hazard, and it is checkable on identical terms. Frontmatter is for short facts.
+
+So a list of *bare names* stays in frontmatter, typed `array of ref → <type>`; a list of *records* becomes a table in the body. The same reference therefore appears in both places and that is not an inconsistency — an experience naming the skills it used is a list of names and nothing more, while a profile's claim on a skill carries a level. What decides the shape is whether the edge has attributes of its own.
 
 ### R9 — Schema files have a fixed shape
 
-Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**`
-line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then
-`## Purpose` and `## Writing rules` where the type has them. The path under
-`## File Location` is written in backticks and begins at the container, `model/` (R13). For a
-type with many entities the last folder it names is the type's own, and what comes before it is
-where that folder sits: `model/` alone, for a type nothing owns; the owner's path, for a type
-that is owned (R10). So `model/skills/*.md`, and
-`model/profiles/<profile>/experiences/*.md`. A singular type names its file instead, directly
-in the container: `model/vision.md`.
+Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**` line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then `## Purpose` and `## Writing rules` where the type has them. The path under `## File Location` is written in backticks and begins at the container, `model/` (R13). For a type with many entities the last folder it names is the type's own, and what comes before it is where that folder sits: `model/` alone, for a type nothing owns; the owner's path, for a type that is owned (R10). So `model/skills/*.md`, and `model/profiles/<profile>/experiences/*.md`. A singular type names its file instead, directly in the container: `model/vision.md`.
 
-`## Frontmatter` holds one table and only one — a field is a row in it — with columns
-`Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.`
-instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens
-with the sections table, whose columns are `Section | Required | Description`.
+`## Frontmatter` holds one table and only one — a field is a row in it — with columns `Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.` instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens with the sections table, whose columns are `Section | Required | Description`.
 
-A section whose content is itself a table declares that in the sections table: its Description
-begins with `Table.`, and a table naming that section's columns follows, with columns
-`Column | Required | Type | Description`, read on the same terms as the frontmatter table
-except for the list types below. The column table is introduced by a caption line naming its
-section — `` `## Skills` is a table with these columns: `` — and the caption, not the
-position, is what says which section the columns belong to. The sections table is then free
-to list its rows in whatever order reads best. A section marked `Table.` with no column
-table, and a column table for a section not marked `Table.`, are both errors: each half
-means nothing without the other.
+A section the sections table marks `Yes` is on every page of the type, under its heading exactly as the table writes it, so a page that renames one has dropped it. A page may carry sections of its own beside the declared ones: a heading its schema does not declare resolves nothing, draws no edge and is read as prose. That is the opposite of R15, on purpose. A field left over by a rename still renders as though it were the field, while a section of the page's own claims to be nothing the schema knows. What it costs is that an optional section written with a typo reads as one of the page's own, and no script can tell the two apart; an editor that knows the schema can.
 
-Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`,
-`array`, `enum`, `ref → <type>`, `array of ref → <type>`. A reference names one entity, so
-the type it points at is singular: `ref → skill`, never `ref → skills`.
+The sections table lists the page's `>` line beside its H1 — a tagline, a definition, a statement, under whatever name the type gives it — and a page writes it as the first blockquote after the H1: one paragraph, one short statement. It may wrap across as many `>` lines as the prose needs, because Markdown reads a run of them as one paragraph and so does every tool that reads the model; a blank line or a bare `>` ends it. A line break inside it is layout, never content, so a tagline that renders whole on a page reaches every reader whole.
 
-`date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
-states and never at more; an author may deliberately record less. A shorter form is an
-interval, not a point: `2002` is the whole year, and a comparison takes its earliest instant,
-so `2002` orders before `2002-03`.
+A section whose content is itself a table declares that in the sections table: its Description begins with `Table.`, and a table naming that section's columns follows, with columns `Column | Required | Type | Description`, read on the same terms as the frontmatter table except for the list types below. The column table is introduced by a caption line naming its section — `` `## Skills` is a table with these columns: `` — and the caption, not the position, is what says which section the columns belong to. The sections table is then free to list its rows in whatever order reads best. A section marked `Table.` with no column table, and a column table for a section not marked `Table.`, are both errors: each half means nothing without the other.
 
-The form is stated here rather than in the description of whichever field happens to use it,
-because a type in a closed vocabulary that means different things in two schemas is not closed.
-`date` was the only member whose lexical form was never written down, and while it went unsaid
-one schema's description fixed it at `YYYY-MM` — which made an instance invent a month for a
-diploma that states a year, and left a talk's known day in prose because no field could hold
-it. A rule that forces both an invention and a discard is the wrong rule.
+A section whose content is grouped under `###` headings that name entities declares that the same way: its Description begins with `Grouped.`, and a table naming what those headings reference follows, with columns `Heading | Required | Type | Description` and one row. It is introduced by a caption line naming its section — `` `## Achievements` is grouped under these headings: `` — which is what tells it from a column table, since both open by naming a section. The row's Type is `ref → <type>`, the one type every heading in the section names, and `Heading` names the reference, which is what the edge is called. One row, because a heading that named a second type would be a second section. Required says whether an instance must carry the headings at all: an instance that defines no entities of the heading's type writes the section ungrouped, which is what `No` allows, and a schema may say in its writing rules when a page writes it ungrouped although the instance does. A section marked `Grouped.` with no heading table, and a heading table for a section not marked `Grouped.`, are both errors, as with `Table.`.
 
-Where each form is legal follows from one distinction: **a frontmatter field may hold one
-value or a list; a table cell holds one value.** The whole vocabulary is therefore open to a
-frontmatter field, and both `ref → <type>` and `array of ref → <type>` there must resolve. In
-a column table the list types — `array` and `array of ref → <type>` — are an error, not
-something to be read leniently, because there is nothing for them to mean: a column that
-references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter
-field (R8); it never becomes a column.
+A section that holds a list may declare which kind, because the two kinds mean different things: a numbered list is a sequence, the order a phase's work is done in, and a bulleted list is a set. Its Description begins with `Bulleted.` or `Numbered.`, or carries the word directly after `Grouped.` where the list stands under headings — `Grouped. Numbered.` — and never after `Table.`, since a table holds rows. The kind governs the list and not the section: a section may open its list with a sentence and close it with a paragraph, as a gate does, and only the items are held. A section that declares neither is held to nothing, as one that says neither `Table.` nor `Grouped.` is prose: a page's own sections, and numbered steps inside a paragraph of reasoning, are nobody's to judge. R16 says what an instance is held to.
 
-`## Purpose` and `## Writing rules` come last, after every table, and say what the shape above
-cannot: what the type is *for*, and what separates a good entity of it from one that merely
-has the shape. Purpose is one paragraph — the sentence someone needs before writing their
-first entity of the type, not the rationale for the design. Writing rules are a list, one
-sentence each, and each one has to be checkable by an agent reading an entity: "person-neutral:
-no name, employer, date or number from any profile" can fail, and "write well" cannot. They are
-about what goes *in* a field or section; whether a field is required is the table's business,
-not theirs.
+Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`, `image`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`. A reference names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 
-They come as a pair or not at all: writing rules with no purpose is the same half-a-thing as a
-`Table.` section with no column table, since the rules are how the purpose is met. Both are
-optional in the shape and neither is optional in core, which is what gets copied — a schema
-you write for a type of your own may leave them out, and every schema in `core/` has them. The
-reader that checks the shape stops at the tables, so nothing that reads a schema mechanically
-sees them; the agent pass does, which is the point of putting them in the schema rather than
-in a document beside it.
+`rank` is the vocabulary's name for an entity's order within its type, wherever a schema needs one: a field so named is typed `number`, and two entities of one type never share a rank — there is nothing left to order them by if they do.
 
-A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as
-`:---`, `---:` or `:---:`.
+Some fields name a thing that is sometimes an entity and sometimes not — an employer that is the company itself, a client that is nobody here. `ref? → <type>` is how a schema says so: a value that resolves becomes an edge, a value that does not stays a string, and neither reading is an error.
 
-A schema is not an entity, so it never lives in a folder named for a type: such a folder holds
-entities of that type and nothing else, and a schema sitting in one would be read as an entity
-by anything walking it. Where the schemas do live is the repository's own business — this says
-only where they cannot.
+The `?` is not `Required`, though the two read as one thing on a first pass. `Required` says whether the field may be absent; `ref?` says whether a value that is present must resolve. A field can be both, and `organization` is.
+
+A required list that is present and empty is absent in every sense that matters: nothing resolves, no edge is drawn, and the page reads as though it had answered a question it did not. So a required field typed `array` or `array of ref → <type>` carries at least one entry. An optional list written empty is how an author says none yet, and that is theirs to say, since the field could have been left out.
+
+`date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source states and never at more; an author may deliberately record less. A shorter form is an interval, not a point: `2002` is the whole year. A comparison takes the bound the field names — a `start` the interval's first instant, an `end` its last — so a period starting `2002` orders before one starting `2002-03`, and a period ending `2002` orders after one ending `2002-03`. One rule for both fields reads an end as its first instant, which says a period that ended sometime in 2002 ended before one that ended that March. The model does not know that, and it is the opposite of what a reader takes from the value.
+
+The form is stated here rather than in the description of whichever field happens to use it, because a type in a closed vocabulary that means different things in two schemas is not closed. `date` was the only member whose lexical form was never written down, and while it went unsaid one schema's description fixed it at `YYYY-MM` — which made an instance invent a month for a diploma that states a year, and left a talk's known day in prose because no field could hold it. A rule that forces both an invention and a discard is the wrong rule.
+
+`image` is a file name with no path, and the file sits in the folder of the page that names it: for a profile, `profiles/<profile>/` beside the profile's own file, so the picture goes with the person in the one operation R6 makes of removing them. A name with a `/` in it is a reference by location, which R3 forbids. The file is `.jpg`, `.jpeg` or `.png`, lowercase, and its first bytes are the signature of what the name says. **An image is square, 256 to 1024 pixels on a side and at most 300 KB (307,200 bytes).** Square because every place that draws one draws a circle, and a circle cut from a rectangle cuts whichever face is off-center; the floor is what a dense screen needs for a small avatar and the ceiling and the cap keep a page from loading a photograph. `image` is a frontmatter type: a row of a table has no folder of its own for a file to sit in. An image in the container that no page's `image` field names is an error, because it is a file nothing copies and no reader reaches.
+
+Where each form is legal follows from one distinction: **a frontmatter field may hold one value or a list; a table cell holds one value.** The whole vocabulary is therefore open to a frontmatter field, and both `ref → <type>` and `array of ref → <type>` there must resolve. In a column table the list types — `array` and `array of ref → <type>` — are an error, not something to be read leniently, because there is nothing for them to mean: a column that references another entity is typed `ref → <type>`. A list of bare names stays a frontmatter field (R8); it never becomes a column.
+
+`ref? → <type>` is legal wherever `ref → <type>` is — a frontmatter field or a column — on the same terms. `array of ref?` is not a form: the `?` asks whether one value resolves, and a list has no single value to ask it of.
+
+`qualifier → <type>` is a column type and only a column type. A row of a column table is one fact about several things — a skill held at a level — and a fact like that is identified by the things it joins rather than by a name of its own. R2 names entities by their H1 and allows no two of a type to share one, so such a row cannot become an entity without being given a name nobody calls it. It stays a row: one column names what the row points at, and the rest qualify that reference. A qualifier must resolve, exactly as a reference must, and it draws no edge of its own; it reaches a reader as an attribute of the edge its row drew, already resolved to an id.
+
+So a column table declares at most one reference, and a table that qualifies anything declares the reference being qualified, because a qualifier with nothing to qualify is an attribute of an edge that does not exist. Where the reference column stands is the author's choice: the edge a row draws is a matter of the schema, never of the order somebody typed the columns in, and a parser draws from the declared column wherever it is. A table declaring no reference at all draws nothing and is data, which is a table's other legal shape.
+
+A schema may declare two joins between what its tables hold, each as the opening of a Description, where a reader and a check both find it, as R8 has an enum's values. A column typed `qualifier → <type>` whose Description opens with a field in backticks, the word `lists` and a column in backticks — `` `skills` lists `Skill`. `` — declares that the entity the cell names carries, in that field, the entity the same row's column names. The field is one the qualifier's type declares `ref → <type>` or `array of ref → <type>`, the column is one of this table typed to the same type, and a declaration naming anything else is an error in the schema. A section whose Description goes on from `Table.` with `` Under `## <Section>`. `` declares that its table and the one it names reference the same entities, both ways: no row here stands under something the other never names, and nothing named there is left without a row here. Both sections are table sections of the one schema, and each has its reference to the same type; which column is meant is not said, because a column table declares at most one. R16 says what an instance is held to. A Description that opens any other way declares nothing, so a declaration misspelled is prose and switches nothing on: a schema that means one is read back once after it is written, by running the checks against a page that breaks it.
+
+`## Purpose` and `## Writing rules` come last, after every table, and say what the shape above cannot: what the type is *for*, and what separates a good entity of it from one that merely has the shape. Purpose is one paragraph — the sentence someone needs before writing their first entity of the type, not the rationale for the design. Writing rules are a list, one sentence each, and each one has to be checkable by an agent reading an entity: "person-neutral: no name, employer, date or number from any profile" can fail, and "write well" cannot. They are about what goes *in* a field or section; whether a field is required is the table's business, not theirs.
+
+They come as a pair or not at all: writing rules with no purpose is the same half-a-thing as a `Table.` section with no column table, since the rules are how the purpose is met. Both are optional in the shape and neither is optional in core, which is what gets copied — a schema you write for a type of your own may leave them out, and every schema in `core/` has them. The reader that checks the shape stops at the tables, so nothing that reads a schema mechanically sees them; the agent pass does, which is the point of putting them in the schema rather than in a document beside it.
+
+A schema declares the references its type makes and none it receives. Which types reference this one is read from the tables of every other schema, so a sentence here saying that nothing does, or that one edge is the only one, is a second copy of a fact held elsewhere, and it stops being true the day another schema declares a reference and nobody rereads this one. Prose may name a referrer to explain a design — a skill outlives the profile that claims it — and never says that the ones it names are all there are.
+
+A table's separator row cells are plain dashes — `| --- |` — never alignment colons such as `:---`, `---:` or `:---:`.
+
+A schema is not an entity, so it never lives in a folder named for a type: such a folder holds entities of that type, any image a page in it names (R9), and nothing else, and a schema sitting in one would be read as an entity by anything walking it. Where the schemas do live is the repository's own business — this says only where they cannot.
 
 ### R10 — An owned type declares its owner
 
-One `**Owner:**` line in the owned type's schema, and the File Location nests inside that
-owner. The declaration goes on the owned type because "what does this belong to?" is asked of
-the owned thing.
+One `**Owner:**` line in the owned type's schema, and the File Location nests inside that owner. The declaration goes on the owned type because "what does this belong to?" is asked of the owned thing.
 
-R9 says the path ends with the type's own folder and this says where that folder sits, so an
-owned type satisfies both: `experience` is owned by `profile`, its folder is `experiences`,
-and its path is `profiles/<profile>/experiences/*.md`. An earlier wording of R9 had the path
-*begin* with the type's own folder, which no owned type could satisfy.
+R9 says the path ends with the type's own folder and this says where that folder sits, so an owned type satisfies both: `experience` is owned by `profile`, its folder is `experiences`, and its path is `profiles/<profile>/experiences/*.md`. An earlier wording of R9 had the path *begin* with the type's own folder, which no owned type could satisfy.
 
 ### R11 — A list-valued frontmatter field is a block sequence
 
@@ -222,20 +152,13 @@ skills:
   - Software modeling (UML, SysML, C4)
 ```
 
-A flow sequence — `skills: [API design, Software modeling (UML, SysML, C4)]` — is an error,
-because an entry may contain a comma and nothing there is malformed when it does. That line
-holds three fragments, no parser complains, and R4 catches it only for as long as the
-fragments resolve to nothing: the day `SysML` is a skill of its own, the claim is wrong and
-every check agrees it is fine. Quoting the entry fixes one file and is a rule people forget;
-a block sequence has no quoting hazard to remember. It also gives a diff one line per
-reference added or removed, which is the other reason to want it.
+A flow sequence — `skills: [API design, Software modeling (UML, SysML, C4)]` — is an error, because an entry may contain a comma and nothing there is malformed when it does. That line holds three fragments, no parser complains, and R4 catches it only for as long as the fragments resolve to nothing: the day `SysML` is a skill of its own, the claim is wrong and every check agrees it is fine. Quoting the entry fixes one file and is a rule people forget; a block sequence has no quoting hazard to remember. It also gives a diff one line per reference added or removed, which is the other reason to want it.
 
 A field holding one value stays on the key's own line. This is about lists.
 
 ### R12 — A filename is derived, and the derivation is stated
 
-**Slugging a string means: lower-case it, replace every run of characters outside `a–z` and
-`0–9` with a single `-`, and drop any leading or trailing `-`.**
+**Slugging a string means: lower-case it, replace every run of characters outside `a–z` and `0–9` with a single `-`, and drop any leading or trailing `-`.**
 
 | string | slug |
 | --- | --- |
@@ -244,68 +167,46 @@ A field holding one value stays on the key's own line. This is about lists.
 | `Software modeling (UML, SysML, C4)` | `software-modeling-uml-sysml-c4` |
 | `Zürich office` | `z-rich-office` |
 
-The last is ugly and that is the point. A non-ASCII letter drops rather than being
-transliterated, because transliteration is where two implementations differ — `ü` becomes `ue`
-in one and `u` in another — and then whatever writes the file and whatever checks it disagree
-about the same file. Dropping is the rule nobody has to look up. An instance that dislikes the
-result renames the entity, which is the honest fix: R2 makes the H1 canonical and R3 keeps the
-filename out of every reference, so a filename is free to be ugly.
+The last is ugly and that is the point. A non-ASCII letter drops rather than being transliterated, because transliteration is where two implementations differ — `ü` becomes `ue` in one and `u` in another — and then whatever writes the file and whatever checks it disagree about the same file. Dropping is the rule nobody has to look up. An instance that dislikes the result renames the entity, which is the honest fix: R2 makes the H1 canonical and R3 keeps the filename out of every reference, so a filename is free to be ugly.
 
-**By default a file is named for the slug of its H1**, and a folder entity's folder likewise
-(R6). A singular type's file is named for the type — `vision.md`, `identity.md` — which leaves
-its H1 free to be a sentence. A type whose files are named some other way says so in its own schema, and one is:
-`experience` is named for its start year, a `-`, and a slug the author chooses to identify the
-period — `2018-northwind-atelier.md` for an experience whose H1 is
-`Rebuilding the order pipeline`.
+**By default a file is named for the slug of its H1**, and a folder entity's folder likewise (R6). A singular type's file is named for the type — `vision.md`, `identity.md` — which leaves its H1 free to be a sentence. A type whose files are named some other way says so in its own schema, and one is: `experience` is named for its start year, a `-`, and a slug the author chooses to identify the period — `2018-northwind-atelier.md` for an experience whose H1 is `Rebuilding the order pipeline`.
 
-That one is *chosen* rather than derived, and the schema says so rather than naming a field to
-derive it from. An experience's H1 says what happened, which neither sorts nor scans in a
-folder listing; `organization` is optional, so it cannot be what a required filename comes
-from; and the same organization recurs across periods, so it does not identify one anyway. What
-a stated form still fixes is everything worth fixing: the prefix is the year in `start`, the
-rest is a slug by the definition above, and the whole is unique in its folder.
+That one is *chosen* rather than derived, and the schema says so rather than naming a field to derive it from. An experience's H1 says what happened, which neither sorts nor scans in a folder listing; `organization` is optional, so it cannot be what a required filename comes from; and the same organization recurs across periods, so it does not identify one anyway. What a stated form still fixes is everything worth fixing: the prefix is the year in `start`, the rest is a slug by the definition above, and the whole is unique in its folder.
 
-Two entities in one folder that end up with the same filename are an error. The folder, not the
-type: an owned type shares a folder only with its owner's other entities, so two profiles may
-each hold an experience named the same way and both files are correctly named.
+Two entities in one folder that end up with the same filename are an error. The folder, not the type: an owned type shares a folder only with its owner's other entities, so two profiles may each hold an experience named the same way and both files are correctly named.
 
-This is here rather than in a tooling document because a filename is written by whoever writes
-the file, and the first instance was written by hand. A rule only a program can consult is not
-a convention.
+This is here rather than in a tooling document because a filename is written by whoever writes the file, and the first instance was written by hand. A rule only a program can consult is not a convention.
 
 ### R15 — A page's frontmatter fields are the ones its schema declares
 
-A frontmatter field its schema does not declare is an error. This binds a page whose folder
-matches a type's stated File Location; a file matching none has no schema, so nothing declares
-what its frontmatter may hold and nothing reads it.
+A frontmatter field its schema does not declare is an error. This binds a page whose folder matches a type's stated File Location; a file matching none has no schema, so nothing declares what its frontmatter may hold and nothing reads it.
 
-What the rule costs is the local field: an instance cannot carry one of its own. What it buys
-is that a rename cannot half-happen. An undeclared field resolves no reference and satisfies no
-requirement — but it still renders, which is how a field left behind by a rename survives on
-the page under the old name while every other check reports green.
+What the rule costs is the local field: an instance cannot carry one of its own. What it buys is that a rename cannot half-happen. An undeclared field resolves no reference and satisfies no requirement — but it still renders, which is how a field left behind by a rename survives on the page under the old name while every other check reports green.
+
+### R16 — An instance is held to what its schema declares
+
+A field or column typed `ref → <type>` or `array of ref → <type>` draws an edge from every page that carries it. One typed `ref? → <type>` draws an edge when its value resolves, and stays a fact when it does not. One typed `qualifier → <type>` resolves and draws no edge: it qualifies the edge its own row drew, and reaches a reader in that edge's attributes. Typed anything else, a field draws no edge and its value resolves to nothing — and typed `number`, it is written as digits.
+
+A heading declared `ref → <type>` draws an edge from the page to the entity each `###` heading in that section names, via `<Section>.<Heading>`, and a heading that names nothing of its type is R4.
+
+Where a section declares its list `Bulleted.` or `Numbered.` (R9), every item at the left margin of that section carries the declared marker. An indented item is a sub-point of the one above it and may be of either kind, and what stands in a fenced block is not the page's list. A section that is required and declares a kind carries at least one item, as a required list field carries at least one entry.
+
+Where a column declares that a field `lists` another column (R9), a filled cell is held to it: the entity it names carries the row's other entity in that field, read within the owner the page is written in where the type is owned (R4). A blank cell names nothing and is held to nothing. Where a section is declared `Under` another, every entity either table references has a row in the other, and a page that carries the table above and leaves out the one under it has every row above reported, since leaving the section out is how nothing gets written under a claim. Both hold what a schema says and name no type themselves.
+
+A column table draws one edge per row, so two rows naming the same entity are two edges between one pair, and a reader can tell a distinction from a duplicate only by what the rows say beside the name. Where a table's drawing reference stands beside a column named `As`, that column is what says it: each row naming an entity another row of the table also names carries an `As`, and no two of them carry the same one. A row whose entity no other row names may leave it blank. The rule is found by the columns a schema declares, and names no type either.
+
+The difference between a reference and a qualifier is not how hard it resolves; both must. It is what the row is saying. A row that names a skill and a level makes one claim about both, so one edge carries it and the level qualifies that edge. Two edges would say the page refers to the skill and, separately, to the level — and the second is a claim no row makes.
+
+`number` is about the written form, not a parsed type, and that is worth saying because a reader will otherwise take it for a bug. This is a model made of Markdown: every value in every file is text, and what a serializer turns that text into is the serializer's own business, not this vocabulary's. A rule reading "digits become a number" would say more than intended — it would turn a year-only date into an integer, and a date written `YYYY` is legal by R9.
+
+What the rule costs is that a schema's types stop being decoration: retype a field from `string` to `ref → <type>` and a page that used to hold a fact now holds an edge, on every instance that field carries it. What it buys is that nothing beyond the schema decides which fields to resolve — a parser reads the type once and knows, for every page of every type, which fields become edges and which stay facts.
 
 ## Working
 
 ### R0 — Validation runs before committing
 
-Nothing is committed without a validation pass over the rules above. The pass is an agent
-reading the files against these rules. A repository may also own a script that checks some of
-them; nothing here depends on having one.
+Nothing is committed without a validation pass over the rules above. The pass is an agent reading the files against these rules and, where a repository runs one, a script reading part of them from the same schemas. The agent pass is the one every repository has; nothing here depends on the script.
 
-Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository,
-`npm run verify` runs `verify/check.mjs`, which mechanically checks part of R4, R6, R9, R10,
-R11 and R12 against this repository's own files, plus a meta-check under R0 that fails if any
-check cites a rule this document does not define. `npm run test:instance` exercises the
-instance parser's implementation of the rules it cites — R2, R3, R4, R5, R6, R7, R9 and R13 —
-against fixtures rather than files, and `npm run test:rules` extends that meta-check to the
-rules the parser cites in its comments and error messages. No file is checked against R1, R2,
-R3, R5, R7 or R8; where a check happens to touch one, it is incidental to the rule that check
-cites. Treat all six as agent-enforced — which is by design, not by omission: the claim this
-model ships under is that schemas written as prose are enforceable by agents.
+Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm run verify` runs `verify/check.mjs`, which mechanically checks part of R2, R3, R4, R5, R6, R8, R9, R10, R11, R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if any check cites a rule this document does not define. `npm run test:instance` exercises the instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 — against fixtures rather than files, and `npm run test:rules` extends that meta-check to the rules the parser cites in its comments and error messages. Part is the word that matters. Of R3 a script reads one thing, a link from an entity to a file of the model, of R2 that a name of an owned type is unique within its owner, and of R5 that a name of an owned type is one of its owner's own and that an owner's table of what it owns agrees with its folder; that a name written in prose is the canonical one, no script can tell. No file is checked against R1, R7 or R17; where a check happens to touch one, it is incidental to the rule that check cites. Treat these, and the rest of every rule a script reads in part, as agent-enforced — which is by design, not by omission: the claim this model ships under is that a schema written as prose is the only schema, which an agent reads whole and a script reads where its shape is fixed.
 
-Those scripts are this repository's own harness. Copying `CONVENTIONS.md` into a company
-brings the rules and not the scripts — there is no `verify` script there, and what these run
-against is this repository's own files and its own parser, not yours. The agent pass is the
-portable part, and it is the only thing that covers what no script reaches: whether a schema's
-prose is portable, and whether a rule that has crept in is really about modeling rather than
-about one company's tooling.
+Those scripts are this repository's own harness, run against its own files. An instance takes the other half. The checks that are about an instance rather than about this repository ship in the release as `bin/check-instance.mjs`, and an instance calls them through the reusable workflow `instance-check.yml` at the release its `.companygraph/manifest.json` names. They reach the same rules `verify` does, except R10, which is about a schema and not about a page. They read the schemas from the core the instance vendored, never from the core in the package, so a newer checker never holds an instance to rules it has not adopted, and a checker that is not the release the manifest names refuses to run. Every run says what it left to the agent pass. That pass is the only thing that covers what no script reaches: whether a page keeps its schema's writing rules, whether a schema's prose is portable, and whether a rule that has crept in is really about modeling rather than about one company's tooling.

@@ -4,17 +4,9 @@
 > the tooling will lay one out. It is the first thing that can show the extraction was wrong,
 > and the first thing that can show the tooling design is wrong — before either is built on.
 
-Status: built, and still moving — §7 records what it taught, including what it taught after
-the first pass. Each finding is a follow-up unless its entry says core has already acted. The
-instance is a new repository, `robertblust/mental-model`; this spec lives here because the
-findings it produces are about core and the tooling, not about one person's CV.
+Status: built, and still moving — §7 records what it taught, including what it taught after the first pass. Each finding is a follow-up unless its entry says core has already acted. The instance is a new repository, `robertblust/mental-model`; this spec lives here because the findings it produces are about core and the tooling, not about one person's CV.
 
-Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §6
-(splitting the agent instructions), §7 (an instance ships as a skill), §9 (the first slice) —
-and [`2026-08-25-companygraph-tooling-design.md`](2026-08-25-companygraph-tooling-design.md)
-— §2 (the release contract), §3 (the instance layout), §5 (installed skills). Where this spec
-and either of those disagree, their decisions stand and this one records the disagreement as a
-finding (§7) rather than resolving it.
+Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §6 (splitting the agent instructions), §7 (an instance ships as a skill), §9 (the first slice) — and [`2026-08-25-companygraph-tooling-design.md`](2026-08-25-companygraph-tooling-design.md) — §2 (the release contract), §3 (the instance layout), §5 (installed skills). Where this spec and either of those disagree, their decisions stand and this one records the disagreement as a finding (§7) rather than resolving it.
 
 ---
 
@@ -49,9 +41,7 @@ finding (§7) rather than resolving it.
 
 ## 2. The release contract, honoured first
 
-The tooling spec's §2 contract has two halves and `meta-model` has neither yet: no
-`core/manifest.json`, no tag. An instance that mimics `init` must record which core it
-vendored, so the release comes first.
+The tooling spec's §2 contract has two halves and `meta-model` has neither yet: no `core/manifest.json`, no tag. An instance that mimics `init` must record which core it vendored, so the release comes first.
 
 - `core/manifest.json`:
 
@@ -82,9 +72,7 @@ vendored, so the release comes first.
 
 ## 3. The instance layout
 
-`robertblust/mental-model`, public — the content is the portfolio the CV already sends out,
-and a reference instance nobody can read is not a reference. Laid out as the tooling spec's
-§3 describes, with nothing added and nothing left out:
+`robertblust/mental-model`, public — the content is the portfolio the CV already sends out, and a reference instance nobody can read is not a reference. Laid out as the tooling spec's §3 describes, with nothing added and nothing left out:
 
 ```
 mental-model/
@@ -148,10 +136,7 @@ Decisions inside that:
 
 ## 4. Content
 
-Everything is drawn from the CV repository's `content/` — `profile.yaml`, `skills.yaml`,
-`experience/`, `projects/`, `education/`, `community/` — in English only. Nothing is invented:
-a fact that is not in the CV is not in the instance. Where a CV entry has an `id`, the entity
-carries it as `source-id`.
+Everything is drawn from the CV repository's `content/` — `profile.yaml`, `skills.yaml`, `experience/`, `projects/`, `education/`, `community/` — in English only. Nothing is invented: a fact that is not in the CV is not in the instance. Where a CV entry has an `id`, the entity carries it as `source-id`.
 
 ### Sources — 2
 
@@ -160,29 +145,17 @@ carries it as `source-id`.
 | Local | — | values, proficiency levels, skills — written here, mastered here |
 | rob-cv | — (a local repository with no remote; the field is optional and stays absent rather than naming a path) | the profile and every experience; `source-id` is the CV entry's `id` |
 
-The split follows the source schema's own words: a source is "where a page's facts are
-mastered". The definition of a skill is written for this graph; the dates of a role are not,
-and copying them here does not make this repository their master. No sync exists and the CV
-repository has no public address, so the `source-id` is a pointer a person with that
-repository follows, not a key a program does — the field's contract does not depend on which.
+The split follows the source schema's own words: a source is "where a page's facts are mastered". The definition of a skill is written for this graph; the dates of a role are not, and copying them here does not make this repository their master. No sync exists and the CV repository has no public address, so the `source-id` is a pointer a person with that repository follows, not a key a program does — the field's contract does not depend on which.
 
 ### Proficiency levels — 4
 
-The ladder from `example/`, unchanged: Familiar 10, Competent 20, Proficient 30, Expert 40,
-each with the example's `## What it means`. One ladder in two instances is a stronger claim
-than a second ladder would be, and inventing rungs for one person is the wrong direction.
+The ladder from `example/`, unchanged: Familiar 10, Competent 20, Proficient 30, Expert 40, each with the example's `## What it means`. One ladder in two instances is a stronger claim than a second ladder would be, and inventing rungs for one person is the wrong direction.
 
 ### Skills — about 25
 
-One skill per capability, not per product: "Event-driven architecture", not Kafka and Pub/Sub
-and RabbitMQ as three files. Products are named under `## In practice`, which is what the
-section is for. `group` carries the CV's group name verbatim — the schema leaves whether a
-group becomes a type "deliberately open", and ten strings on twenty-five files is the data that
-question needs.
+One skill per capability, not per product: "Event-driven architecture", not Kafka and Pub/Sub and RabbitMQ as three files. Products are named under `## In practice`, which is what the section is for. `group` carries the CV's group name verbatim — the schema leaves whether a group becomes a type "deliberately open", and ten strings on twenty-five files is the data that question needs.
 
-The list, by CV group, is drawn up during the build and reviewed in the PR. The rule for a
-cut: a capability earns a file when at least one experience evidences it; a product earns a
-mention, never a file.
+The list, by CV group, is drawn up during the build and reviewed in the PR. The rule for a cut: a capability earns a file when at least one experience evidences it; a product earns a mention, never a file.
 
 ### The profile — 1
 
@@ -198,10 +171,7 @@ mention, never a file.
 
 ### Experiences — 20
 
-Every dated CV entry becomes one experience under `profiles/robert-blust/experiences/`:
-six roles, seven projects, two education entries, five community entries. Filename
-`YYYY-<slug>.md` by start year, as the schema's File Location asks; where two entries share a
-year the slug distinguishes them and the folder still sorts.
+Every dated CV entry becomes one experience under `profiles/robert-blust/experiences/`: six roles, seven projects, two education entries, five community entries. Filename `YYYY-<slug>.md` by start year, as the schema's File Location asks; where two entries share a year the slug distinguishes them and the folder still sorts.
 
 | CV folder | `organisation` | `# Title` | `> Tagline` | `## Achievements` |
 | --- | --- | --- | --- | --- |
@@ -210,21 +180,13 @@ year the slug distinguishes them and the folder still sorts.
 | education | the institution | the degree or certificate | one line | the bullets |
 | community | the organisation or event | the CV's title | one line | the bullets, if any |
 
-`start` and `end` as `YYYY-MM` where the CV has a month, `YYYY-01` where it has only a year —
-the schema types the field `date` in that format and a bare year is not one. That coercion is
-a finding (§7). `skills` lists the skill files the entry evidences, by H1.
+`start` and `end` as `YYYY-MM` where the CV has a month, `YYYY-01` where it has only a year — the schema types the field `date` in that format and a bare year is not one. That coercion is a finding (§7). `skills` lists the skill files the entry evidences, by H1.
 
-The mapping of degrees and talks onto a type whose tagline says "period" is the decision
-taken in the brainstorm: describe everything in the vocabulary that exists and record where it
-strains, rather than leave two folders of the CV unmodelled or invent types before core's
-remaining clusters are designed.
+The mapping of degrees and talks onto a type whose tagline says "period" is the decision taken in the brainstorm: describe everything in the vocabulary that exists and record where it strains, rather than leave two folders of the CV unmodelled or invent types before core's remaining clusters are designed.
 
 ### Values — 3 or 4
 
-Drafted from the CV's summary and achievements, each with the schema's required `## In
-practice` in its two halves (following it, breaking it). These are the one place the instance
-carries prose the CV does not, and they are marked for the owner's review in the PR: a value
-someone else wrote for you is not yet yours.
+Drafted from the CV's summary and achievements, each with the schema's required `## In practice` in its two halves (following it, breaking it). These are the one place the instance carries prose the CV does not, and they are marked for the owner's review in the PR: a value someone else wrote for you is not yet yours.
 
 ---
 
@@ -277,15 +239,13 @@ The three skills follow the tooling spec's §5 descriptions:
 6. Fill §7. Open one PR in the instance with all of it; open one PR in `meta-model` ticking
    roadmap item 2 and carrying the filled §7.
 
-Verification is the agent pass in step 5 and `npm run verify` in `meta-model` after step 1.
-There is no script in the instance to run; that absence is the design.
+Verification is the agent pass in step 5 and `npm run verify` in `meta-model` after step 1. There is no script in the instance to run; that absence is the design.
 
 ---
 
 ## 7. What the instance taught
 
-Filled during the build. Each entry names the section of the spec it bears on and states the
-finding without proposing the fix — the fix is a follow-up decision, not part of this work.
+Filled during the build. Each entry names the section of the spec it bears on and states the finding without proposing the fix — the fix is a follow-up decision, not part of this work.
 
 Known before the first file is written:
 

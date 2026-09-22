@@ -3,6 +3,7 @@ source: Local
 kind: Role
 start: 2018-03
 end: 2022-01
+role: Backend engineer
 organization: Northwind Atelier
 skills:
   - Java Programming
@@ -14,12 +15,16 @@ skills:
 
 ## Achievements
 
+### Delivery
+
 - Replaced a nightly batch with a pipeline that ran when the order did, taking visibility from
   the next morning to seconds.
+
+### Results
+
 - Established that the speed-up mattered less than anyone expected, and why — which set the
   direction for the work that followed.
 
 ## Ending
 
-Left in January 2022 when the pipeline work was done and the next problem worth four years was
-somewhere else.
+Left in January 2022 when the pipeline work was done and the next problem worth four years was somewhere else.

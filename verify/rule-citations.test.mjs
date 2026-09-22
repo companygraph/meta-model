@@ -3,7 +3,7 @@
 // written down" check in verify/check.mjs implements that over its own checks. It cannot see
 // the other surface in this repository that cites rules by number: the instance parser's
 // comments and error messages. R2 and R3 keep a repository folder out of a path, R4 makes an
-// unresolvable name an error, R5 and R6 make ownership nesting on disk, R7 singularises a
+// unresolvable name an error, R5 and R6 make ownership nesting on disk, R7 singularizes a
 // folder into a type. This suite is R0 extended to that second surface, and nothing more.
 // While the parser and the rules lived in different repositories no such check was possible,
 // which is the reason the parser moved here rather than into the design package.
@@ -16,7 +16,14 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 
-const src = fs.readFileSync(new URL("../lib/instance.mjs", import.meta.url), "utf8");
+// Both files in `lib/`, because both are shipped and both cite rules: the parser in its
+// comments and error messages, and the instance checks in the message of every failure they
+// report. `verify/check.mjs`'s own "rules are written down" check reaches the second one at
+// runtime, by the `rule` each check names — this reaches the citations in its prose, which
+// nothing else reads.
+const src = ["../lib/instance.mjs", "../lib/checks.mjs"]
+  .map((f) => fs.readFileSync(new URL(f, import.meta.url), "utf8"))
+  .join("\n");
 const conventions = fs.readFileSync(new URL("../core/CONVENTIONS.md", import.meta.url), "utf8");
 
 // Every `R<n>` in the parser is a citation — in a comment or in the message of the error the
@@ -40,13 +47,13 @@ const DEFINITION = /^###\s+(R\d+)\s+—/gm;
 const cited = [...new Set(src.match(CITATION) || [])];
 const defined = new Set([...conventions.matchAll(DEFINITION)].map((m) => m[1]));
 
-test("the parser cites at least one rule", () => {
+test("the shipped files cite at least one rule", () => {
   // Without this the test below passes vacuously if the citation pattern ever stops matching:
   // an empty `cited` makes `missing` empty too, and a green suite would mean nothing.
   assert.ok(cited.length > 0, "the parser cites no rules — has the citation pattern broken?");
 });
 
-test("every rule the parser cites is defined in core/CONVENTIONS.md", () => {
+test("every rule the shipped files cite is defined in core/CONVENTIONS.md", () => {
   // `defined` needs no guard of its own: if the heading pattern ever stops matching, every
   // citation lands in `missing` and this fails loudly rather than passing on an empty list.
   const missing = cited.filter((r) => !defined.has(r));

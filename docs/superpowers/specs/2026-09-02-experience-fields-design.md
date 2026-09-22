@@ -9,7 +9,7 @@
 > one that shows where it missed.**
 >
 > | | proposed here | shipped |
-> |---|---|---|
+> | --- | --- | --- |
 > | date precision | `YYYY` \| `YYYY-MM` \| `YYYY-MM-DD`, stated in R9 | **0.7.0**, as written |
 > | `kind` | a required bare-token **enum** | **0.6.0**, as a **type** — see below |
 > | references | `url` and a `## References` table | **0.9.0**, as written |
@@ -42,13 +42,9 @@
 > The one-line fix this spec noticed in passing — the filename rule illustrated with a real
 > employer's name, against this repository's own rule — shipped with 0.9.0.
 
-Status: proposed when written; shipped across 0.6.0, 0.7.0 and 0.9.0. Changes `core/experience-schema.md` and one paragraph of
-`CONVENTIONS.md`. The first two resolve findings recorded in
-[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7; the
-third was found while resolving them.
+Status: proposed when written; shipped across 0.6.0, 0.7.0 and 0.9.0. Changes `core/experience-schema.md` and one paragraph of `CONVENTIONS.md`. The first two resolve findings recorded in [`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) §7; the third was found while resolving them.
 
-Written from a second pass over a company-of-one instance, a year after its first. Nothing
-instance-specific is reproduced here: what follows is the pattern each finding turned out to be.
+Written from a second pass over a company-of-one instance, a year after its first. Nothing instance-specific is reproduced here: what follows is the pattern each finding turned out to be.
 
 ---
 
@@ -62,8 +58,7 @@ instance-specific is reproduced here: what follows is the pattern each finding t
 > whether a talk or a certification is an `experience` at all; the remaining clusters may say
 > otherwise.
 
-Both were written down without a fix, as that spec's §7 asks. Both are now decidable, because
-the instance has run for a year and the damage each one does is visible rather than predicted.
+Both were written down without a fix, as that spec's §7 asks. Both are now decidable, because the instance has run for a year and the damage each one does is visible rather than predicted.
 
 ---
 
@@ -71,27 +66,17 @@ the instance has run for a year and the damage each one does is visible rather t
 
 ### What the coercion actually costs
 
-The finding names one direction: a source that states a year becomes `YYYY-01`, and the model
-asserts a month nobody wrote down. That much was known.
+The finding names one direction: a source that states a year becomes `YYYY-01`, and the model asserts a month nobody wrote down. That much was known.
 
-The second direction is what makes the rule wrong rather than merely lossy. **The same form
-discards precision that exists.** A talk happened on a day. A certificate names an issue date
-and an expiry date. A conference was held on a date its programme states. An employment
-reference names the day the period closed. None of that fits `YYYY-MM`, so every one of those
-dates ends up in prose — written a second time, inside an achievement bullet, at a precision the
-field could not hold. The entry then states its date twice, and only the vaguer of the two is
-queryable.
+The second direction is what makes the rule wrong rather than merely lossy. **The same form discards precision that exists.** A talk happened on a day. A certificate names an issue date and an expiry date. A conference was held on a date its programme states. An employment reference names the day the period closed. None of that fits `YYYY-MM`, so every one of those dates ends up in prose — written a second time, inside an achievement bullet, at a precision the field could not hold. The entry then states its date twice, and only the vaguer of the two is queryable.
 
-A rule that is wrong in both directions at once is not a rule that needs tightening. It is
-measuring the wrong thing: **precision is a property of the source document, not of the field
-and not of the kind of entry.**
+A rule that is wrong in both directions at once is not a rule that needs tightening. It is measuring the wrong thing: **precision is a property of the source document, not of the field and not of the kind of entry.**
 
 ### The change
 
 `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`.
 
-Stated in `CONVENTIONS.md` R9, beside the type vocabulary, rather than in a schema's Description
-column:
+Stated in `CONVENTIONS.md` R9, beside the type vocabulary, rather than in a schema's Description column:
 
 > `date` is `YYYY`, `YYYY-MM` or `YYYY-MM-DD`. A date is written at the precision its source
 > states and never at more; an author may deliberately record less. A shorter form is an
@@ -110,11 +95,7 @@ Two things the wording is careful about:
 
 ### A smaller finding underneath it
 
-`CONVENTIONS.md` names `date` in the closed type vocabulary and **never says what a date looks
-like**. The form lives in the Description column of one field in one schema. Two schemas could
-type a field `date` and mean different things, and no rule would be broken. It has cost nothing
-so far only because `date` has exactly two uses in core. Fixing the form is the occasion to put
-it where it belongs.
+`CONVENTIONS.md` names `date` in the closed type vocabulary and **never says what a date looks like**. The form lives in the Description column of one field in one schema. Two schemas could type a field `date` and mean different things, and no rule would be broken. It has cost nothing so far only because `date` has exactly two uses in core. Fixing the form is the occasion to put it where it belongs.
 
 ---
 
@@ -122,17 +103,9 @@ it where it belongs.
 
 ### The finding, answered
 
-A degree, a certification, a board seat and a talk are all dated periods, and the open question
-was whether they are `experience` at all. They are. The alternative is four types, and under R5
-and R6 that means four folders inside the owner — where the experience schema's own reason for
-its filename rule, that *"the folder then sorts chronologically and reads as a career"*, is
-spent. One folder, one timeline, is worth keeping.
+A degree, a certification, a board seat and a talk are all dated periods, and the open question was whether they are `experience` at all. They are. The alternative is four types, and under R5 and R6 that means four folders inside the owner — where the experience schema's own reason for its filename rule, that *"the folder then sorts chronologically and reads as a career"*, is spent. One folder, one timeline, is worth keeping.
 
-But holding four things in one type without saying which is a real loss, and it shows up the
-moment an instance imports from a source system that already draws the distinction. A CV filed
-in four categories — roles, projects, education, public work — arrives as one flat folder with
-the category dropped. "Which of these are jobs?" then cannot be answered without reading every
-body and judging, and a graph is built to be read by things that do not judge.
+But holding four things in one type without saying which is a real loss, and it shows up the moment an instance imports from a source system that already draws the distinction. A CV filed in four categories — roles, projects, education, public work — arrives as one flat folder with the category dropped. "Which of these are jobs?" then cannot be answered without reading every body and judging, and a graph is built to be read by things that do not judge.
 
 ### The change
 
@@ -149,30 +122,19 @@ body and judging, and a graph is built to be read by things that do not judge.
 
 ### An enum, not four types
 
-R8 draws the line — *"A set whose members carry a definition of their own is not an enum — make
-it a type"* — and core holds both sides of it already. `proficiency-level` is a type because
-each rung carries a rank and a rubric that every claim would otherwise restate. A kind carries
-one line of gloss and nothing that needs a file of its own. Bare tokens.
+R8 draws the line — *"A set whose members carry a definition of their own is not an enum — make it a type"* — and core holds both sides of it already. `proficiency-level` is a type because each rung carries a rank and a rubric that every claim would otherwise restate. A kind carries one line of gloss and nothing that needs a file of its own. Bare tokens.
 
-`kind` would also be the **first `enum` field in core**. R8 has had no subject since it was
-written.
+`kind` would also be the **first `enum` field in core**. R8 has had no subject since it was written.
 
 ### Required
 
-`Yes`. An optional `kind` produces untyped entries and a fifth case every consumer must handle,
-which is the situation it was meant to fix. This is the breaking half of the proposal: every
-existing instance fills a field on every experience.
+`Yes`. An optional `kind` produces untyped entries and a fifth case every consumer must handle, which is the situation it was meant to fix. This is the breaking half of the proposal: every existing instance fills a field on every experience.
 
 ### It governs no dates
 
-A one-off keeps `end` equal to `start`, which core already carries as a writing rule and which
-the reference instance settled in its own files before core did.
+A one-off keeps `end` equal to `start`, which core already carries as a writing rule and which the reference instance settled in its own files before core did.
 
-The obvious alternative is worth recording as rejected: let an absent `end` mean "one-off" when
-the kind is `community`, and "ongoing" when it is `role`. That makes an absence mean two things
-and resolves it by a label, so every reader of a date must first read the kind — and any
-instance with a genuinely ongoing period has the collision in front of it, not in theory. Date
-semantics stay independent of `kind`.
+The obvious alternative is worth recording as rejected: let an absent `end` mean "one-off" when the kind is `community`, and "ongoing" when it is `role`. That makes an absence mean two things and resolves it by a label, so every reader of a date must first read the kind — and any instance with a genuinely ongoing period has the collision in front of it, not in theory. Date semantics stay independent of `kind`.
 
 ---
 
@@ -182,16 +144,11 @@ No finding was recorded for this one; it surfaced while filing the other two.
 
 ### Two kinds of link
 
-An instance accumulates links, and they are not one thing. The page of a conference **is** the
-entry — it is where that event lives on the web. An entry in a public commercial register is
-not the company's page; the company's own site is. The register is there so a reader can check
-one claim the entry makes.
+An instance accumulates links, and they are not one thing. The page of a conference **is** the entry — it is where that event lives on the web. An entry in a public commercial register is not the company's page; the company's own site is. The register is there so a reader can check one claim the entry makes.
 
 The test: **does the link identify the entry, or support a claim inside it?**
 
-Core already models the first half. `identity` carries `url`, typed `string`, described as *"The
-company's own address on the web"*. An experience wants that field for that reason, and the
-description transfers with one word changed.
+Core already models the first half. `identity` carries `url`, typed `string`, described as *"The company's own address on the web"*. An experience wants that field for that reason, and the description transfers with one word changed.
 
 ### The change
 
@@ -214,14 +171,9 @@ and, optional, declared `Table.` in the sections table:
 
 ### Why a table and not a list of URLs
 
-R8 decides it: *"A field whose value is a list of records is a table wearing YAML: put it in the
-body as a Markdown table and declare its columns in the schema."*
+R8 decides it: *"A field whose value is a list of records is a table wearing YAML: put it in the body as a Markdown table and declare its columns in the schema."*
 
-A reference is a record, and the evidence is that the label already exists wherever these links
-live today. An entry does not write a bare URL for a recording — it writes "Recording:" in front
-of it, because the URL alone does not say what it is. Strip the label to fit an array and that
-information is destroyed. It is the same shape as the profile's Skills table, for the same
-stated reason: an edge with attributes of its own.
+A reference is a record, and the evidence is that the label already exists wherever these links live today. An entry does not write a bare URL for a recording — it writes "Recording:" in front of it, because the URL alone does not say what it is. Strip the label to fit an array and that information is destroyed. It is the same shape as the profile's Skills table, for the same stated reason: an edge with attributes of its own.
 
 One rule keeps the new column a fact rather than an opinion, and belongs in the writing rules:
 
@@ -250,18 +202,11 @@ One rule keeps the new column a fact rather than an opinion, and belongs in the 
 
 ## 6. Version and tooling
 
-**0.5.0 → 0.6.0.** Two breaking changes: a reader that assumes `YYYY-MM` fails on the new date
-forms, and a required `kind` fails every existing instance until it is filled.
+**0.5.0 → 0.6.0.** Two breaking changes: a reader that assumes `YYYY-MM` fails on the new date forms, and a required `kind` fails every existing instance until it is filled.
 
-**No code changes.** `lib/instance.mjs` parses structure — it cites R2, R3, R4, R5, R6, R7, R9
-and R13 — and validates neither a date form nor an enum value; `verify/check.mjs` checks this
-repository's own files against the same structural rules. Field-level types are agent-enforced
-today, and all three changes here land inside that. Whether the parser should learn field types
-at all is a real question and this spec does not answer it.
+**No code changes.** `lib/instance.mjs` parses structure — it cites R2, R3, R4, R5, R6, R7, R9 and R13 — and validates neither a date form nor an enum value; `verify/check.mjs` checks this repository's own files against the same structural rules. Field-level types are agent-enforced today, and all three changes here land inside that. Whether the parser should learn field types at all is a real question and this spec does not answer it.
 
-**What an instance does on upgrade**, none of it automatic: fill `kind` on every experience;
-correct any `-01` that was a coercion rather than an observation; move links out of prose into
-`url` and `## References`.
+**What an instance does on upgrade**, none of it automatic: fill `kind` on every experience; correct any `-01` that was a coercion rather than an observation; move links out of prose into `url` and `## References`.
 
 ---
 
@@ -269,19 +214,8 @@ correct any `-01` that was a coercion rather than an observation; move links out
 
 Two limits, stated so a clean pass is not read as more than it is.
 
-**Precision is unverifiable after the fact.** Nothing in a file records what its source document
-said, so "never more precision than the source" can be enforced when the entry is written, by
-whoever has the document open, and never afterwards. That is the same class as every writing
-rule, which is where the rule belongs — but it means this change removes a specific false
-precision without preventing the next one.
+**Precision is unverifiable after the fact.** Nothing in a file records what its source document said, so "never more precision than the source" can be enforced when the entry is written, by whoever has the document open, and never afterwards. That is the same class as every writing rule, which is where the rule belongs — but it means this change removes a specific false precision without preventing the next one.
 
-**An absent optional field is indistinguishable from a fact that does not exist.** No pass over
-an instance can tell "this entry has no recording" from "this entry's recording was dropped on
-import". The second happens: the reference instance had four links its source system states and
-its own files do not, and nothing inside the model could have found them. Only a field-by-field
-comparison against the source system finds that class of defect.
+**An absent optional field is indistinguishable from a fact that does not exist.** No pass over an instance can tell "this entry has no recording" from "this entry's recording was dropped on import". The second happens: the reference instance had four links its source system states and its own files do not, and nothing inside the model could have found them. Only a field-by-field comparison against the source system finds that class of defect.
 
-That generalises past this spec. For every optional field, mastership is enforced by nobody. A
-drift check between an instance and the systems that master its pages is a tooling question, it
-is larger than all three changes here, and it is the only one of the four that would have caught
-that defect.
+That generalises past this spec. For every optional field, mastership is enforced by nobody. A drift check between an instance and the systems that master its pages is a tooling question, it is larger than all three changes here, and it is the only one of the four that would have caught that defect.

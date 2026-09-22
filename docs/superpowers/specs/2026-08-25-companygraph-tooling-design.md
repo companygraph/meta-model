@@ -4,24 +4,15 @@
 > mechanically checks an instance, and the agent skills it installs. It never interprets a
 > schema's prose; the agent remains what enforces the model.
 
-Status: design agreed, nothing built. This spec lives here because the `tooling` repository
-does not exist yet. When it does, the spec moves with it and this file becomes a link.
+Status: design agreed, and partly superseded on September 20, 2026 by [`2026-09-20-the-cli-design.md`](2026-09-20-the-cli-design.md), which is the one being built. Three things there are later decisions and win over this note: the tooling lives in this repository rather than a `tooling` repository of its own, since the premise that kept it out, a repository of Markdown and nothing else, is gone; `add` is dropped, since an editor scaffolds an entity; and `init` writes the instance's CI workflow, which did not exist when this was written. Everything else here stands and is not restated there: the layout of §3, the manifest, the release contract of §2, the skills and the sync slot of §5, where §6 draws the line at the validator, and the non-goals of §1.
 
-Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §5
-(schemas, and the rejected validator), §6 (splitting the agent instructions), §7 (an instance
-ships as a skill), §8 (declaring packs) and §10 (the versioning question). Where the two
-disagree, the older spec's *decisions* stand and this one is wrong, except where this spec
-explicitly answers a question the older one left open.
+Reads against [`2026-08-23-companygraph-design.md`](2026-08-23-companygraph-design.md) — §5 (schemas, and the rejected validator), §6 (splitting the agent instructions), §7 (an instance ships as a skill), §8 (declaring packs) and §10 (the versioning question). Where the two disagree, the older spec's *decisions* stand and this one is wrong, except where this spec explicitly answers a question the older one left open.
 
 ---
 
 ## 1. Purpose and non-goals
 
-The README's roadmap item 5 says what is missing: copying `core/` and `CONVENTIONS.md` into a
-repository is the method, not a stopgap, and what is absent is the mechanical half —
-scaffolding the folders a schema names, wiring the agent commands, and upgrading an instance
-in place when core moves. This is that half, in the manner of
-[spec-kit](https://github.com/github/spec-kit).
+The README's roadmap item 5 says what is missing: copying `core/` and `CONVENTIONS.md` into a repository is the method, not a stopgap, and what is absent is the mechanical half — scaffolding the folders a schema names, wiring the agent commands, and upgrading an instance in place when core moves. This is that half, in the manner of [spec-kit](https://github.com/github/spec-kit).
 
 **Owns:**
 
@@ -51,10 +42,7 @@ companygraph/
   tooling/         Node, zero dependencies, built with spec-kit. Publishes npm `companygraph`.
 ```
 
-The tooling is a separate repository because it is code with its own release cycle, and the
-meta-model stays a zero-dependency Markdown repository. The cost, taken knowingly: spec-kit
-keeps templates and CLI in one repository to stay in lockstep, and this design gives that up.
-What replaces lockstep is a contract.
+The tooling is a separate repository because it is code with its own release cycle, and the meta-model stays a zero-dependency Markdown repository. The cost, taken knowingly: spec-kit keeps templates and CLI in one repository to stay in lockstep, and this design gives that up. What replaces lockstep is a contract.
 
 ### The release contract of `meta-model`
 
@@ -159,34 +147,30 @@ Decisions inside that:
 {
   "tooling": "0.3.0",
   "core": { "version": "1.4.0", "shape": 1, "source": "bundled" },
-  "schemas": "meta",
+  "units": "meta",
   "packs": [],
   "files": {
-    "meta/CONVENTIONS.md": "sha256:…",
-    "meta/profile-schema.md": "sha256:…"
+    "meta/core/CONVENTIONS.md": "sha256:…",
+    "meta/core/profile-schema.md": "sha256:…"
   }
 }
 ```
 
-`source` is `bundled` or `fetched:v1.4.0`. `files` lists every vendored file with the hash it
-had when written; it is what `upgrade` compares against, and what `check` reports drift from.
+`source` is `bundled` or `fetched:v1.4.0`. `files` lists every vendored file with the hash it had when written; it is what `upgrade` compares against, and what `check` reports drift from.
 
 ---
 
 ## 4. The four commands
 
-All four: exit non-zero on any problem, write nothing when pre-flight fails, and print paths
-relative to the instance root. Interactive prompts exist only where a flag is absent, so CI can
-run every command non-interactively.
+All four: exit non-zero on any problem, write nothing when pre-flight fails, and print paths relative to the instance root. Interactive prompts exist only where a flag is absent, so CI can run every command non-interactively.
 
 ### `init [--here] [--core <tag>] [--schemas <dir>] [--name <instance>]`
 
-Writes the layout in §3. Pre-flights every conflict, then writes; a partial instance is never
-left behind. Interactive only for the instance name when `--name` is absent.
+Writes the layout in §3. Pre-flights every conflict, then writes; a partial instance is never left behind. Interactive only for the instance name when `--name` is absent.
 
 ### `add <type> <name> [--owner <name>]`
 
-Reads `meta/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
+Reads `meta/<unit>/<type>-schema.md` — its tables only, by the R9 fixed shape — and writes one entity:
 
 - H1 is the name exactly as given; the filename is derived by R12 — the slug of the H1, or
   whatever the type's own schema states instead, as `experience` does. Three documents said
@@ -201,15 +185,16 @@ Reads `meta/<type>-schema.md` — its tables only, by the R9 fixed shape — and
   type (R6).
 - Refuses a `--owner` that resolves to no entity of the owning type.
 
-This is the one place the tooling reads a schema, and the fixed shape is the reason it can: the
-reader is a table reader, not a prose reader.
+This is the one place the tooling reads a schema, and the fixed shape is the reason it can: the reader is a table reader, not a prose reader.
 
 ### `check`
+
+`check` is not built in a tooling repository. It ships from this one as `lib/checks.mjs`, by the amendment in [`2026-09-10-instance-checks-design.md`](2026-09-10-instance-checks-design.md), and runs in three places: an instance's CI through `instance-check.yml`, a shell through `bin/check-instance.mjs`, and the editor through `companygraph/obsidian-plugin`, which bundles the package and reads the schemas from the core the vault vendored. Whoever builds `init`, `add` and `upgrade` takes it from there and does not build it again. What follows is the design as it was agreed, kept for what it says the command holds and why.
 
 Fails on:
 
 | what | rule cited |
-|---|---|
+| --- | --- |
 | `.companygraph/manifest.json` missing or unreadable | — |
 | a schema file inside a type folder | R9 |
 | a root folder no schema names, or a schema whose root folder is missing | R6, R7 |
@@ -221,13 +206,9 @@ Fails on:
 | two H1s of one type that derive to the same filename | R12 |
 | a schema that does not match the fixed shape | R9 |
 
-Reports without failing: a vendored file whose hash differs from the manifest (that is
-`upgrade`'s business, §4, and the instance may have a reason).
+Reports without failing: a vendored file whose hash differs from the manifest (that is `upgrade`'s business, §4, and the instance may have a reason).
 
-Every failure cites the rule number, and a meta-check refuses to cite a rule that the vendored
-`CONVENTIONS.md` does not define — the R0 discipline `verify/check.mjs` already has. The output
-ends by naming the rules it did not check, so nobody reads a green `check` as a validated
-instance.
+Every failure cites the rule number, and a meta-check refuses to cite a rule that the vendored `CONVENTIONS.md` does not define — the R0 discipline `verify/check.mjs` already has. The output ends by naming the rules it did not check, so nobody reads a green `check` as a validated instance.
 
 ### `upgrade [--core <tag>] [--force]`
 
@@ -248,9 +229,9 @@ A three-way merge is deliberately not attempted.
 
 ## 5. Installed skills and the sync slot
 
-Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded by the tooling:
+Five skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded by the tooling:
 
-- **`companygraph-validate`** — the R0 agent pass. Reads `meta/CONVENTIONS.md`, walks the graph,
+- **`companygraph-validate`** — the R0 agent pass. Reads `meta/core/CONVENTIONS.md`, walks the graph,
   reports per rule. Runs `companygraph check` first so the agent's attention goes to what the
   script cannot reach: R1, R2, R3, R5, R7, R8, and whether prose that crept into the instance's
   rules is really about modelling. The generated `AGENTS.md` instructs that it runs before every
@@ -307,25 +288,37 @@ Four skills under `.claude/skills/companygraph-*/SKILL.md`, owned and upgraded b
   reads the release notes, walks the entities a schema change affects, and proposes the edits.
   This is where "upgrade an instance in place when core moves" actually lives; the command only
   moves the schemas.
+- **`companygraph-surface`** — produces the content of a surface, one file per entity of the type
+  into `dist/surfaces/`. The type arrived in core 0.16.0: a surface is a place the company
+  publishes that no script writes, and its file records the rules by which the model becomes that
+  place. Nothing turned those rules into the thing itself.
 
-This settles the older spec's §7 open question — the packaging belongs in core's tooling,
-shared and versioned, not copied per instance.
+  **It is the one skill that is a script and a procedure rather than a script alone**, and the
+  boundary is where judgment starts. A script walks the model and resolves what any surface would
+  want the same way — an entity's dates in the family's register, its `organization` with the
+  fallback the model supplies, its address, the sections a body could be written from — and it
+  routes nothing and orders nothing, because which kinds reach which unit and in what order are
+  the surface's own rules and its file is their only home. The procedure applies those rules to
+  the facts, writes each unit in the register the file names, and holds the result against every
+  constraint the file states.
 
-**The sync slot** is a convention, not code. Instance-owned skills live at
-`.claude/skills/<instance>-<source>/` — `magic-sync-kpis`, say — are never touched by
-`upgrade`, and the generated `AGENTS.md` carries a section listing them. What generalises from
-the multi-person instance's sync commands is the shape — *fetch from a system, write entities,
-run validate* — and the slot documents that shape with one worked example. No connector ships.
-This is §6 of the older spec applied to skills: the portable ones the tooling ships, the ones
-naming a tracker or a CRM the instance owns.
+  The output is never committed and the reason is R17, not the build directory: a produced surface
+  is the state of the thing made, and a file in the model records the rules and never that state.
+
+  Producing a surface is also the only thing that checks a surface file. Reading the reference
+  instance's file against its model found nothing in two review rounds; producing the profile from
+  it found a missing rule every time, six times running, and every one was about what to put in
+  rather than what to leave out.
+
+This settles the older spec's §7 open question — the packaging belongs in core's tooling, shared and versioned, not copied per instance.
+
+**The sync slot** is a convention, not code. Instance-owned skills live at `.claude/skills/<instance>-<source>/` — `magic-sync-kpis`, say — are never touched by `upgrade`, and the generated `AGENTS.md` carries a section listing them. What generalises from the multi-person instance's sync commands is the shape — *fetch from a system, write entities, run validate* — and the slot documents that shape with one worked example. No connector ships. This is §6 of the older spec applied to skills: the portable ones the tooling ships, the ones naming a tracker or a CRM the instance owns.
 
 ---
 
 ## 6. `check` and the deferred validator — where the line is
 
-The older spec rejected a validator that parses Markdown schemas as its source of truth (§5).
-`add` and `check` do read schemas, so the boundary is stated here so that the tooling cannot
-become that validator by accretion.
+The older spec rejected a validator that parses Markdown schemas as its source of truth (§5). `add` and `check` do read schemas, so the boundary is stated here so that the tooling cannot become that validator by accretion.
 
 - **What is read:** the three R9 tables, by their fixed columns, and the H1 of every entity.
   Reading is by position in the fixed shape — never by interpreting a Description cell or any
@@ -384,11 +377,7 @@ become that validator by accretion.
 
 ## 9. Findings from the reference instance
 
-Building `robertblust/mental-model` by hand tested this design before any of it was written,
-and §7 of
-[`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) records
-what it found. The entries bearing on this document, so that whoever builds it reads them here
-rather than rediscovering them:
+Building `robertblust/mental-model` by hand tested this design before any of it was written, and §7 of [`2026-08-26-reference-instance-design.md`](2026-08-26-reference-instance-design.md) records what it found. The entries bearing on this document, so that whoever builds it reads them here rather than rediscovering them:
 
 - **§5, the export format and the description** — both fixed above rather than left as findings.
 - **§3, the manifest has no value for a hand-built instance.** `tooling: "0.0.0"` was the

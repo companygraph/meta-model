@@ -20,5 +20,44 @@ jobs:
         run: npm run verify
       - name: The parser still parses
         run: npm run test:instance
-      - name: Every rule the parser cites still exists
+      - name: The instance checks still catch what they were written for
+        run: npm run test:instance-checks
+      - name: Every rule the shipped files cite still exists
         run: npm run test:rules
+      # The CLI: what a command would do, the files an instance starts with, the command itself
+      # run over temporary folders, and the tarball and fetch it takes another release's core
+      # through. The command's tests also run the export skill's scripts, which need the runner's
+      # own Python 3.
+      - name: The plan decides what init and upgrade write
+        run: npm run test:plan
+      - name: The files an instance starts with
+        run: npm run test:instance-files
+      - name: The command, run over real folders
+        run: npm run test:cli
+      - name: Another release's core is read from its tarball
+        run: npm run test:untar && npm run test:fetch-core
+      - name: The Obsidian plugin is put into a vault
+        run: npm run test:obsidian
+
+  # The same suite on Windows, where the command is also run: a checkout there has `\r\n` line
+  # ends unless `.gitattributes` says otherwise, and `path` answers with `\`. A job of its own
+  # rather than a matrix over `verify`, so the check the ruleset requires keeps its name, and
+  # every step runs whatever the one before it did, so one run names every failure.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Check the repository's own shape
+        run: npm run verify
+      - name: The parser, the instance checks and the rules
+        if: ${{ !cancelled() }}
+        run: npm run test:instance && npm run test:instance-checks && npm run test:rules
+      - name: The plan, the files an instance starts with, and the command over real folders
+        if: ${{ !cancelled() }}
+        run: npm run test:plan && npm run test:instance-files && npm run test:cli
+      - name: The tarball, the fetch and the Obsidian install
+        if: ${{ !cancelled() }}
+        run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian

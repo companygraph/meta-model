@@ -4,15 +4,9 @@
 > (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use
 > checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** Make `organisation` `organization`, put the spelling rule where the vocabulary keeps
-its rules, and close the validator gap that would let an instance keep the old spelling
-silently.
+**Goal:** Make `organisation` `organization`, put the spelling rule where the vocabulary keeps its rules, and close the validator gap that would let an instance keep the old spelling silently.
 
-**Architecture:** Two new rules in `core/CONVENTIONS.md` — R14 (American English) and R15 (a
-page's frontmatter fields are the ones its schema declares) — one renamed field, and one new
-check citing R15. Core releases as 0.13.0; the mental-model re-vendors and renames; both sites
-regenerate their data blocks. No rendering code changes anywhere: `@robertblust/design` has
-zero occurrences of the field name.
+**Architecture:** Two new rules in `core/CONVENTIONS.md` — R14 (American English) and R15 (a page's frontmatter fields are the ones its schema declares) — one renamed field, and one new check citing R15. Core releases as 0.13.0; the mental-model re-vendors and renames; both sites regenerate their data blocks. No rendering code changes anywhere: `@robertblust/design` has zero occurrences of the field name.
 
 **Tech Stack:** Markdown schemas, Node 22 (`verify/check.mjs`, no dependencies), `gh` CLI.
 
@@ -43,9 +37,11 @@ zero occurrences of the field name.
 ## Task 1: R14 and R15 in CONVENTIONS.md
 
 **Files:**
+
 - Modify: `core/CONVENTIONS.md`
 
 **Interfaces:**
+
 - Produces: rule ids `R14` and `R15`, which Task 2's check cites. `verify/check.mjs` fails a
   check whose `rule` names a rule `CONVENTIONS.md` does not define, so the rules land first.
 
@@ -89,11 +85,9 @@ the page under the old name while every other check reports green.
 
 - [ ] **Step 3: Fix the two British spellings in this file**
 
-`core/CONVENTIONS.md` line 34 reads `recognises` and line 284 reads `modelling`. Both are this
-vocabulary's own prose and both are now R14 violations:
+`core/CONVENTIONS.md` line 34 reads `recognises` and line 284 reads `modelling`. Both are this vocabulary's own prose and both are now R14 violations:
 
-Both are whole words with no boundary ambiguity, so `sed` is safe here — but note that BSD
-`sed` does not understand `\b`, which is why every word-boundary rename below uses `perl`.
+Both are whole words with no boundary ambiguity, so `sed` is safe here — but note that BSD `sed` does not understand `\b`, which is why every word-boundary rename below uses `perl`.
 
 ```bash
 sed -i '' 's/recognises/recognizes/; s/modelling/modeling/' core/CONVENTIONS.md
@@ -102,9 +96,7 @@ grep -nowE "recognises|modelling" core/CONVENTIONS.md   # expect: no output
 
 - [ ] **Step 4: Verify**
 
-Run: `npm run verify`
-Expected: pass. No check cites R14 or R15 yet, and the meta-check only fails a check naming a
-rule that does not exist — not a rule without a check.
+Run: `npm run verify` Expected: pass. No check cites R14 or R15 yet, and the meta-check only fails a check naming a rule that does not exist — not a rule without a check.
 
 - [ ] **Step 5: Commit**
 
@@ -118,9 +110,11 @@ git commit -m "R14 and R15: American English, and fields a schema declares"
 ## Task 2: The R15 check
 
 **Files:**
+
 - Modify: `verify/check.mjs`
 
 **Interfaces:**
+
 - Consumes: `R15` from Task 1; the existing `TYPES`, `fieldsOf(type)`, `typeOfFile(rel)`,
   `walkMd(rel, visit)`, `frontmatterOf(text)`, `EX` and `fail(message)`.
 - Produces: a check named `frontmatter fields are declared`, which Task 3 relies on to prove
@@ -128,8 +122,7 @@ git commit -m "R14 and R15: American English, and fields a schema declares"
 
 - [ ] **Step 1: Write the check**
 
-Insert immediately after the `list fields are block sequences` check (the object whose
-`rule` is `"R11"`), as a new element of `CHECKS`:
+Insert immediately after the `list fields are block sequences` check (the object whose `rule` is `"R11"`), as a new element of `CHECKS`:
 
 ```js
   {
@@ -165,9 +158,7 @@ Insert immediately after the `list fields are block sequences` check (the object
 
 - [ ] **Step 2: Run it — it must pass on the tree as it stands**
 
-Run: `npm run verify`
-Expected: pass. Every field in `example/` is declared today; a failure here means the check is
-reading something wrong, not that the example is wrong.
+Run: `npm run verify` Expected: pass. Every field in `example/` is declared today; a failure here means the check is reading something wrong, not that the example is wrong.
 
 - [ ] **Step 3: Prove it can fail**
 
@@ -179,8 +170,7 @@ sed -i '' 's/^organisation: /organisation-typo: /' \
 npm run verify
 ```
 
-Expected: FAIL, naming that file and `organisation-typo`, and nothing else. If it passes, or
-fails for a different reason, the check is wrong — fix it before restoring.
+Expected: FAIL, naming that file and `organisation-typo`, and nothing else. If it passes, or fails for a different reason, the check is wrong — fix it before restoring.
 
 ```bash
 git checkout -- example/model/profiles/mira-halvorsen/experiences/2018-northwind-atelier.md
@@ -189,8 +179,7 @@ npm run verify   # back to pass
 
 - [ ] **Step 4: Correct the file-header comment**
 
-The comment at the top of `verify/check.mjs` states what the script does not check. Two of its
-clauses are now false. Replace this text:
+The comment at the top of `verify/check.mjs` states what the script does not check. Two of its clauses are now false. Replace this text:
 
 ```
 // schema requires, an unknown frontmatter field passes, and no file under example/values/ is
@@ -217,6 +206,7 @@ git commit -m "A frontmatter field no schema declares is an error"
 ## Task 3: `organisation` becomes `organization`
 
 **Files:**
+
 - Modify: `core/experience-schema.md` (6 occurrences, one of them the field declaration),
   `core/experience-kind-schema.md` (1), `core/profile-schema.md` (1),
   `core/proficiency-level-schema.md` (1), `core/CONVENTIONS.md` (2), `README.md` (1),
@@ -226,6 +216,7 @@ git commit -m "A frontmatter field no schema declares is an error"
   occurrences in prose
 
 **Interfaces:**
+
 - Consumes: Task 2's check, which is what proves no example page kept the old key.
 
 - [ ] **Step 1: Rename everywhere except the historical records**
@@ -242,15 +233,11 @@ grep -rIn --exclude-dir=.git -w organisation .    # expect: only docs/superpower
 grep -rIn --exclude-dir=.git -w organization core/experience-schema.md | head -1
 ```
 
-Expected: every remaining hit is under `docs/superpowers/`, which §7 of the spec leaves alone.
-The second command shows the field declaration now reading `organization`.
+Expected: every remaining hit is under `docs/superpowers/`, which §7 of the spec leaves alone. The second command shows the field declaration now reading `organization`.
 
 - [ ] **Step 3: Verify**
 
-Run: `npm run verify`
-Expected: pass. Task 2's check is what makes this meaningful — had the `sed` missed an example
-page, `frontmatter fields are declared` would name it, because `organisation` is no longer a
-field any schema declares.
+Run: `npm run verify` Expected: pass. Task 2's check is what makes this meaningful — had the `sed` missed an example page, `frontmatter fields are declared` would name it, because `organisation` is no longer a field any schema declares.
 
 - [ ] **Step 4: Commit**
 
@@ -264,20 +251,18 @@ git commit -m "organisation becomes organization"
 ## Task 4: Release 0.13.0
 
 **Files:**
+
 - Modify: `package.json`, `core/manifest.json`
 
 - [ ] **Step 1: Bump both, to the same number**
 
-`package.json`: `"version": "0.12.0"` → `"version": "0.13.0"`.
-`core/manifest.json`: `{ "version": "0.12.0", "shape": 1 }` → `{ "version": "0.13.0", "shape": 1 }`.
+`package.json`: `"version": "0.12.0"` → `"version": "0.13.0"`. `core/manifest.json`: `{ "version": "0.12.0", "shape": 1 }` → `{ "version": "0.13.0", "shape": 1 }`.
 
 `shape` does not move: the schema file format is unchanged.
 
 - [ ] **Step 2: Verify**
 
-Run: `npm run verify`
-Expected: pass. `verify` compares a tag on HEAD against the manifest; there is no tag yet, which
-it accepts.
+Run: `npm run verify` Expected: pass. `verify` compares a tag on HEAD against the manifest; there is no tag yet, which it accepts.
 
 - [ ] **Step 3: Commit, push, open the PR — and stop**
 
@@ -288,11 +273,7 @@ git push -u origin american-english
 gh pr create --title "American English in the vocabulary" --body "..."
 ```
 
-The PR body says what the release is: two rules, one renamed field, one new check, and that
-every instance on 0.13.0 must rename its `organisation` keys. **Do not merge and do not tag.**
-Robert reviews. After his go, the controller merges with `gh pr merge --merge`, then tags
-`v0.13.0` on `main` and publishes the release — `verify` on `main` then checks that the tag and
-the manifest agree.
+The PR body says what the release is: two rules, one renamed field, one new check, and that every instance on 0.13.0 must rename its `organisation` keys. **Do not merge and do not tag.** Robert reviews. After his go, the controller merges with `gh pr merge --merge`, then tags `v0.13.0` on `main` and publishes the release — `verify` on `main` then checks that the tag and the manifest agree.
 
 ---
 
@@ -301,6 +282,7 @@ the manifest agree.
 **Blocked on:** `v0.13.0` tagged in `companygraph/meta-model`.
 
 **Files (repository: `robertblust/mental-model`, branch `american-english`):**
+
 - Modify: `meta/core/*` — 12 files, replaced wholesale from the release
 - Modify: `.companygraph/manifest.json` — the version, the source, and 12 sha256 values
 - Modify: `model/profiles/robert-blust/experiences/*.md` — 23 files carrying `organisation:`
@@ -309,11 +291,11 @@ the manifest agree.
   `model/proficiency-levels/competent.md`
 
 **Interfaces:**
+
 - Consumes: core 0.13.0's `experience-schema.md`, which declares `organization`.
 - Produces: the commit both sites will pin.
 
-This repository vendors 0.11.0, so 0.13.0 brings 0.12.0's changes with it. Read that release's
-notes before assuming this task is only about spelling.
+This repository vendors 0.11.0, so 0.13.0 brings 0.12.0's changes with it. Read that release's notes before assuming this task is only about spelling.
 
 - [ ] **Step 1: Replace the vendored core**
 
@@ -326,9 +308,7 @@ rm -rf meta/core && cp -R /tmp/mm-013/core meta/core
 
 - [ ] **Step 2: Rewrite the manifest**
 
-`version` becomes `0.13.0` and `source` becomes `fetched:v0.13.0`. Recompute every hash — the
-file list itself may have changed between 0.11.0 and 0.13.0, so rebuild the map rather than
-editing values in place:
+`version` becomes `0.13.0` and `source` becomes `fetched:v0.13.0`. Recompute every hash — the file list itself may have changed between 0.11.0 and 0.13.0, so rebuild the map rather than editing values in place:
 
 ```bash
 python3 - <<'PY'
@@ -377,9 +357,7 @@ The parenthetical is now false. Replace the whole bullet with:
 
 - [ ] **Step 5: Validate**
 
-Run the `companygraph-validate` skill. It reports per rule and names what it did not check.
-Expected: every reference resolves, every sha256 matches, and no page carries an undeclared
-field. A commit with an unresolved reference is not made.
+Run the `companygraph-validate` skill. It reports per rule and names what it did not check. Expected: every reference resolves, every sha256 matches, and no page carries an undeclared field. A commit with an unresolved reference is not made.
 
 - [ ] **Step 6: Commit and open the PR — do not merge**
 
@@ -399,6 +377,7 @@ The body states that 0.12.0 arrives in the same step, and lists what moved beyon
 **Blocked on:** Task 5 merged, so there is a commit to pin.
 
 **Files (repository: `robertblust.github.io`, branch `model-0-13-0`):**
+
 - Modify: `package.json`, `package-lock.json` — the parser pin
 - Modify: `source.json` — the mental-model commit
 - Modify: `model/index.html` — regenerated, not edited
@@ -433,9 +412,7 @@ npm run verify
 npm run og:check
 ```
 
-Read `og:check`'s output whole — a stale line ends with its reason, not with `og.png`, so a
-filter anchored on the filename shows only the cards that passed. If `model/og.png` reports
-stale, run `npm run og` and commit `model/og.sha` with the rest.
+Read `og:check`'s output whole — a stale line ends with its reason, not with `og.png`, so a filter anchored on the filename shows only the cards that passed. If `model/og.png` reports stale, run `npm run og` and commit `model/og.sha` with the rest.
 
 - [ ] **Step 4: Commit and open the PR — do not merge**
 
@@ -446,19 +423,16 @@ git push -u origin model-0-13-0
 gh pr create --title "Pin the model at core 0.13.0" --body "..."
 ```
 
-The body names the core version, says the page is regenerated rather than edited, and reports
-`model:check`, `verify` and `og:check` — and, if `model/og.sha` moved while `model/og.png` did
-not, says why: the recipe hashes every local file the page names, and the card's crop shows the
-graph and no card body.
+The body names the core version, says the page is regenerated rather than edited, and reports `model:check`, `verify` and `og:check` — and, if `model/og.sha` moved while `model/og.png` did not, says why: the recipe hashes every local file the page names, and the card's crop shows the graph and no card body.
 
 ---
 
 ## Task 7: companygraph.io regenerates
 
-**Blocked on:** Task 4 merged and `v0.13.0` tagged. Independent of Tasks 5 and 6 — this site
-renders the meta-model, not the mental-model.
+**Blocked on:** Task 4 merged and `v0.13.0` tagged. Independent of Tasks 5 and 6 — this site renders the meta-model, not the mental-model.
 
 **Files (repository: `companygraph.github.io`, branch `core-0-13-0`):**
+
 - Modify: `package.json`, `package-lock.json`, `source.json`
 - Modify: `model/index.html`, `example/index.html` — regenerated
 - Modify: `README.md`, `CLAUDE.md` — prose
@@ -511,8 +485,7 @@ git push -u origin core-0-13-0
 gh pr create --title "Pin core 0.13.0" --body "..."
 ```
 
-The body names the core version, separates what regenerated from the two prose files edited by
-hand, and reports `example:check`, `verify` and `og:check`.
+The body names the core version, separates what regenerated from the two prose files edited by hand, and reports `example:check`, `verify` and `og:check`.
 
 ---
 
