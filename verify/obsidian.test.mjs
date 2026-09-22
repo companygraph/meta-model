@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { download, graphOf, installed, knownVault, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 
 const vault = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-obsidian-"));
 const release = (version, id = "companygraph") => new Map([
@@ -250,4 +250,40 @@ test("the list is read from APPDATA on Windows and from .config or the Flatpak's
   assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...linFs }), true);
   const broken = { exists: () => true, read: () => "not json" };
   assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...broken }), false);
+});
+
+// A folder Obsidian does not know, put on its list so the URL can open it: one entry added, the
+// others kept, the file made where Obsidian has none yet. Only while Obsidian is not running,
+// which the command decides; this writes what it is told to.
+test("registering a vault adds one entry to Obsidian's list and keeps the rest, or makes the list", () => {
+  const listPath = "/Users/rob/Library/Application Support/obsidian/obsidian.json";
+  const files = new Map([[listPath, registry("/Users/rob/Desktop/cv-yileny")]]);
+  const written = [];
+  const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p), write: (p, text) => { files.set(p, text); written.push(p); } };
+  const options = { platform: "darwin", env: { HOME: "/Users/rob" }, ...fsOf };
+  registerVault("/Users/rob/Desktop/vault-trial", options);
+  const { vaults } = JSON.parse(files.get(listPath));
+  assert.deepEqual(Object.values(vaults).map((v) => v.path).sort(), ["/Users/rob/Desktop/cv-yileny", "/Users/rob/Desktop/vault-trial"]);
+  for (const id of Object.keys(vaults)) assert.match(id, /^[0-9a-f]{16}$/);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-trial", options), true);
+  registerVault("/Users/rob/Desktop/vault-trial", options);
+  assert.equal(Object.keys(JSON.parse(files.get(listPath)).vaults).length, 2, "registered once");
+  const empty = new Map();
+  const emptyFs = { exists: (p) => empty.has(p), read: (p) => empty.get(p), write: (p, text) => empty.set(p, text), mkdir: () => {} };
+  registerVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...emptyFs });
+  assert.equal(Object.values(JSON.parse(empty.get("/home/rob/.config/obsidian/obsidian.json")).vaults)[0].path, "/home/rob/vault");
+});
+
+// Whether Obsidian is running, asked of each platform's process list; a lister that cannot be
+// run answers false, and the opener then answers for itself.
+test("Obsidian is running where the platform's process list names it", () => {
+  const ran = [];
+  const listing = (out, status = 0) => (command, args) => (ran.push([command, ...args]), { status, stdout: out });
+  assert.equal(obsidianRunning({ platform: "darwin", run: listing("4513\n") }), true);
+  assert.equal(obsidianRunning({ platform: "darwin", run: listing("", 1) }), false);
+  assert.equal(obsidianRunning({ platform: "win32", run: listing('"Obsidian.exe","4513","Console","1","200 K"\n') }), true);
+  assert.equal(obsidianRunning({ platform: "win32", run: listing("INFO: No tasks are running which match the specified criteria.\n") }), false);
+  assert.equal(obsidianRunning({ platform: "linux", run: () => ({ error: new Error("ENOENT") }) }), false);
+  assert.deepEqual(ran[0], ["pgrep", "-x", "Obsidian"]);
+  assert.deepEqual(ran[2], ["tasklist", "/FI", "IMAGENAME eq Obsidian.exe", "/FO", "CSV", "/NH"]);
 });

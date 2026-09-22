@@ -213,17 +213,24 @@ test("obsidian makes the vault's folder when there is none, and refuses a file i
 
 // Obsidian opens by URL only a folder it already lists as a vault, and that list is Obsidian's
 // own; a folder it does not know is told the one way in, and --open is not tried.
-test("obsidian tells a folder Obsidian does not know how it becomes a vault, and does not try to open it", () => {
+test("obsidian puts a folder Obsidian does not know on its list when Obsidian is not running, then opens it", () => {
   const build = temp();
   fs.writeFileSync(path.join(build, "main.js"), "// main");
   fs.writeFileSync(path.join(build, "styles.css"), "");
   fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
   const root = temp();
   const home = temp();
+  // No process lister and no opener on the path: not running is the answer, and the open fails aloud.
   const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
-  assert.match(said, /Obsidian does not know this folder yet/);
-  assert.match(said, /Open folder as vault/);
-  assert.doesNotMatch(said, /could not open/);
+  assert.match(said, /put on Obsidian's list of vaults/);
+  assert.match(said, /could not open/);
+  const list = path.join(home, process.platform === "darwin" ? "Library/Application Support/obsidian" : process.platform === "win32" ? "obsidian" : ".config/obsidian", "obsidian.json");
+  assert.deepEqual(Object.values(JSON.parse(fs.readFileSync(list, "utf8")).vaults).map((v) => v.path), [path.resolve(root)]);
+  // Not asked to open: the list is left alone, and the way in is said.
+  const other = temp();
+  const quiet = run(["obsidian", other, "--from", build, "--no-plugins"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
+  assert.match(quiet, /Open folder as vault/);
+  assert.equal(Object.values(JSON.parse(fs.readFileSync(list, "utf8")).vaults).length, 1);
 });
 
 test("obsidian --open says an opener that fails and still says what is left to do", () => {
