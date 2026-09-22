@@ -179,7 +179,7 @@ This is here rather than in a tooling document because a filename is written by 
 
 ### R15 — A page's frontmatter fields are the ones its schema declares
 
-A frontmatter field its schema does not declare is an error. This binds a page whose folder matches a type's stated File Location; a file matching none has no schema, so nothing declares what its frontmatter may hold and nothing reads it.
+A frontmatter field its schema does not declare is an error. This binds a page whose folder matches a type's stated File Location; a file matching none has no schema, so nothing declares what its frontmatter may hold and nothing reads it. A declared field is written once: a key that stands twice holds two values, and a reader that takes the first and one that takes the last both pass, so a page can say one thing to the checker and another to the site that serves it.
 
 What the rule costs is the local field: an instance cannot carry one of its own. What it buys is that a rename cannot half-happen. An undeclared field resolves no reference and satisfies no requirement — but it still renders, which is how a field left behind by a rename survives on the page under the old name while every other check reports green.
 
