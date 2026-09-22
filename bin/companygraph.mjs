@@ -5,7 +5,7 @@
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
-//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>]
+//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //
 // Run with no command at a terminal, it opens a menu over the same four, which asks what the
 // flags would say and calls the same code, and stays open until Quit or Ctrl+C.
@@ -13,7 +13,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, rmSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -21,7 +21,8 @@ import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
-import { download, installed, newestRelease, place, readLocal } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
@@ -32,11 +33,11 @@ const USAGE = `companygraph [<command>]
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
-  obsidian [<vault>]  install the Obsidian plugin's newest release in a vault, or update it there
+  obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
-obsidian: --release <tag>  --from <dir>
+obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -68,7 +69,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -137,6 +138,12 @@ let reader = null;
 let ended = false;
 const lines = [];
 const waiting = [];
+// Inside a pick of the menu, a question is left with b or back, or with Ctrl+C, and the menu comes
+// back: `Back` is thrown out of the pick and caught where the menu called it, and what the pick
+// had written by then stays. Outside the menu neither means that: b is an answer like any other,
+// and Ctrl+C ends the run as it always did.
+class Back extends Error {}
+let inPick = false;
 function ask(question) {
   if (!reader) {
     reader = createInterface({ input: process.stdin });
@@ -150,11 +157,22 @@ function ask(question) {
   const answered = lines.length ? Promise.resolve(lines.shift()) : reader.closed ? Promise.resolve("") : new Promise((done) => waiting.push(done));
   // The terminal echoes what is typed, so the menu's record of a pick keeps the answer itself.
   return answered.then((line) => {
+    if (line === BACK) throw new Back();
     const answer = line.trim();
     record?.push(`${answer || dim("Enter")}\n`);
+    if (inPick && /^b(ack)?$/i.test(answer)) throw new Back();
     return answer;
   });
 }
+// Ctrl+C while a pick is asking answers the question with this, and the menu comes back; at the
+// menu's own prompt, or outside the menu, it ends the run. A line a person could never type.
+const BACK = "\u0000back";
+process.on("SIGINT", () => {
+  if (inPick && waiting.length) {
+    process.stdout.write("\n");
+    waiting.shift()(BACK);
+  } else process.exit(130);
+});
 
 // At a terminal the menu clears the screen before it draws, so what is on it is the latest pick
 // and what that pick said, never the log of every one before it. `record` collects what a pick
@@ -313,36 +331,145 @@ async function upgrade(argv) {
   return "done";
 }
 
-// Installs or updates, which are one act: the three files written over whatever release was there,
-// and the plugin switched on if it was not. A vault that is not an instance takes the plugin too,
+// A vault made of an instance, in five steps, each said as it happens: CompanyGraph's plugin, the
+// two recommended beside it, each asked for by name unless --plugins or --no-plugins answers for
+// them, the graph, the panes, and Obsidian itself. The questions are asked whether or not stdin is
+// a terminal, as init asks for a name, since a pipe at its end answers no. Each plugin is read and
+// refused before its own files are written, and installed again it is updated, the three files
+// written over whatever release was there and the plugin switched on if it was not; the graph and
+// the panes are written where the vault has none and kept where it has, since Obsidian rewrites
+// both as a person works, unless --force. Obsidian is found or, where a package manager puts it
+// there reliably, offered; a folder Obsidian already knows as a vault is then opened through
+// Obsidian's own URL, on --open or on a yes at a terminal, and an opener that fails is said and
+// does not stop what is left to say. A folder Obsidian does not know is put on Obsidian's own
+// list first, which is the one write into a file of Obsidian's and is made only while Obsidian is
+// not running, since it reads the list when it starts; under a running Obsidian the command
+// offers to quit it the way its menu does and reopen it with the vault, and on a no the way in is
+// Obsidian's own, Open folder as vault, and is said. A vault that is not an instance takes all of it too,
 // since the plugin's own `Make this vault an instance` is one way to make one.
 async function obsidian(argv) {
   const given = flags(argv);
   const vault = given._[0] ?? ".";
+  const force = Boolean(given.force);
+  const [own, ...recommended] = PLUGINS;
+
+  // A folder not there yet is made, as Obsidian makes a vault of an empty one; a file in the way
+  // is refused by `installed` below, as it always was.
+  if (!existsSync(vault)) {
+    mkdirSync(vault, { recursive: true });
+    console.log(`${good("✓")} made the folder ${shown(vault)}`);
+  }
   const now = installed(vault);
   let files;
   if (given.from) files = readLocal(given.from);
   else {
     const release = given.release ?? (await newestRelease());
-    if (now.release === release && now.enabled) {
-      console.log(`${good("✓")} CompanyGraph ${release}, the ${given.release ? "release asked for" : "newest release"}, is installed and switched on in ${shown(vault)}; nothing to do.`);
-      console.log(dim("  Not under Installed plugins in Obsidian? Settings → Community plugins → Turn on community plugins."));
-      return;
-    }
-    files = await download(release);
+    if (now.release === release && now.enabled)
+      console.log(`${good("✓")} CompanyGraph ${release}, the ${given.release ? "release asked for" : "newest release"}, is installed and switched on in ${shown(vault)}`);
+    else files = await download(release);
   }
-  const done = place(vault, files);
-  const moved = done.from === null ? `CompanyGraph ${done.to} installed` : done.from === done.to ? `CompanyGraph ${done.to} written again` : `CompanyGraph ${done.from} → ${done.to}`;
-  console.log(`${good("✓")} ${moved} in ${shown(vault)}${done.enabled ? ", and switched on" : ""}`);
+  if (files) said(place(vault, files), own, vault);
+
+  // One there and on is updated unasked, as CompanyGraph's is; one not there is offered; one there
+  // and switched off was switched off by the person, which Obsidian records by taking its name out
+  // of the list and leaving its files, and that is not the command's to undo.
+  if (!given["no-plugins"]) {
+    for (const plugin of recommended) {
+      const has = installed(vault, plugin);
+      if (has.release !== null && !has.enabled) {
+        console.log(`  ${plugin.name} is there but switched off; left as it is`);
+        continue;
+      }
+      const wanted = has.release !== null || given.plugins || yes(await ask(prompt(`Install ${plugin.name}, ${plugin.what}?`, "y/N")));
+      if (!wanted) {
+        console.log(`  ${plugin.name} left out${plugin.needs ? `; ${plugin.needs.replace(/^It/, "it").replace(/\.$/, "")}` : ""}`);
+        continue;
+      }
+      const release = await newestRelease(fetch, plugin);
+      if (has.release === release && has.enabled) console.log(`${good("✓")} ${plugin.name} ${release}, the newest release, is installed and switched on`);
+      else said(place(vault, await download(release, fetch, plugin), plugin), plugin);
+      if (plugin.needs && has.release === null) console.log(dim(`  ${plugin.needs}`));
+    }
+  }
+
+  const model = join(vault, "model");
+  const folders = existsSync(model) ? readdirSync(model, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort() : [];
+  const graph = settle(vault, "graph.json", graphOf(folders), { force });
+  console.log(`${good("✓")} graph.json ${graph}${graph === "written" ? (folders.length ? ": the model, one color per folder" : ": the model, with no folder to color yet") : ", as Obsidian has it"}`);
+  const file = existsSync(join(vault, "model", "identity.md")) ? "model/identity.md" : "README.md";
+  const on = installed(vault).list;
+  const panes = settle(vault, "workspace.json", workspaceOf({ file, plugins: on }), { force });
+  console.log(`${good("✓")} workspace.json ${panes}${panes === "written" ? `: ${file} open, the plugin's views on the right` : ", as Obsidian has it"}`);
+
+  const where = whereObsidian();
+  let app = where.app;
+  if (app) console.log(`${good("✓")} Obsidian is at ${shown(app)}`);
+  else {
+    console.log(`${bad("✗")} Obsidian was not found${process.platform === "linux" ? " on the path, as a Flatpak or as a Snap; an AppImage is wherever it was put" : ""}`);
+    if (where.installer && yes(await ask(prompt(`Install it with ${where.installer.name}?`, "y/N")))) {
+      const ran = spawnSync(where.installer.command[0], where.installer.command.slice(1), { stdio: "inherit" });
+      if (ran.status === 0) {
+        app = whereObsidian().app ?? where.installer.name;
+        console.log(app === where.installer.name ? `${good("✓")} installed with ${app}` : `${good("✓")} Obsidian is at ${shown(app)}`);
+      } else console.log(`${bad("✗")} ${where.installer.command.join(" ")} did not go through`);
+    } else if (where.installer) console.log(`  ${where.installer.name} installs it: ${dim(where.installer.command.join(" "))}`);
+    else console.log(`  it is at ${dim(where.download)}`);
+  }
+  // The URL opens only a folder Obsidian lists as a vault. --open is honored whether or not
+  // Obsidian was found, since on Linux not found is not not installed and the opener answers for
+  // itself; an opener that fails is said, with the URL to use by hand. A folder not on the list is
+  // put there first; a running Obsidian would not see it, so it is offered a quit and a reopen,
+  // always asked, since a flag should not quit a person's application.
+  let known = knownVault(vault);
+  const url = vaultUrl(vault);
+  let opened = false;
+  let registered = false;
+  if (given.open || (app && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
+    let blocked = !known && obsidianRunning();
+    if (blocked) {
+      console.log(`  Obsidian is running, and reads its list of vaults only when it starts; it reopens what it has open now`);
+      if (yes(await ask(prompt("Quit Obsidian and reopen it with the vault?", "y/N")))) {
+        const asked = await quitObsidian();
+        if (asked.quit) blocked = false;
+        else console.log(`${bad("✗")} Obsidian did not quit${asked.reason ? `: ${asked.reason}` : " (a second Obsidian running?)"}; quit it yourself and run this again, or open the folder there`);
+      } else console.log(`  left as it is; open the folder there`);
+    }
+    if (!blocked) {
+      try {
+        if (!known) {
+          registerVault(vault);
+          known = registered = true;
+          console.log(`${good("✓")} put on Obsidian's list of vaults`);
+        }
+        // The opener answers that the URL was handed over, not that a vault opened, so that is
+        // what is said, and the way in by hand stays in the steps below for a vault put on the
+        // list this run.
+        openVault(vault);
+        opened = true;
+        console.log(`${good("✓")} asked Obsidian to open ${shown(vault)}`);
+      } catch (error) {
+        console.log(`${bad("✗")} ${error.message}`);
+      }
+    }
+  }
+  if (!opened) console.log(known ? `  Obsidian opens it at ${dim(url)}` : `  Obsidian does not know this folder yet; once opened there, ${dim(url)} opens it`);
   // What no file in the vault can do. Obsidian keeps whether a vault's community plugins run, its
   // restricted mode, in its own storage, and a vault once browsed in restricted mode lists none.
+  const steps = [
+    ...(known && !registered ? [] : [`${registered ? "Did it not open? " : ""}Open the folder as a vault: ${dim(`Open another vault → Open folder as vault → ${shown(vault)}`)}`]),
+    "Trust the vault's author when Obsidian asks",
+    `The plugins not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}\n     ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}`,
+  ];
   console.log(`
-${bold("Next, in Obsidian")}
-  ${accent("1")}  Open the folder as a vault, if it is not one yet: ${dim("Open another vault → Open folder as vault")}
-  ${accent("2")}  Trust the vault's author when Obsidian asks
-  ${accent("3")}  CompanyGraph not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}
-     ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}
-  A vault Obsidian has open already takes the plugin on ${dim("Reload app without saving")}.`);
+${bold("Then, in Obsidian")}
+${steps.map((step, i) => `  ${accent(String(i + 1))}  ${step}`).join("\n")}
+  A vault Obsidian has open already takes the plugins on ${dim("Reload app without saving")}.`);
+}
+
+// One plugin's install, said: installed, written again, or moved between releases.
+function said(done, plugin, vault) {
+  const moved = done.from === null ? `${plugin.name} ${done.to} installed` : done.from === done.to ? `${plugin.name} ${done.to} written again` : `${plugin.name} ${done.from} → ${done.to}`;
+  console.log(`${good("✓")} ${moved}${vault ? ` in ${shown(vault)}` : ""}${done.enabled ? ", and switched on" : ""}`);
 }
 
 async function check(argv) {
@@ -386,7 +513,7 @@ async function menu() {
       console.log();
       await init([...args, "--name", name], { menu: true });
       console.log();
-      if (yes(await ask(prompt("Install the Obsidian plugin in it, to write it in Obsidian?", "y/N")))) {
+      if (yes(await ask(prompt("Make it a vault, to write it in Obsidian?", "y/N")))) {
         console.log();
         await obsidian([root]);
       }
@@ -399,7 +526,7 @@ async function menu() {
       if (yes(await ask(prompt("Go ahead?", "y/N")))) await upgrade([root]);
       return 0;
     }],
-    ["Obsidian plugin", "install it in a vault, or update it there", async () => {
+    ["Obsidian", "make an instance a vault: the plugins, the graph, the panes, and Obsidian itself", async () => {
       await obsidian([await folder("Which vault?", ".")]);
       return 0;
     }],
@@ -421,7 +548,7 @@ async function menu() {
     entries.forEach(([label, what], i) => console.log(`  ${accent(i + 1)}  ${label.padEnd(width)}  ${dim(what)}`));
     console.log(`  ${accent(entries.length + 1)}  ${"Quit".padEnd(width)}  ${dim("or q, or Ctrl+C")}`);
     console.log();
-    const pick = await ask(prompt(`Pick 1-${entries.length + 1}`));
+    const pick = await ask(prompt(`Pick 1-${entries.length + 1}`, "b or Ctrl+C at any question comes back here"));
     if (!pick && ended && !lines.length) return code;
     if (!pick) continue;
     if (/^q(uit)?$/i.test(pick) || pick === String(entries.length + 1)) {
@@ -435,14 +562,24 @@ async function menu() {
       console.log(`\n${banner()}\n\n  ${accent("›")} ${bold(label)}\n`);
     } else console.log();
     record = SCREEN ? [] : null;
+    let back = false;
     try {
       if (!entry) throw new Error(`${pick} is not one of 1-${entries.length + 1}; nothing was done.`);
+      inPick = true;
       code = await entry[2]();
     } catch (error) {
-      console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
-      code = 1;
+      if (error instanceof Back) {
+        back = true;
+        code = 0;
+        console.log(`\n  back to the menu; what was written before stays`);
+      } else {
+        console.error(`${bad("✗")} ${error instanceof Error ? error.message : String(error)}`);
+        code = 1;
+      }
+    } finally {
+      inPick = false;
     }
-    if (record) latest = [label, code === 0, record.join("")];
+    if (record) latest = [back ? `${label} · back` : label, code === 0, record.join("")];
     record = null;
     if (!SCREEN) console.log();
   }
