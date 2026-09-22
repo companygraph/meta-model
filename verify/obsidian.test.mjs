@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { download, installed, newestRelease, place, readLocal } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 
 const vault = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-obsidian-"));
 const release = (version, id = "companygraph") => new Map([
@@ -89,4 +89,227 @@ test("a folder of one's own build is read with the same checks, and a missing ma
   assert.throws(() => readLocal(dir), /main\.js is missing; the plugin's npm run build writes it/);
   fs.writeFileSync(path.join(dir, "main.js"), "");
   assert.equal(readLocal(dir).size, 3);
+});
+
+// The recommended plugins: the same three files, into a folder of their own id, from their own
+// repository, switched on beside CompanyGraph. Each is in Obsidian's community directory, and is
+// installed here so a vault is ready without a hunt through it.
+test("the recommended plugins are Claudian and Terminal, each with its id and repository", () => {
+  assert.deepEqual(
+    PLUGINS.map((p) => [p.id, p.repo]),
+    [["companygraph", "companygraph/obsidian-plugin"], ["realclaudian", "yishentu/claudian"], ["terminal", "polyipseity/obsidian-terminal"]],
+  );
+});
+
+test("a recommended plugin lands in a folder of its own id and is switched on beside CompanyGraph", () => {
+  const root = vault();
+  place(root, release("1.0.0"));
+  const terminal = PLUGINS.find((p) => p.id === "terminal");
+  const done = place(root, release("3.27.2", "terminal"), terminal);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".obsidian", "plugins", "terminal")).sort(), ["main.js", "manifest.json", "styles.css"]);
+  assert.deepEqual(list(root), ["companygraph", "terminal"]);
+  assert.deepEqual([done.from, done.to, done.enabled], [null, "3.27.2", true]);
+  assert.deepEqual([installed(root, terminal).release, installed(root).release], ["3.27.2", "1.0.0"]);
+});
+
+test("a recommended plugin is downloaded from its own repository and held to its own id", async () => {
+  const asked = [];
+  const claudian = PLUGINS.find((p) => p.id === "realclaudian");
+  await download("2.3.2", serving(release("2.3.2", "realclaudian"), asked), claudian);
+  assert.equal(asked[0], "https://github.com/yishentu/claudian/releases/download/2.3.2/main.js");
+  await assert.rejects(download("2.3.2", serving(release("2.3.2")), claudian), /for companygraph, not realclaudian/);
+  const latest = [];
+  await newestRelease(async (url) => { latest.push(url); return new Response(JSON.stringify({ tag_name: "2.3.2" })); }, claudian);
+  assert.equal(latest[0], "https://api.github.com/repos/yishentu/claudian/releases/latest");
+});
+
+// The graph view as Obsidian keeps it in `.obsidian/graph.json`: the model's entities without
+// their READMEs and sources, and one color per root folder of the model, so a reader tells the
+// types apart at a glance.
+test("the graph filters to the model and colors each root folder of it, sources and READMEs left out", () => {
+  const graph = JSON.parse(graphOf(["achievement-kinds", "profiles", "skills", "sources"]));
+  assert.equal(graph.search, "path:model/ -file:README -path:model/sources");
+  assert.deepEqual(
+    graph.colorGroups.map((g) => g.query),
+    ["path:model/achievement-kinds", "path:model/profiles", "path:model/skills"],
+  );
+  for (const group of graph.colorGroups) {
+    assert.equal(group.color.a, 1);
+    assert.ok(Number.isInteger(group.color.rgb) && group.color.rgb >= 0 && group.color.rgb <= 0xffffff);
+  }
+  const rgbs = graph.colorGroups.map((g) => g.color.rgb);
+  assert.equal(new Set(rgbs).size, rgbs.length);
+});
+
+// The panes as Obsidian keeps them in `.obsidian/workspace.json`: files, search and bookmarks on
+// the left; References, Outline, Checks and Brief on the right, with Claudian where it is
+// installed; the identity open in the middle. Terminal's pane is the plugin's own to open.
+const leaves = (node, out = []) => {
+  if (node.type === "leaf") out.push(node.state.type);
+  for (const child of node.children ?? []) leaves(child, out);
+  return out;
+};
+
+test("the panes open the identity with the plugin's views, and a pane only where its plugin is installed", () => {
+  const all = JSON.parse(workspaceOf({ file: "model/identity.md", plugins: ["companygraph", "realclaudian", "terminal"] }));
+  assert.deepEqual(leaves(all.left), ["file-explorer", "search", "bookmarks"]);
+  assert.deepEqual(leaves(all.right), ["companygraph-references", "outline", "companygraph-checks", "companygraph-brief", "claudian-view"]);
+  assert.deepEqual(leaves(all.main), ["markdown"]);
+  assert.equal(JSON.stringify(all).includes("terminal:terminal"), false);
+  assert.equal(JSON.stringify(all).includes('"file":"model/identity.md"'), true);
+  const own = JSON.parse(workspaceOf({ file: "model/identity.md", plugins: ["companygraph"] }));
+  assert.deepEqual(leaves(own.right), ["companygraph-references", "outline", "companygraph-checks", "companygraph-brief"]);
+  assert.deepEqual(leaves(own.main), ["markdown"]);
+});
+
+// Obsidian rewrites both files whenever a person changes the graph or moves a pane, so a file
+// already there is theirs and is kept, unless the caller says to write over it.
+test("a vault file is written where absent, kept where present, and written over on force", () => {
+  const root = vault();
+  assert.equal(settle(root, "graph.json", "one"), "written");
+  assert.equal(fs.readFileSync(path.join(root, ".obsidian", "graph.json"), "utf8"), "one");
+  assert.equal(settle(root, "graph.json", "two"), "kept");
+  assert.equal(fs.readFileSync(path.join(root, ".obsidian", "graph.json"), "utf8"), "one");
+  assert.equal(settle(root, "graph.json", "two", { force: true }), "written");
+  assert.equal(fs.readFileSync(path.join(root, ".obsidian", "graph.json"), "utf8"), "two");
+});
+
+// Where Obsidian is, or how to get it, on each platform. The filesystem is handed in, so every
+// platform is tried from this one.
+const fsOf = (...present) => ({ exists: (p) => present.includes(p) });
+
+test("on macOS Obsidian is found under /Applications, and Homebrew is the installer when it is there", () => {
+  const env = { PATH: "/opt/homebrew/bin:/usr/bin" };
+  const found = whereObsidian({ platform: "darwin", env, ...fsOf("/Applications/Obsidian.app") });
+  assert.deepEqual([found.app, found.installer], ["/Applications/Obsidian.app", null]);
+  const missing = whereObsidian({ platform: "darwin", env, ...fsOf("/opt/homebrew/bin/brew") });
+  assert.equal(missing.app, null);
+  assert.deepEqual(missing.installer, { name: "Homebrew", command: ["brew", "install", "--cask", "obsidian"] });
+  assert.equal(whereObsidian({ platform: "darwin", env, ...fsOf() }).installer, null);
+  assert.equal(missing.download, "https://obsidian.md/download");
+});
+
+test("on Windows Obsidian is found under LOCALAPPDATA, and winget is the installer when it is on the path", () => {
+  const env = { LOCALAPPDATA: "C:\\Users\\rob\\AppData\\Local", PATH: "C:\\Users\\rob\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Windows" };
+  const exe = "C:\\Users\\rob\\AppData\\Local\\Obsidian\\Obsidian.exe";
+  assert.equal(whereObsidian({ platform: "win32", env, ...fsOf(exe) }).app, exe);
+  const machine = "C:\\Program Files\\Obsidian\\Obsidian.exe";
+  assert.equal(whereObsidian({ platform: "win32", env: { ...env, ProgramFiles: "C:\\Program Files" }, ...fsOf(machine) }).app, machine);
+  const missing = whereObsidian({ platform: "win32", env, ...fsOf("C:\\Users\\rob\\AppData\\Local\\Microsoft\\WindowsApps\\winget.exe") });
+  assert.equal(missing.app, null);
+  assert.deepEqual(missing.installer, {
+    name: "winget",
+    command: ["winget", "install", "--id", "Obsidian.Obsidian", "-e", "--accept-source-agreements", "--accept-package-agreements"],
+  });
+});
+
+test("on Linux Obsidian is found on the path, as a Flatpak or a Snap, and nothing installs it", () => {
+  const env = { PATH: "/usr/local/bin:/usr/bin", HOME: "/home/rob" };
+  assert.equal(whereObsidian({ platform: "linux", env, ...fsOf("/usr/bin/obsidian") }).app, "/usr/bin/obsidian");
+  assert.equal(whereObsidian({ platform: "linux", env, ...fsOf("/var/lib/flatpak/exports/bin/md.obsidian.Obsidian") }).app, "/var/lib/flatpak/exports/bin/md.obsidian.Obsidian");
+  assert.equal(whereObsidian({ platform: "linux", env, ...fsOf("/snap/bin/obsidian") }).app, "/snap/bin/obsidian");
+  const missing = whereObsidian({ platform: "linux", env, ...fsOf() });
+  assert.deepEqual([missing.app, missing.installer], [null, null]);
+});
+
+// A vault Obsidian knows, opened through its own URL, handed to each platform's opener as one
+// argument. The URL opens only a folder on Obsidian's list, which `registerVault` below puts it on.
+test("opening a vault hands each platform's opener the obsidian:// URL of the folder", () => {
+  const ran = [];
+  const run = (command, args) => (ran.push([command, ...args]), { status: 0 });
+  // Resolved as the opener resolves it, since on Windows the folder gains a drive letter.
+  const url = `obsidian://open?path=${encodeURIComponent(path.resolve("/Users/rob/Desktop/my vault"))}`;
+  openVault("/Users/rob/Desktop/my vault", { platform: "darwin", run });
+  openVault("/Users/rob/Desktop/my vault", { platform: "win32", run });
+  openVault("/Users/rob/Desktop/my vault", { platform: "linux", run });
+  assert.deepEqual(ran, [["open", url], ["rundll32", "url.dll,FileProtocolHandler", url], ["xdg-open", url]]);
+  assert.equal(vaultUrl("/Users/rob/Desktop/my vault"), url);
+  assert.throws(() => openVault("/v", { platform: "linux", run: () => ({ status: 1, error: new Error("ENOENT") }) }), /could not open/);
+});
+
+// Whether Obsidian knows a folder as a vault, read from the list Obsidian keeps outside every
+// vault, at its own place per platform. `registerVault` below is the one write into it.
+const registry = (...paths) => JSON.stringify({ vaults: Object.fromEntries(paths.map((p, i) => [`${i}`.padStart(16, "a"), { path: p, ts: 1 }])) });
+
+test("a vault is known where Obsidian's own list names its folder, at the list's place per platform", () => {
+  const home = "/Users/rob";
+  const files = new Map([["/Users/rob/Library/Application Support/obsidian/obsidian.json", registry("/Users/rob/Desktop/cv-yileny")]]);
+  const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p) };
+  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: home }, ...fsOf }), true);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-trial", { platform: "darwin", env: { HOME: home }, ...fsOf }), false);
+  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: "/Users/other" }, ...fsOf }), false);
+});
+
+test("the list is read from APPDATA on Windows and from .config or the Flatpak's config on Linux, and a broken list means not known", () => {
+  const win = new Map([["C:\\Users\\rob\\AppData\\Roaming\\obsidian\\obsidian.json", registry("C:\\Users\\rob\\vault")]]);
+  const winFs = { exists: (p) => win.has(p), read: (p) => win.get(p) };
+  assert.equal(knownVault("C:\\Users\\rob\\vault", { platform: "win32", env: { APPDATA: "C:\\Users\\rob\\AppData\\Roaming" }, ...winFs }), true);
+  const lin = new Map([["/home/rob/.var/app/md.obsidian.Obsidian/config/obsidian/obsidian.json", registry("/home/rob/vault")]]);
+  const linFs = { exists: (p) => lin.has(p), read: (p) => lin.get(p) };
+  assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...linFs }), true);
+  const broken = { exists: () => true, read: () => "not json" };
+  assert.equal(knownVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...broken }), false);
+});
+
+// A folder Obsidian does not know, put on its list so the URL can open it: one entry added, the
+// others kept, the file made where Obsidian has none yet. Only while Obsidian is not running,
+// which the command decides; this writes what it is told to.
+test("registering a vault adds one entry to Obsidian's list and keeps the rest, or makes the list", () => {
+  const listPath = "/Users/rob/Library/Application Support/obsidian/obsidian.json";
+  const files = new Map([[listPath, registry("/Users/rob/Desktop/cv-yileny")]]);
+  const written = [];
+  const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p), write: (p, text) => { files.set(p, text); written.push(p); } };
+  const options = { platform: "darwin", env: { HOME: "/Users/rob" }, ...fsOf };
+  registerVault("/Users/rob/Desktop/vault-trial", options);
+  const { vaults } = JSON.parse(files.get(listPath));
+  assert.deepEqual(Object.values(vaults).map((v) => v.path).sort(), ["/Users/rob/Desktop/cv-yileny", "/Users/rob/Desktop/vault-trial"]);
+  for (const id of Object.keys(vaults)) assert.match(id, /^[0-9a-f]{16}$/);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-trial", options), true);
+  registerVault("/Users/rob/Desktop/vault-trial", options);
+  assert.equal(Object.keys(JSON.parse(files.get(listPath)).vaults).length, 2, "registered once");
+  const empty = new Map();
+  const emptyFs = { exists: (p) => empty.has(p), read: (p) => empty.get(p), write: (p, text) => empty.set(p, text), mkdir: () => {} };
+  registerVault("/home/rob/vault", { platform: "linux", env: { HOME: "/home/rob" }, ...emptyFs });
+  assert.equal(Object.values(JSON.parse(empty.get("/home/rob/.config/obsidian/obsidian.json")).vaults)[0].path, "/home/rob/vault");
+});
+
+// Whether Obsidian is running, asked of each platform's process list; a lister that cannot be
+// run answers false, and the opener then answers for itself.
+test("Obsidian is running where the platform's process list names it", () => {
+  const ran = [];
+  const listing = (out, status = 0) => (command, args) => (ran.push([command, ...args]), { status, stdout: out });
+  assert.equal(obsidianRunning({ platform: "darwin", run: listing("4513\n") }), true);
+  assert.equal(obsidianRunning({ platform: "darwin", run: listing("", 1) }), false);
+  assert.equal(obsidianRunning({ platform: "win32", run: listing('"Obsidian.exe","4513","Console","1","200 K"\n') }), true);
+  assert.equal(obsidianRunning({ platform: "win32", run: listing("INFO: No tasks are running which match the specified criteria.\n") }), false);
+  assert.equal(obsidianRunning({ platform: "linux", run: () => ({ error: new Error("ENOENT") }) }), false);
+  assert.deepEqual(ran[0], ["pgrep", "-x", "Obsidian"]);
+  assert.deepEqual(ran[2], ["tasklist", "/FI", "IMAGENAME eq Obsidian.exe", "/FO", "CSV", "/NH"]);
+});
+
+// Obsidian quit the way its menu quits it, never killed, and waited for until it is gone, since
+// it writes its list of vaults on the way out and an entry written before that would be lost.
+test("quitting Obsidian asks it politely per platform and waits until the process list no longer names it", async () => {
+  const ran = [];
+  const run = (command, args) => (ran.push([command, ...args]), { status: 0, stdout: "" });
+  const slept = [];
+  const sleep = async (ms) => { slept.push(ms); };
+  let polls = 0;
+  const running = () => ++polls < 3;
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run, running, sleep }), { quit: true });
+  assert.deepEqual(ran[0], ["osascript", "-e", 'quit app "Obsidian"']);
+  assert.equal(polls, 3);
+  assert.equal(slept.length, 2);
+  await quitObsidian({ platform: "win32", run, running: () => false, sleep });
+  assert.deepEqual(ran[1], ["taskkill", "/IM", "Obsidian.exe"]);
+  await quitObsidian({ platform: "linux", run, running: () => false, sleep });
+  assert.deepEqual(ran[2], ["pkill", "-x", "obsidian"]);
+  // Still there after the wait: false, and nothing else is tried.
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run, running: () => true, sleep, tries: 3 }), { quit: false });
+  assert.match((await quitObsidian({ platform: "darwin", run: () => ({ error: new Error("ENOENT") }), running: () => true, sleep })).reason, /could not be run/);
+  // A refused Apple event says why at once, rather than waiting on a quit that was never sent;
+  // on Windows taskkill answers 1 for the helpers even as the window closes, so the wait decides.
+  const refused = { status: 1, stderr: "execution error: Not authorized to send Apple events to Obsidian. (-1743)" };
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run: () => refused, running: () => true, sleep }), { quit: false, reason: refused.stderr });
+  assert.deepEqual(await quitObsidian({ platform: "win32", run: () => ({ status: 1, stderr: "" }), running: () => false, sleep }), { quit: true });
 });
