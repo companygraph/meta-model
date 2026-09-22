@@ -175,6 +175,19 @@ test("obsidian writes the graph and the panes for the model's folders, keeps the
   assert.match(forced, /graph\.json written/);
 });
 
+// --open with no opener on the path: the failure is said with the URL, and what is left to say
+// in Obsidian is still said, since every file was written by then.
+test("obsidian --open says an opener that fails and still says what is left to do", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, PATH: temp() } });
+  assert.match(said, /✗ could not open obsidian:\/\/open\?path=/);
+  assert.match(said, /Then, in Obsidian/);
+});
+
 test("upgrade moves an instance, says what it did, and leaves the model alone", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

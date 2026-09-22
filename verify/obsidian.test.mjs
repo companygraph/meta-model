@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 
 const vault = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-obsidian-"));
 const release = (version, id = "companygraph") => new Map([
@@ -193,9 +193,14 @@ test("on Windows Obsidian is found under LOCALAPPDATA, and winget is the install
   const env = { LOCALAPPDATA: "C:\\Users\\rob\\AppData\\Local", PATH: "C:\\Users\\rob\\AppData\\Local\\Microsoft\\WindowsApps;C:\\Windows" };
   const exe = "C:\\Users\\rob\\AppData\\Local\\Obsidian\\Obsidian.exe";
   assert.equal(whereObsidian({ platform: "win32", env, ...fsOf(exe) }).app, exe);
+  const machine = "C:\\Program Files\\Obsidian\\Obsidian.exe";
+  assert.equal(whereObsidian({ platform: "win32", env: { ...env, ProgramFiles: "C:\\Program Files" }, ...fsOf(machine) }).app, machine);
   const missing = whereObsidian({ platform: "win32", env, ...fsOf("C:\\Users\\rob\\AppData\\Local\\Microsoft\\WindowsApps\\winget.exe") });
   assert.equal(missing.app, null);
-  assert.deepEqual(missing.installer, { name: "winget", command: ["winget", "install", "--id", "Obsidian.Obsidian", "-e"] });
+  assert.deepEqual(missing.installer, {
+    name: "winget",
+    command: ["winget", "install", "--id", "Obsidian.Obsidian", "-e", "--accept-source-agreements", "--accept-package-agreements"],
+  });
 });
 
 test("on Linux Obsidian is found on the path, as a Flatpak or a Snap, and nothing installs it", () => {
@@ -217,6 +222,7 @@ test("opening a vault hands each platform's opener the obsidian:// URL of the fo
   openVault("/Users/rob/Desktop/my vault", { platform: "darwin", run });
   openVault("/Users/rob/Desktop/my vault", { platform: "win32", run });
   openVault("/Users/rob/Desktop/my vault", { platform: "linux", run });
-  assert.deepEqual(ran, [["open", url], ["cmd", "/c", "start", "", url], ["xdg-open", url]]);
+  assert.deepEqual(ran, [["open", url], ["rundll32", "url.dll,FileProtocolHandler", url], ["xdg-open", url]]);
+  assert.equal(vaultUrl("/Users/rob/Desktop/my vault"), url);
   assert.throws(() => openVault("/v", { platform: "linux", run: () => ({ status: 1, error: new Error("ENOENT") }) }), /could not open/);
 });

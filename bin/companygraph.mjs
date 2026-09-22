@@ -21,7 +21,7 @@ import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
-import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -314,16 +314,16 @@ async function upgrade(argv) {
   return "done";
 }
 
-// Installs or updates, which are one act: the three files written over whatever release was there,
-// and the plugin switched on if it was not. A vault that is not an instance takes the plugin too,
-// since the plugin's own `Make this vault an instance` is one way to make one.
 // A vault made of an instance, in five steps, each said as it happens: CompanyGraph's plugin, the
-// two recommended beside it, the graph, the panes, and Obsidian itself. The plugins are read and
-// refused before anything is written, and installed again they are updated; the graph and the
-// panes are written where the vault has none and kept where it has, since Obsidian rewrites both
-// as a person works, unless --force. Obsidian is found or, where a package manager puts it there
-// reliably, offered; the vault is then opened through Obsidian's own URL, which is what makes it a
-// vault there, on --open or on a yes at a terminal.
+// two recommended beside it, the graph, the panes, and Obsidian itself. Each plugin is read and
+// refused before its own files are written, and installed again it is updated, the three files
+// written over whatever release was there and the plugin switched on if it was not; the graph and
+// the panes are written where the vault has none and kept where it has, since Obsidian rewrites
+// both as a person works, unless --force. Obsidian is found or, where a package manager puts it
+// there reliably, offered; the vault is then opened through Obsidian's own URL, which is what
+// makes it a vault there, on --open or on a yes at a terminal, and an opener that fails is said
+// and does not stop what is left to say. A vault that is not an instance takes all of it too,
+// since the plugin's own `Make this vault an instance` is one way to make one.
 async function obsidian(argv) {
   const given = flags(argv);
   const vault = given._[0] ?? ".";
@@ -354,7 +354,7 @@ async function obsidian(argv) {
   const model = join(vault, "model");
   const folders = existsSync(model) ? readdirSync(model, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort() : [];
   const graph = settle(vault, "graph.json", graphOf(folders), { force });
-  console.log(`${good("✓")} graph.json ${graph}${graph === "written" ? ": the model, one color per folder" : ", as Obsidian has it"}`);
+  console.log(`${good("✓")} graph.json ${graph}${graph === "written" ? (folders.length ? ": the model, one color per folder" : ": the model, with no folder to color yet") : ", as Obsidian has it"}`);
   const file = existsSync(join(vault, "model", "identity.md")) ? "model/identity.md" : "README.md";
   const on = installed(vault).list;
   const panes = settle(vault, "workspace.json", workspaceOf({ file, plugins: on }), { force });
@@ -368,15 +368,24 @@ async function obsidian(argv) {
     console.log(`${bad("✗")} Obsidian was not found${process.platform === "linux" ? " on the path, as a Flatpak or as a Snap; an AppImage is wherever it was put" : ""}`);
     if (where.installer && terminal && yes(await ask(prompt(`Install it with ${where.installer.name}?`, "y/N")))) {
       const ran = spawnSync(where.installer.command[0], where.installer.command.slice(1), { stdio: "inherit" });
-      if (ran.status === 0) app = whereObsidian().app ?? where.installer.name;
-      else console.log(`${bad("✗")} ${where.installer.command.join(" ")} did not go through`);
+      if (ran.status === 0) {
+        app = whereObsidian().app ?? where.installer.name;
+        console.log(`${good("✓")} Obsidian is at ${shown(app)}`);
+      } else console.log(`${bad("✗")} ${where.installer.command.join(" ")} did not go through`);
     } else if (where.installer) console.log(`  ${where.installer.name} installs it: ${dim(where.installer.command.join(" "))}`);
     else console.log(`  it is at ${dim(where.download)}`);
   }
-  const url = `obsidian://open?path=${encodeURIComponent(resolve(vault))}`;
-  if (app && (given.open || (terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N")))))) {
-    openVault(vault);
-    console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
+  // --open is honored whether or not Obsidian was found: on Linux not found is not not installed,
+  // and the opener answers for itself. An opener that fails is said, with the URL to use by hand.
+  const url = vaultUrl(vault);
+  if (given.open || (app && terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
+    try {
+      openVault(vault);
+      console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
+    } catch (error) {
+      console.log(`${bad("✗")} ${error.message}`);
+      console.log(`  Obsidian opens it, and makes it a vault, at ${dim(url)}`);
+    }
   } else console.log(`  Obsidian opens it, and makes it a vault, at ${dim(url)}`);
   // What no file in the vault can do. Obsidian keeps whether a vault's community plugins run, its
   // restricted mode, in its own storage, and a vault once browsed in restricted mode lists none.
