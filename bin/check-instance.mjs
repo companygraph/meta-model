@@ -98,10 +98,11 @@ export function checkPath(path) {
   // edit, and an edit found only by the next `upgrade` is refused there, on whoever upgrades
   // rather than on whoever made it; found here, it is named on the commit that made it. Each
   // file is read from disk by its own path, since the skills sit outside the folders walked
-  // above, and a path that is not plain and relative is refused rather than read. A manifest
-  // with no `files` recorded none, and there is nothing to hold it to.
+  // above, and a path that is not plain and relative is refused rather than read; a backslash is
+  // refused with them, as `plainRelative` in plan.mjs says why. A manifest with no `files`
+  // recorded none, and there is nothing to hold it to.
   for (const [path, recorded] of Object.entries(manifest.files ?? {})) {
-    const plain = path.split("/").every((part) => part !== "" && part !== "." && part !== "..");
+    const plain = !path.includes("\\") && path.split("/").every((part) => part !== "" && part !== "." && part !== "..");
     if (!plain) {
       failures.push(`${path}: named in .companygraph/manifest.json, and not a plain path inside the instance`);
       continue;

@@ -283,6 +283,21 @@ test("a manifest naming a `..` path in files refuses the whole upgrade even with
 
 // Defect 2: `units` is also untrusted, and an upgrade must refuse it rather than write core files
 // through an escaping relative path.
+// On Windows `path.resolve` reads `\\` as a separator, so a key with no `..` segment between
+// slashes can still climb out of the folder it claims to sit in, and the belt-and-braces guard in
+// the command only holds it inside the instance, not inside core.
+test("a manifest naming a key with a backslash refuses the whole upgrade, even with a correct hash", () => {
+  const { writes: initial } = initPlan(ask);
+  const manifest = JSON.parse(initial.get(".companygraph/manifest.json"));
+  const key = "meta/core/..\\..\\model\\identity.md";
+  manifest.files[key] = hashOf("# Acme\n");
+  const held = new Map([[key, "# Acme\n"]]);
+  for (const path of Object.keys(manifest.files)) if (initial.has(path)) held.set(path, initial.get(path));
+  const { refused, writes } = upgradePlan({ core, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow: null });
+  assert.ok(refused && refused.includes(key), refused);
+  assert.equal(writes, undefined);
+});
+
 test("a manifest whose units escapes the instance refuses the whole upgrade", () => {
   const { manifest, held, workflow } = instance();
   const hostile = { ...manifest, units: "../escaped" };
