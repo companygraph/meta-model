@@ -353,10 +353,16 @@ async function obsidian(argv) {
   }
   if (files) said(place(vault, files), own, vault);
 
-  // One already there is updated unasked, as CompanyGraph's is; one not there is offered.
+  // One there and on is updated unasked, as CompanyGraph's is; one not there is offered; one there
+  // and switched off was switched off by the person, which Obsidian records by taking its name out
+  // of the list and leaving its files, and that is not the command's to undo.
   if (!given["no-plugins"]) {
     for (const plugin of recommended) {
       const has = installed(vault, plugin);
+      if (has.release !== null && !has.enabled) {
+        console.log(`  ${plugin.name} is there but switched off; left as it is`);
+        continue;
+      }
       const wanted = has.release !== null || given.plugins || yes(await ask(prompt(`Install ${plugin.name}, ${plugin.what}?`, "y/N")));
       if (!wanted) {
         console.log(`  ${plugin.name} left out${plugin.needs ? `; ${plugin.needs.replace(/^It/, "it").replace(/\.$/, "")}` : ""}`);
@@ -387,7 +393,7 @@ async function obsidian(argv) {
       const ran = spawnSync(where.installer.command[0], where.installer.command.slice(1), { stdio: "inherit" });
       if (ran.status === 0) {
         app = whereObsidian().app ?? where.installer.name;
-        console.log(`${good("✓")} Obsidian is at ${shown(app)}`);
+        console.log(app === where.installer.name ? `${good("✓")} installed with ${app}` : `${good("✓")} Obsidian is at ${shown(app)}`);
       } else console.log(`${bad("✗")} ${where.installer.command.join(" ")} did not go through`);
     } else if (where.installer) console.log(`  ${where.installer.name} installs it: ${dim(where.installer.command.join(" "))}`);
     else console.log(`  it is at ${dim(where.download)}`);
@@ -400,25 +406,30 @@ async function obsidian(argv) {
   let known = knownVault(vault);
   const url = vaultUrl(vault);
   let opened = false;
+  let registered = false;
   if (given.open || (app && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
     let blocked = !known && obsidianRunning();
     if (blocked) {
       console.log(`  Obsidian is running, and reads its list of vaults only when it starts; it reopens what it has open now`);
       if (yes(await ask(prompt("Quit Obsidian and reopen it with the vault?", "y/N")))) {
-        if (await quitObsidian()) blocked = false;
-        else console.log(`${bad("✗")} Obsidian did not quit; quit it yourself and answer again, or open the folder there`);
-      } else console.log(`${bad("✗")} left as it is; open the folder there`);
+        const asked = await quitObsidian();
+        if (asked.quit) blocked = false;
+        else console.log(`${bad("✗")} Obsidian did not quit${asked.reason ? `: ${asked.reason}` : " (a second Obsidian running?)"}; quit it yourself and run this again, or open the folder there`);
+      } else console.log(`  left as it is; open the folder there`);
     }
     if (!blocked) {
       try {
         if (!known) {
           registerVault(vault);
-          known = true;
+          known = registered = true;
           console.log(`${good("✓")} put on Obsidian's list of vaults`);
         }
+        // The opener answers that the URL was handed over, not that a vault opened, so that is
+        // what is said, and the way in by hand stays in the steps below for a vault put on the
+        // list this run.
         openVault(vault);
         opened = true;
-        console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
+        console.log(`${good("✓")} asked Obsidian to open ${shown(vault)}`);
       } catch (error) {
         console.log(`${bad("✗")} ${error.message}`);
       }
@@ -428,7 +439,7 @@ async function obsidian(argv) {
   // What no file in the vault can do. Obsidian keeps whether a vault's community plugins run, its
   // restricted mode, in its own storage, and a vault once browsed in restricted mode lists none.
   const steps = [
-    ...(known ? [] : [`Open the folder as a vault: ${dim(`Open another vault → Open folder as vault → ${shown(vault)}`)}`]),
+    ...(known && !registered ? [] : [`${registered ? "Did it not open? " : ""}Open the folder as a vault: ${dim(`Open another vault → Open folder as vault → ${shown(vault)}`)}`]),
     "Trust the vault's author when Obsidian asks",
     `The plugins not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}\n     ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}`,
   ];

@@ -175,8 +175,6 @@ test("obsidian writes the graph and the panes for the model's folders, keeps the
   assert.match(forced, /graph\.json written/);
 });
 
-// --open with no opener on the path: the failure is said with the URL, and what is left to say
-// in Obsidian is still said, since every file was written by then.
 // Each recommended plugin is asked for by name, and a no leaves it out and says so; the answers
 // come through the pipe as the menu's do. A yes would reach the network, so none is given here.
 test("obsidian asks for each recommended plugin by name, and a no leaves it out", () => {
@@ -195,6 +193,23 @@ test("obsidian asks for each recommended plugin by name, and a no leaves it out"
   assert.doesNotMatch(quiet, /Install Claudian/);
 });
 
+// Obsidian switches a plugin off by taking its name out of the list and leaving its files, and
+// a person's off is not the command's to undo: the files are neither updated nor switched on.
+test("obsidian leaves a recommended plugin the person switched off as it is, and says so", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  const off = path.join(root, ".obsidian", "plugins", "terminal");
+  fs.mkdirSync(off, { recursive: true });
+  fs.writeFileSync(path.join(off, "manifest.json"), JSON.stringify({ id: "terminal", version: "3.0.0" }));
+  const said = run(["obsidian", root, "--from", build], { stdio: "pipe", input: "n\n" });
+  assert.match(said, /Terminal is there but switched off; left as it is/);
+  assert.doesNotMatch(said, /Install Terminal/);
+  assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "community-plugins.json"), "utf8")), ["companygraph"]);
+});
+
 // A folder that is not there yet is made, as Obsidian itself makes a vault of an empty folder;
 // a file in the way is still refused.
 test("obsidian makes the vault's folder when there is none, and refuses a file in its place", () => {
@@ -211,8 +226,9 @@ test("obsidian makes the vault's folder when there is none, and refuses a file i
   assert.throws(() => run(["obsidian", file, "--from", build, "--no-plugins"], { stdio: "pipe" }), /is not a folder/);
 });
 
-// Obsidian opens by URL only a folder it already lists as a vault, and that list is Obsidian's
-// own; a folder it does not know is told the one way in, and --open is not tried.
+// Obsidian opens by URL only a folder it already lists as a vault, so a folder it does not know
+// is put on that list first, while Obsidian is not running, and the way in by hand stays among
+// the steps for a vault put there this run, since the opener cannot say whether a vault opened.
 test("obsidian puts a folder Obsidian does not know on its list when Obsidian is not running, then opens it", () => {
   const build = temp();
   fs.writeFileSync(path.join(build, "main.js"), "// main");
@@ -225,7 +241,8 @@ test("obsidian puts a folder Obsidian does not know on its list when Obsidian is
   assert.match(said, /put on Obsidian's list of vaults/);
   assert.match(said, /could not open/);
   const list = path.join(home, process.platform === "darwin" ? "Library/Application Support/obsidian" : process.platform === "win32" ? "obsidian" : ".config/obsidian", "obsidian.json");
-  assert.deepEqual(Object.values(JSON.parse(fs.readFileSync(list, "utf8")).vaults).map((v) => v.path), [path.resolve(root)]);
+  assert.deepEqual(Object.values(JSON.parse(fs.readFileSync(list, "utf8")).vaults).map((v) => v.path), [fs.realpathSync.native(root)]);
+  assert.match(said, /Did it not open\? Open the folder as a vault/);
   // Not asked to open: the list is left alone, and the way in is said.
   const other = temp();
   const quiet = run(["obsidian", other, "--from", build, "--no-plugins"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
@@ -233,6 +250,8 @@ test("obsidian puts a folder Obsidian does not know on its list when Obsidian is
   assert.equal(Object.values(JSON.parse(fs.readFileSync(list, "utf8")).vaults).length, 1);
 });
 
+// --open with no opener on the path: the failure is said with the URL, and what is left to say
+// in Obsidian is still said, since every file was written by then.
 test("obsidian --open says an opener that fails and still says what is left to do", () => {
   const build = temp();
   fs.writeFileSync(path.join(build, "main.js"), "// main");
@@ -242,7 +261,7 @@ test("obsidian --open says an opener that fails and still says what is left to d
   const home = temp();
   const list = path.join(home, process.platform === "darwin" ? "Library/Application Support/obsidian" : process.platform === "win32" ? "obsidian" : ".config/obsidian");
   fs.mkdirSync(list, { recursive: true });
-  fs.writeFileSync(path.join(list, "obsidian.json"), JSON.stringify({ vaults: { aaaaaaaaaaaaaaaa: { path: path.resolve(root), ts: 1 } } }));
+  fs.writeFileSync(path.join(list, "obsidian.json"), JSON.stringify({ vaults: { aaaaaaaaaaaaaaaa: { path: fs.realpathSync.native(root), ts: 1 } } }));
   const said = run(["obsidian", root, "--from", build, "--no-plugins", "--open"], { stdio: "pipe", env: { ...process.env, HOME: home, APPDATA: home, PATH: temp() } });
   assert.match(said, /✗ could not open obsidian:\/\/open\?path=/);
   assert.match(said, /Then, in Obsidian/);

@@ -212,8 +212,8 @@ test("on Linux Obsidian is found on the path, as a Flatpak or a Snap, and nothin
   assert.deepEqual([missing.app, missing.installer], [null, null]);
 });
 
-// The vault opened in Obsidian through its own URL, which also registers the vault there, so
-// "Open folder as vault" is no longer a step. The opener is each platform's own.
+// A vault Obsidian knows, opened through its own URL, handed to each platform's opener as one
+// argument. The URL opens only a folder on Obsidian's list, which `registerVault` below puts it on.
 test("opening a vault hands each platform's opener the obsidian:// URL of the folder", () => {
   const ran = [];
   const run = (command, args) => (ran.push([command, ...args]), { status: 0 });
@@ -228,8 +228,7 @@ test("opening a vault hands each platform's opener the obsidian:// URL of the fo
 });
 
 // Whether Obsidian knows a folder as a vault, read from the list Obsidian keeps outside every
-// vault, at its own place per platform. Read and never written: a folder Obsidian does not know
-// is opened once by hand, through Open folder as vault, and the URL opens it from then on.
+// vault, at its own place per platform. `registerVault` below is the one write into it.
 const registry = (...paths) => JSON.stringify({ vaults: Object.fromEntries(paths.map((p, i) => [`${i}`.padStart(16, "a"), { path: p, ts: 1 }])) });
 
 test("a vault is known where Obsidian's own list names its folder, at the list's place per platform", () => {
@@ -297,7 +296,7 @@ test("quitting Obsidian asks it politely per platform and waits until the proces
   const sleep = async (ms) => { slept.push(ms); };
   let polls = 0;
   const running = () => ++polls < 3;
-  assert.equal(await quitObsidian({ platform: "darwin", run, running, sleep }), true);
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run, running, sleep }), { quit: true });
   assert.deepEqual(ran[0], ["osascript", "-e", 'quit app "Obsidian"']);
   assert.equal(polls, 3);
   assert.equal(slept.length, 2);
@@ -306,6 +305,11 @@ test("quitting Obsidian asks it politely per platform and waits until the proces
   await quitObsidian({ platform: "linux", run, running: () => false, sleep });
   assert.deepEqual(ran[2], ["pkill", "-x", "obsidian"]);
   // Still there after the wait: false, and nothing else is tried.
-  assert.equal(await quitObsidian({ platform: "darwin", run, running: () => true, sleep, tries: 3 }), false);
-  assert.equal(await quitObsidian({ platform: "darwin", run: () => ({ error: new Error("ENOENT") }), running: () => true, sleep }), false);
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run, running: () => true, sleep, tries: 3 }), { quit: false });
+  assert.match((await quitObsidian({ platform: "darwin", run: () => ({ error: new Error("ENOENT") }), running: () => true, sleep })).reason, /could not be run/);
+  // A refused Apple event says why at once, rather than waiting on a quit that was never sent;
+  // on Windows taskkill answers 1 for the helpers even as the window closes, so the wait decides.
+  const refused = { status: 1, stderr: "execution error: Not authorized to send Apple events to Obsidian. (-1743)" };
+  assert.deepEqual(await quitObsidian({ platform: "darwin", run: () => refused, running: () => true, sleep }), { quit: false, reason: refused.stderr });
+  assert.deepEqual(await quitObsidian({ platform: "win32", run: () => ({ status: 1, stderr: "" }), running: () => false, sleep }), { quit: true });
 });
