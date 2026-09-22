@@ -38,3 +38,26 @@ jobs:
         run: npm run test:untar && npm run test:fetch-core
       - name: The Obsidian plugin is put into a vault
         run: npm run test:obsidian
+
+  # The same suite on Windows, where the command is also run: a checkout there has `\r\n` line
+  # ends unless `.gitattributes` says otherwise, and `path` answers with `\`. A job of its own
+  # rather than a matrix over `verify`, so the check the ruleset requires keeps its name, and
+  # every step runs whatever the one before it did, so one run names every failure.
+  windows:
+    runs-on: windows-latest
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: Check the repository's own shape
+        run: npm run verify
+      - name: The parser, the instance checks and the rules
+        if: ${{ !cancelled() }}
+        run: npm run test:instance && npm run test:instance-checks && npm run test:rules
+      - name: The plan, the files an instance starts with, and the command over real folders
+        if: ${{ !cancelled() }}
+        run: npm run test:plan && npm run test:instance-files && npm run test:cli
+      - name: The tarball, the fetch and the Obsidian install
+        if: ${{ !cancelled() }}
+        run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian

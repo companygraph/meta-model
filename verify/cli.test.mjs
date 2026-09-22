@@ -13,13 +13,13 @@ const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
 
-// Every file under a folder, as the checks read one: path relative to the root, text, and bytes
-// for an image (R9).
+// Every file under a folder, as the checks read one: path relative to the root with `/` on every
+// platform, text, and bytes for an image (R9).
 function filesOf(root, base = root, into = new Map()) {
   for (const entry of fs.readdirSync(base, { withFileTypes: true })) {
     const full = path.join(base, entry.name);
     if (entry.isDirectory()) filesOf(root, full, into);
-    else into.set(path.relative(root, full), fs.readFileSync(full, IMAGE_FILE.test(entry.name) ? undefined : "utf8"));
+    else into.set(path.relative(root, full).split(path.sep).join("/"), fs.readFileSync(full, IMAGE_FILE.test(entry.name) ? undefined : "utf8"));
   }
   return into;
 }
@@ -77,6 +77,17 @@ test("it adds to a repository that is not an instance, and leaves what is there"
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
   assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Mine\n");
   assert.ok(fs.existsSync(path.join(root, "meta/core/CONVENTIONS.md")));
+});
+
+test("--here names a file already there in a subfolder as a conflict, and writes nothing", () => {
+  const root = temp();
+  fs.mkdirSync(path.join(root, "model"));
+  fs.writeFileSync(path.join(root, "model/README.md"), "# Mine\n");
+  assert.throws(
+    () => run(["init", root, "--here", "--name", "Acme", "--agent", "claude"], { stdio: "pipe" }),
+    /model\/README\.md/,
+  );
+  assert.deepEqual([...filesOf(root).keys()], ["model/README.md"]);
 });
 
 test("an agent it cannot write for is refused by name, and nothing is written", () => {
@@ -329,6 +340,20 @@ test("check fails on a vendored file that is not as the tooling wrote it, or is 
   delete manifest.files;
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+});
+
+// Git for Windows checks text out with \r\n line ends unless told otherwise. The checks, the
+// hashes and the upgrade all read what the tooling wrote with \n, so the same instance with every
+// line end turned into \r\n passes check and has nothing to upgrade.
+test("an instance checked out with \\r\\n line ends passes check, and upgrade finds nothing edited", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  for (const [rel, text] of filesOf(root))
+    if (typeof text === "string") fs.writeFileSync(path.join(root, rel), text.replace(/\n/g, "\r\n"));
+  assert.match(fs.readFileSync(path.join(root, "model/identity.md"), "utf8"), /\r\n/);
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+  assert.match(run(["upgrade", root]), /already on core/i);
 });
 
 test("a core newer than the checker is refused naming both pins, the manifest's and the workflow's", () => {

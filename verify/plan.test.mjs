@@ -25,6 +25,7 @@ test("a plan writes the vendored core, the manifest, the folders, the entities, 
   assert.ok(paths.includes("model/identity.md") && paths.includes("model/vision.md") && paths.includes("model/sources/local.md"));
   assert.ok(paths.includes(".github/workflows/companygraph.yml"));
   assert.ok(paths.includes("AGENTS.md") && paths.includes("CLAUDE.md"));
+  assert.equal(writes.get(".gitattributes"), "* text=auto eol=lf\n");
   // The skills are the caller's to pass, read from this release's agents/; none given, none written.
   assert.ok(!paths.some((p) => p.includes(".claude/skills")));
 });
@@ -87,6 +88,12 @@ test("--here refuses when the units folder or .companygraph/ is already there, n
   // A different --schemas name is checked the same way, by its own name.
   const schemas = initPlan({ ...ask, units: "schemas", present: new Set(["schemas/notes.txt"]) });
   assert.ok(schemas.refused.includes("schemas/"));
+});
+
+test("--here leaves a .gitattributes already there alone, rather than refusing over it", () => {
+  const { writes, refused } = initPlan({ ...ask, present: new Set([".gitattributes"]) });
+  assert.equal(refused, undefined);
+  assert.ok(!writes.has(".gitattributes"));
 });
 
 test("a name with nothing to write refuses", () => {
@@ -276,6 +283,21 @@ test("a manifest naming a `..` path in files refuses the whole upgrade even with
 
 // Defect 2: `units` is also untrusted, and an upgrade must refuse it rather than write core files
 // through an escaping relative path.
+// On Windows `path.resolve` reads `\\` as a separator, so a key with no `..` segment between
+// slashes can still climb out of the folder it claims to sit in, and the belt-and-braces guard in
+// the command only holds it inside the instance, not inside core.
+test("a manifest naming a key with a backslash refuses the whole upgrade, even with a correct hash", () => {
+  const { writes: initial } = initPlan(ask);
+  const manifest = JSON.parse(initial.get(".companygraph/manifest.json"));
+  const key = "meta/core/..\\..\\model\\identity.md";
+  manifest.files[key] = hashOf("# Acme\n");
+  const held = new Map([[key, "# Acme\n"]]);
+  for (const path of Object.keys(manifest.files)) if (initial.has(path)) held.set(path, initial.get(path));
+  const { refused, writes } = upgradePlan({ core, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow: null });
+  assert.ok(refused && refused.includes(key), refused);
+  assert.equal(writes, undefined);
+});
+
 test("a manifest whose units escapes the instance refuses the whole upgrade", () => {
   const { manifest, held, workflow } = instance();
   const hostile = { ...manifest, units: "../escaped" };

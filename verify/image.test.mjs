@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { readFileSync, readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
+import { fileURLToPath } from "node:url";
 import { checkInstance, imageInfoOf, IMAGE_FILE } from "../lib/checks.mjs";
 import { parseInstance, imagesOf } from "../lib/instance.mjs";
 
@@ -158,7 +159,7 @@ test("an image field on a singular type: an unnamed image at the container root 
 
 // `imagesOf` is what a site calls after parsing: read the example the way a site reads its
 // model, bytes for an image and text for the rest, and ask it what to publish.
-const ROOT = new URL("..", import.meta.url).pathname;
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
 const tree = (rel, { asText = false } = {}) => {
   const out = new Map();
   const walk = (d) => {

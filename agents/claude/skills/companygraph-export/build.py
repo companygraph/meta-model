@@ -28,6 +28,7 @@ Stdlib only. No third-party module is installed where this runs.
 import glob
 import json
 import os
+import posixpath
 import pathlib
 import re
 import shutil
@@ -203,7 +204,7 @@ def folder_of(paths, name=None):
         found = pathlib.Path("model") / name
         if found.is_dir():
             return found.as_posix()
-    return os.path.commonpath([p.parent.as_posix() for p in paths])
+    return posixpath.commonpath([p.parent.as_posix() for p in paths])
 
 
 def readme_of(paths, name=None):
@@ -609,7 +610,7 @@ def main():
     out.mkdir(parents=True)
 
     for name, origin, text in documents:
-        (out / name).write_text(text, encoding="utf-8")
+        (out / name).write_text(text, encoding="utf-8", newline="\n")
         print(f"{'':>4} {'document':<8}  {name}")
 
     for source in sources:
@@ -620,7 +621,7 @@ def main():
         if readme:
             parts.append(context(readme, source["title"]))
         parts += [render(p) for p in source["entities"]]
-        (out / source["file"]).write_text("\n\n".join(parts).rstrip() + "\n", encoding="utf-8")
+        (out / source["file"]).write_text("\n\n".join(parts).rstrip() + "\n", encoding="utf-8", newline="\n")
         held = len(source["entities"])
         print(f"{held:4d} {'entity' if held == 1 else 'entities':<8}  {source['file']}")
 

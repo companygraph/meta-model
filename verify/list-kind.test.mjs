@@ -6,6 +6,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { checkInstance, sectionsOf, blocksOf, IMAGE_FILE } from "../lib/checks.mjs";
 
 const roleSchema = (rows) => ["# Role Schema", "", "> A seat.", "", "## File Location", "", "`model/roles/*.md`", "",
@@ -83,7 +84,7 @@ test("a kind follows Grouped, and a table section that declares one is an error 
 
 // The two holes the declared kind was written to close, in the shapes the track review found
 // them. Both lean on core's own schemas, so they read the ones this repository ships.
-const root = new URL("..", import.meta.url).pathname;
+const root = fileURLToPath(new URL("..", import.meta.url));
 const shipped = () => {
   const files = new Map();
   const walk = (dir, prefix) => {
