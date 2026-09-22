@@ -21,7 +21,7 @@ import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
-import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -326,7 +326,8 @@ async function upgrade(argv) {
 // Obsidian's own URL, on --open or on a yes at a terminal, and an opener that fails is said and
 // does not stop what is left to say. A folder Obsidian does not know is put on Obsidian's own
 // list first, which is the one write into a file of Obsidian's and is made only while Obsidian is
-// not running, since it reads the list when it starts; under a running Obsidian the way in is
+// not running, since it reads the list when it starts; under a running Obsidian the command
+// offers to quit it the way its menu does and reopen it with the vault, and on a no the way in is
 // Obsidian's own, Open folder as vault, and is said. A vault that is not an instance takes all of it too,
 // since the plugin's own `Make this vault an instance` is one way to make one.
 async function obsidian(argv) {
@@ -394,15 +395,21 @@ async function obsidian(argv) {
   // The URL opens only a folder Obsidian lists as a vault. --open is honored whether or not
   // Obsidian was found, since on Linux not found is not not installed and the opener answers for
   // itself; an opener that fails is said, with the URL to use by hand. A folder not on the list is
-  // put there first, unless Obsidian is running and would not see it, in which case the way in is
-  // Obsidian's own and is said.
+  // put there first; a running Obsidian would not see it, so it is offered a quit and a reopen,
+  // always asked, since a flag should not quit a person's application.
   let known = knownVault(vault);
   const url = vaultUrl(vault);
   let opened = false;
   if (given.open || (app && yes(await ask(prompt("Open the vault in Obsidian?", "y/N"))))) {
-    if (!known && obsidianRunning())
-      console.log(`${bad("✗")} Obsidian is running and reads its list of vaults only when it starts; quit it and answer again, or open the folder there`);
-    else {
+    let blocked = !known && obsidianRunning();
+    if (blocked) {
+      console.log(`  Obsidian is running, and reads its list of vaults only when it starts; it reopens what it has open now`);
+      if (yes(await ask(prompt("Quit Obsidian and reopen it with the vault?", "y/N")))) {
+        if (await quitObsidian()) blocked = false;
+        else console.log(`${bad("✗")} Obsidian did not quit; quit it yourself and answer again, or open the folder there`);
+      } else console.log(`${bad("✗")} left as it is; open the folder there`);
+    }
+    if (!blocked) {
       try {
         if (!known) {
           registerVault(vault);

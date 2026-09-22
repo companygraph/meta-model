@@ -6,7 +6,7 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 
 const vault = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-obsidian-"));
 const release = (version, id = "companygraph") => new Map([
@@ -286,4 +286,26 @@ test("Obsidian is running where the platform's process list names it", () => {
   assert.equal(obsidianRunning({ platform: "linux", run: () => ({ error: new Error("ENOENT") }) }), false);
   assert.deepEqual(ran[0], ["pgrep", "-x", "Obsidian"]);
   assert.deepEqual(ran[2], ["tasklist", "/FI", "IMAGENAME eq Obsidian.exe", "/FO", "CSV", "/NH"]);
+});
+
+// Obsidian quit the way its menu quits it, never killed, and waited for until it is gone, since
+// it writes its list of vaults on the way out and an entry written before that would be lost.
+test("quitting Obsidian asks it politely per platform and waits until the process list no longer names it", async () => {
+  const ran = [];
+  const run = (command, args) => (ran.push([command, ...args]), { status: 0, stdout: "" });
+  const slept = [];
+  const sleep = async (ms) => { slept.push(ms); };
+  let polls = 0;
+  const running = () => ++polls < 3;
+  assert.equal(await quitObsidian({ platform: "darwin", run, running, sleep }), true);
+  assert.deepEqual(ran[0], ["osascript", "-e", 'quit app "Obsidian"']);
+  assert.equal(polls, 3);
+  assert.equal(slept.length, 2);
+  await quitObsidian({ platform: "win32", run, running: () => false, sleep });
+  assert.deepEqual(ran[1], ["taskkill", "/IM", "Obsidian.exe"]);
+  await quitObsidian({ platform: "linux", run, running: () => false, sleep });
+  assert.deepEqual(ran[2], ["pkill", "-x", "obsidian"]);
+  // Still there after the wait: false, and nothing else is tried.
+  assert.equal(await quitObsidian({ platform: "darwin", run, running: () => true, sleep, tries: 3 }), false);
+  assert.equal(await quitObsidian({ platform: "darwin", run: () => ({ error: new Error("ENOENT") }), running: () => true, sleep }), false);
 });
