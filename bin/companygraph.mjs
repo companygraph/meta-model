@@ -13,7 +13,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, rmSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
 import { dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -330,6 +330,12 @@ async function obsidian(argv) {
   const force = Boolean(given.force);
   const [own, ...recommended] = PLUGINS;
 
+  // A folder not there yet is made, as Obsidian makes a vault of an empty one; a file in the way
+  // is refused by `installed` below, as it always was.
+  if (!existsSync(vault)) {
+    mkdirSync(vault, { recursive: true });
+    console.log(`${good("✓")} made the folder ${shown(vault)}`);
+  }
   const now = installed(vault);
   let files;
   if (given.from) files = readLocal(given.from);
