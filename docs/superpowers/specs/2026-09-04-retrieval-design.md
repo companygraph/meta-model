@@ -1,32 +1,20 @@
 # The graph is the index, not the corpus
 
-Retrieval-augmented generation is the obvious thing to reach for once an instance outgrows a
-context window, and the obvious way to do it is wrong. This spec says where retrieval belongs
-in a CompanyGraph, what it is allowed to do there, and what it must never be allowed to do.
+Retrieval-augmented generation is the obvious thing to reach for once an instance outgrows a context window, and the obvious way to do it is wrong. This spec says where retrieval belongs in a CompanyGraph, what it is allowed to do there, and what it must never be allowed to do.
 
-Nothing here is built. It is a design, written down before the first line, because the failure
-mode it guards against is one that looks like success.
+The index and the scoped retrieval are not built. This is a design, written down before the first line, because the failure mode it guards against is one that looks like success. The consumers built since it was written took its constraints without its machinery; *Where this stands* says how.
 
 ## The problem retrieval is being asked to solve
 
-An instance is Markdown, and a small one is read whole. That is the whole trick: an agent
-loads the graph, follows references by name, and every claim it makes cites a path that
-opens. There is no similarity, no ranking, no confidence — a reference either resolves or it
-is an error, which is R4.
+An instance is Markdown, and a small one is read whole. That is the whole trick: an agent loads the graph, follows references by name, and every claim it makes cites a path that opens. There is no similarity, no ranking, no confidence — a reference either resolves or it is an error, which is R4.
 
 That stops working twice.
 
-**It stops at size.** A company of one is a few hundred files. A multi-person instance is
-thousands, and grows with the company rather than with the model. At some point the graph
-does not fit, and something has to choose what enters the context.
+**It stops at size.** A company of one is a few hundred files. A multi-person instance is thousands, and grows with the company rather than with the model. At some point the graph does not fit, and something has to choose what enters the context.
 
-**It stops at vocabulary.** Navigation by name requires knowing the names. Someone who has
-not read the conventions asks about "the thing that breaks when a group books" and no
-reference resolves, because they did not use a canonical name — they used their own words.
-The graph cannot answer a question it cannot address.
+**It stops at vocabulary.** Navigation by name requires knowing the names. Someone who has not read the conventions asks about "the thing that breaks when a group books" and no reference resolves, because they did not use a canonical name — they used their own words. The graph cannot answer a question it cannot address.
 
-Those are two different failures and they want different answers. Conflating them is how the
-wrong design gets built.
+Those are two different failures and they want different answers. Conflating them is how the wrong design gets built.
 
 ## Why embedding the instance is the wrong answer
 
@@ -50,58 +38,33 @@ It destroys the only properties that make the graph worth having.
   question about a capability the company does not have comes back with the three most
   similar ones and a fluent paragraph, and nothing in the pipeline knows the difference.
 
-That last one is the failure that looks like success, and it is why this is a spec and not a
-ticket.
+That last one is the failure that looks like success, and it is why this is a spec and not a ticket.
 
 ## The design
 
 **The graph is the index. The corpus is everything else.**
 
-Entity bodies are never embedded. What gets retrieved is the unstructured material the graph
-points into and does not contain: the company's wiki pages, its chat history, its incident
-write-ups, its meeting notes, its customer correspondence. The graph says what exists and who
-owns it; that material says what was discussed, tried and decided in prose nobody structured.
+Entity bodies are never embedded. What gets retrieved is the unstructured material the graph points into and does not contain: the company's wiki pages, its chat history, its incident write-ups, its meeting notes, its customer correspondence. The graph says what exists and who owns it; that material says what was discussed, tried and decided in prose nobody structured.
 
 Four steps, and retrieval appears in two of them.
 
-**1 — Resolve vocabulary.** Embed only taglines and definitions: the `>` line every entity
-carries, plus its canonical name and type. For a thousand-entity instance that is a thousand
-short strings, cheap enough to rebuild on every commit. A question in someone's own words is
-matched against that index to produce *candidate entity names*, and nothing else. This step
-answers no question. It translates a person's vocabulary into the graph's, which is exactly
-the thing navigation cannot do and the thing embeddings are actually good at.
+**1 — Resolve vocabulary.** Embed only taglines and definitions: the `>` line every entity carries, plus its canonical name and type. For a thousand-entity instance that is a thousand short strings, cheap enough to rebuild on every commit. A question in someone's own words is matched against that index to produce *candidate entity names*, and nothing else. This step answers no question. It translates a person's vocabulary into the graph's, which is exactly the thing navigation cannot do and the thing embeddings are actually good at.
 
-**2 — Navigate.** From the resolved entities, follow references: the owner, the decisions
-that produced it, the measures attached to it, the roles accountable for it. Exact, typed,
-no ranking. This is the ordinary agent pass over a graph, unchanged, except that it now
-starts from the right place.
+**2 — Navigate.** From the resolved entities, follow references: the owner, the decisions that produced it, the measures attached to it, the roles accountable for it. Exact, typed, no ranking. This is the ordinary agent pass over a graph, unchanged, except that it now starts from the right place.
 
-**3 — Retrieve, scoped.** Only now does retrieval touch the corpus, and only within the
-boundary navigation established: the wiki space that entity owns, the channel that role
-owns, the incidents referencing that capability. The graph has cut the corpus by orders of
-magnitude before a single vector is compared, which is why this retrieval can afford to be
-narrow and precise rather than broad and lucky.
+**3 — Retrieve, scoped.** Only now does retrieval touch the corpus, and only within the boundary navigation established: the wiki space that entity owns, the channel that role owns, the incidents referencing that capability. The graph has cut the corpus by orders of magnitude before a single vector is compared, which is why this retrieval can afford to be narrow and precise rather than broad and lucky.
 
-**4 — Answer with both citations.** Graph claims cite paths that resolve. Corpus claims cite
-documents that exist, each one reachable from an entity the reader can also open. A claim
-supported by neither is not made.
+**4 — Answer with both citations.** Graph claims cite paths that resolve. Corpus claims cite documents that exist, each one reachable from an entity the reader can also open. A claim supported by neither is not made.
 
 ## Retrieval never generates a claim
 
 Both retrieval steps are constrained to a job that is checkable.
 
-Step 1 returns names that must exist. A name it proposes is passed through the same resolver
-R4 governs; a hallucinated entity fails to resolve and the step reports that it found no
-match, which is a correct answer. Retrieval cannot invent a name because the graph decides
-what is a name.
+Step 1 returns names that must exist. A name it proposes is passed through the same resolver R4 governs; a hallucinated entity fails to resolve and the step reports that it found no match, which is a correct answer. Retrieval cannot invent a name because the graph decides what is a name.
 
-Step 3 returns documents that must be citable. It selects; it does not summarize into fact.
-Anything asserted from a retrieved document is quoted or cited, so a reader can check it
-against the source rather than against the model's fluency.
+Step 3 returns documents that must be citable. It selects; it does not summarize into fact. Anything asserted from a retrieved document is quoted or cited, so a reader can check it against the source rather than against the model's fluency.
 
-This is the same discipline the conventions already apply elsewhere: an unresolvable
-reference is an error rather than a warning, and every validation pass names what it did not
-check. Retrieval joins that regime rather than sitting outside it.
+This is the same discipline the conventions already apply elsewhere: an unresolvable reference is an error rather than a warning, and every validation pass names what it did not check. Retrieval joins that regime rather than sitting outside it.
 
 ## What is deliberately not built
 
@@ -120,24 +83,23 @@ check. Retrieval joins that regime rather than sitting outside it.
 
 ## Three further uses, and why they come later
 
-Each of these is real and none is in the first slice. They are recorded here so that the
-first slice is not designed to exclude them.
+Each of these is real and none is in the first slice. They are recorded here so that the first slice is not designed to exclude them.
 
-**Drift detection.** Retrieve the corpus and compare it against what the graph asserts, then
-report the contradictions: the process page says one thing, the people doing the process
-describe another. This is retrieval used to find disagreement rather than to answer
-questions, and it addresses the failure mode that eventually kills every knowledge base —
-not being wrong on the day it was written, but being right then and never revisited.
+**Drift detection.** Retrieve the corpus and compare it against what the graph asserts, then report the contradictions: the process page says one thing, the people doing the process describe another. This is retrieval used to find disagreement rather than to answer questions, and it addresses the failure mode that eventually kills every knowledge base — not being wrong on the day it was written, but being right then and never revisited.
 
-**Decision archaeology.** "Why did we stop doing this?" is answered by an instance's git
-history and its superseded decisions, which are numerous, chronological and naturally
-filtered by an entity's own path. The commit log of a CompanyGraph is a decision record that
-nothing currently reads.
+**Decision archaeology.** "Why did we stop doing this?" is answered by an instance's git history and its superseded decisions, which are numerous, chronological and naturally filtered by an entity's own path. The commit log of a CompanyGraph is a decision record that nothing currently reads.
 
-**Intake.** Someone writes a paragraph; retrieval proposes which entities it touches and
-which ones do not exist yet, so the graph grows by conversation rather than by schema
-knowledge. This is how an instance gets contributions from people who will not read
-`core/CONVENTIONS.md`, and it is the same step 1 with a different consumer.
+**Intake.** Someone writes a paragraph; retrieval proposes which entities it touches and which ones do not exist yet, so the graph grows by conversation rather than by schema knowledge. This is how an instance gets contributions from people who will not read `core/CONVENTIONS.md`, and it is the same step 1 with a different consumer.
+
+## Where this stands
+
+As of 2026-09-22 two consumers exist, and neither embeds anything.
+
+The MCP server, `companygraph/mcp-server`, serving mcp.blust.ch and mcp.companygraph.io, is the first. Its `search` is a substring match over an entity's name, tagline, fields, sections and tables, answered in type-then-name order, a listing rather than a ranking; fuzzy matching was offered and declined. A query that matches nothing returns nothing, which is the "no such thing" property held at the tool. Its instruction to a client says the server reports what the model says at one commit and adds nothing.
+
+The chat, `companygraph/chat-server`, is the first consumer that takes a question in a visitor's own words. Its design, *A visitor asks the model*, section 4, states this spec's fourth step and its *Retrieval never generates a claim* rule in prose: every claim in an answer comes from a tool's answer in that conversation, the answer names the entity it rests on, and where the tools do not say, the answer says the model does not say. Step 1, resolving vocabulary, is done there by the model choosing search terms over at most four tool rounds against a graph of a few hundred files, not by an index of taglines. That is enough at that size, and it keeps the property that matters: a term the graph does not contain finds nothing.
+
+The tagline index and the scoped retrieval of a corpus have no trigger. No instance is near a context window, and no instance points at a corpus outside its own evidence tables. Both are parked until one does; the design is kept so that the first consumer to need them does not reach for the chunk-and-embed design instead.
 
 ## Success criteria
 
@@ -156,8 +118,11 @@ knowledge. This is how an instance gets contributions from people who will not r
   "a corpus is a set of documents addressable by an owner and a URL" — and the connectors an
   instance supplies is not drawn yet.
 - **Where does the tagline index live?** Derived and rebuildable is settled; whether it is
-  built by the tooling on demand or cached in a location the conventions declare is not.
+  built by the tooling on demand or cached in a location the conventions declare is not, and
+  the question waits with the index.
 - **Does this need a rule number?** The constraints in *Retrieval never generates a claim* are
   the kind of thing `CONVENTIONS.md` enforces, but they govern a consuming tool rather than
-  the shape of an instance, and nothing in R1-R15 governs a consumer today. Adding the first
-  such rule is a bigger decision than this design.
+  the shape of an instance, and no rule among R1-R17 governs a consumer. The two consumers
+  carry the constraints as their own statements, the MCP server's instruction and the chat
+  design's section 4, without a number. Whether a numbered rule should stand behind both is
+  a bigger decision than this design.
