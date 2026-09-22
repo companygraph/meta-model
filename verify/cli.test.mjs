@@ -140,12 +140,39 @@ test("obsidian --from puts a build into a vault and switches it on", () => {
   fs.writeFileSync(path.join(build, "styles.css"), "");
   fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
   const root = temp();
-  const said = run(["obsidian", root, "--from", build], { stdio: "pipe" });
+  const said = run(["obsidian", root, "--from", build, "--no-plugins"], { stdio: "pipe" });
   assert.match(said, /CompanyGraph 1\.0\.0 installed .*, and switched on/);
   // The switch no file sets: a vault browsed in restricted mode lists no community plugin at all.
   assert.match(said, /Settings → Community plugins → Turn on community plugins/);
   assert.doesNotMatch(said, /\x1b\[/, "no color where there is no terminal");
   assert.deepEqual(JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "community-plugins.json"), "utf8")), ["companygraph"]);
+});
+
+// The rest of what `obsidian` does to a vault, with the recommended plugins skipped because they
+// come over the network: the graph colored per root folder of the model, the panes, and where
+// Obsidian is. Both files are the person's once Obsidian has written them, so the second run keeps
+// them and says so.
+test("obsidian writes the graph and the panes for the model's folders, keeps them on a second run, and says how to open the vault", () => {
+  const build = temp();
+  fs.writeFileSync(path.join(build, "main.js"), "// main");
+  fs.writeFileSync(path.join(build, "styles.css"), "");
+  fs.writeFileSync(path.join(build, "manifest.json"), JSON.stringify({ id: "companygraph", version: "1.0.0" }));
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--folders", "skills,values"]);
+  const said = run(["obsidian", root, "--from", build, "--no-plugins"], { stdio: "pipe" });
+  assert.match(said, /graph\.json written: the model, one color per folder/);
+  assert.match(said, /workspace\.json written/);
+  assert.match(said, /obsidian:\/\/open\?path=/);
+  const graph = JSON.parse(fs.readFileSync(path.join(root, ".obsidian", "graph.json"), "utf8"));
+  assert.deepEqual(graph.colorGroups.map((g) => g.query), ["path:model/skills", "path:model/values"]);
+  const workspace = fs.readFileSync(path.join(root, ".obsidian", "workspace.json"), "utf8");
+  assert.ok(workspace.includes('"file": "model/identity.md"') && !workspace.includes("claudian-view"));
+  fs.writeFileSync(path.join(root, ".obsidian", "graph.json"), "{}");
+  const again = run(["obsidian", root, "--from", build, "--no-plugins"], { stdio: "pipe" });
+  assert.match(again, /graph\.json kept/);
+  assert.equal(fs.readFileSync(path.join(root, ".obsidian", "graph.json"), "utf8"), "{}");
+  const forced = run(["obsidian", root, "--from", build, "--no-plugins", "--force"], { stdio: "pipe" });
+  assert.match(forced, /graph\.json written/);
 });
 
 test("upgrade moves an instance, says what it did, and leaves the model alone", () => {

@@ -5,7 +5,7 @@
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
-//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>]
+//   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--no-plugins] [--force] [--open]
 //
 // Run with no command at a terminal, it opens a menu over the same four, which asks what the
 // flags would say and calls the same code, and stays open until Quit or Ctrl+C.
@@ -21,7 +21,8 @@ import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
-import { download, installed, newestRelease, place, readLocal } from "../lib/obsidian.mjs";
+import { download, graphOf, installed, newestRelease, openVault, place, PLUGINS, readLocal, settle, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
+import { spawnSync } from "node:child_process";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
@@ -32,11 +33,11 @@ const USAGE = `companygraph [<command>]
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
-  obsidian [<vault>]  install the Obsidian plugin's newest release in a vault, or update it there
+  obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
-obsidian: --release <tag>  --from <dir>
+obsidian: --release <tag>  --from <dir>  --no-plugins  --force  --open
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -68,7 +69,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "no-plugins", "open"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -316,33 +317,81 @@ async function upgrade(argv) {
 // Installs or updates, which are one act: the three files written over whatever release was there,
 // and the plugin switched on if it was not. A vault that is not an instance takes the plugin too,
 // since the plugin's own `Make this vault an instance` is one way to make one.
+// A vault made of an instance, in five steps, each said as it happens: CompanyGraph's plugin, the
+// two recommended beside it, the graph, the panes, and Obsidian itself. The plugins are read and
+// refused before anything is written, and installed again they are updated; the graph and the
+// panes are written where the vault has none and kept where it has, since Obsidian rewrites both
+// as a person works, unless --force. Obsidian is found or, where a package manager puts it there
+// reliably, offered; the vault is then opened through Obsidian's own URL, which is what makes it a
+// vault there, on --open or on a yes at a terminal.
 async function obsidian(argv) {
   const given = flags(argv);
   const vault = given._[0] ?? ".";
+  const force = Boolean(given.force);
+  const [own, ...recommended] = PLUGINS;
+
   const now = installed(vault);
   let files;
   if (given.from) files = readLocal(given.from);
   else {
     const release = given.release ?? (await newestRelease());
-    if (now.release === release && now.enabled) {
-      console.log(`${good("✓")} CompanyGraph ${release}, the ${given.release ? "release asked for" : "newest release"}, is installed and switched on in ${shown(vault)}; nothing to do.`);
-      console.log(dim("  Not under Installed plugins in Obsidian? Settings → Community plugins → Turn on community plugins."));
-      return;
-    }
-    files = await download(release);
+    if (now.release === release && now.enabled)
+      console.log(`${good("✓")} CompanyGraph ${release}, the ${given.release ? "release asked for" : "newest release"}, is installed and switched on in ${shown(vault)}`);
+    else files = await download(release);
   }
-  const done = place(vault, files);
-  const moved = done.from === null ? `CompanyGraph ${done.to} installed` : done.from === done.to ? `CompanyGraph ${done.to} written again` : `CompanyGraph ${done.from} → ${done.to}`;
-  console.log(`${good("✓")} ${moved} in ${shown(vault)}${done.enabled ? ", and switched on" : ""}`);
+  if (files) said(place(vault, files), own, vault);
+
+  if (!given["no-plugins"]) {
+    for (const plugin of recommended) {
+      const has = installed(vault, plugin);
+      const release = await newestRelease(fetch, plugin);
+      if (has.release === release && has.enabled) console.log(`${good("✓")} ${plugin.name} ${release}, the newest release, is installed and switched on`);
+      else said(place(vault, await download(release, fetch, plugin), plugin), plugin);
+    }
+    console.log(dim("  Claudian is Claude Code in a pane, and needs Claude Code on this machine; Terminal is a shell in one."));
+  }
+
+  const model = join(vault, "model");
+  const folders = existsSync(model) ? readdirSync(model, { withFileTypes: true }).filter((e) => e.isDirectory()).map((e) => e.name).sort() : [];
+  const graph = settle(vault, "graph.json", graphOf(folders), { force });
+  console.log(`${good("✓")} graph.json ${graph}${graph === "written" ? ": the model, one color per folder" : ", as Obsidian has it"}`);
+  const file = existsSync(join(vault, "model", "identity.md")) ? "model/identity.md" : "README.md";
+  const on = installed(vault).list;
+  const panes = settle(vault, "workspace.json", workspaceOf({ file, plugins: on }), { force });
+  console.log(`${good("✓")} workspace.json ${panes}${panes === "written" ? `: ${file} open, the plugin's views on the right` : ", as Obsidian has it"}`);
+
+  const where = whereObsidian();
+  const terminal = Boolean(process.stdin.isTTY && process.stdout.isTTY);
+  let app = where.app;
+  if (app) console.log(`${good("✓")} Obsidian is at ${shown(app)}`);
+  else {
+    console.log(`${bad("✗")} Obsidian was not found${process.platform === "linux" ? " on the path, as a Flatpak or as a Snap; an AppImage is wherever it was put" : ""}`);
+    if (where.installer && terminal && yes(await ask(prompt(`Install it with ${where.installer.name}?`, "y/N")))) {
+      const ran = spawnSync(where.installer.command[0], where.installer.command.slice(1), { stdio: "inherit" });
+      if (ran.status === 0) app = whereObsidian().app ?? where.installer.name;
+      else console.log(`${bad("✗")} ${where.installer.command.join(" ")} did not go through`);
+    } else if (where.installer) console.log(`  ${where.installer.name} installs it: ${dim(where.installer.command.join(" "))}`);
+    else console.log(`  it is at ${dim(where.download)}`);
+  }
+  const url = `obsidian://open?path=${encodeURIComponent(resolve(vault))}`;
+  if (app && (given.open || (terminal && yes(await ask(prompt("Open the vault in Obsidian?", "y/N")))))) {
+    openVault(vault);
+    console.log(`${good("✓")} opened ${shown(vault)} in Obsidian`);
+  } else console.log(`  Obsidian opens it, and makes it a vault, at ${dim(url)}`);
   // What no file in the vault can do. Obsidian keeps whether a vault's community plugins run, its
   // restricted mode, in its own storage, and a vault once browsed in restricted mode lists none.
   console.log(`
-${bold("Next, in Obsidian")}
-  ${accent("1")}  Open the folder as a vault, if it is not one yet: ${dim("Open another vault → Open folder as vault")}
-  ${accent("2")}  Trust the vault's author when Obsidian asks
-  ${accent("3")}  CompanyGraph not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}
+${bold("Then, in Obsidian")}
+  ${accent("1")}  Trust the vault's author when Obsidian asks
+  ${accent("2")}  The plugins not under Installed plugins? ${dim("Settings → Community plugins → Turn on community plugins")}
      ${dim("Obsidian keeps that switch itself, outside the vault, so no command can set it.")}
-  A vault Obsidian has open already takes the plugin on ${dim("Reload app without saving")}.`);
+  A vault Obsidian has open already takes the plugins on ${dim("Reload app without saving")}.`);
+}
+
+// One plugin's install, said: installed, written again, or moved between releases.
+function said(done, plugin, vault) {
+  const moved = done.from === null ? `${plugin.name} ${done.to} installed` : done.from === done.to ? `${plugin.name} ${done.to} written again` : `${plugin.name} ${done.from} → ${done.to}`;
+  console.log(`${good("✓")} ${moved}${vault ? ` in ${shown(vault)}` : ""}${done.enabled ? ", and switched on" : ""}`);
 }
 
 async function check(argv) {
@@ -386,7 +435,7 @@ async function menu() {
       console.log();
       await init([...args, "--name", name], { menu: true });
       console.log();
-      if (yes(await ask(prompt("Install the Obsidian plugin in it, to write it in Obsidian?", "y/N")))) {
+      if (yes(await ask(prompt("Make it a vault, to write it in Obsidian?", "y/N")))) {
         console.log();
         await obsidian([root]);
       }
@@ -399,7 +448,7 @@ async function menu() {
       if (yes(await ask(prompt("Go ahead?", "y/N")))) await upgrade([root]);
       return 0;
     }],
-    ["Obsidian plugin", "install it in a vault, or update it there", async () => {
+    ["Obsidian", "make an instance a vault: the plugins, the graph, the panes, and Obsidian itself", async () => {
       await obsidian([await folder("Which vault?", ".")]);
       return 0;
     }],
