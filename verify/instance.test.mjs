@@ -3,7 +3,7 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, parseSchemas, declarationOf, CORE_LABEL } from "../lib/instance.mjs";
+import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL } from "../lib/instance.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
@@ -860,6 +860,34 @@ test("a Phases row that names no phase is an R4, as any declared reference is", 
     ["phase-schema.md", schema("phase", { location: "processes/<process>/phases/*.md", owner: "process" })],
   ]);
   assert.throws(() => parseInstance(files, { schemas }), /R4: "Specfy"/);
+});
+
+test("a Type cell reading `ref → by <Column> in <Owner>` is a reference whose type is its row's", () => {
+  assert.deepEqual(declarationOf("ref → by Type in Owner"), { form: "ref", target: null, by: "Type", in: "Owner" });
+  assert.deepEqual(declarationOf("`ref → by Type`"), { form: "ref", target: null, by: "Type", in: null });
+  // Every other form keeps the shape it had, so nothing reading `{ form, target }` changes.
+  assert.deepEqual(declarationOf("ref → skill"), { form: "ref", target: "skill" });
+  assert.deepEqual(declarationOf("qualifier → proficiency-level"), { form: "qualifier", target: "proficiency-level" });
+});
+
+test("a schema declaring a `by` column is read, and the vocabulary graph draws no type edge for it", () => {
+  const files = new Map([
+    ["value-schema.md", schema("value")],
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"], ["For", "string"]] } })],
+  ]);
+  const { edges } = parseSchemas(files);
+  assert.deepEqual(edges.filter((e) => e.from === "core/question"), []);
+});
+
+test("constraints name a `by` reference by its columns and no target", () => {
+  const files = new Map([
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"]] } })],
+  ]);
+  const ref = constraintsOf(files).question.references.find((r) => r.via === "Rests on.Entity");
+  assert.equal(ref.target, null);
+  assert.equal(ref.by, "Type");
+  assert.equal(ref.in, "Owner");
+  assert.equal(ref.form, "ref");
 });
 
 // A name of an owned type identifies an entity within its owner (R2), and a reference to one is
