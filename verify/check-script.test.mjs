@@ -86,17 +86,21 @@ test("a column typed image fails the vocabulary check by name", () => {
   }
 });
 
-// `pairs` is one [from, to] row replacement or a list of them.
-const mutated = (...pairs) => {
+// `pairs` is one [from, to] row replacement or a list of them, mutating core/profile-schema.md.
+// A leading string argument names a different schema file to mutate instead, for a fixture that
+// needs a row profile-schema.md does not carry — a heading table, say.
+const mutated = (...args) => {
+  const file = typeof args[0] === "string" ? args.shift() : "profile-schema.md";
+  const pairs = args;
   const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
   try {
     for (const dir of ["core", "example", "lib"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
-    const schemaPath = join(tmp, "core", "profile-schema.md");
+    const schemaPath = join(tmp, "core", file);
     let text = readFileSync(schemaPath, "utf8");
     for (const [from, to] of pairs) {
-      assert.ok(text.includes(from), "core/profile-schema.md no longer carries the row this test mutates — update the fixture");
+      assert.ok(text.includes(from), `core/${file} no longer carries the row this test mutates — update the fixture`);
       text = text.replace(from, to);
     }
     writeFileSync(schemaPath, text);
@@ -127,4 +131,21 @@ test("a required `by` column whose type column is optional fails", () => {
 test("the form spelled with `ref?` is refused by its own message", () => {
   const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref? → by Where | The page. |"]);
   assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("the form spelled with `array of` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | array of ref → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("the form spelled with `qualifier` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | qualifier → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("a heading table declaring `ref → by …` fails, since a heading has no row either", () => {
+  const out = mutated("experience-schema.md",
+    ["| `Kind` | No | ref → achievement-kind | The kind every bullet below it is chiefly evidence of |",
+     "| `Kind` | No | ref → by Kind | The kind. |"]);
+  assert.match(out, /`Kind` is "ref → by Kind"; a reference whose type is read from its row is a column, never a frontmatter field or a heading/);
 });
