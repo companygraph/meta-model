@@ -86,7 +86,7 @@ The parser, in `lib/instance.mjs`, draws the edge a `by` cell names, resolved wi
 
 The example instance under `example/` gains three questions, one resting on unowned entities alone, one on an owned one and one resting on nothing, so the instance checks, which `example/` is written to pass, exercise both branches on a real tree as well as on the failing fixtures.
 
-The MCP servers need nothing of their own: `list_types` shows the type, `get_entity` returns a question's edges like any other, and `describe_schema` returns the new schema. Each re-pins the package.
+mcp-server is not exempt: its `Relation` carries a `by` reference as a relation whose `to` is null, the schema made nullable to admit it, with the `by` and `in` columns beside it naming what the row named. That ships as a minor release, and every deployment re-pins it before any instance it serves upgrades its core, since a strict `to: z.string()` fails a question's edges before a question is ever seeded. `get_entity` needs nothing of its own, since the edge it returns already carries the resolved id; `list_types` shows the type and `describe_schema` returns the new schema unchanged.
 
 ## The Obsidian plugin
 
@@ -116,6 +116,6 @@ Audience and a filter by it; a `/faq/` page on any site and the FAQPage structur
 
 ## What it costs
 
-A release of meta-model that every consumer re-pins: both instances, both sites, the MCP server and both deployments, chat-server, and the plugin. The re-pin is all it asks of any of them, but it has to come first, because an older parser throws on a question row. The order is meta-model's release; then every consumer re-pins the package while still reading a model without questions, the plugin among them, and chat-server ships its index, which reads nothing until an instance has questions; then each instance upgrades its core and is seeded; then the servers and sites re-pin to the seeded model commit, which is when the chat on each host starts carrying the index.
+A release of meta-model that every consumer re-pins: both instances, both sites, the MCP server and both deployments, chat-server, and the plugin. The re-pin is all it asks of any of them, but it has to come first, because an older parser throws on a question row. The order is meta-model's release; then every consumer re-pins the package while still reading a model without questions, the plugin among them; the MCP server ships its nullable `to` and chat-server ships its index in that same window, before any instance it serves has upgraded, since each reads nothing until an instance has questions; then each instance upgrades its core and is seeded; then the servers and sites re-pin to the seeded model commit, which is when the chat on each host starts carrying the index.
 
 Verification at the end is a live one on each host: a question asked in a visitor's words that no search term of the model's matches, and the same question in German, each answered with the entities it rests on named.
