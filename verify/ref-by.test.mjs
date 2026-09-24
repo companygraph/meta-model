@@ -71,3 +71,32 @@ test("an owner that names nothing fails", () => {
 test("an owned name is looked for only within the owner the row names", () => {
   assert.equal(about([["experience", "Splitting the billing domain", "Tomas Reyes", ""]], "names no experience of profile \"Tomas Reyes\"").length, 1);
 });
+
+// The type column is required in core's own question-schema.md, so a blank type cell is
+// normally the required-cell failure and heldBy never sees it. This fixture relaxes the
+// column to `No` — a local variant of QUESTION_SCHEMA, not the shared one above — so a filled
+// entity cell can reach heldBy with nothing to read a type from, which the parser refuses (R4)
+// and which the checker must refuse the same way.
+const OPTIONAL_TYPE_QUESTION_SCHEMA = QUESTION_SCHEMA.replace("| `Type` | Yes | string | The type. |", "| `Type` | No | string | The type. |");
+
+test("an entity cell filled with a blank type cell fails, since a name with no type cannot resolve", () => {
+  const rows = [["", "Craftsmanship", "", ""]];
+  const files = tree(rows);
+  files.set("meta/core/question-schema.md", OPTIONAL_TYPE_QUESTION_SCHEMA);
+  const failures = checkInstance(files, { core: "meta/core", model: "model" }).failures.filter(
+    (f) => f.includes("questions/who-splits-the-billing-domain.md") && f.includes("R4") && f.includes("Type") && f.includes("Craftsmanship"),
+  );
+  assert.equal(failures.length, 1);
+});
+
+test("an owned type in a process passes", () => {
+  const files = tree([["`phase`", "Discover", "Atlas", ""]]);
+  files.set("meta/core/process-schema.md", bare("process", null, "model/processes/<process>/<process>.md"));
+  files.set("meta/core/phase-schema.md", bare("phase", "process", "model/processes/<process>/phases/*.md"));
+  files.set("model/processes/atlas/atlas.md", "# Atlas\n\n> Finds the shape.\n");
+  files.set("model/processes/atlas/phases/discover.md", "# Discover\n\n> First.\n");
+  const failures = checkInstance(files, { core: "meta/core", model: "model" }).failures.filter((f) =>
+    f.includes("questions/who-splits-the-billing-domain.md"),
+  );
+  assert.deepEqual(failures, []);
+});
