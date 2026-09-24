@@ -1142,6 +1142,30 @@ test("rowScope: a plain-file owner's scope is empty, not every entity under its 
   assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "Ana" }), { within: [] });
 });
 
+// A plain file whose own name happens to equal its containing folder's — `profiles/profiles.md`,
+// a profile named "Pro" filed directly under `profiles/` — reads exactly like folder form to the
+// "last two segments match" check alone: the slug read off the filename ("profiles") and the
+// segment before it (also "profiles", the folder itself) coincide, though nothing really sits
+// under `profiles/profiles/`. Where the owner carries an `id` (the parser's own entities do),
+// that id is what the reading is checked against, and a plain file's id never matches its
+// directory candidate, so it is refused the same as any other plain-file owner.
+test("an owner file named after its own folder is not mistaken for folder form", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Pro", ""]]);
+  files.set("profiles/profiles.md", "# Pro\n\n> A profile whose file matches its folder's name.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }),
+                /R4: "Splitting the billing domain" .*names no experience of profiles\/profiles/);
+});
+
+// An id-less owner's label in "names no <type> of <owner>" is its owned folder when it is
+// folder-form — the best a caller without an id can offer, and the folder, not the file inside
+// it, is what a reader would expect an owner's own label to be.
+test("an id-less owner's label is its folder, not its own file's path", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const pluginEntities = entities.map((e) => ({ type: e.type, name: e.name, path: "model/" + e.path }));
+  assert.deepEqual(resolveRow(pluginEntities, schemas, { type: "experience", name: "Nonexistent", owner: "Mira Halvorsen" }),
+                    { error: "names no experience of model/profiles/mira-halvorsen", subject: "value" });
+});
+
 // A singular type's own root file (`identity.md`, no folder at all) owns nothing either, for the
 // same reason a plain file does: no folder sits under it.
 test("rowScope: a singular owner has no folder, so it owns nothing", () => {
