@@ -487,6 +487,18 @@ const CHECKS = [
       };
       if (ahead(m.version, pkg.version))
         fail(`core/manifest.json says ${m.version}, ahead of package.json's ${pkg.version}; core is released with the package or behind it, never before it`);
+      // An instance's workflow calls instance-check.yml at the release its manifest names, and
+      // that file checks the checker out at a ref of its own, since the runner cannot tell it how
+      // the caller spelled the tag. A release whose file still names the one before runs the
+      // older checker, which refuses every instance that took the new pin: v0.45.0 and v0.46.0
+      // shipped that way. So the ref is the package's version, held here before a tag is cut.
+      const workflow = read(".github/workflows/instance-check.yml");
+      if (workflow === null) fail(".github/workflows/instance-check.yml is missing");
+      else {
+        const refs = [...workflow.matchAll(/^\s+ref:\s*(\S+)\s*$/gm)].map((r) => r[1]);
+        if (refs.length !== 1 || refs[0] !== `v${pkg.version}`)
+          fail(`.github/workflows/instance-check.yml checks the checker out at ${refs.join(", ") || "no ref"}, and package.json says ${pkg.version}; the ref is v${pkg.version}, or every instance on this release runs the one before`);
+      }
       const tags = execFileSync("git", ["tag", "--points-at", "HEAD", "v*"], { cwd: ROOT, encoding: "utf8" })
         .split("\n").filter(Boolean);
       for (const tag of tags)
