@@ -154,3 +154,25 @@ test("a heading table declaring `ref → by …` fails, since a heading has no r
      "| `Kind` | No | ref → by Kind | The kind. |"]);
   assert.match(out, /`Kind` is "ref → by Kind"; a reference whose type is read from its row is a column, never a frontmatter field or a heading/);
 });
+
+test("an instance workflow that checks out another release than package.json's fails the run", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
+  try {
+    for (const dir of ["core", "example", "lib", ".github"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    cpSync(join(ROOT, "package.json"), join(tmp, "package.json"));
+    // The release check asks git which tags sit on HEAD, so the copy is a repository of its own.
+    spawnSync("git", ["init", "-q"], { cwd: tmp });
+    spawnSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture"], { cwd: tmp });
+    mkdirSync(join(tmp, "verify"));
+    cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    const version = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
+    const path = join(tmp, ".github", "workflows", "instance-check.yml");
+    const before = readFileSync(path, "utf8");
+    assert.ok(before.includes(`ref: v${version}`), "instance-check.yml no longer names package.json's release — update the fixture");
+    writeFileSync(path, before.replace(`ref: v${version}`, "ref: v0.0.1"));
+    const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
+    assert.match(result.stdout + result.stderr, new RegExp(`checks the checker out at v0\\.0\\.1, and package\\.json says ${version.replace(/\./g, "\\.")}`));
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
