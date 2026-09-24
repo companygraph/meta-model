@@ -121,6 +121,11 @@ test("a `by` naming a column that is not a string column of its table fails", ()
   assert.match(out, /`URL` is "ref → by Kind", and `Kind` is not a string column of the same table \(R9\)/);
 });
 
+test("an `in` naming a column that is not a string column of its table fails", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Where in Kind | The page. |"]);
+  assert.match(out, /`Kind` is not a string column of the same table \(R9\)/);
+});
+
 test("a required `by` column whose type column is optional fails", () => {
   const out = mutated(
     ["| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |", "| `Where` | No | string | The place. |"],
