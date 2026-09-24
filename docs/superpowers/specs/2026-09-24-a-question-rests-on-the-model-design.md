@@ -72,7 +72,7 @@ R4's closing sentence, "Should a reference from outside ever be wanted, it names
 
 R16: a `by` cell draws one edge, as a `ref → <type>` cell does, via `<Section>.<Column>`, `Rests on.Entity`. The type and owner cells draw none; they say what the edge points at and draw nothing of their own, as a qualifier draws nothing. R16's rule on `As` applies unchanged: two rows naming one entity carry an `As`, and a question has no reason to, so `question` declares none.
 
-`shape` stays 3. A parser that predates the form reads the unknown Type cell as a fact, as R16 has every consumer do, so a question's rows reach an older consumer as text and draw no edges. Nothing breaks; the edges arrive with the re-pin.
+`shape` stays 3, since it records what core carries and nothing gates on it. An older parser does not read the form as a fact: its reader of a Type cell matches anything written `ref → …`, takes `by Type in Owner` for the name of a type and throws R4 on the first question row, and an older checker fails the cell the same way. So every consumer re-pins the package before any instance it reads carries a question, and the order below is built on that.
 
 ## The tooling
 
@@ -112,6 +112,6 @@ Audience and a filter by it; a `/faq/` page on any site and the FAQPage structur
 
 ## What it costs
 
-A release of meta-model that every consumer re-pins: both instances, both sites, the MCP server and both deployments, chat-server, and the plugin. The re-pin is all it asks of any of them, since the form degrades to text on an older parser. The order is meta-model's release first; then chat-server's index, which reads nothing until an instance has questions; then the two instances' seeds; then the re-pins of the servers and sites, which is when the chat on each host starts carrying the index; then the plugin.
+A release of meta-model that every consumer re-pins: both instances, both sites, the MCP server and both deployments, chat-server, and the plugin. The re-pin is all it asks of any of them, but it has to come first, because an older parser throws on a question row. The order is meta-model's release; then every consumer re-pins the package while still reading a model without questions, the plugin among them, and chat-server ships its index, which reads nothing until an instance has questions; then each instance upgrades its core and is seeded; then the servers and sites re-pin to the seeded model commit, which is when the chat on each host starts carrying the index.
 
 Verification at the end is a live one on each host: a question asked in a visitor's words that no search term of the model's matches, and the same question in German, each answered with the entities it rests on named.
