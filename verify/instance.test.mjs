@@ -3,7 +3,7 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL } from "../lib/instance.mjs";
+import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL, ownerTypesOf, rowScope, resolveRow } from "../lib/instance.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
@@ -1048,4 +1048,167 @@ test("an owned name is looked for only within the owner the row names", () => {
   const files = withQuestion([["experience", "Splitting the billing domain", "Tomas Reyes", ""]]);
   files.set("profiles/tomas-reyes/tomas-reyes.md", "# Tomas Reyes\n\n> Designer.\n");
   assert.throws(() => parseInstance(files, { schemas: questionSchemas }), /R4: "Splitting the billing domain" .*names no experience of profiles\/tomas-reyes/);
+});
+
+// `resolveBy`'s rule — what a `by <Column> in <Owner>` row may name, and which one of those a
+// given name is — is exported so a consumer besides the parser (the Obsidian plugin, offering
+// completion for the same rows) reads it rather than copies it. `ownerTypesOf` is the map
+// `parseInstance` already built inline, from the schemas' `**Owner:**` lines (R10); `rowScope`
+// is what a row's own `Type`/`Owner` cells narrow the model down to before any name is chosen;
+// `resolveRow` adds the name.
+test("ownerTypesOf reads the owner map parseInstance derives from the schemas' Owner lines", () => {
+  const owners = ownerTypesOf(questionSchemas);
+  assert.equal(owners.get("experience"), "profile");
+  assert.equal(owners.has("value"), false);
+});
+
+test("rowScope for an unowned type is every entity of it", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const scope = rowScope(entities, schemas, { type: "value", owner: "" });
+  assert.deepEqual(scope.within.map((e) => e.id), ["values/craftsmanship"]);
+});
+
+test("rowScope for an owned type is the owner's own, not another owner's", () => {
+  const files = new Map(valid);
+  files.set("profiles/tomas-reyes/tomas-reyes.md", "# Tomas Reyes\n\n> Designer.\n");
+  files.set("profiles/tomas-reyes/experiences/2023-freelance.md",
+    "---\nstart: 2023-01\norganization: Beacon Systems\n---\n\n# Freelance illustration\n\n> Ongoing.\n");
+  const { entities } = parseInstance(files, { schemas });
+  const scope = rowScope(entities, schemas, { type: "experience", owner: "Mira Halvorsen" });
+  assert.deepEqual(scope.within.map((e) => e.id), ["profiles/mira-halvorsen/experiences/2022-beacon-systems"]);
+});
+
+// `rowScope` and `resolveRow` share one error shape: `{ error, subject }`, `error` the sentence's
+// text and `subject` which of the caller's own values it quotes ("value", the name being
+// resolved, or "owner", the row's own owner cell, for the one case that fails before a name is
+// even looked at) — never text with the value already folded in, so a caller assembles the final
+// sentence the same way whichever function it called.
+test("rowScope's and resolveRow's errors are both { error, subject }, R4's text minus the value and where", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "valu", owner: "" }),
+                    { error: 'is of type "valu", which no schema declares', subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "value", owner: "Mira Halvorsen" }),
+                    { error: 'is a value, which nothing owns, and its row names "Mira Halvorsen" as its owner', subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "" }),
+                    { error: "is a experience, which a profile owns, and the row names no profile", subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "Nobody" }),
+                    { error: "names no profile", subject: "owner" });
+  assert.deepEqual(resolveRow(entities, schemas, { type: "experience", name: "x", owner: "Nobody" }),
+                    { error: "names no profile", subject: "owner" });
+});
+
+// A missing or blank Type cell used to fall into the "which no schema declares" case, reading as
+// `is of type "undefined", which no schema declares` or the same with `""` — the row has no type
+// to complain about, not a wrong one, and gets its own text; a row naming an actually-wrong type
+// (`"valu"`, above) keeps the R4 text it always had.
+test("a row with no type in it fails with its own text, not \"is of type undefined\"", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "", owner: "" }), { error: "has no type in its row", subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, {}), { error: "has no type in its row", subject: "value" });
+});
+
+test("a blank Type cell reads as R4's new text through the parser too", () => {
+  assert.throws(() => parseInstance(withQuestion([["", "Craftsmanship", "", ""]]), { schemas: questionSchemas }),
+                /R4: "Craftsmanship" .*has no type in its row/);
+});
+
+test("resolveRow resolves the same entity whether entities carry a parser's id or only { type, name, path }", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const byId = resolveRow(entities, schemas, { type: "experience", name: "Splitting the billing domain", owner: "Mira Halvorsen" });
+  assert.equal(byId.entity.id, "profiles/mira-halvorsen/experiences/2022-beacon-systems");
+
+  const pluginEntities = entities.map((e) => ({ type: e.type, name: e.name, path: "model/" + e.path }));
+  const byPath = resolveRow(pluginEntities, schemas, { type: "experience", name: "Splitting the billing domain", owner: "Mira Halvorsen" });
+  assert.deepEqual(byPath.entity, { type: "experience", name: "Splitting the billing domain",
+                                     path: "model/profiles/mira-halvorsen/experiences/2022-beacon-systems.md" });
+});
+
+// An owner named by a plain file — `profiles/ana.md`, no folder of her own beside it — owns
+// nothing: nothing can sit under a file. The path-based scope used to read `dirname("profiles/
+// ana.md")` as `"profiles"`, which is every profile's experiences, not Ana's none, and drew an
+// edge to Mira's experience where the base (id-based) scoping refused with R4. Ana's name still
+// resolves as an owner — she is a profile — she just owns no experiences.
+test("an owner written as a plain file owns nothing, even though its name resolves", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Ana", ""]]);
+  files.set("profiles/ana.md", "# Ana\n\n> Illustrator.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }),
+                /R4: "Splitting the billing domain" .*names no experience of profiles\/ana/);
+});
+
+test("rowScope: a plain-file owner's scope is empty, not every entity under its parent folder", () => {
+  const files = new Map(valid);
+  files.set("profiles/ana.md", "# Ana\n\n> Illustrator.\n");
+  const { entities } = parseInstance(files, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "Ana" }), { within: [] });
+});
+
+// A plain file whose own name happens to equal its containing folder's — `profiles/profiles.md`,
+// a profile named "Pro" filed directly under `profiles/` — reads exactly like folder form to the
+// "last two segments match" check alone: the slug read off the filename ("profiles") and the
+// segment before it (also "profiles", the folder itself) coincide, though nothing really sits
+// under `profiles/profiles/`. Where the owner carries an `id` (the parser's own entities do),
+// that id is what the reading is checked against, and a plain file's id never matches its
+// directory candidate, so it is refused the same as any other plain-file owner.
+test("an owner file named after its own folder is not mistaken for folder form", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Pro", ""]]);
+  files.set("profiles/profiles.md", "# Pro\n\n> A profile whose file matches its folder's name.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }),
+                /R4: "Splitting the billing domain" .*names no experience of profiles\/profiles/);
+});
+
+// An id-less owner's label in "names no <type> of <owner>" is its owned folder when it is
+// folder-form — the best a caller without an id can offer, and the folder, not the file inside
+// it, is what a reader would expect an owner's own label to be.
+test("an id-less owner's label is its folder, not its own file's path", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const pluginEntities = entities.map((e) => ({ type: e.type, name: e.name, path: "model/" + e.path }));
+  assert.deepEqual(resolveRow(pluginEntities, schemas, { type: "experience", name: "Nonexistent", owner: "Mira Halvorsen" }),
+                    { error: "names no experience of model/profiles/mira-halvorsen", subject: "value" });
+});
+
+// A singular type's own root file (`identity.md`, no folder at all) owns nothing either, for the
+// same reason a plain file does: no folder sits under it.
+test("rowScope: a singular owner has no folder, so it owns nothing", () => {
+  const noteSchemas = new Map([...schemas, ["note-schema.md", schema("note", { owner: "identity" })]]);
+  const entities = [{ type: "identity", name: "Beacon Systems", path: "identity.md" }];
+  assert.deepEqual(rowScope(entities, noteSchemas, { type: "note", owner: "Beacon Systems" }), { within: [] });
+  // The owner label in the follow-up "names no <type> of <owner>" is the owner's own path,
+  // unstripped, for an id-less entity like this one — never a slice-off-the-last-character
+  // garble like "identity.m" (path.lastIndexOf("/") is -1 for a path with no "/" at all, and
+  // slicing to -1 chops one character off the whole string).
+  assert.deepEqual(resolveRow(entities, noteSchemas, { type: "note", name: "Anything", owner: "Beacon Systems" }),
+                    { error: "names no note of identity.md", subject: "value" });
+});
+
+// With `sub` set — every site passes one — the owner label in "names no <type> of <owner>" used
+// to read the owner's sub-prefixed `path` (`model/profiles/mira-halvorsen`), since that was all
+// the path-based scope had; the base read the owner's `id`, never prefixed
+// (`profiles/mira-halvorsen`). The parser's own entities carry an `id`, so the label is read from
+// it again.
+test("with `sub`, the owner label stays the owner's id, not its sub-prefixed path", () => {
+  const files = withQuestion([["experience", "Nonexistent", "Mira Halvorsen", ""]]);
+  assert.throws(() => parseInstance(files, { sub: "model/", schemas: questionSchemas }),
+                /R4: "Nonexistent" in model\/questions\/who-splits-billing\.md .*names no experience of profiles\/mira-halvorsen/);
+});
+
+// Neither `rowScope` nor `resolveRow` caches `schemas` or `entities` between calls: a caller that
+// changes `entities` between two calls — the plugin, editing the same array as someone types —
+// is read correctly on the very next call, and a `within` array is always freshly built, so a
+// caller sorting or otherwise mutating what one call returned cannot reach the next call.
+test("rowScope scans `entities` fresh on every call — a push between calls is seen", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const before = rowScope(entities, schemas, { type: "value", owner: "" }).within.length;
+  entities.push({ type: "value", name: "Kindness", path: "values/kindness.md" });
+  const after = rowScope(entities, schemas, { type: "value", owner: "" }).within.length;
+  assert.equal(after, before + 1);
+});
+
+test("a returned `within` array is the caller's own — sorting it does not affect the next call", () => {
+  const files = new Map(valid);
+  files.set("values/discipline.md", "# Discipline\n\n> Keep the promise.\n");
+  const { entities } = parseInstance(files, { schemas });
+  const first = rowScope(entities, schemas, { type: "value", owner: "" }).within;
+  first.sort((a, b) => (a.name > b.name ? -1 : 1));
+  const second = rowScope(entities, schemas, { type: "value", owner: "" }).within;
+  assert.deepEqual(second.map((e) => e.name), ["Craftsmanship", "Discipline"]);
 });
