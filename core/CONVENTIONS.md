@@ -30,7 +30,7 @@ Never by file path and never by filename. Paths move; a canonical name is the en
 
 Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.
 
-A reference to an owned type is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference core declares to an owned type is written there, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of. A name that is only another owner's entity is unresolvable from here, and one written outside every owner of the type has no owner to be resolved in and names nothing. Should a reference from outside ever be wanted, it names the owner as well, and that form is designed when it is.
+A reference whose schema names an owned type, `ref → <type>` and its sibling forms, is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference declared this way is written inside an owner, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of, and a name that is only another owner's entity is unresolvable from here. A reference written outside every owner reaches an owned type only through the `in <Owner>` form, `ref → by <Column> in <Owner>` (R9), whose row names the owner in its own cell, never folded into the name, and resolves within it.
 
 ### R5 — An owned collection nests inside its owner
 
@@ -100,13 +100,15 @@ A section whose content is grouped under `###` headings that name entities decla
 
 A section that holds a list may declare which kind, because the two kinds mean different things: a numbered list is a sequence, the order a phase's work is done in, and a bulleted list is a set. Its Description begins with `Bulleted.` or `Numbered.`, or carries the word directly after `Grouped.` where the list stands under headings — `Grouped. Numbered.` — and never after `Table.`, since a table holds rows. The kind governs the list and not the section: a section may open its list with a sentence and close it with a paragraph, as a gate does, and only the items are held. A section that declares neither is held to nothing, as one that says neither `Table.` nor `Grouped.` is prose: a page's own sections, and numbered steps inside a paragraph of reasoning, are nobody's to judge. R16 says what an instance is held to.
 
-Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`, `image`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`. A reference names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
+Required is `Yes` or `No`. Types come from the closed vocabulary: `string`, `number`, `date`, `image`, `array`, `enum`, `ref → <type>`, `ref? → <type>`, `array of ref → <type>`, `qualifier → <type>`, `ref → by <Column>` and `ref → by <Column> in <Owner>`. A reference names one entity, so the type it points at is singular: `ref → skill`, never `ref → skills`.
 
 `rank` is the vocabulary's name for an entity's order within its type, wherever a schema needs one: a field so named is typed `number`, and two entities of one type never share a rank — there is nothing left to order them by if they do.
 
 Some fields name a thing that is sometimes an entity and sometimes not — an employer that is the company itself, a client that is nobody here. `ref? → <type>` is how a schema says so: a value that resolves becomes an edge, a value that does not stays a string, and neither reading is an error.
 
 The `?` is not `Required`, though the two read as one thing on a first pass. `Required` says whether the field may be absent; `ref?` says whether a value that is present must resolve. A field can be both, and `organization` is.
+
+Some tables name entities of more than one type, as a question names whatever its answer rests on. `ref → by <Column>` is how a schema says so: each cell names an entity of the type the same row's `<Column>` cell names, written as the type's schema file is named without `-schema.md`. Where that type may be owned, `ref → by <Column> in <Owner>` reads the owner from the row's `<Owner>` cell, filled exactly where the type is owned (R4, R10). The form is a column's only, because a frontmatter field and a heading have no row to read a type from, and the columns it names are `string` columns of the same table, whose names do not contain the word `in`.
 
 A required list that is present and empty is absent in every sense that matters: nothing resolves, no edge is drawn, and the page reads as though it had answered a question it did not. So a required field typed `array` or `array of ref → <type>` carries at least one entry. An optional list written empty is how an author says none yet, and that is theirs to say, since the field could have been left out.
 
@@ -196,6 +198,8 @@ Where a column declares that a field `lists` another column (R9), a filled cell 
 A column table draws one edge per row, so two rows naming the same entity are two edges between one pair, and a reader can tell a distinction from a duplicate only by what the rows say beside the name. Where a table's drawing reference stands beside a column named `As`, that column is what says it: each row naming an entity another row of the table also names carries an `As`, and no two of them carry the same one. A row whose entity no other row names may leave it blank. The rule is found by the columns a schema declares, and names no type either.
 
 The difference between a reference and a qualifier is not how hard it resolves; both must. It is what the row is saying. A row that names a skill and a level makes one claim about both, so one edge carries it and the level qualifies that edge. Two edges would say the page refers to the skill and, separately, to the level — and the second is a claim no row makes.
+
+A column typed `ref → by <Column>` draws one edge per row, as a `ref → <type>` column does, on the type its row names and within the owner its row names; the type and owner cells draw nothing and reach the edge as its attributes. A type cell naming no type a schema declares, an owned type with no owner, and an unowned type with one are each R4.
 
 `number` is about the written form, not a parsed type, and that is worth saying because a reader will otherwise take it for a bug. This is a model made of Markdown: every value in every file is text, and what a serializer turns that text into is the serializer's own business, not this vocabulary's. A rule reading "digits become a number" would say more than intended — it would turn a year-only date into an integer, and a date written `YYYY` is legal by R9.
 

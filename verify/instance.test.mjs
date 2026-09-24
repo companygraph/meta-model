@@ -3,7 +3,7 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, parseSchemas, declarationOf, CORE_LABEL } from "../lib/instance.mjs";
+import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL } from "../lib/instance.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
@@ -80,6 +80,7 @@ const schemas = new Map([
              ["organization", "ref? → identity"], ["skills", "array of ref → skill"]],
     tables: { References: [["What", "string"], ["URL", "string"]] },
     grouped: { Achievements: ["Kind", "ref → achievement-kind"] },
+    owner: "profile",
   })],
 ]);
 
@@ -862,6 +863,34 @@ test("a Phases row that names no phase is an R4, as any declared reference is", 
   assert.throws(() => parseInstance(files, { schemas }), /R4: "Specfy"/);
 });
 
+test("a Type cell reading `ref → by <Column> in <Owner>` is a reference whose type is its row's", () => {
+  assert.deepEqual(declarationOf("ref → by Type in Owner"), { form: "ref", target: null, by: "Type", in: "Owner" });
+  assert.deepEqual(declarationOf("`ref → by Type`"), { form: "ref", target: null, by: "Type", in: null });
+  // Every other form keeps the shape it had, so nothing reading `{ form, target }` changes.
+  assert.deepEqual(declarationOf("ref → skill"), { form: "ref", target: "skill" });
+  assert.deepEqual(declarationOf("qualifier → proficiency-level"), { form: "qualifier", target: "proficiency-level" });
+});
+
+test("a schema declaring a `by` column is read, and the vocabulary graph draws no type edge for it", () => {
+  const files = new Map([
+    ["value-schema.md", schema("value")],
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"], ["For", "string"]] } })],
+  ]);
+  const { edges } = parseSchemas(files);
+  assert.deepEqual(edges.filter((e) => e.from === "core/question"), []);
+});
+
+test("constraints name a `by` reference by its columns and no target", () => {
+  const files = new Map([
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"]] } })],
+  ]);
+  const ref = constraintsOf(files).question.references.find((r) => r.via === "Rests on.Entity");
+  assert.equal(ref.target, null);
+  assert.equal(ref.by, "Type");
+  assert.equal(ref.in, "Owner");
+  assert.equal(ref.form, "ref");
+});
+
 // A name of an owned type identifies an entity within its owner (R2), and a reference to one is
 // resolved within the owner it is written in (R4). Every reference core makes to an owned type is
 // written inside that owner, so the scope is known from where a name is written and never
@@ -965,4 +994,58 @@ test("a phase heading that names no track of its own process is an R4 that says 
   const files = twoTracked();
   files.set("processes/hiring/phases/screen.md", "# Screen\n\n> First.\n\n## Activities\n\n### Docs\n\n1. Read it.\n");
   assert.throws(() => parseInstance(files, { schemas: tracking() }), /R4: "Docs" in .*screen\.md "## Activities" names no track of processes\/hiring/);
+});
+
+// A question's rows name entities of any type, the type read from the row and, where the type
+// is owned, the owner too (R4, R9). The fixtures reuse `valid` and `schemas` above.
+const questionSchemas = new Map([...schemas,
+  ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"], ["For", "string"]] } })]]);
+const question = (rows) => ["# Who splits the billing domain?", "", "> Look at the period and the value behind it.", "",
+  ...(rows ? ["## Rests on", "", "| Type | Entity | Owner | For |", "| --- | --- | --- | --- |", ...rows.map((r) => `| ${r.join(" | ")} |`), ""] : [])].join("\n");
+const withQuestion = (rows) => new Map([...valid, ["questions/who-splits-billing.md", question(rows)]]);
+
+test("a row typed by its own cells draws its edge, within the owner it names", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["value", "Craftsmanship", "", "why"],
+    ["`experience`", "Splitting the billing domain", "Mira Halvorsen", "the period"],
+  ]), { schemas: questionSchemas });
+  const drawn = edges.filter((e) => e.via === "Rests on.Entity");
+  assert.deepEqual(drawn.map((e) => e.to).sort(), ["profiles/mira-halvorsen/experiences/2022-beacon-systems", "values/craftsmanship"]);
+  const period = drawn.find((e) => e.to.startsWith("profiles/"));
+  assert.equal(period.from, "questions/who-splits-billing");
+  assert.equal(period.attrs.Owner, "Mira Halvorsen");
+  assert.equal(period.attrs.For, "the period");
+});
+
+test("a `by` reference's type and owner cells reach attrs stripped of the backticks they are written with", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["`experience`", "Splitting the billing domain", "`Mira Halvorsen`", "the period"],
+  ]), { schemas: questionSchemas });
+  const period = edges.find((e) => e.via === "Rests on.Entity");
+  assert.equal(period.attrs.Type, "experience");
+  assert.equal(period.attrs.Owner, "Mira Halvorsen");
+});
+
+test("a question with no Rests on draws nothing and reads", () => {
+  const { entities, edges } = parseInstance(withQuestion(null), { schemas: questionSchemas });
+  assert.ok(entities.some((e) => e.id === "questions/who-splits-billing"));
+  assert.deepEqual(edges.filter((e) => e.from === "questions/who-splits-billing"), []);
+});
+
+test("a type cell naming no type is R4", () => {
+  assert.throws(() => parseInstance(withQuestion([["valu", "Craftsmanship", "", ""]]), { schemas: questionSchemas }), /R4: .*"valu", which no schema declares/);
+});
+
+test("an owned type with no owner cell is R4, naming the owner type", () => {
+  assert.throws(() => parseInstance(withQuestion([["experience", "Splitting the billing domain", "", ""]]), { schemas: questionSchemas }), /R4: .*which a profile owns, and the row names no profile/);
+});
+
+test("an unowned type with an owner cell is R4", () => {
+  assert.throws(() => parseInstance(withQuestion([["value", "Craftsmanship", "Mira Halvorsen", ""]]), { schemas: questionSchemas }), /R4: .*nothing owns/);
+});
+
+test("an owned name is looked for only within the owner the row names", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Tomas Reyes", ""]]);
+  files.set("profiles/tomas-reyes/tomas-reyes.md", "# Tomas Reyes\n\n> Designer.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }), /R4: "Splitting the billing domain" .*names no experience of profiles\/tomas-reyes/);
 });
