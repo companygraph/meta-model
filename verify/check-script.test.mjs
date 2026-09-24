@@ -85,3 +85,46 @@ test("a column typed image fails the vocabulary check by name", () => {
     rmSync(tmp, { recursive: true, force: true });
   }
 });
+
+// `pairs` is one [from, to] row replacement or a list of them.
+const mutated = (...pairs) => {
+  const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
+  try {
+    for (const dir of ["core", "example", "lib"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    mkdirSync(join(tmp, "verify"));
+    cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    const schemaPath = join(tmp, "core", "profile-schema.md");
+    let text = readFileSync(schemaPath, "utf8");
+    for (const [from, to] of pairs) {
+      assert.ok(text.includes(from), "core/profile-schema.md no longer carries the row this test mutates — update the fixture");
+      text = text.replace(from, to);
+    }
+    writeFileSync(schemaPath, text);
+    const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
+    return result.stdout + result.stderr;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+};
+
+test("a frontmatter field typed by its row fails, since a field has no row", () => {
+  const out = mutated(["| `location` | No | string | Where the person works from |", "| `location` | No | ref → by Kind | Where. |"]);
+  assert.match(out, /`location` is "ref → by Kind"; a reference whose type is read from its row is a column, never a frontmatter field/);
+});
+
+test("a `by` naming a column that is not a string column of its table fails", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Kind | The page. |"]);
+  assert.match(out, /`URL` is "ref → by Kind", and `Kind` is not a string column of the same table \(R9\)/);
+});
+
+test("a required `by` column whose type column is optional fails", () => {
+  const out = mutated(
+    ["| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |", "| `Where` | No | string | The place. |"],
+    ["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Where | The page. |"]);
+  assert.match(out, /`URL` is required and `Where`, which names its type, is not \(R9\)/);
+});
+
+test("the form spelled with `ref?` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref? → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});

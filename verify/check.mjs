@@ -344,12 +344,9 @@ const CHECKS = [
         // to the list of types, or a schema could group a section under a type nobody defines.
         const s = sectionsOf(text);
         const frontmatter = tableOf((s.get("Frontmatter") ?? "").trim());
-        const typed = [
-          frontmatter,
-          ...blocksOf(s.get("Sections") ?? "")
-            .filter((b) => b.section || b.grouped)
-            .map((b) => b.table),
-        ];
+        const blocks = blocksOf(s.get("Sections") ?? "");
+        const headingTables = new Set(blocks.filter((b) => b.grouped).map((b) => b.table));
+        const typed = [frontmatter, ...blocks.filter((b) => b.section || b.grouped).map((b) => b.table)];
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = (row[2] ?? "").replace(/`/g, "").trim();
@@ -371,6 +368,30 @@ const CHECKS = [
             // list of qualifiers has nothing to qualify.
             if (/^array of qualifier → /.test(declared)) {
               fail(`${path}: ${row[0]} is "${declared}"; \`array of qualifier\` is not a form — a column holds one value`);
+              continue;
+            }
+            // R9: a reference whose type is read from its row needs a row, so it is a column of a
+            // column table, and the columns it reads are string columns of that same table.
+            const by = declared.match(/^ref → by (.+?)(?: in (.+))?$/);
+            if (by) {
+              if (fm === frontmatter || headingTables.has(fm)) {
+                fail(`${path}: ${row[0]} is "${declared}"; a reference whose type is read from its row is a column, never a frontmatter field or a heading`);
+                continue;
+              }
+              for (const name of [by[1], by[2]].filter(Boolean)) {
+                const named = fm.rows.find((r) => (r[0] ?? "").replace(/`/g, "").trim() === name.trim());
+                if (!named || (named[2] ?? "").replace(/`/g, "").trim() !== "string")
+                  fail(`${path}: ${row[0]} is "${declared}", and \`${name.trim()}\` is not a string column of the same table (R9)`);
+              }
+              // A name with no type cannot resolve, so the type column is required wherever the
+              // reference is.
+              const typeRow = fm.rows.find((r) => (r[0] ?? "").replace(/`/g, "").trim() === by[1].trim());
+              if (typeRow && (row[1] ?? "").replace(/`/g, "").trim() === "Yes" && (typeRow[1] ?? "").replace(/`/g, "").trim() !== "Yes")
+                fail(`${path}: ${row[0]} is required and \`${by[1].trim()}\`, which names its type, is not (R9)`);
+              continue;
+            }
+            if (/→ by /.test(declared)) {
+              fail(`${path}: ${row[0]} is "${declared}"; \`ref → by <Column>\` and \`ref → by <Column> in <Owner>\` are the forms (R9)`);
               continue;
             }
             const ref = declared.match(/^(array of )?(ref\??|qualifier) → (.+)$/);
