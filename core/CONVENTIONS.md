@@ -30,7 +30,7 @@ Never by file path and never by filename. Paths move; a canonical name is the en
 
 Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check.
 
-A reference to an owned type is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference core declares to an owned type is written there, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of. A name that is only another owner's entity is unresolvable from here, and one written outside every owner of the type has no owner to be resolved in and names nothing. A reference from outside every owner names the owner as well, in its own cell and never folded into the name: `ref → by <Column> in <Owner>` (R9), where the row's owner cell names an entity of the type R10 declares as owner, and the name is resolved within it.
+A reference whose schema names an owned type, `ref → <type>` and its sibling forms, is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference declared this way is written inside an owner, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of, and a name that is only another owner's entity is unresolvable from here. A reference written outside every owner reaches an owned type only through the `in <Owner>` form, `ref → by <Column> in <Owner>` (R9), whose row names the owner in its own cell, never folded into the name, and resolves within it.
 
 ### R5 — An owned collection nests inside its owner
 
