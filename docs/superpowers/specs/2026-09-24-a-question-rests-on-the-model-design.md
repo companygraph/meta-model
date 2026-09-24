@@ -2,7 +2,7 @@
 
 A visitor asks in their own words, and the model is written in the company's. The chat reaches the model through a words search, so a question phrased the way people phrase it, or asked in German, finds nothing although the model holds the answer. Core gains a type `question`: one file per question as it is asked, a short answer that routes to the entities holding the facts, and a table naming those entities. The chat carries the instance's questions in its prompt and matches a visitor's words to them by meaning, then answers from the entities the question rests on.
 
-Status: decided by the owner on September 24, 2026, one question at a time. The answer routes and states no fact of its own, rather than a full prose answer or no answer at all. Audience is left out until a page wants to filter by it. The chat reaches the questions through an index in its prompt, capped, rather than through the words search alone or a ranking boost in the server. A question references entities of any type through a new form of the vocabulary, a reference whose type is read from its row, rather than a frontmatter list per type; and the owner form R4 left to be designed when wanted is designed here, because a question has to reach an experience. Both instances are seeded in the first round.
+Status: decided by the owner on September 24, 2026, one question at a time. The answer routes and states no fact another entity holds, rather than a full prose answer or no answer at all; a question may rest on no entity when its answer is mastered on the question itself, a stance, a boundary or a claim the model deliberately does not make. Audience is left out until a page wants to filter by it. The chat reaches the questions through an index in its prompt, capped, rather than through the words search alone or a ranking boost in the server. A question references entities of any type through a new form of the vocabulary, a reference whose type is read from its row, rather than a frontmatter list per type; and the owner form R4 left to be designed when wanted is designed here, because a question has to reach an experience. Both instances are seeded in the first round.
 
 ## The type
 
@@ -30,7 +30,7 @@ Status: decided by the owner on September 24, 2026, one question at a time. The 
 | --- | --- | --- |
 | `# [Question]` | Yes | The question as a visitor asks it, ending in a question mark. Every reference to it uses this exact string. |
 | `> [Answer]` | Yes | One or two sentences that say where the answer lies and state no fact the model holds elsewhere |
-| `## Rests on` | Yes | Table. One row per entity the answer comes from; its columns are declared below. |
+| `## Rests on` | No | Table. One row per entity the answer comes from; its columns are declared below. Absent when the answer is mastered here. |
 
 `## Rests on` is a table with these columns:
 
@@ -42,18 +42,19 @@ Status: decided by the owner on September 24, 2026, one question at a time. The 
 | `For` | No | string | The part of the answer this entity carries, where the answer rests on more than one |
 ```
 
-Purpose, as the schema will say it: a question answers "where in the model is the answer to what people actually ask?" It is the bridge from a visitor's words to the company's. The facts stay where they are mastered, and the question names them, so a fact changed on its own page is changed for every question that rests on it and no answer goes stale.
+Purpose, as the schema will say it: a question answers "where in the model is the answer to what people actually ask?" It is the bridge from a visitor's words to the company's. The facts stay where they are mastered, and the question names them, so a fact changed on its own page is changed for every question that rests on it and no answer goes stale. What no other entity holds, a stance, a boundary, a claim the model deliberately does not make, is mastered on the question itself.
 
 Writing rules:
 
 - The H1 is worded as people ask, not as the model names things: "Can Robert still write code himself?", not "Software engineering proficiency". A question worded in the model's own vocabulary adds nothing the words search did not already find.
-- The answer routes. It may say what kind of thing the answer is and where it lies, and it may say what the model does not claim; it states no count, version, date or fact that an entity in `## Rests on` holds, because that would be a second copy nothing keeps true.
+- The answer routes. It may say what kind of thing the answer is and where it lies, and it may say what the model does not claim; it states no count, version, date or fact that another entity holds, because that would be a second copy nothing keeps true.
+- An answer with no `## Rests on` is mastered on the question. It states only what no other entity holds: a stance, a boundary, or a claim the model deliberately does not make. A fact that belongs on an entity is written on that entity, and the question rests on it.
 - Every entity the answer draws on has a row, and no row names an entity the answer does not draw on.
 - A question is not an alias. A concept's other names belong in its `## Also known as`; a question is how people ask, not what a thing is called.
 - Names and prose are American English (R14). A visitor asking in German is matched by the chat, not by a German question.
 - One question per thing asked. Two wordings of the same question are one file; the H1 takes the wording people use most.
 
-`## Rests on` is required, and so is the answer, because a question with nothing under it is an open issue and not an entity. What the model is asked and cannot answer yet is a change to the model, written as one, and the question follows it.
+The answer is required, because a question with no answer is an open issue and not an entity: what the model is asked and cannot answer yet is a change to the model, written as one, and the question follows it. `## Rests on` is optional, because some honest answers rest on nothing else in the model. What that costs is that no check can tell a question resting on nothing on purpose from one whose rows were forgotten; the writing rules and the owner's review of each question carry that, as they carry the rest of what an answer may say.
 
 ## A reference whose type is read from its row
 
@@ -83,7 +84,7 @@ The parser, in `lib/instance.mjs`, draws the edge a `by` cell names, resolved wi
 
 `core/CONVENTIONS.md` changes in R4, R9 and R16 as above, and `core/question-schema.md` is new. The manifest's version moves by a minor.
 
-The example instance under `example/` gains two questions, one resting on unowned entities alone and one on an owned one, so the instance checks, which `example/` is written to pass, exercise both branches on a real tree as well as on the failing fixtures.
+The example instance under `example/` gains three questions, one resting on unowned entities alone, one on an owned one and one resting on nothing, so the instance checks, which `example/` is written to pass, exercise both branches on a real tree as well as on the failing fixtures.
 
 The Obsidian plugin takes the new checker through its vendored copy and shows a question's rows like any table section; its section picker offers `## Rests on` on a new question because the schema declares it required. A picker for the type cell is not in this round. The MCP servers need nothing of their own: `list_types` shows the type, `get_entity` returns a question's edges like any other, and `describe_schema` returns the new schema. Each re-pins the package.
 
@@ -95,7 +96,7 @@ chat-server already asks the host for its types at start and again whenever the 
 
 The line is capped by `CHAT_QUESTION_INDEX_CHARS`, a new setting read in `lib/config.mjs`, 4000 characters when unset. Titles are added in the order the host lists them until the next would pass the cap. Where some are left out the line ends "; and more, found by search with type question", so a question past the cap is still reached the way it would have been without the index. A host that lists no questions, or a type map without `question`, adds no line, so the chat on a model that has none reads exactly as today.
 
-The rules gain one sentence: "When the visitor's question is one of the questions this model answers, in any language or wording, get_entity that question first and answer from the entities it rests on, getting each one you draw on and naming it, never the question, as what the answer rests on." The existing sentence that every claim comes from a tool's answer is unchanged, and the index is a pointer, not an answer: the chat still calls `get_entity` for each fact.
+The rules gain one sentence: "When the visitor's question is one of the questions this model answers, in any language or wording, get_entity that question first and answer from the entities it rests on, getting each one you draw on and naming it, not the question, as what the answer rests on; a question that rests on no entity is itself what the answer rests on, and is named." The existing sentence that every claim comes from a tool's answer is unchanged, and the index is a pointer, not an answer: the chat still calls `get_entity` for each fact.
 
 chat-server tests: the index within the cap, the overflow ending, no line without questions, and the refresh when the commit moves. chat-server takes a minor release, and both hosts re-pin it.
 
@@ -103,7 +104,7 @@ chat-server tests: the index within the cap, the overflow ending, no line withou
 
 Each instance is seeded in its own pull request, questions chosen one by one by the owner from candidates drafted in the session that designed this: blust.ch's for someone deciding whether to hire or engage, a prospective client, a peer and the chat itself; CompanyGraph's for someone evaluating it, the skeptic, a contributor and the chat. Each question's rows are written against the entities as they stand at the instance's pin, and each pull request passes the instance checks with the new core.
 
-A candidate whose answer the model does not hold yet, a license or where an adopter's data lives, is not seeded as a question. It is raised as a change to the model, and the question follows once the model holds its answer.
+A candidate whose answer is a fact that belongs on an entity the model does not hold yet, a license or where an adopter's data lives, is not seeded as a question. It is raised as a change to the model, and the question follows once the model holds its answer. A candidate whose answer is a stance or a deliberate non-claim is seeded with no rows.
 
 ## Out of scope
 
