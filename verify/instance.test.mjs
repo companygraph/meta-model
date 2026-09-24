@@ -1017,6 +1017,15 @@ test("a row typed by its own cells draws its edge, within the owner it names", (
   assert.equal(period.attrs.For, "the period");
 });
 
+test("a `by` reference's type and owner cells reach attrs stripped of the backticks they are written with", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["`experience`", "Splitting the billing domain", "`Mira Halvorsen`", "the period"],
+  ]), { schemas: questionSchemas });
+  const period = edges.find((e) => e.via === "Rests on.Entity");
+  assert.equal(period.attrs.Type, "experience");
+  assert.equal(period.attrs.Owner, "Mira Halvorsen");
+});
+
 test("a question with no Rests on draws nothing and reads", () => {
   const { entities, edges } = parseInstance(withQuestion(null), { schemas: questionSchemas });
   assert.ok(entities.some((e) => e.id === "questions/who-splits-billing"));
