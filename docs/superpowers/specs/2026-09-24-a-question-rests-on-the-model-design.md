@@ -86,7 +86,11 @@ The parser, in `lib/instance.mjs`, draws the edge a `by` cell names, resolved wi
 
 The example instance under `example/` gains three questions, one resting on unowned entities alone, one on an owned one and one resting on nothing, so the instance checks, which `example/` is written to pass, exercise both branches on a real tree as well as on the failing fixtures.
 
-The Obsidian plugin takes the new checker through its vendored copy and shows a question's rows like any table section; its section picker offers `## Rests on` on a new question because the schema declares it required. A picker for the type cell is not in this round. The MCP servers need nothing of their own: `list_types` shows the type, `get_entity` returns a question's edges like any other, and `describe_schema` returns the new schema. Each re-pins the package.
+The MCP servers need nothing of their own: `list_types` shows the type, `get_entity` returns a question's edges like any other, and `describe_schema` returns the new schema. Each re-pins the package.
+
+## The Obsidian plugin
+
+The plugin is where a question is written, so it supports the form rather than only re-pinning. Every place it reads a reference today assumes the declaration names one type and resolves an owned name within the page's own scope; a question row does neither. Its vocabulary reads a `by` column as an offer whose type comes from the row, and completion follows it: the type column offers the types the vault's core declares, the entity column offers the names of the type its row names, within the owner its row names where the type is owned, and the owner column offers the names of that type's owner. Its reader of the references in a file yields a question row as a reference to the entity the row names, resolved within the owner the row names and never the page's own scope, so the references pane lists a question under each entity it rests on, a name in a row links to its entity, and a name that resolves to nothing is marked as any other is. Rename rewrites an entity cell that names the renamed entity and, when an owner is renamed, every owner cell that names it; delete lists the question rows it would leave naming nothing. New entity offers `question` because a schema declares it, and the compliance checks arrive with the re-pin. The plugin takes a minor release, and its plan is written in its own repository once this release is tagged, because it builds on the package.
 
 ## The chat
 
@@ -108,7 +112,7 @@ A candidate whose answer is a fact that belongs on an entity the model does not 
 
 ## Out of scope
 
-Audience and a filter by it; a `/faq/` page on any site and the FAQPage structured data that would go with it; a priority field ordering the chat's index; a picker for the type cell in the plugin. Each is a change of its own once something asks for it.
+Audience and a filter by it; a `/faq/` page on any site and the FAQPage structured data that would go with it; a priority field ordering the chat's index. Each is a change of its own once something asks for it.
 
 ## What it costs
 

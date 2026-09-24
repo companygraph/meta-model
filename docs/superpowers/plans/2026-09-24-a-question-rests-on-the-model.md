@@ -10,7 +10,7 @@
 
 **Spec:** `docs/superpowers/specs/2026-09-24-a-question-rests-on-the-model-design.md`
 
-This plan covers meta-model only. chat-server's question index gets its own plan in that repository. The instances' seeds are editorial and chosen one by one. Consumer re-pins follow the spec's order: every consumer takes this release before any instance it reads carries a question.
+This plan covers meta-model only. Two more plans follow once this release is tagged, each in its own repository: the Obsidian plugin's support for the form (completion, references, links, rename and delete; the spec's section "The Obsidian plugin") and chat-server's question index. The instances' seeds are editorial and chosen one by one. Consumer re-pins follow the spec's order: every consumer takes this release before any instance it reads carries a question.
 
 ## Global Constraints
 
