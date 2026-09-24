@@ -492,6 +492,18 @@ const CHECKS = [
       for (const tag of tags)
         if (tag !== `v${pkg.version}`)
           fail(`tag ${tag} sits on HEAD but package.json says ${pkg.version}`);
+      // instance-check.yml checks out the checker at a ref of its own, and that checker refuses
+      // an instance whose manifest names another release. The ref is set by hand before a tag,
+      // and v0.45.0 and v0.46.0 both shipped it at v0.44.0, so every instance pinned to either
+      // failed on its first run. It is held to package.json on every commit, not only a tagged
+      // one, because the commit that forgets it is the one that gets tagged.
+      const workflow = read(".github/workflows/instance-check.yml");
+      if (workflow === null) return fail(".github/workflows/instance-check.yml is missing");
+      const refs = [...workflow.matchAll(/^\s*ref:\s*(\S+)\s*$/gm)].map((r) => r[1]);
+      if (refs.length !== 1)
+        fail(`.github/workflows/instance-check.yml: expected one checker ref, found ${refs.length}`);
+      else if (refs[0] !== `v${pkg.version}`)
+        fail(`.github/workflows/instance-check.yml checks out the checker at ${refs[0]} but package.json says ${pkg.version}; set the two together`);
     },
   },
   {
