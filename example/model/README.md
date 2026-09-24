@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept` — and declares no packs. That is what core ships, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question` — and declares no packs. That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -18,6 +18,9 @@ features/                        billing-run.md, charge-explanation.md, credit-n
 domains/                         pricing.md, invoicing.md
 concepts/                        contract.md, customer.md, pricing-rule.md, usage-record.md,
                                  invoice.md, invoice-line.md, credit-note.md, billing-period.md
+questions/                       how-do-i-find-out-why-a-line-is-on-my-invoice.md,
+                                 who-split-billing-out-of-the-monolith.md,
+                                 does-beacon-systems-publish-its-revenue.md
 processes/delivery/              delivery.md
   phases/                        specify.md, build.md, release.md
   tracks/                        code.md, docs.md

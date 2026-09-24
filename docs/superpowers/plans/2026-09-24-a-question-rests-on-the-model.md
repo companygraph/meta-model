@@ -37,10 +37,12 @@ This plan covers meta-model only. Two more plans follow once this release is tag
 ### Task 1: The reader of a Type cell learns the form
 
 **Files:**
+
 - Modify: `lib/instance.mjs` — `declarationOf` (around line 394), the frontmatter and column-table loops of `parseSchemas` (around lines 456–503), and the `reference` helper inside `constraintsOf` (around line 618)
 - Test: `verify/instance.test.mjs`
 
 **Interfaces:**
+
 - Produces: `declarationOf(cell)` returns `{ form: "ref", target: null, by: <string>, in: <string|null> }` for the new form, and the unchanged `{ form, target }` for every other form. `constraintsOf(...)[type].references[i]` carries `by` and `in` (both `null` for other forms) and `target: null` for the new form.
 
 - [ ] **Step 1: Write the failing tests** — append to `verify/instance.test.mjs`:
@@ -81,8 +83,7 @@ test("constraints name a `by` reference by its columns and no target", () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test verify/instance.test.mjs`
-Expected: the three new tests FAIL. `declarationOf` returns `target: "by Type in Owner"`, and `parseSchemas` throws `R4: "by Type in Owner" … names no schema`.
+Run: `node --test verify/instance.test.mjs` Expected: the three new tests FAIL. `declarationOf` returns `target: "by Type in Owner"`, and `parseSchemas` throws `R4: "by Type in Owner" … names no schema`.
 
 - [ ] **Step 3: Implement.** In `lib/instance.mjs`, replace `declarationOf` with:
 
@@ -117,8 +118,7 @@ In `constraintsOf`'s `reference` helper, carry the new keys:
 
 - [ ] **Step 4: Run the parser tests**
 
-Run: `node --test verify/instance.test.mjs verify/constraints.test.mjs`
-Expected: all PASS. If `constraints.test.mjs` compares whole reference objects with `deepEqual`, add `by: null, in: null` to its expected objects. That's the only allowed change to existing tests.
+Run: `node --test verify/instance.test.mjs verify/constraints.test.mjs` Expected: all PASS. If `constraints.test.mjs` compares whole reference objects with `deepEqual`, add `by: null, in: null` to its expected objects. That's the only allowed change to existing tests.
 
 - [ ] **Step 5: Commit**
 
@@ -143,10 +143,12 @@ git log -1 --format='[%s]'
 ### Task 2: The parser draws a row's edge on the type its row names
 
 **Files:**
+
 - Modify: `lib/instance.mjs` — `parseInstance`, beside `resolve` (around line 265) and in the body-table loop (around lines 313–333)
 - Test: `verify/instance.test.mjs`
 
 **Interfaces:**
+
 - Consumes: `declarationOf` from Task 1.
 - Produces: edges `{ from: "questions/<slug>", to: <id>, via: "Rests on.Entity", attrs: { Type, Owner, For } }`, and R4 errors whose messages contain the phrases asserted below.
 
@@ -201,8 +203,7 @@ test("an owned name is looked for only within the owner the row names", () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test verify/instance.test.mjs`
-Expected: the new tests FAIL. `resolve` reads `decl.target === null` and throws the wrong error.
+Run: `node --test verify/instance.test.mjs` Expected: the new tests FAIL. `resolve` reads `decl.target === null` and throws the wrong error.
 
 - [ ] **Step 3: Implement.** In `parseInstance`, directly after `resolve`, add:
 
@@ -242,8 +243,7 @@ The type and owner columns are declared `string`, so `declarationOf` returns `nu
 
 - [ ] **Step 4: Run the parser tests**
 
-Run: `node --test verify/instance.test.mjs verify/constraints.test.mjs && node --test verify/rule-citations.test.mjs`
-Expected: all PASS. The rule-citations test accepts the new `R4:` messages because R4 is defined.
+Run: `node --test verify/instance.test.mjs verify/constraints.test.mjs && node --test verify/rule-citations.test.mjs` Expected: all PASS. The rule-citations test accepts the new `R4:` messages because R4 is defined.
 
 - [ ] **Step 5: Commit**
 
@@ -266,10 +266,12 @@ git log -1 --format='[%s]'
 ### Task 3: The vocabulary gate admits the form in column tables only
 
 **Files:**
+
 - Modify: `verify/check.mjs` — the `type vocabulary` check (around lines 330–390)
 - Test: `verify/check-script.test.mjs`
 
 **Interfaces:**
+
 - Consumes: nothing from earlier tasks. The gate reads the cell text itself, as it does for every other form.
 - Produces: failure messages containing the phrases asserted below.
 
@@ -322,8 +324,7 @@ test("the form spelled with `ref?` is refused by its own message", () => {
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test verify/check-script.test.mjs`
-Expected: the four new tests FAIL. The script reports `points at unknown type "by Kind"` (or nothing) instead.
+Run: `node --test verify/check-script.test.mjs` Expected: the four new tests FAIL. The script reports `points at unknown type "by Kind"` (or nothing) instead.
 
 - [ ] **Step 3: Implement.** In the `type vocabulary` check, note which blocks are heading tables:
 
@@ -364,8 +365,7 @@ Expected: the four new tests FAIL. The script reports `points at unknown type "b
 
 - [ ] **Step 4: Run the tests and the script**
 
-Run: `node --test verify/check-script.test.mjs && node verify/check.mjs`
-Expected: all PASS, and `verify/check.mjs` exits 0 on the unmodified tree.
+Run: `node --test verify/check-script.test.mjs && node verify/check.mjs` Expected: all PASS, and `verify/check.mjs` exits 0 on the unmodified tree.
 
 - [ ] **Step 5: Commit**
 
@@ -388,11 +388,13 @@ git log -1 --format='[%s]'
 ### Task 4: The instance checks hold a row-typed cell
 
 **Files:**
+
 - Modify: `lib/checks.mjs` — the import from `./instance.mjs` (line 21), `TYPES` (add `question`), `refOf` (around line 406), and the R16 check `the instance is held to what the schemas declare` (around lines 740–890)
 - Create: `verify/ref-by.test.mjs`
 - Modify: `package.json` — add `verify/ref-by.test.mjs` to `test:instance-checks`
 
 **Interfaces:**
+
 - Consumes: `declarationOf` from Task 1.
 - Produces: `checkInstance(files, { core, model }).failures` entries containing the phrases asserted below. `TYPES` gains `{ type: "question", folder: "questions" }`.
 
@@ -478,8 +480,7 @@ In `package.json`, append ` verify/ref-by.test.mjs` to the `test:instance-checks
 
 - [ ] **Step 2: Run them to see them fail**
 
-Run: `node --test verify/ref-by.test.mjs`
-Expected: FAIL. The question folder is unknown to `TYPES`, and cells are read as `ref → by Type in Owner`.
+Run: `node --test verify/ref-by.test.mjs` Expected: FAIL. The question folder is unknown to `TYPES`, and cells are read as `ref → by Type in Owner`.
 
 - [ ] **Step 3: Implement.**
 
@@ -547,8 +548,7 @@ For each hit (`targetOf`, `joinsOf`'s `pointsAt`, the owned-reference check near
 
 - [ ] **Step 4: Run the instance-check tests**
 
-Run: `npm run test:instance-checks && node --test verify/rule-citations.test.mjs`
-Expected: all PASS.
+Run: `npm run test:instance-checks && node --test verify/rule-citations.test.mjs` Expected: all PASS.
 
 - [ ] **Step 5: Commit**
 
@@ -571,6 +571,7 @@ git log -1 --format='[%s]'
 ### Task 5: Core ships the question type
 
 **Files:**
+
 - Create: `core/question-schema.md`
 - Modify: `core/CONVENTIONS.md` — R4 (the paragraph ending "that form is designed when it is."), R9 (the closed-vocabulary sentence and a paragraph after the `ref?` paragraphs), R16 (a paragraph after the qualifier paragraph)
 - Modify: `core/manifest.json`, `package.json` — a minor version each
@@ -579,6 +580,7 @@ git log -1 --format='[%s]'
 - Modify: `README.md` — wherever it lists the core types or schema files (`grep -n "concept-schema\|concept" README.md`)
 
 **Interfaces:**
+
 - Consumes: Tasks 1–4.
 - Produces: the released shape the other repositories re-pin.
 
@@ -709,6 +711,7 @@ gh pr create --title "A question rests on the model" --body-file <body.md>
 ```
 
 Write the body in the register:
+
 - first paragraph: the gap (a visitor's words against the model's words);
 - second paragraph: what changed (the type, the two reference forms, the R4 owner form, the checker and parser, the three example questions);
 - third paragraph: what it costs downstream, and that consumers re-pin before any instance carries a question because an older parser throws on a question row;
