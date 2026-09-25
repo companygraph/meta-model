@@ -56,6 +56,15 @@ test("a folder whose type owns others names every schema it holds", () => {
   assert.ok(files.get("model/profiles/README.md").includes("its experiences in `experiences/` against `meta/core/experience-schema.md`"));
 });
 
+test("a type with a noun spells its folder README with it, and one without reads as before", () => {
+  const files = readmesFor(["kpis", "strategic-objectives"], "meta");
+  assert.equal(files.get("model/kpis/README.md"), "# KPIs\n\nOne file per KPI, written against `meta/core/kpi-schema.md`.\n");
+  assert.equal(
+    files.get("model/strategic-objectives/README.md"),
+    "# Strategic objectives\n\nOne file per strategic objective, written against `meta/core/strategic-objective-schema.md`.\n",
+  );
+});
+
 test("an instance starts with a source and its two singular entities, naming the instance", () => {
   const files = startingEntities({ name: "Acme" });
   assert.deepEqual([...files.keys()].sort(), ["model/identity.md", "model/sources/local.md", "model/vision.md"]);
