@@ -22,7 +22,7 @@ test("a plan writes the vendored core, the manifest, the folders, the entities, 
   assert.ok(paths.includes("meta/core/CONVENTIONS.md") && paths.includes("meta/core/skill-schema.md"));
   assert.ok(paths.includes(".companygraph/manifest.json"));
   assert.ok(paths.includes("model/README.md") && paths.includes("model/skills/README.md"));
-  assert.ok(paths.includes("model/identity.md") && paths.includes("model/vision.md") && paths.includes("model/sources/local.md"));
+  assert.ok(paths.includes("model/brand.md") && paths.includes("model/identity.md") && paths.includes("model/vision.md") && paths.includes("model/sources/local.md"));
   assert.ok(paths.includes(".github/workflows/companygraph.yml"));
   assert.ok(paths.includes("AGENTS.md") && paths.includes("CLAUDE.md"));
   assert.equal(writes.get(".gitattributes"), "* text=auto eol=lf\n");
