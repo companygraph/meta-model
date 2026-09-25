@@ -4,11 +4,12 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question` — and declares no packs. That is what core ships, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question` — and declares no packs. That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
 vision.md                        billing nobody has to explain
+brand.md                         Beacon — the mark, the colors, the faces and the voice
 strategic-objectives/            support-stops-explaining-invoices.md
 strategies/                      invoicing-strategy.md
 kpis/                            change-lead-time.md, change-fail-rate.md
@@ -42,7 +43,7 @@ profiles/ai-agent/               ai-agent.md — an agent, holding the Reviewer 
   experiences/                   empty
 ```
 
-`profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a folder of files because nothing owns a skill. `identity.md` and `vision.md` are files directly in the container because a company has one of each: the filesystem carries the cardinality, so no rule has to state it (R6, R13).
+`profiles/` is a folder of folders because a profile owns its experiences. `skills/` is a folder of files because nothing owns a skill. `identity.md`, `vision.md` and `brand.md` are files directly in the container because a company has one of each: the filesystem carries the cardinality, so no rule has to state it (R6, R13).
 
 Everything here sits under `model/`. What an instance keeps beside it — the vendored `meta/`, its tooling, its working documents — is not content and is never walked as content.
 
