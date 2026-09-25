@@ -56,6 +56,7 @@ flowchart TB
     subgraph oss["Open source — Apache 2.0, forever"]
         TOOL["Tooling — a menu, scaffolding, checks, upgrades, the plugin's install"]
         SERVER["MCP server — read-only access for agents"]
+        CHAT["Chat server — a visitor's question, answered from an MCP host"]
         PLUGIN["Obsidian plugin — the checks while a file is edited"]
         PACK["Pack — vocabulary only some kinds of company need"]
         CORE["Core — types, schemas, CONVENTIONS.md"]
@@ -65,18 +66,19 @@ flowchart TB
     CONS -.-> INST
     TOOL --> CORE
     SERVER --> CORE
+    CHAT --> SERVER
     PLUGIN --> CORE
     INST --> TOOL & PACK & CORE
     PACK --> CORE
 ```
 
-An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server, the plugin and the tooling built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that costs money.
+An arrow points at what a thing depends on. CompanyGraph owns core, the packs, the server, the chat, the plugin and the tooling built for them — all of it Apache 2.0 and staying that way. The company owns its content and the repository holding it. Consulting is dotted because nothing in it is required to use any of the rest: it is help, not a dependency, and it is the only part that could ever cost money.
 
-The server and the plugin sit beside the tooling rather than between core and an instance: each depends on what this package ships and on nothing an instance declares. A deployment of the server names the instance and the release it serves; `companygraph/mcp-server` is the package, and `robertblust/mcp-blust-ch` and `companygraph/mcp-companygraph-io` are the deployments that run it over the two instances. `companygraph/obsidian-plugin` bundles this package's checker, and the tooling's `obsidian` installs it in a vault without pinning it, because the plugin already pins this package.
+The server and the plugin sit beside the tooling rather than between core and an instance: each depends on what this package ships and on nothing an instance declares. The chat depends on neither core nor an instance: it asks a deployed server and holds no model of its own. A deployment of the server names the instance and the release it serves; `companygraph/mcp-server` is the package, and `robertblust/mcp-blust-ch`, `companygraph/mcp-companygraph-io` and `guestgraph/mcp-guestgraph-io` are the deployments that run it, each over one instance and each with the chat beside it. `companygraph/obsidian-plugin` bundles this package's checker, and the tooling's `obsidian` installs it in a vault without pinning it, because the plugin already pins this package.
 
 ## Status
 
-Past its first release and in use by a real instance, with some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, role, process, phase, track, product, feature, domain, concept and question. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. What is not there yet is the rest of the types the design names; the roadmap below says which.
+Past its first release and in use by real instances, with some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, role, process, phase, track, product, feature, domain, concept and question. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. [`companygraph/mental-model`](https://github.com/companygraph/mental-model) describes CompanyGraph itself and [`guestgraph/mental-model`](https://github.com/guestgraph/mental-model) the project behind GuestGraph, a company whose product is not about modeling; each vendors core the same way and is served the same way. What is not there yet is the rest of the types the design names; the roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md), and the specs that followed sit beside it in `docs/superpowers/specs/`.
 
