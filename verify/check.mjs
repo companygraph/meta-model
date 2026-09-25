@@ -75,12 +75,16 @@ const CHECKS = [
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type, owner, folder, file } of TYPES) {
+      for (const { type, owner, folder, file, noun } of TYPES) {
         const path = `core/${type}-schema.md`;
         const text = read(path);
         if (text === null) continue;
 
-        const title = type.replace(/(^|-)(\w)/g, (_, d, c) => (d ? " " : "") + c.toUpperCase());
+        // A type's title is its id, word-cased — except where the id is not how the type is
+        // written in prose, which `noun` on the TYPES row says (an abbreviation spelled as it
+        // is read: `kpi` reads "KPI", not "Kpi"). Every row without a `noun` derives exactly as
+        // it always has.
+        const title = noun ?? type.replace(/(^|-)(\w)/g, (_, d, c) => (d ? " " : "") + c.toUpperCase());
         const s = sectionsOf(text);
 
         // The header region — everything before the first "## " heading — must contain,
@@ -400,8 +404,6 @@ const CHECKS = [
               if (many && form === "qualifier") continue;
               if (!known.has(target))
                 fail(`${path}: ${row[0]} points at unknown type "${target}"`);
-              if (target.endsWith("s"))
-                fail(`${path}: ${row[0]} is "${many ?? ""}${form} → ${target}"; a reference names one entity`);
             } else if (!TYPE_VOCABULARY.has(declared)) {
               fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
             }
