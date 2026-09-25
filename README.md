@@ -11,11 +11,11 @@ It is not invented. It is the generalization of a model that already works in tw
 ```
 core/              the shipped unit, copied whole into an instance
   CONVENTIONS.md   the portable rules that make the graph checkable
-  *-schema.md      one per type: identity, vision, profile, experience,
-                   experience-kind, achievement-kind, skill, proficiency-level,
-                   value, source, surface, strategic-objective, strategy, kpi,
-                   role, process, phase, track, product, feature, domain,
-                   concept, question
+  *-schema.md      one per type: identity, vision, brand, profile,
+                   experience, experience-kind, achievement-kind, skill,
+                   proficiency-level, value, source, surface,
+                   strategic-objective, strategy, kpi, role, process, phase,
+                   track, product, feature, domain, concept, question
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
 example/           a fictional company, described in those types
@@ -78,7 +78,7 @@ The server and the plugin sit beside the tooling rather than between core and an
 
 ## Status
 
-Past its first release and in use by real instances, with some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, kpi, role, process, phase, track, product, feature, domain, concept and question. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. [`companygraph/mental-model`](https://github.com/companygraph/mental-model) describes CompanyGraph itself and [`guestgraph/mental-model`](https://github.com/guestgraph/mental-model) the project behind GuestGraph, a company whose product is not about modeling; each vendors core the same way and is served the same way. What is not there yet is the rest of the types the design names; the roadmap below says which.
+Past its first release and in use by real instances, with some of the remaining core types still ahead. The current release is the newest tag, and `core/manifest.json` names it. Core holds one schema per type, and `core/` is the list: identity, vision, brand, profile, experience, experience-kind, achievement-kind, skill, proficiency-level, value, source, surface, strategic-objective, strategy, kpi, role, process, phase, track, product, feature, domain, concept and question. The reference instance, [`robertblust/mental-model`](https://github.com/robertblust/mental-model), vendors the release its own pin names and populates the types that release carries, for a company of one, and blust.ch builds its model pages from it with the parser this package ships, and `companygraph/mcp-server` serves the same instance to an agent over MCP. [`companygraph/mental-model`](https://github.com/companygraph/mental-model) describes CompanyGraph itself and [`guestgraph/mental-model`](https://github.com/guestgraph/mental-model) the project behind GuestGraph, a company whose product is not about modeling; each vendors core the same way and is served the same way. What is not there yet is the rest of the types the design names; the roadmap below says which.
 
 The model is built spec-first — the design, including what was rejected and why, is in [`docs/superpowers/specs/2026-08-23-companygraph-design.md`](docs/superpowers/specs/2026-08-23-companygraph-design.md), and the specs that followed sit beside it in `docs/superpowers/specs/`.
 
