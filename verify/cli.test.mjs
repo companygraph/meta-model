@@ -554,6 +554,32 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
+// A release walk ships what is in the package folder, and a package folder in the npx cache is
+// not pristine: Python leaves __pycache__ beside a skill's script it compiled, macOS drops a
+// .DS_Store, and the three instances took two .pyc files into their manifests at 0.50.0 that
+// way. The walk skips what no release ships, so an instance never records a file it did not get.
+test("init ships no __pycache__ or .DS_Store that sits beside the release's skills", () => {
+  const skillDir = path.join(here, "..", "agents/claude/skills/companygraph-export");
+  const cache = path.join(skillDir, "__pycache__");
+  const store = path.join(skillDir, ".DS_Store");
+  fs.mkdirSync(cache, { recursive: true });
+  fs.writeFileSync(path.join(cache, "build.cpython-314.pyc"), "not python");
+  fs.writeFileSync(store, "not a file a release ships");
+  try {
+    const root = temp();
+    run(["init", root, "--name", "Acme", "--agent", "claude"]);
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/__pycache__")), "no __pycache__ was written");
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/.DS_Store")), "no .DS_Store was written");
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+    assert.ok(!Object.keys(manifest.files).some((key) => key.includes("__pycache__") || key.endsWith(".DS_Store")), "the manifest names neither");
+    const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(cache, { recursive: true, force: true });
+    fs.rmSync(store, { force: true });
+  }
+});
+
 test("check fails on a skill edited inside the instance, as on edited core", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -597,7 +623,28 @@ test("upgrade gives no skills to an instance init did not give them to, and leav
 });
 
 // companygraph/mental-model is this case: made by init before the skills existed, its manifest
-// records none and it holds none, and an upgrade gives it all three.
+// records none and it holds none, and an upgrade gives it every one.
+// The three live instances were this case at 0.50.0: a manifest recording the skills a release
+// before this one wrote, and none of the folders a later release added. The upgrade fills them in.
+test("upgrade gives an instance that records some skills the ones a later release added", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  for (const gone of ["companygraph-company", "companygraph-consent"]) {
+    fs.rmSync(path.join(root, ".claude/skills", gone), { recursive: true });
+    for (const key of Object.keys(manifest.files)) if (key.startsWith(`.claude/skills/${gone}/`)) delete manifest.files[key];
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  assert.ok(Object.keys(manifest.files).some((key) => key.startsWith(".claude/skills/companygraph-validate/")), "the fixture still records the older skills");
+  run(["upgrade", root]);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".claude/skills")).sort(), SKILL_NAMES);
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.ok(moved.files[".claude/skills/companygraph-company/SKILL.md"], "the manifest records the added skill");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("upgrade gives the skills to an instance that records none and holds none, and check passes after", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

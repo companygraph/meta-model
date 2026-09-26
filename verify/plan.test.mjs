@@ -26,6 +26,7 @@ test("a plan writes the vendored core, the manifest, the folders, the entities, 
   assert.ok(paths.includes(".github/workflows/companygraph.yml"));
   assert.ok(paths.includes("AGENTS.md") && paths.includes("CLAUDE.md"));
   assert.equal(writes.get(".gitattributes"), "* text=auto eol=lf\n");
+  assert.equal(writes.get(".gitignore"), "dist/\n.obsidian/\n");
   // The skills are the caller's to pass, read from this release's agents/; none given, none written.
   assert.ok(!paths.some((p) => p.includes(".claude/skills")));
 });
@@ -88,6 +89,13 @@ test("--here refuses when the units folder or .companygraph/ is already there, n
   // A different --schemas name is checked the same way, by its own name.
   const schemas = initPlan({ ...ask, units: "schemas", present: new Set(["schemas/notes.txt"]) });
   assert.ok(schemas.refused.includes("schemas/"));
+});
+
+test("--here leaves a .gitignore already there alone, since what a repository ignores is its own", () => {
+  const { writes, refused } = initPlan({ ...ask, present: new Set([".gitignore"]) });
+  assert.equal(refused, undefined);
+  assert.ok(!writes.has(".gitignore"));
+  assert.ok(writes.has(".gitattributes"));
 });
 
 test("--here leaves a .gitattributes already there alone, rather than refusing over it", () => {

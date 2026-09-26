@@ -44,11 +44,18 @@ obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --ope
 // match `extractCore`: `core/` is flat today, but a future subfolder must not be dropped from a
 // bundled init while a fetched one keeps it. Not exported: importing this module runs the argv
 // dispatcher at the foot of the file, so nothing outside it could ever call this anyway.
+// The folder walked is the package as installed, which is not pristine: Python leaves a
+// `__pycache__` beside a script it compiled, and macOS drops a `.DS_Store`, and neither is a file
+// a release ships. Three instances recorded two `.pyc` files in their manifests at 0.50.0 that
+// way, and the checks then failed on files the instance never held. What no release ships is
+// skipped by name, so a polluted install writes exactly what a clean one does.
+const unshipped = (name) => name === "__pycache__" || name === ".DS_Store" || name.endsWith(".pyc");
 function filesOfThisRelease(folder) {
   const from = join(HERE, "..", folder);
   const files = new Map();
   const walk = (rel) => {
     for (const entry of readdirSync(join(from, rel || "."), { withFileTypes: true })) {
+      if (unshipped(entry.name)) continue;
       const child = rel ? `${rel}/${entry.name}` : entry.name;
       if (entry.isDirectory()) walk(child);
       else files.set(child, unixLines(readFileSync(join(from, child), "utf8")));
