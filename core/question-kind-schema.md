@@ -8,7 +8,7 @@
 
 A kind owns nothing and nothing owns it: every question claims one of the same few, and what each kind covers lives here rather than being restated on every question. It sits at the container root beside `questions/`, because every question in the instance claims one of the same set.
 
-The set is the instance's own, as an achievement kind's is. What a company's visitors ask about, a career, a product's fit, a hotel's guests, is a fact about that company, and a kind arriving later is one file here, not a change to this metamodel and a release of it.
+The set is the instance's own, as an achievement kind's is. What a company's visitors ask about, a career, a product's fit, a hotel's matching and privacy, is a fact about that company, and a kind arriving later is one file here, not a change to this metamodel and a release of it.
 
 ## Frontmatter
 
@@ -41,6 +41,7 @@ A kind answers "what is this question about?", the question a visitor asks of a 
   for the type or the section the answers sit in.
 - `rank` orders kinds wherever questions are drawn grouped, and nothing else. The first kind is
   the one most visitors come for, and two kinds never share a rank.
-- A kind holds at least two questions. One question alone is filed under the nearest kind until a
-  second arrives, because a group of one is a heading over a single line.
+- A kind holds at least two questions, unless the instance holds only one. One question alone is
+  filed under the nearest kind until a second arrives, because a group of one is a heading over a
+  single line.
 - Names and prose are American English (R14).
