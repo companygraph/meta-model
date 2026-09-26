@@ -105,6 +105,7 @@ Nothing owns a decision and a decision owns nothing: a call bears on entities of
 | `kind` | Yes | ref → decision-kind | What sort of call this is, the H1 of a file in `decision-kinds/` |
 | `status` | Yes | ref → decision-status | Whether the call still holds, the H1 of a file in `decision-statuses/` |
 | `by` | Yes | ref → role | The seat that made the call, the H1 of a file in `roles/`. Never the person: who held the seat on that date is the profile's. |
+| `serves` | No | array of ref → strategic-objective | The objectives this call was made for, each the H1 of a file in `strategic-objectives/` |
 | `upholds` | No | array of ref → value | The values the call was weighed against, each the H1 of a file in `values/` |
 | `supersedes` | No | array of ref → decision | Earlier calls this one replaces, each the H1 of a file in `decisions/` |
 
@@ -158,6 +159,8 @@ Writing rules:
 - `decided` is the date the call was made, at the precision the source states, never the date it was carried out. A call still proposed carries the date it was put forward, and takes the date of the call when its status leaves the proposed state, the file renamed where the year moved.
 - `by` names the seat, never the person, as a role is person-neutral. In a company of one that is one seat; in a company of more it is the seat that answered for the call, and a call that several seats made names the one that would have had the last word.
 - `upholds` names a value only where it actually turned the call. A value that would be cited by any call the company makes tells a reader nothing.
+- `serves` names an objective only where the call was made for it; a call that serves no written objective is still a decision, and gains no invented one.
+- A decision names the objective it serves, never the strategy it follows: which route a call sits on is read from the strategy that serves the same objective, and a strategy the call produced or changed is a `## Bears on` row.
 - Every row of `## Bears on` names an entity the call made, changed or ended. An entity the call merely mentions is not borne on.
 - A decision is not rewritten to say something else. `status` is the one field that moves, and `decided` with it once when a proposed call is made; what replaced the call is read from the later decision's `supersedes`, and a call that another supersedes carries the status the instance keeps for a replaced call. Where a call is dropped and nothing replaced it, one dated sentence closing `## Consequences` says so.
 - Written in the company's own first person, "I" for a company of one, "we" otherwise, and the same one throughout the instance.
@@ -172,6 +175,8 @@ A status derived from `supersedes`, which was the first proposal: taken where no
 A `decided-by` profile. The seat is what answers for a call, and naming the person would make every decision a claim about someone that outlives their holding the seat.
 
 A strategy field, `follows` or `under`. The `## Bears on` table names a strategy where a call produced or changed one, and a field beside it would state the same edge twice.
+
+An objective field was left out of the first round on the same reasoning, and came back the same day as `serves`, optional, mirroring a strategy's: the reference instance's proposed first CAS is made for the objective of a master's in AI leadership, and `## Bears on`, which names what a call made, changed or ended, could not say so without bending its rule. A decision names the objective and never the strategy, for the reason above.
 
 A `## Since` section for what happened after. What happened after a call is the next decision, or the period that carried it out, and both are entities that can name this one.
 

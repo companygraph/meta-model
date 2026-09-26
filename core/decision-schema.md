@@ -18,6 +18,7 @@ Nothing owns a decision and a decision owns nothing: a call bears on entities of
 | `kind` | Yes | ref → decision-kind | What sort of call this is, the H1 of a file in `decision-kinds/` |
 | `status` | Yes | ref → decision-status | Whether the call is made and still holds, the H1 of a file in `decision-statuses/` |
 | `by` | Yes | ref → role | The seat that made the call, the H1 of a file in `roles/`. Never the person: who held the seat on that date is the profile's. |
+| `serves` | No | array of ref → strategic-objective | The objectives this call was made for, each the H1 of a file in `strategic-objectives/` |
 | `upholds` | No | array of ref → value | The values the call was weighed against, each the H1 of a file in `values/` |
 | `supersedes` | No | array of ref → decision | Earlier calls this one replaces, each the H1 of a file in `decisions/` |
 
@@ -85,6 +86,11 @@ A decision is a call the company made on a date, written with the options that l
   several seats made names the one that would have had the last word.
 - `upholds` names a value only where it actually turned the call. A value that would be cited
   by any call the company makes tells a reader nothing.
+- `serves` names an objective only where the call was made for it; a call that serves no
+  written objective is still a decision, and gains no invented one.
+- A decision names the objective it serves, never the strategy it follows: which route a call
+  sits on is read from the strategy that serves the same objective, and a strategy the call
+  produced or changed is a `## Bears on` row.
 - Every row of `## Bears on` names an entity the call made, changed or ended. An entity the
   call merely mentions is not borne on.
 - A decision is not rewritten to say something else. `status` is the one field that moves, and
