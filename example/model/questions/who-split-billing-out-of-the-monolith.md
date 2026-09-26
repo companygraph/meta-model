@@ -1,5 +1,6 @@
 ---
 source: Local
+kind: Product
 ---
 
 # Who split billing out of the monolith?
