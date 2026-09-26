@@ -554,6 +554,32 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
+// A release walk ships what is in the package folder, and a package folder in the npx cache is
+// not pristine: Python leaves __pycache__ beside a skill's script it compiled, macOS drops a
+// .DS_Store, and the three instances took two .pyc files into their manifests at 0.50.0 that
+// way. The walk skips what no release ships, so an instance never records a file it did not get.
+test("init ships no __pycache__ or .DS_Store that sits beside the release's skills", () => {
+  const skillDir = path.join(here, "..", "agents/claude/skills/companygraph-export");
+  const cache = path.join(skillDir, "__pycache__");
+  const store = path.join(skillDir, ".DS_Store");
+  fs.mkdirSync(cache, { recursive: true });
+  fs.writeFileSync(path.join(cache, "build.cpython-314.pyc"), "not python");
+  fs.writeFileSync(store, "not a file a release ships");
+  try {
+    const root = temp();
+    run(["init", root, "--name", "Acme", "--agent", "claude"]);
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/__pycache__")), "no __pycache__ was written");
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/.DS_Store")), "no .DS_Store was written");
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+    assert.ok(!Object.keys(manifest.files).some((key) => key.includes("__pycache__") || key.endsWith(".DS_Store")), "the manifest names neither");
+    const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(cache, { recursive: true, force: true });
+    fs.rmSync(store, { force: true });
+  }
+});
+
 test("check fails on a skill edited inside the instance, as on edited core", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
