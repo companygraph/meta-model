@@ -547,6 +547,10 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
   assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
+  assert.match(said, /-company and -consent/);
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
+  assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
