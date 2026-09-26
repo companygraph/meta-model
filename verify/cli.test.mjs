@@ -32,6 +32,12 @@ test("an instance init writes passes the mechanical checks on its first day", ()
   assert.deepEqual(failures, []);
 });
 
+test("init says what the model starts with without counting its singular entities, which the next type would make wrong", () => {
+  const said = run(["init", temp(), "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /its source and its singular entities/);
+  assert.doesNotMatch(said, /\b(two|three|four) singular/);
+});
+
 test("what it wrote is what its manifest says it wrote", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

@@ -232,7 +232,7 @@ async function init(argv, { menu = false } = {}) {
   console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
-  console.log(`  the model is empty but for its README files, its source and its two singular entities`);
+  console.log(`  the model is empty but for its README files, its source and its singular entities`);
   if (menu) return;
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);

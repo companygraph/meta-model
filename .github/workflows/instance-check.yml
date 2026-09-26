@@ -34,7 +34,7 @@ jobs:
         uses: actions/checkout@v7
         with:
           repository: companygraph/meta-model
-          ref: v0.47.0
+          ref: v0.48.0
           path: .companygraph-checker
       - name: the instance is held to the core it vendored
         run: node .companygraph-checker/bin/check-instance.mjs .

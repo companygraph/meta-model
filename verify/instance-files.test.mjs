@@ -65,12 +65,16 @@ test("a type with a noun spells its folder README with it, and one without reads
   );
 });
 
-test("an instance starts with a source and its two singular entities, naming the instance", () => {
+test("an instance starts with a source and its three singular entities, naming the instance", () => {
   const files = startingEntities({ name: "Acme" });
-  assert.deepEqual([...files.keys()].sort(), ["model/identity.md", "model/sources/local.md", "model/vision.md"]);
+  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
   assert.match(files.get("model/identity.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
   assert.match(files.get("model/identity.md"), /\n## What it is\n/);
   assert.match(files.get("model/vision.md"), /\n## What it means\n/);
+  assert.match(files.get("model/brand.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
+  for (const section of ["Mark", "Color", "Typography", "Voice", "References"]) assert.match(files.get("model/brand.md"), new RegExp(`\n## ${section}\n`));
+  // A table is its header alone: nothing a reader could mistake for content, and the checks pass it.
+  assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\n## Typography\n/);
   assert.match(files.get("model/sources/local.md"), /^# Local\n/);
 });
 
