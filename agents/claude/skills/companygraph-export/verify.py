@@ -4,8 +4,8 @@
 Coverage is the whole point of the second artifact, and it is checkable only because each
 inlined entity keeps its `<!-- entity: <path> -->` marker: Gemini Notebook strips the comment, and
 this script reads the file from disk where it survives. The zip is checkable the same way,
-read straight from the archive with `zipfile`: two of its files, `model/identity.md` and
-`model/vision.md`, are singular entities copied whole and carry no marker, so those are
+read straight from the archive with `zipfile`: the singular entities, one file per singular
+type directly under `model/`, are copied whole and carry no marker, so those are
 claimed by name instead — `model/<basename>` for a `model/*.md` member the marker scan found
 nothing in. A marker count cannot tell that file from one merely missing a marker, or tell a
 literal `<!-- entity: ... -->` used as prose in a reading guide from a real one; comparing
