@@ -4,6 +4,8 @@ node_modules
 .vscode
 .claudian
 .superpowers
+__pycache__
+.DS_Store
 
 # Local, untracked: paths that must not be published.
 /LOCAL.md
