@@ -21,7 +21,7 @@ const decision = (name, fm, { sections = ["The question", "Why", "Consequences"]
   ...sections.filter((s) => s !== "The question").flatMap((s) => [`## ${s}`, "", "Prose.", ""]),
   ...(bearsOn ? ["## Bears on", "", "| Type | Entity | Owner | How |", "| --- | --- | --- | --- |", ...bearsOn.map((r) => `| ${r.join(" | ")} |`), ""] : []),
 ].join("\n");
-const GOOD = ["source: Local", "decided: 2026-08-25", "kind: Architecture", "status: Standing", "by: Owner", "upholds:", "  - Craftsmanship", "supersedes:", "  - Core is a submodule"];
+const GOOD = ["source: Local", "decided: 2026-08-25", "kind: Architecture", "status: Standing", "by: Owner", "upholds:", "  - Craftsmanship", "serves:", "  - Every model is served", "supersedes:", "  - Core is a submodule"];
 
 const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["meta/core/decision-schema.md", real("decision")],
@@ -30,6 +30,7 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["meta/core/source-schema.md", bare("source", null, "model/sources/*.md")],
   ["meta/core/role-schema.md", bare("role", null, "model/roles/*.md")],
   ["meta/core/value-schema.md", bare("value", null, "model/values/*.md")],
+  ["meta/core/strategic-objective-schema.md", bare("strategic-objective", null, "model/strategic-objectives/*.md")],
   ["meta/core/concept-schema.md", bare("concept", null, "model/concepts/*.md")],
   ["meta/core/profile-schema.md", bare("profile", null, "model/profiles/<profile>/<profile>.md")],
   // An experience's filename begins with its `start`, so the fixture's declares and carries one:
@@ -41,6 +42,7 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
   ["model/roles/owner.md", "# Owner\n\n> The seat.\n"],
   ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
+  ["model/strategic-objectives/every-model-is-served.md", "# Every model is served\n\n> What must become true.\n"],
   ["model/concepts/core.md", "# Core\n\n> The shipped unit.\n"],
   ["model/profiles/mira-halvorsen/mira-halvorsen.md", "# Mira Halvorsen\n\n> Engineer.\n"],
   ["model/profiles/mira-halvorsen/experiences/2022-beacon.md", "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> A period.\n"],
@@ -92,6 +94,10 @@ test("a status naming no decision status fails", () => {
 
 test("a by naming no role fails", () => {
   assert.equal(about(GOOD.map((l) => l.replace("by: Owner", "by: Mira Halvorsen")), undefined, undefined, "\"Mira Halvorsen\"").length, 1);
+});
+
+test("a serves naming no strategic objective fails", () => {
+  assert.equal(about(GOOD.map((l) => l.replace("  - Every model is served", "  - Every model is sold")), undefined, undefined, "\"Every model is sold\"").length, 1);
 });
 
 test("a supersedes naming no decision fails", () => {
