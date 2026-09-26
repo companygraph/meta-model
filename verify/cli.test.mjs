@@ -536,7 +536,7 @@ test("a core newer than the checker is refused naming both pins, the manifest's 
   assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
 
-const SKILL_NAMES = ["companygraph-export", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
+const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
 
 test("init writes the skills, hashed into the manifest like the core, and tells how to run the checks", () => {
   const root = temp();
@@ -547,6 +547,10 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
   assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
+  assert.match(said, /-company and -consent/);
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
+  assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
@@ -557,6 +561,15 @@ test("check fails on a skill edited inside the instance, as on edited core", () 
   const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /\.claude\/skills\/companygraph-validate\/SKILL\.md: not as the tooling wrote it/);
+});
+
+test("check fails on the company skill edited inside the instance, the one an operator is most tempted to edit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.appendFileSync(path.join(root, ".claude/skills/companygraph-company/SKILL.md"), "\n10. Also read the blog.\n");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /\.claude\/skills\/companygraph-company\/SKILL\.md: not as the tooling wrote it/);
 });
 
 test("upgrade gives no skills to an instance init did not give them to, and leaves its own alone", () => {
