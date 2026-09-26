@@ -6,7 +6,7 @@ Status: decided by the owner on September 26, 2026, one question at a time. The 
 
 ## Where this comes from
 
-The nearest published shape is the architecture decision record, which since Michael Nygard's 2011 note holds a title, a status, a context, the decision and its consequences, and in its later forms a list of the options considered. Its status is a fixed set, proposed, accepted, deprecated, superseded, and every team that adopts it redefines the set. Its scope is architecture. What this meta-model wants is the same record for any call a company makes, a hire, a price, a market, a period of someone's life, with the status set the company's own.
+The nearest published shape is the architecture decision record, which since Michael Nygard's 2011 note holds a title, a status, a context, the decision and its consequences, and in its later forms a list of the options considered. Its status is a fixed set, proposed, accepted, deprecated, superseded, and every team that adopts it redefines the set; the proposed state is the one this meta-model keeps in every instance's first round, because a call written before it is made is what lets it be argued. Its scope is architecture. What this meta-model wants is the same record for any call a company makes, a hire, a price, a market, a period of someone's life, with the status set the company's own.
 
 The reference instance holds the value "Decide well over build fast": the decision is written down before the code, with the alternatives that lost and why, so the next person can disagree with a reason rather than a rewrite. That sentence is the schema. The alternatives are required and each carries why it lost, and the reasoning is a section of its own, because a call stated without its reasons is a fact and not a decision.
 
@@ -78,9 +78,9 @@ A status owns nothing and nothing owns it: every decision carries one, and what 
 | `## What it means` | Yes | When a call is in this state, when it leaves it, and what a reader may rely on while it is |
 ```
 
-Purpose, as the schema will say it: a status answers "does this call still hold?" for someone about to act on it. A decision file is never rewritten to say something else, so the status is the one thing on it that moves, and what each state licenses a reader to do is written once here.
+Purpose, as the schema will say it: a status answers "is this call made, and does it still hold?" for someone about to act on it. A decision file is never rewritten to say something else, so the status is the one thing on it that moves, and what each state licenses a reader to do is written once here.
 
-Writing rules: `## What it means` says what a reader may rely on, a standing call is acted on, a replaced one is read through the decision that replaced it, and how a call leaves the state. An instance has one status for a call that holds as written, and every other status says which decision or event moves a call into it. A status is about whether the call holds, never about how well it went.
+Writing rules: `## What it means` says what a reader may rely on, a proposed call is not acted on, a standing call is, a replaced one is read through the decision that replaced it, and how a call leaves the state. An instance has one status for a call that holds as written, and every other status says which decision or event moves a call into it. A status is about whether the call is made and holds, never about how well it went.
 
 ### The decision
 
@@ -101,7 +101,7 @@ Nothing owns a decision and a decision owns nothing: a call bears on entities of
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
-| `decided` | Yes | date | When the call was made, not when it was carried out |
+| `decided` | Yes | date | When the call was made, not when it was carried out. For a call still proposed, when it was put forward. |
 | `kind` | Yes | ref → decision-kind | What sort of call this is, the H1 of a file in `decision-kinds/` |
 | `status` | Yes | ref → decision-status | Whether the call still holds, the H1 of a file in `decision-statuses/` |
 | `by` | Yes | ref → role | The seat that made the call, the H1 of a file in `roles/`. Never the person: who held the seat on that date is the profile's. |
@@ -155,11 +155,11 @@ Writing rules:
 - `## Alternatives` carries at least one row, and never the option taken. `Why not` names what the option would have cost, in the terms the call turned on, not that it was worse.
 - `## Why` gives the reason the chosen option won, concretely enough that a reader could tell whether it would still win today. A reason that would equally support any of the alternatives supports none.
 - `## Consequences` names what the company is now committed to and what it gave up, and states what has to stay true for the call to stay right, because that is what a reader watches for.
-- `decided` is the date the call was made, at the precision the source states, never the date it was carried out.
+- `decided` is the date the call was made, at the precision the source states, never the date it was carried out. A call still proposed carries the date it was put forward, and takes the date of the call when its status leaves the proposed state, the file renamed where the year moved.
 - `by` names the seat, never the person, as a role is person-neutral. In a company of one that is one seat; in a company of more it is the seat that answered for the call, and a call that several seats made names the one that would have had the last word.
 - `upholds` names a value only where it actually turned the call. A value that would be cited by any call the company makes tells a reader nothing.
 - Every row of `## Bears on` names an entity the call made, changed or ended. An entity the call merely mentions is not borne on.
-- A decision is not rewritten to say something else. `status` is the one field that moves; what replaced the call is read from the later decision's `supersedes`, and a call that another supersedes carries the status the instance keeps for a replaced call. Where a call is dropped and nothing replaced it, one dated sentence closing `## Consequences` says so.
+- A decision is not rewritten to say something else. `status` is the one field that moves, and `decided` with it once when a proposed call is made; what replaced the call is read from the later decision's `supersedes`, and a call that another supersedes carries the status the instance keeps for a replaced call. Where a call is dropped and nothing replaced it, one dated sentence closing `## Consequences` says so.
 - Written in the company's own first person, "I" for a company of one, "we" otherwise, and the same one throughout the instance.
 - Names and prose are American English (R14).
 
@@ -191,7 +191,7 @@ The plugin takes its types and their folders from the package's `TYPES` and ever
 
 ## The instances
 
-Each instance upgrades its core and seeds its kinds, its statuses and its first decisions in the same pull request. Every instance keeps the same three statuses in the first round, Standing, Revised and Dropped, each defined in the instance's own words: Standing is a call that holds as written; Revised is a call another decision supersedes, and is read through that decision; Dropped is a call no longer pursued that nothing replaced. Every decision in the first round is Standing. The seat is `by: Owner` in all three, because the Owner role in each says it produces decisions, recorded where they bind. Each decision's `decided` is read from the entry, the strategy or the spec that records the call, at the precision it states, and the plan names the source for each.
+Each instance upgrades its core and seeds its kinds, its statuses and its first decisions in the same pull request. Every instance keeps the same four statuses in the first round, Proposed, Standing, Revised and Dropped, each defined in the instance's own words: Proposed is a call put forward and not yet made, written with its alternatives so it can be argued, and not acted on; Standing is a call that holds as written; Revised is a call another decision supersedes, and is read through that decision; Dropped is a call no longer pursued that nothing replaced, which a proposed call becomes when it is declined. Every decision in the first round is Standing. The seat is `by: Owner` in all three, because the Owner role in each says it produces decisions, recorded where they bind. Each decision's `decided` is read from the entry, the strategy or the spec that records the call, at the precision it states, and the plan names the source for each.
 
 The reference instance, a company of one, defines two kinds. Career: a call about my own path, what to do next, for whom, on what terms. Portfolio: a call about what I build and publish in my own name. Its first four decisions:
 
@@ -222,7 +222,7 @@ The dates, the exact wording of each alternative's cost and each `## Why` are wr
 
 ## Out of scope
 
-A page on any site that draws the decisions, and the German it would need; a chat index of them; a check that a superseded decision carries the replaced status, which is a join across two types the vocabulary does not declare and the agent pass holds; the 1,360 decisions the talk read out of the specs, which are the specs' and stay there until one is worth a file; a decision that is proposed and not yet made, which an instance may define as a status of its own when it wants one. Each is a change of its own once something asks for it.
+A page on any site that draws the decisions, and the German it would need; a chat index of them; a check that a superseded decision carries the replaced status, which is a join across two types the vocabulary does not declare and the agent pass holds; the 1,360 decisions the talk read out of the specs, which are the specs' and stay there until one is worth a file. Each is a change of its own once something asks for it.
 
 ## What it costs
 
