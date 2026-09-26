@@ -6,7 +6,7 @@
 
 `model/decisions/*.md`
 
-Nothing owns a decision and a decision owns nothing: a call bears on entities of every type and belongs to none of them, as a question does. The filename is not the slug of the H1, which is what R12 does by default. It is the year in `decided`, then a `-`, then a slug naming the call, chosen as an experience's is: `2026-09-architect-role.md`, `2026-08-vendored-core.md`. The folder then sorts as a log and reads as one. The year must be the year in `decided`, the rest must be a slug by R12, and the two together must be unique in the folder.
+Nothing owns a decision and a decision owns nothing: a call bears on entities of every type and belongs to none of them, as a question does. The filename is not the slug of the H1, which is what R12 does by default. It is the year in `decided`, then a `-`, then a slug naming the call, chosen as an experience's is: `2026-architect-role.md`, `2026-vendored-core.md`. The folder then sorts as a log and reads as one. The year must be the year in `decided`, the rest must be a slug by R12, and the two together must be unique in the folder.
 
 ## Frontmatter
 

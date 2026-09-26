@@ -36,7 +36,7 @@ A status answers "is this call made, and does it still hold?" for someone about 
 - It says how a call leaves the state, which decision or event moves it on, so that a status
   is never changed by hand without a reason the model can show.
 - An instance has exactly one status for a call that holds as written, and every other status
-  says what moved a call out of that one.
+  says which decision or event moves a call into it.
 - A status is about whether the call is made and holds, never about how well it went. What
   came of a call is the next decision's question or a period's result.
 - Name it for the state of the call, `Standing`, `Revised`, and never for a verdict on it.

@@ -256,7 +256,7 @@ A status answers "is this call made, and does it still hold?" for someone about 
 - It says how a call leaves the state, which decision or event moves it on, so that a status
   is never changed by hand without a reason the model can show.
 - An instance has exactly one status for a call that holds as written, and every other status
-  says what moved a call out of that one.
+  says which decision or event moves a call into it.
 - A status is about whether the call is made and holds, never about how well it went. What
   came of a call is the next decision's question or a period's result.
 - Name it for the state of the call, `Standing`, `Revised`, and never for a verdict on it.
@@ -273,7 +273,7 @@ A status answers "is this call made, and does it still hold?" for someone about 
 
 `model/decisions/*.md`
 
-Nothing owns a decision and a decision owns nothing: a call bears on entities of every type and belongs to none of them, as a question does. The filename is not the slug of the H1, which is what R12 does by default. It is the year in `decided`, then a `-`, then a slug naming the call, chosen as an experience's is: `2026-09-architect-role.md`, `2026-08-vendored-core.md`. The folder then sorts as a log and reads as one. The year must be the year in `decided`, the rest must be a slug by R12, and the two together must be unique in the folder.
+Nothing owns a decision and a decision owns nothing: a call bears on entities of every type and belongs to none of them, as a question does. The filename is not the slug of the H1, which is what R12 does by default. It is the year in `decided`, then a `-`, then a slug naming the call, chosen as an experience's is: `2026-architect-role.md`, `2026-vendored-core.md`. The folder then sorts as a log and reads as one. The year must be the year in `decided`, the rest must be a slug by R12, and the two together must be unique in the folder.
 
 ## Frontmatter
 
