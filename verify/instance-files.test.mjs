@@ -65,7 +65,7 @@ test("a type with a noun spells its folder README with it, and one without reads
   );
 });
 
-test("an instance starts with a source and its three singular entities, naming the instance", () => {
+test("an instance starts with a source and its singular entities, naming the instance", () => {
   const files = startingEntities({ name: "Acme" });
   assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
   assert.match(files.get("model/identity.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);

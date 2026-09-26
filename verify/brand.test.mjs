@@ -41,8 +41,8 @@ test("a required table section written as its header row alone passes the mechan
   assert.deepEqual(about(brand({ ...GOOD, Color: TABLES.Color.slice(0, 2) })), []);
 });
 
-test("an instance with no brand.md fails, naming the file", () => {
-  assert.equal(about(null, "model/brand.md is missing").length, 1);
+test("an instance with no brand.md fails, naming the file and the schema it is written against", () => {
+  assert.equal(about(null, "model/brand.md is missing", "written against meta/core/brand-schema.md").length, 1);
 });
 
 test("a missing Voice fails", () => {

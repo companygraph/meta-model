@@ -155,7 +155,7 @@ def root_type(path):
 
 
 def singular(path):
-    """Whether a path is an entity that stands alone: `model/identity.md`, `model/vision.md`.
+    """Whether a path is an entity that stands alone: one file per singular type, directly under `model/`.
 
     It has no folder and so nothing to consolidate with. In the zip it is copied whole and
     carries no marker; `verify.py` knows that and claims a marker-less `model/*.md` member as
