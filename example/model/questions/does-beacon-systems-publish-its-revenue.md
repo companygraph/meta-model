@@ -1,5 +1,6 @@
 ---
 source: Local
+kind: Company
 ---
 
 # Does Beacon Systems publish its revenue?

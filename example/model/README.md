@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `decision`, `decision-kind`, `decision-status` — and declares no packs. That is what core ships, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status` — and declares no packs. That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -22,7 +22,9 @@ concepts/                        contract.md, customer.md, pricing-rule.md, usag
                                  invoice.md, invoice-line.md, credit-note.md, billing-period.md
 questions/                       how-do-i-find-out-why-a-line-is-on-my-invoice.md,
                                  who-split-billing-out-of-the-monolith.md,
-                                 does-beacon-systems-publish-its-revenue.md
+                                 does-beacon-systems-publish-its-revenue.md,
+                                 what-is-it-like-to-work-at-beacon-systems.md
+question-kinds/                  product.md, company.md
 decision-kinds/                  architecture.md, product.md
 decision-statuses/               standing.md, revised.md
 decisions/                       2022-billing-leaves-the-monolith.md

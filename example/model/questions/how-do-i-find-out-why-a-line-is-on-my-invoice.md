@@ -1,5 +1,6 @@
 ---
 source: Local
+kind: Product
 ---
 
 # How do I find out why a line is on my invoice?
