@@ -129,6 +129,20 @@ test("an open period stamps a null end, and a one-off stamps end equal to start"
                    { kind: "Role", start: "2012-05-04", end: "2012-05-04" });
 });
 
+// A decision carries a `kind` too, a decision kind, and no period. The stamp is a period's:
+// a renderer translates its kind against the experience kinds, so a kind alone is not a stamp.
+test("a decision, which carries a kind but no period, carries no stamp", () => {
+  const files = new Map(valid);
+  files.set("decision-kinds/architecture.md", "# Architecture\n\n> How it is built.\n\n## What it means\n\nText.\n");
+  files.set("decisions/2022-billing.md",
+    "---\nkind: Architecture\ndecided: 2022-01\n---\n\n# Billing leaves the monolith\n\n> The call.\n");
+  const withDecisions = new Map(schemas);
+  withDecisions.set("decision-kind-schema.md", schema("decision-kind"));
+  withDecisions.set("decision-schema.md", schema("decision", { fields: [["kind", "ref → decision-kind"], ["decided", "date"]] }));
+  const { entities } = parseInstance(files, { schemas: withDecisions });
+  assert.equal("stamp" in entities.find((e) => e.type === "decision"), false);
+});
+
 test("types come from folders, singular by R7, with their owner", () => {
   const { types } = parseInstance(valid, { schemas });
   assert.deepEqual(types, [

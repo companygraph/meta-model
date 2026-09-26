@@ -32,13 +32,18 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["meta/core/value-schema.md", bare("value", null, "model/values/*.md")],
   ["meta/core/concept-schema.md", bare("concept", null, "model/concepts/*.md")],
   ["meta/core/profile-schema.md", bare("profile", null, "model/profiles/<profile>/<profile>.md")],
-  ["meta/core/experience-schema.md", bare("experience", "profile", "model/profiles/<profile>/experiences/*.md")],
+  // An experience's filename begins with its `start`, so the fixture's declares and carries one:
+  // the clean tree then reports nothing an `about()` filter would have to hide.
+  ["meta/core/experience-schema.md", [...head("experience", "profile", "model/profiles/<profile>/experiences/*.md"),
+    "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |",
+    "| `start` | Yes | date | When it began. |", "",
+    "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ""].join("\n")],
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
   ["model/roles/owner.md", "# Owner\n\n> The seat.\n"],
   ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
   ["model/concepts/core.md", "# Core\n\n> The shipped unit.\n"],
   ["model/profiles/mira-halvorsen/mira-halvorsen.md", "# Mira Halvorsen\n\n> Engineer.\n"],
-  ["model/profiles/mira-halvorsen/experiences/2022-beacon.md", "# Splitting the billing domain\n\n> A period.\n"],
+  ["model/profiles/mira-halvorsen/experiences/2022-beacon.md", "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> A period.\n"],
   ["model/decision-kinds/architecture.md", "---\nsource: Local\n---\n\n# Architecture\n\n> How the tooling is built.\n\n## What it means\n\nProse.\n"],
   ["model/decision-statuses/standing.md", "---\nsource: Local\n---\n\n# Standing\n\n> Holds as written.\n\n## What it means\n\nProse.\n"],
   ["model/decisions/2026-submodule.md", decision("Core is a submodule", ["source: Local", "decided: 2026-08-20", "kind: Architecture", "status: Standing", "by: Owner"])],
@@ -50,6 +55,11 @@ const about = (fm, opts, filename, ...words) =>
 
 test("a decision with every required field and section, upholding a value and superseding another, passes", () => {
   assert.deepEqual(about(GOOD), []);
+});
+
+test("the clean fixture reports nothing about its experience, so the filter above hides no unrelated failure", () => {
+  const all = checkInstance(tree(GOOD), { core: "meta/core", model: "model" }).failures;
+  assert.deepEqual(all.filter((f) => f.includes("experiences/")), []);
 });
 
 test("a Bears on table naming a concept and an owned experience with its owner passes", () => {
