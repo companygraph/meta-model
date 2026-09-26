@@ -597,7 +597,28 @@ test("upgrade gives no skills to an instance init did not give them to, and leav
 });
 
 // companygraph/mental-model is this case: made by init before the skills existed, its manifest
-// records none and it holds none, and an upgrade gives it all three.
+// records none and it holds none, and an upgrade gives it every one.
+// The three live instances were this case at 0.50.0: a manifest recording the skills a release
+// before this one wrote, and none of the folders a later release added. The upgrade fills them in.
+test("upgrade gives an instance that records some skills the ones a later release added", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  for (const gone of ["companygraph-company", "companygraph-consent"]) {
+    fs.rmSync(path.join(root, ".claude/skills", gone), { recursive: true });
+    for (const key of Object.keys(manifest.files)) if (key.startsWith(`.claude/skills/${gone}/`)) delete manifest.files[key];
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  assert.ok(Object.keys(manifest.files).some((key) => key.startsWith(".claude/skills/companygraph-validate/")), "the fixture still records the older skills");
+  run(["upgrade", root]);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".claude/skills")).sort(), SKILL_NAMES);
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.ok(moved.files[".claude/skills/companygraph-company/SKILL.md"], "the manifest records the added skill");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("upgrade gives the skills to an instance that records none and holds none, and check passes after", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
