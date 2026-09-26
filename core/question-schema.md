@@ -12,6 +12,7 @@
 | --- | --- | --- | --- |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
+| `kind` | Yes | ref → question-kind | What the question is about, the H1 of a file in `question-kinds/` |
 
 ## Sections
 
@@ -43,5 +44,6 @@ A question answers "where in the model is the answer to what people actually ask
 - A question is not an alias. A concept's other names belong in its `## Also known as`; a question is how people ask, not what a thing is called.
 - Names and prose are American English (R14). A visitor asking in German is matched by the chat, not by a German question.
 - One question per thing asked. Two wordings of the same question are one file; the H1 takes the wording people use most.
+- A question has one kind, the one a visitor would look under first. A question that seems to need two is either two questions or is filed where most visitors would look for it.
 
 The answer is required, because a question with no answer is an open issue and not an entity: what the model is asked and cannot answer yet is a change to the model, written as one, and the question follows it. `## Rests on` is optional, because some honest answers rest on nothing else in the model. What that costs is that no check can tell a question resting on nothing on purpose from one whose rows were forgotten; the writing rules and the owner's review of each question carry that, as they carry the rest of what an answer may say.
