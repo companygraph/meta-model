@@ -45,4 +45,8 @@ Release is the last phase. The work is done when all of these hold:
 - The page is live.
 - The change has been exercised in production without incident.
 
-Where they cannot be met, the Reviewer decides whether the release is rolled back.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| rolled back | |

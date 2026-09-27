@@ -3,6 +3,9 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL, ownerTypesOf, rowScope, resolveRow } from "../lib/instance.mjs";
 
 const valid = new Map([
@@ -826,15 +829,22 @@ test("a blank qualifier cell is not resolved, and keeps its empty value", () => 
   });
 });
 
-// The reference column is not softened with it. A row that names no skill is the R4 it always
-// was, because moving that error out of the parser would buy nothing: the row draws no edge
-// and the page has said a thing it cannot mean.
-test("a blank reference cell is still an R4 error", () => {
+// The reference column reads a blank cell the same way: nothing to resolve, so the row draws
+// no edge, and a row beside it that does fill the column still does. Whether the column was
+// allowed to be blank at all is the checker's Required rule, not the parser's — a blank cell
+// in a column the schema requires is `lib/checks.mjs`'s "row has no skill" (see verify/
+// instance-checks.test.mjs), never this R4. A cell that is not blank and still names nothing
+// is R4 as it always was, whatever the column's Required says ("a row whose reference column
+// names nothing is an R4 error", above, and "a Phases row that names no phase…", below).
+test("a blank reference cell draws no edge, and a filled row beside it still does", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/mira-halvorsen.md",
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
-    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Owned it. |\n");
-  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "" in .* names no skill/);
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Nothing to resolve. |\n" +
+    "| Java Programming | Proficient | Owned it. |\n");
+  const { edges } = parseInstance(files, { schemas });
+  const skills = edges.filter((x) => x.via === "Skills.Skill" && x.from === "profiles/mira-halvorsen");
+  assert.deepEqual(skills.map((x) => x.to), ["skills/java-programming"]);
 });
 
 // A process names its phases in a table whose column is declared `ref → phase`, where it used
@@ -1064,6 +1074,18 @@ test("an owned name is looked for only within the owner the row names", () => {
   assert.throws(() => parseInstance(files, { schemas: questionSchemas }), /R4: "Splitting the billing domain" .*names no experience of profiles\/tomas-reyes/);
 });
 
+// A blank Entity cell names nothing even with its Type cell filled: `named` is empty before
+// `resolveBy` is ever called, so the row parses without throwing and draws no edge, while a
+// filled row beside it still draws its own.
+test("a blank Entity cell draws no edge, with its Type cell filled, and a filled row beside it still draws its own", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["value", "", "", ""],
+    ["value", "Craftsmanship", "", "why"],
+  ]), { schemas: questionSchemas });
+  const drawn = edges.filter((e) => e.via === "Rests on.Entity");
+  assert.deepEqual(drawn.map((e) => e.to), ["values/craftsmanship"]);
+});
+
 // `resolveBy`'s rule — what a `by <Column> in <Owner>` row may name, and which one of those a
 // given name is — is exported so a consumer besides the parser (the Obsidian plugin, offering
 // completion for the same rows) reads it rather than copies it. `ownerTypesOf` is the map
@@ -1225,4 +1247,19 @@ test("a returned `within` array is the caller's own — sorting it does not affe
   first.sort((a, b) => (a.name > b.name ? -1 : 1));
   const second = rowScope(entities, schemas, { type: "value", owner: "" }).within;
   assert.deepEqual(second.map((e) => e.name), ["Craftsmanship", "Discipline"]);
+});
+
+const mdFiles = (root) => {
+  const m = new Map();
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".md")) m.set(path.relative(root, p).split(path.sep).join("/"), fs.readFileSync(p, "utf8")); } };
+  walk(root);
+  return m;
+};
+
+test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: mdFiles(path.join(here, "../core")) });
+  const from = (id) => inst.edges.filter((x) => x.from === id && x.via === "If not met.Leads to");
+  assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [["processes/delivery/phases/build", "reworked"]]);
+  assert.deepEqual(from("processes/delivery/phases/release"), []);
 });

@@ -73,8 +73,9 @@ test("an instance starts with a source and its singular entities, naming the ins
   assert.match(files.get("model/vision.md"), /\n## What it means\n/);
   assert.match(files.get("model/brand.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
   for (const section of ["Mark", "Color", "Typography", "Voice", "References"]) assert.match(files.get("model/brand.md"), new RegExp(`\n## ${section}\n`));
-  // A table is its header alone: nothing a reader could mistake for content, and the checks pass it.
-  assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\n## Typography\n/);
+  // A required table section carries at least one row (R16), so the starting table holds a
+  // placeholder row a reader cannot mistake for a real color, and the checks pass it.
+  assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\| .+ \|\n\n## Typography\n/);
   assert.match(files.get("model/sources/local.md"), /^# Local\n/);
 });
 

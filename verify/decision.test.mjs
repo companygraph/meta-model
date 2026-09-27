@@ -68,8 +68,8 @@ test("a Bears on table naming a concept and an owned experience with its owner p
   assert.deepEqual(about(GOOD, { bearsOn: [["concept", "Core", "", "changed it"], ["experience", "Splitting the billing domain", "Mira Halvorsen", "made it"]] }), []);
 });
 
-test("an Alternatives table written as its header row alone passes the mechanical checks; the writing rule refuses it", () => {
-  assert.deepEqual(about(GOOD, { alternatives: ALTERNATIVES.slice(0, 2) }), []);
+test("an Alternatives table written as its header row alone fails, naming the section and R16", () => {
+  assert.equal(about(GOOD, { alternatives: ALTERNATIVES.slice(0, 2) }, undefined, "## Alternatives", "has no row").length, 1);
 });
 
 test("a filename whose year is not the year in decided fails naming both", () => {

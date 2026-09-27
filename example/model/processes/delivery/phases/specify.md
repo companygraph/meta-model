@@ -44,4 +44,9 @@ To leave Specify, all of these hold:
 - The approach is chosen and the rejected ones are named.
 - What the change will not do is written down.
 
-Where they cannot be met, the Reviewer decides whether the request is reshaped or dropped.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| reshaped | Specify |
+| dropped | |
