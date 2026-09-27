@@ -1,10 +1,11 @@
 #!/usr/bin/env python3
 """Render a CompanyGraph instance into both of its export artifacts, from one walk of the model.
 
-`dist/<instance>-skill.zip` is uploadable as an organization or personal skill: `SKILL.md` at
-the root, `model/<type>.md` per root type folder, `model/meta.md`. `dist/<instance>-gemini-notebook/`
-is a flat folder of Markdown sources, one per content area, because Gemini Notebook takes files and
-no archive among them. Both carry the model's own pages verbatim: an entity keeps the
+`dist/<skill>-skill.zip` is uploadable as an organization or personal skill, named for the
+identity and then the folder, `acme-mental-model`: `SKILL.md` at the root, `model/<type>.md`
+per root type folder, `model/meta.md`. `dist/<instance>-gemini-notebook/` is a flat folder of
+Markdown sources, one per content area, because Gemini Notebook takes files and no archive
+among them. Both carry the model's own pages verbatim: an entity keeps the
 frontmatter, the H1 and the body it has on disk, so nothing a reader could be answered from is
 rewritten on the way out.
 
@@ -33,6 +34,7 @@ import pathlib
 import re
 import shutil
 import sys
+import unicodedata
 import zipfile
 
 # Two documents ship as sources of their own, beside the sources that carry entities: the
@@ -58,6 +60,9 @@ TOKEN = re.compile(r"\{\{([a-z]+)(?::([^{}]+))?\}\}")
 # recorded in the archive, so an archive built from mtimes is new every time the model is
 # merely re-checked out.
 ZIP_DATE = (1980, 1, 1, 0, 0, 0)
+
+# The longest name an account accepts for a skill.
+SKILL_NAME_CAP = 64
 
 
 def units():
@@ -417,6 +422,36 @@ def tagline():
     return " ".join(line for line in lines if line)
 
 
+def slug(text):
+    """Text as a skill name's part: lowercase ASCII letters and digits, every other run a dash.
+
+    An accent is dropped rather than the letter it sits on, so `Zürich` gives `zurich`.
+    """
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+
+def skill_name(instance):
+    """The name the zip's skill is listed and loaded by: the identity's H1, then the folder.
+
+    The folder alone is what every instance `init` writes for itself is called, `mental-model`,
+    and an account holds one skill per name, so a second instance uploaded beside the first
+    would collide with it. The identity's H1 is the one name the model guarantees and no other
+    instance shares. Where the folder already begins with it, `acme` for Acme, it is not said
+    twice. A name longer than an account accepts fails the build rather than being cut, since a
+    shortened name is one nobody chose.
+    """
+    heading = next((line[2:] for line in pathlib.Path("model/identity.md").read_text(
+        encoding="utf-8").splitlines() if line.startswith("# ")), "")
+    who, folder = slug(heading), slug(instance)
+    if not who:
+        raise SystemExit("FAIL  model/identity.md has no H1 to name the skill by")
+    name = folder if folder == who or folder.startswith(who + "-") else f"{who}-{folder}"
+    if len(name) > SKILL_NAME_CAP:
+        raise SystemExit(f"FAIL  skill name {name} is {len(name)} characters, cap is {SKILL_NAME_CAP}")
+    return name
+
+
 def plain(text):
     """Markdown link and emphasis syntax as plain text: a link becomes its link text.
 
@@ -441,8 +476,8 @@ def zip_body(paths, readme, carried):
     return "\n\n".join(parts).rstrip() + "\n"
 
 
-def zip_skill(instance, table, version):
-    """`<instance>/SKILL.md`: what the agent loading the skill reads before the model.
+def zip_skill(skill, table, version):
+    """`<skill>/SKILL.md`: what the agent loading the skill reads before the model.
 
     Frontmatter it can be listed by, the instance's own intro when it wrote one, a table saying
     what each file holds so a wrong count is visible without opening anything, and the one
@@ -450,7 +485,7 @@ def zip_skill(instance, table, version):
     name is, and where the rules are.
     """
     description = plain(tagline()).replace('"', '\\"')
-    parts = [f"---\nname: {instance}\ndescription: \"{description}\"\n---", f"# {instance}"]
+    parts = [f"---\nname: {skill}\ndescription: \"{description}\"\n---", f"# {skill}"]
 
     intro = pathlib.Path("export/SKILL-intro.md")
     if intro.is_file():
@@ -466,7 +501,7 @@ def zip_skill(instance, table, version):
     return "\n\n".join(parts) + "\n"
 
 
-def zip_members(walked, instance):
+def zip_members(walked, skill):
     """Every member of the skill zip, as `{path inside the archive: text}`.
 
     One `model/<folder>.md` per type folder under `model/`, with `model/profiles/` walked
@@ -485,7 +520,7 @@ def zip_members(walked, instance):
     carried = {"SKILL.md", "model/meta.md"}
     carried |= {f"model/{name}.md" for name in groups}
 
-    members, table = {f"{instance}/SKILL.md": None}, []
+    members, table = {f"{skill}/SKILL.md": None}, []
     for name in sorted(groups):
         held = groups[name]
         if len(held) == 1 and singular(held[0]):
@@ -501,12 +536,12 @@ def zip_members(walked, instance):
             # profile has to lead the experiences it owns; a file an agent greps does not care.
             held = sorted(held, key=lambda p: p.as_posix())
             body = zip_body(held, readme_of(held, name), carried)
-        members[f"{instance}/model/{name}.md"] = body
+        members[f"{skill}/model/{name}.md"] = body
         table.append((f"model/{name}.md", len(held)))
 
     version = json.loads(
         pathlib.Path(".companygraph/manifest.json").read_text(encoding="utf-8"))["core"]["version"]
-    members[f"{instance}/SKILL.md"] = zip_skill(instance, table, version)
+    members[f"{skill}/SKILL.md"] = zip_skill(skill, table, version)
     return members
 
 
@@ -538,7 +573,8 @@ def main():
     root = pathlib.Path.cwd()
     instance = root.name
     out = root / "dist" / f"{instance}-gemini-notebook"
-    archive = root / "dist" / f"{instance}-skill.zip"
+    skill = skill_name(instance)
+    archive = root / "dist" / f"{skill}-skill.zip"
 
     walked = entities()
     if not walked:
@@ -601,7 +637,7 @@ def main():
 
     # Both renderings are built in memory before either lands, so a failure in one does not
     # leave the other half of the export newer than the model it was meant to agree with.
-    members = zip_members(walked, instance)
+    members = zip_members(walked, skill)
 
     # Written from scratch every run: a renamed heading would otherwise leave its old file
     # behind, and a bundle claiming an entity twice is the failure the verifier reports.
