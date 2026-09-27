@@ -1016,6 +1016,21 @@ EOF
 
 Stop for Rob's merge word; then delete worktree and branch by name.
 
+### Task 5b: The Obsidian plugin re-pins before any instance merges
+
+The plugin runs its own bundled `checkInstance` and `parseInstance` against the vault (`src/model.ts`). Before this release the parser throws R4 on an empty `Leads to`, so a vault with the tables would lose its graph (completion, name marks, the references pane) until the plugin carries v0.55.0. Its reference, completion, heading-mark and scaffold code is schema-generic and needs no change. This task's release goes out before Rob merges any instance PR.
+
+Worktree: `cd /Users/rob/git/companygraph/obsidian-plugin && git pull --ff-only && git worktree add -b a-gate-says-where-failure-leads ../obsidian-plugin-a-gate-says-where-failure-leads origin/main`. Starts once v0.55.0 is tagged and Task 5's branch is pushed (its commit must be fetchable).
+
+**Files:** `package.json`, `package-lock.json` (re-pin `companygraph-meta-model` to `v0.55.0`); `scripts/fixtures.mjs` (`INSTANCE_COMMIT` to Task 5's pushed head); `test/scaffold.test.ts` (the `expected` list in "every type scaffolded into the reference instance owes only what its notice says"); `main.js` (rebuilt); the plugin's version per its release rule.
+
+- [ ] **Step 1: Re-pin and move the fixture** — `npm uninstall companygraph-meta-model && npm install "github:companygraph/meta-model#v0.55.0"`, prove it from `package-lock.json`; set `INSTANCE_COMMIT` to Task 5's head; refetch the fixtures as the repo's scripts do.
+- [ ] **Step 2: See what moves** — run the unit suite. Expected: `test/scaffold.test.ts` fails on an unexpected `has no row` for a scaffolded process or phase; `test/headings.test.ts` and `test/refactor.test.ts` pass on the moved fixture.
+- [ ] **Step 3: The scaffold test** — add `/has no row, and its schema requires the section/` to its `expected` list, with a comment that a required table owes a row as a required list owes an item, and the author writes it.
+- [ ] **Step 4: A regression test for the reason this task exists** — in the model tests, parse a vault whose phase has an `## If not met` row with an empty `Leads to` and assert the graph is built (not null) and no failure is reported for that row.
+- [ ] **Step 5: Build, unit suite, and `npm run e2e`** — the e2e drives real Obsidian over CDP against the moved fixture (see the plugin's e2e notes); all pass.
+- [ ] **Step 6: Commit, push, PR, stop** — prose commit and PR body saying why the re-pin must precede the instance merges. Rob merges; then the release per the plugin's own release steps, and the built plugin goes into Rob's vault.
+
 ### Task 6: companygraph/mental-model
 
 **Files:** as Task 5, plus `model/processes/contribution/phases/{propose,consider,review,integrate}.md` and `model/processes/feature-request/phases/{raise,understand,triage,answer}.md`.

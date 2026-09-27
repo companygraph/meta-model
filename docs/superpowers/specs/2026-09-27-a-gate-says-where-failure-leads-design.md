@@ -118,10 +118,12 @@ A column for a hand-off to another process, `Hands to` typed `ref → process`, 
 
 Telling a wait from a redo. `release held` and `left open` lead to their own phase, as `reworked` does, and the picture draws both the same way; the outcome's words tell them apart.
 
-A stop mark per phase, unless the preview calls for it; German labels for the picture; and any change to chat-server, design, the sites or the Obsidian plugin, none of which needs one: the plugin reads a `Table.` section and its columns from the schema.
+A stop mark per phase, unless the preview calls for it; German labels for the picture; and any change to chat-server, design or the sites, none of which needs one.
+
+The Obsidian plugin needs no code change, since it reads a `Table.` section, its columns, its completion scope and its heading marks from the schema, and already treats an empty cell as no reference. It does need a re-pin and a release before any instance adopts the tables: it runs its own bundled checker and parser against the vault, and the parser before this release throws R4 on the empty `Leads to` of every stop row, which leaves the plugin with no graph for the whole vault. Its reference-instance fixture moves with it, and its scaffold test learns the new "has no row" finding, which a freshly scaffolded required table now owes as a required list already does.
 
 ## What it costs
 
-A minor release of meta-model, with two checks and one R16 sentence, and a minor release of mcp-server. The order is meta-model's release; then the three instances each upgrade their core and write their tables, the reference instance first; then mcp-server's release, tested against the reference instance's tables; then the three MCP hosts re-pin mcp-server and their model; then the three sites re-pin their model, as they do for any model change.
+A minor release of meta-model, with two checks and one R16 sentence, and a minor release of mcp-server. The order is meta-model's release; then the three instances each upgrade their core and write their tables, the reference instance first, with the Obsidian plugin re-pinned and released before any instance merges; then mcp-server's release, tested against the reference instance's tables; then the three MCP hosts re-pin mcp-server and their model; then the three sites re-pin their model, as they do for any model change.
 
 Verification at the end is the instance checks green on all three instances with every phase carrying at least one row; each check shown failing on its fixture; on each MCP host, `get_entity` on Spec returning the three rows and `diagram` on Delivery returning dashed arrows for every row with a target and one Stop node; and on each chat, "show me the Delivery process" drawing the back arrows, with the answer stating none that `links` does not hold.
