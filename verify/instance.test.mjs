@@ -3,6 +3,8 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
+import path from "node:path";
 import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL, ownerTypesOf, rowScope, resolveRow } from "../lib/instance.mjs";
 
 const valid = new Map([
@@ -1225,4 +1227,19 @@ test("a returned `within` array is the caller's own — sorting it does not affe
   first.sort((a, b) => (a.name > b.name ? -1 : 1));
   const second = rowScope(entities, schemas, { type: "value", owner: "" }).within;
   assert.deepEqual(second.map((e) => e.name), ["Craftsmanship", "Discipline"]);
+});
+
+const mdFiles = (root) => {
+  const m = new Map();
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".md")) m.set(path.relative(root, p).split(path.sep).join("/"), fs.readFileSync(p, "utf8")); } };
+  walk(root);
+  return m;
+};
+
+test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
+  const here = path.dirname(new URL(import.meta.url).pathname);
+  const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: mdFiles(path.join(here, "../core")) });
+  const from = (id) => inst.edges.filter((x) => x.from === id && x.via === "If not met.Leads to");
+  assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [["processes/delivery/phases/build", "reworked"]]);
+  assert.deepEqual(from("processes/delivery/phases/release"), []);
 });

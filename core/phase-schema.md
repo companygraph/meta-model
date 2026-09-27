@@ -33,7 +33,8 @@ A phase is owned by a process and cannot exist without it, so it nests inside th
 | `## Activities` | Yes | Grouped. Numbered. What is done, in the order it is done; where the work differs by track, one `### [Track]` heading per track, each with its own list |
 | `## What it produces` | Yes | Table. What leaves the phase; its columns are declared below. |
 | `## What it never does` | Yes | Bulleted. One sentence each, of what the phase refuses |
-| `## Gate` | Yes | Bulleted. The criteria that must be satisfied to leave the phase, one item each, and in a sentence after them what happens when they cannot be |
+| `## Gate` | Yes | Bulleted. The criteria that must be satisfied to leave the phase, one item each |
+| `## If not met` | Yes | Table. What the escalation authority may decide when the gate's criteria cannot be met, one row each, and where the work goes; its columns are declared below. A paragraph under the table may say what the rows cannot. |
 
 `## Activities` is grouped under these headings:
 
@@ -47,6 +48,13 @@ A phase is owned by a process and cannot exist without it, so it nests inside th
 | --- | --- | --- | --- |
 | `Deliverable` | Yes | string | The thing that leaves the phase |
 | `Description` | Yes | string | What it is, and what makes it finished |
+
+`## If not met` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Outcome` | Yes | string | What the escalation authority may decide, in a few words: `reworked`, `dropped` |
+| `Leads to` | No | ref? → phase | The phase the work goes to: this one, or one before it in the owning process's `## Phases`. Empty where the process stops. |
 
 ## Purpose
 
@@ -64,9 +72,20 @@ A phase is one step of a process and the gate at its end — what enters, what i
   phase whose work is the same on every track.
 - `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
   where the two disagree the model is wrong, not the reader, and the instance checks say so.
-- The last phase has no `gate-to`, and its gate is the one that releases the work.
+- The last phase has no `gate-to`, and its gate is the one that releases the work; its
+  `## If not met` still says what happens when it cannot.
 - A phase's name is unique within its process (R2): two processes may each call a phase
   `Review`, and a `gate-to` or a process's `## Phases` finds the one in its own process (R4). A
   phase and a role may share a name, since a reference carries the type it resolves under.
 - `executed-by` names the seats that do the work, never the seat that approves it; a seat that
   only signs belongs in `gate-approvers`.
+- An outcome is what the escalation authority decides, in a word or a few, as a past participle
+  where it can be: `reworked`, `narrowed`, `dropped`. It is not the gate criterion that failed.
+- `Leads to` names this phase where the work stays in it, redone or waiting, and an earlier phase
+  where the work goes back. It never names a later one: a failure that skips work is a happy
+  path, and it belongs in `gate-to`. The instance checks say so.
+- An empty `Leads to` stops the process. A hand-off to another process is a stop in this table,
+  and the paragraph under it names the process the work goes to.
+- Two rows may lead to the same phase; the outcome is what tells them apart.
+- The paragraph under the table says only what the rows cannot, a reason or a hand-off, and a
+  page whose rows say everything carries none.

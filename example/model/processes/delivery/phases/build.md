@@ -51,4 +51,9 @@ To leave Build, all of these hold:
 - Every review finding is resolved or recorded with a reason.
 - The branch does what the specification said, and nothing else.
 
-Where they cannot be met, the Reviewer decides whether the branch is reworked or abandoned.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| reworked | Build |
+| abandoned | |
