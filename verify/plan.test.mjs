@@ -269,6 +269,26 @@ test("the workflow's tag is matched up to its closing quote, and a differently n
 // own core is not a reason to trust it. The hash and the held text below are made to match on
 // purpose: the pre-existing edited-file check would already refuse a hash mismatch or a missing
 // file for the wrong reason, so this proves the new check catches it even when the hash is right.
+test("init writes the export's inputs, unhashed, and --here leaves one already there alone", () => {
+  const { writes } = initPlan(ask);
+  assert.match(writes.get("export/gemini-notebook-AGENTS.md"), /^# Acme — the model\n/);
+  assert.ok(writes.has("export/README.md"));
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  assert.ok(!Object.keys(manifest.files).some((p) => p.startsWith("export/")), "the instance's own, so never hashed");
+  const here = initPlan({ ...ask, present: new Set(["export/gemini-notebook-AGENTS.md"]) });
+  assert.ok(!here.refused, here.refused);
+  assert.ok(!here.writes.has("export/gemini-notebook-AGENTS.md") && here.writes.has("export/README.md"));
+});
+
+test("an upgrade writes the export's inputs the instance lacks, never one it has, and leaves the manifest alone for them", () => {
+  const { manifest, held, workflow } = instance();
+  const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, name: "Acme", present: new Set(["export/README.md"]) });
+  assert.deepEqual(plan.given, ["export/gemini-notebook-AGENTS.md"]);
+  assert.deepEqual([...plan.writes.keys()], ["export/gemini-notebook-AGENTS.md"]);
+  const none = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  assert.equal(none.writes.size, 0, "no name, and nothing is given");
+});
+
 test("a manifest naming a file outside its own core refuses the whole upgrade, hash and all", () => {
   const { manifest, held, workflow } = instance();
   const identity = "# Acme\n\n> One paragraph.\n";

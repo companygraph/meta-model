@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor,
+  agentFilesFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -91,4 +91,16 @@ test("Claude's files name the vendored core and the instance", () => {
   assert.equal(files.get("CLAUDE.md").trim(), "@AGENTS.md");
   assert.ok(files.get("AGENTS.md").includes("meta/core/CONVENTIONS.md"));
   assert.ok(files.get("AGENTS.md").includes("Acme"));
+});
+
+test("the export's inputs name the instance and count nothing themselves, so they hold for any model", () => {
+  const files = exportFilesFor({ name: "Acme" });
+  assert.deepEqual([...files.keys()].sort(), ["export/README.md", "export/gemini-notebook-AGENTS.md"]);
+  const guide = files.get("export/gemini-notebook-AGENTS.md");
+  assert.match(guide, /^# Acme — the model\n/);
+  assert.match(guide, /\{\{entities\}\}/);
+  assert.match(guide, /References between entities are by name/);
+  // A digit in the guide is a count nobody substitutes; only the build's tokens state numbers.
+  assert.ok(!/\d/.test(guide), "the guide states no number of its own");
+  assert.ok(!/\{\{count:/.test(guide), "the guide names no source a model may not have");
 });

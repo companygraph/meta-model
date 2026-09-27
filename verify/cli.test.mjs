@@ -325,6 +325,20 @@ test("upgrade moves an instance, says what it did, and leaves the model alone", 
   assert.ok(fs.existsSync(path.join(root, "model/skills/java.md")));
 });
 
+// An instance made before init wrote the export's inputs has none, and its bundle shipped no
+// reading guide. The upgrade writes the one missing, names it, and leaves the one the instance has.
+test("upgrade writes a reading guide the instance lacks, names it, and keeps the instance's own README", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "export/gemini-notebook-AGENTS.md"));
+  fs.writeFileSync(path.join(root, "export/README.md"), "# the instance's own\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /written, since the instance had none.*export\/gemini-notebook-AGENTS\.md/);
+  assert.match(fs.readFileSync(path.join(root, "export/gemini-notebook-AGENTS.md"), "utf8"), /^# Acme — the model\n/);
+  assert.equal(fs.readFileSync(path.join(root, "export/README.md"), "utf8"), "# the instance's own\n");
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested
@@ -699,6 +713,10 @@ for (const schemas of ["meta", "schemas"])
     assert.equal(verify.status, 0, verify.stdout + verify.stderr);
     assert.match(verify.stdout, /PASS .*zip agrees/);
     assert.ok(fs.existsSync(path.join(root, "dist/acme-skill.zip")), "a folder that already names the identity is not said twice");
+    assert.doesNotMatch(build.stdout, /missing/, "init gave the bundle its reading guide");
+    const shipped = fs.readFileSync(path.join(root, "dist/acme-gemini-notebook/AGENTS.md"), "utf8");
+    assert.match(shipped, /^# Acme — the model\n/);
+    assert.doesNotMatch(shipped, /\{\{/, "every token was counted");
     const facts = spawnSync("python3", [".claude/skills/companygraph-surface/facts.py"], { cwd: root, encoding: "utf8" });
     assert.equal(facts.status, 0, facts.stdout + facts.stderr);
   });
