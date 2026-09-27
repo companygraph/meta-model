@@ -742,6 +742,34 @@ test("the exported skill is named for the identity and then the folder", () => {
   assert.match(skill.stdout, /\n# acme-zurich-mental-model\n/);
 });
 
+// An agent holding the skill and a server serving the same model can only tell which is older
+// when both name a commit. Outside git there is none to name, and a build over uncommitted files
+// says so rather than naming a commit that does not hold what it read.
+test("the exported skill names the commit it was built from", () => {
+  const root = path.join(temp(), "acme");
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\n> A company, described.\n");
+  const read = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read('acme/SKILL.md'))";
+  const skill = () => {
+    const build = spawnSync("python3", [".claude/skills/companygraph-export/build.py"], { cwd: root, encoding: "utf8" });
+    assert.equal(build.status, 0, build.stdout + build.stderr);
+    return spawnSync("python3", ["-c", read, "dist/acme-skill.zip"], { cwd: root, encoding: "utf8" }).stdout;
+  };
+  assert.doesNotMatch(skill(), /Built from commit/, "outside git there is no commit to name");
+
+  const git = (...args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: root, encoding: "utf8" });
+  git("init", "-q");
+  fs.writeFileSync(path.join(root, ".gitignore"), "dist/\n");
+  git("add", "-A");
+  git("commit", "-q", "-m", "init");
+  const sha = git("rev-parse", "HEAD").stdout.trim();
+  assert.match(sha, /^[0-9a-f]{40}$/);
+  assert.match(skill(), new RegExp(`Built from commit \`${sha}\`; a server`));
+
+  fs.writeFileSync(path.join(root, "model/values/candor.md"), "---\nsource: Local\n---\n\n# Candor\n\n> Say it.\n");
+  assert.match(skill(), new RegExp(`Built from commit \`${sha}\`, with changes not yet committed;`));
+});
+
 // The command is the reader every instance's CI runs, and it has a walker of its own. An image
 // read there as text reaches the check corrupted, and no suite that feeds the check a map would
 // see it, so this goes through the command: a real PNG beside the profile that names it.

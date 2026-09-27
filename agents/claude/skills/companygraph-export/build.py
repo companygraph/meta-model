@@ -33,6 +33,7 @@ import posixpath
 import pathlib
 import re
 import shutil
+import subprocess
 import sys
 import unicodedata
 import zipfile
@@ -476,6 +477,26 @@ def zip_body(paths, readme, carried):
     return "\n\n".join(parts).rstrip() + "\n"
 
 
+def commit():
+    """The commit the export was built from, and whether what it read differs from it.
+
+    A server serving the same model names the commit every answer was read from, and an agent
+    holding both can only tell which is older when the skill names its own. A build over files
+    that are not yet committed says so, since the commit alone would then name a model the
+    skill does not hold. Outside a git work tree there is nothing to name, and `None` leaves
+    the sentence out rather than guessing.
+    """
+    def git(*args):
+        done = subprocess.run(["git", *args], capture_output=True, text=True)
+        return done.stdout.strip() if done.returncode == 0 else None
+
+    sha = git("rev-parse", "HEAD")
+    if not sha:
+        return None
+    read = ["model", units(), "README.md", "export", ".companygraph"]
+    return sha, bool(git("status", "--porcelain", "--", *read))
+
+
 def zip_skill(skill, table, version):
     """`<skill>/SKILL.md`: what the agent loading the skill reads before the model.
 
@@ -494,6 +515,12 @@ def zip_skill(skill, table, version):
     rows = "\n".join(f"| `{name}` | {held} |" for name, held in table)
     parts.append(f"| File | Entities |\n|---|---|\n{rows}")
     parts.append(f"CompanyGraph core {version}.")
+    built = commit()
+    if built:
+        sha, changed = built
+        since = ", with changes not yet committed" if changed else ""
+        parts[-1] += (f" Built from commit `{sha}`{since}; a server serving this model names "
+                      "the commit each answer was read from, so the two can be compared.")
     parts.append(
         "Each entity begins at its `<!-- entity: … -->` line and its H1 is its name. References "
         "between\nentities are by name, so a skill an experience lists is the skill page of that "
