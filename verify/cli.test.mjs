@@ -698,9 +698,31 @@ for (const schemas of ["meta", "schemas"])
     const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
     assert.equal(verify.status, 0, verify.stdout + verify.stderr);
     assert.match(verify.stdout, /PASS .*zip agrees/);
+    assert.ok(fs.existsSync(path.join(root, "dist/acme-skill.zip")), "a folder that already names the identity is not said twice");
     const facts = spawnSync("python3", [".claude/skills/companygraph-surface/facts.py"], { cwd: root, encoding: "utf8" });
     assert.equal(facts.status, 0, facts.stdout + facts.stderr);
   });
+
+// Every instance `init` writes for itself sits in a folder called mental-model, and an account
+// holds one skill per name, so the skill is named for the identity first. The verifier makes the
+// name a second time, and `zip agrees` is what says the two made the same one.
+test("the exported skill is named for the identity and then the folder", () => {
+  const root = path.join(temp(), "mental-model");
+  run(["init", root, "--name", "Acme Zürich", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\n> A company, described.\n");
+  const build = spawnSync("python3", [".claude/skills/companygraph-export/build.py"], { cwd: root, encoding: "utf8" });
+  assert.equal(build.status, 0, build.stdout + build.stderr);
+  assert.ok(fs.existsSync(path.join(root, "dist/mental-model-gemini-notebook")), "the bundle keeps the folder's name");
+  const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
+  assert.equal(verify.status, 0, verify.stdout + verify.stderr);
+  assert.match(verify.stdout, /PASS .*zip agrees/);
+  // Bytes to stdout, since Windows' text-mode print would turn every newline into CRLF.
+  const read = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read('acme-zurich-mental-model/SKILL.md'))";
+  const skill = spawnSync("python3", ["-c", read, "dist/acme-zurich-mental-model-skill.zip"], { cwd: root, encoding: "utf8" });
+  assert.equal(skill.status, 0, skill.stderr);
+  assert.match(skill.stdout, /^---\nname: acme-zurich-mental-model\n/);
+  assert.match(skill.stdout, /\n# acme-zurich-mental-model\n/);
+});
 
 // The command is the reader every instance's CI runs, and it has a walker of its own. An image
 // read there as text reaches the check corrupted, and no suite that feeds the check a map would
