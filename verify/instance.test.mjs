@@ -5,6 +5,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import path from "node:path";
+import { fileURLToPath } from "node:url";
 import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL, ownerTypesOf, rowScope, resolveRow } from "../lib/instance.mjs";
 
 const valid = new Map([
@@ -1073,6 +1074,18 @@ test("an owned name is looked for only within the owner the row names", () => {
   assert.throws(() => parseInstance(files, { schemas: questionSchemas }), /R4: "Splitting the billing domain" .*names no experience of profiles\/tomas-reyes/);
 });
 
+// A blank Entity cell names nothing even with its Type cell filled: `named` is empty before
+// `resolveBy` is ever called, so the row parses without throwing and draws no edge, while a
+// filled row beside it still draws its own.
+test("a blank Entity cell draws no edge, with its Type cell filled, and a filled row beside it still draws its own", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["value", "", "", ""],
+    ["value", "Craftsmanship", "", "why"],
+  ]), { schemas: questionSchemas });
+  const drawn = edges.filter((e) => e.via === "Rests on.Entity");
+  assert.deepEqual(drawn.map((e) => e.to), ["values/craftsmanship"]);
+});
+
 // `resolveBy`'s rule — what a `by <Column> in <Owner>` row may name, and which one of those a
 // given name is — is exported so a consumer besides the parser (the Obsidian plugin, offering
 // completion for the same rows) reads it rather than copies it. `ownerTypesOf` is the map
@@ -1244,7 +1257,7 @@ const mdFiles = (root) => {
 };
 
 test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
-  const here = path.dirname(new URL(import.meta.url).pathname);
+  const here = path.dirname(fileURLToPath(import.meta.url));
   const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: mdFiles(path.join(here, "../core")) });
   const from = (id) => inst.edges.filter((x) => x.from === id && x.via === "If not met.Leads to");
   assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [["processes/delivery/phases/build", "reworked"]]);
