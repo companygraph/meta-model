@@ -716,7 +716,8 @@ test("the exported skill is named for the identity and then the folder", () => {
   const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
   assert.equal(verify.status, 0, verify.stdout + verify.stderr);
   assert.match(verify.stdout, /PASS .*zip agrees/);
-  const read = "import sys, zipfile; print(zipfile.ZipFile(sys.argv[1]).read('acme-zurich-mental-model/SKILL.md').decode())";
+  // Bytes to stdout, since Windows' text-mode print would turn every newline into CRLF.
+  const read = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read('acme-zurich-mental-model/SKILL.md'))";
   const skill = spawnSync("python3", ["-c", read, "dist/acme-zurich-mental-model-skill.zip"], { cwd: root, encoding: "utf8" });
   assert.equal(skill.status, 0, skill.stderr);
   assert.match(skill.stdout, /^---\nname: acme-zurich-mental-model\n/);
