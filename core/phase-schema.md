@@ -54,7 +54,7 @@ A phase is owned by a process and cannot exist without it, so it nests inside th
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Outcome` | Yes | string | What the escalation authority may decide, in a few words: `reworked`, `dropped` |
-| `Leads to` | No | ref? → phase | The phase the work goes to: this one, or one before it in the owning process's `## Phases`. Empty where the process stops. |
+| `Leads to` | No | ref → phase | The phase the work goes to: this one, or one before it in the owning process's `## Phases`. Empty where the process stops. |
 
 ## Purpose
 

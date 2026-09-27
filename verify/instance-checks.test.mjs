@@ -1279,3 +1279,37 @@ test("two rows naming one entity with distinct roles pass", () => {
   });
   assert.deepEqual(failures.filter((f) => f.includes("Maven")), []);
 });
+
+// The parser now lets a blank cell in the reference column through without an R4 — nothing to
+// resolve, so the row draws no edge — which is what makes an optional reference column usable
+// at all. Whether the column could be left blank stays this checker's business, read from the
+// schema's Required column exactly as any other column's blank cell is (`col.required`, above,
+// for an enum). A required reference column left blank is still caught, here rather than by R4.
+test("a blank required reference column is named the same way a blank required enum is", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", "|  | builds |",
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("has no skill"));
+  assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
+  assert.match(hit, /## Relations/);
+});

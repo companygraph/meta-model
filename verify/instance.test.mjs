@@ -828,15 +828,22 @@ test("a blank qualifier cell is not resolved, and keeps its empty value", () => 
   });
 });
 
-// The reference column is not softened with it. A row that names no skill is the R4 it always
-// was, because moving that error out of the parser would buy nothing: the row draws no edge
-// and the page has said a thing it cannot mean.
-test("a blank reference cell is still an R4 error", () => {
+// The reference column reads a blank cell the same way: nothing to resolve, so the row draws
+// no edge, and a row beside it that does fill the column still does. Whether the column was
+// allowed to be blank at all is the checker's Required rule, not the parser's — a blank cell
+// in a column the schema requires is `lib/checks.mjs`'s "row has no skill" (see verify/
+// instance-checks.test.mjs), never this R4. A cell that is not blank and still names nothing
+// is R4 as it always was, whatever the column's Required says ("a row whose reference column
+// names nothing is an R4 error", above, and "a Phases row that names no phase…", below).
+test("a blank reference cell draws no edge, and a filled row beside it still does", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/mira-halvorsen.md",
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
-    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Owned it. |\n");
-  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "" in .* names no skill/);
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Nothing to resolve. |\n" +
+    "| Java Programming | Proficient | Owned it. |\n");
+  const { edges } = parseInstance(files, { schemas });
+  const skills = edges.filter((x) => x.via === "Skills.Skill" && x.from === "profiles/mira-halvorsen");
+  assert.deepEqual(skills.map((x) => x.to), ["skills/java-programming"]);
 });
 
 // A process names its phases in a table whose column is declared `ref → phase`, where it used
