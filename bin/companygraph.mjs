@@ -15,11 +15,11 @@
 import { createInterface } from "node:readline/promises";
 import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
 import { homedir } from "node:os";
-import { dirname, join, relative, resolve, sep } from "node:path";
+import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
-import { unixLines } from "../lib/instance-files.mjs";
+import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
@@ -270,6 +270,13 @@ async function upgrade(argv) {
   }
   const workflowPath = join(root, ".github/workflows/companygraph.yml");
   const workflow = existsSync(workflowPath) ? read(workflowPath) : null;
+  // The export's inputs are the instance's own and only written where absent, so all the plan
+  // needs is which of them are there, and the name its guide opens on: the identity's H1, or the
+  // folder's name where the identity has none to read.
+  const identityPath = join(root, "model/identity.md");
+  const identity = existsSync(identityPath) ? read(identityPath).match(/^# (.+)$/m)?.[1].trim() : undefined;
+  const name = identity || basename(resolve(root));
+  const exportPaths = [...exportFilesFor({ name }).keys()];
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const plan = upgradePlan({
@@ -282,6 +289,8 @@ async function upgrade(argv) {
     workflow,
     fetched: Boolean(given.core),
     force: Boolean(given.force),
+    name,
+    present: new Set(exportPaths.filter((path) => existsSync(join(root, path)))),
   });
   if (plan.refused) throw new Error(plan.refused);
   if (plan.writes.size === 0 && plan.removes.length === 0) {
@@ -307,6 +316,7 @@ async function upgrade(argv) {
   const written = writePlan(root, plan.writes);
   for (const path of plan.removes) rmSync(join(root, path), { force: true });
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${plan.removes.length} removed`);
+  if (plan.given.length) console.log(`  written, since the instance had none, and its own from now on: ${plan.given.join(", ")}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is

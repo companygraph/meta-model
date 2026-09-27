@@ -622,7 +622,8 @@ def main():
     for name, origin in DOCUMENTS:
         found = pathlib.Path(origin)
         if not found.is_file():
-            print(f"{'':>4} {'missing':<8}  {name}: no {origin} in this instance")
+            print(f"{'':>4} {'missing':<8}  {name}: no {origin} in this instance"
+                  + ("; `companygraph upgrade` writes one" if name == "AGENTS.md" else ""))
             continue
         documents.append((name, origin, found.read_text(encoding="utf-8")))
     written = len(sources) + len(documents)
