@@ -535,7 +535,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 git push -u origin a-gate-says-where-failure-leads
 gh pr create --title "A gate says where failure leads" --body-file <(cat <<'EOF'
-A process picture draws only the happy path, because a phase has one structured exit, gate-to, and says what happens when its gate fails in a closing sentence no picture can draw. This gives a phase a required If not met table after Gate, each row an outcome the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops; the sentence goes. Two generic checks come with it: a required table section carries at least one row, which R16 now says as it already did of lists, and a table naming the page's own ordered type never names a later entity. The example's phases write their tables. The spec and plan are in docs/superpowers. An instance that upgrades must write the table on every phase in the same change, or its checks fail. This is core 0.46.0 and the package at 0.54.0.
+A process picture draws only the happy path, because a phase has one structured exit, gate-to, and says what happens when its gate fails in a closing sentence no picture can draw. This gives a phase a required If not met table after Gate, each row an outcome the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops; the sentence goes. Two generic checks come with it: a required table section carries at least one row, which R16 now says as it already did of lists, and a table naming the page's own ordered type never names a later entity. The parser now reads a blank cell in a table's reference column as naming nothing, so the row draws no edge where it used to be an R4; a stop row in If not met needs exactly that, and mcp-server, the sites and the plugin all inherit it. R16's new rows rule caught init's starting brand.md, which held four required Table. sections and no row in any of them, so it now carries one placeholder row per required table, worded so a reader cannot mistake it for real content, and Rob's to change; the two fixtures in verify/brand.test.mjs and verify/decision.test.mjs that asserted a header-only table passes now assert it fails instead. The example's phases write their tables. The spec and plan are in docs/superpowers. An instance that upgrades must write the table on every phase in the same change, or its checks fail. This is core 0.46.0 and the package at 0.54.0.
 
 Verified: npm run verify, node --test verify/*.test.mjs, conventions-check, conventions-format check and markdownlint pass locally; each new check was shown failing on its fixture before it was written.
 
@@ -550,7 +550,7 @@ Stop. The merge waits for Rob's explicit merge word.
 
 ```bash
 cd /Users/rob/git/companygraph/meta-model && git pull --ff-only
-gh release create v0.54.0 --target main --title v0.54.0 --notes "Core 0.46.0: a phase carries a required \`## If not met\` table after \`## Gate\`, columns \`Outcome\` and \`Leads to\`, and \`## Gate\` no longer closes with a sentence on what happens when it cannot be met. An instance with processes that upgrades must, in the same change, write the table on every phase from that sentence and delete the sentence: each outcome a row, \`Leads to\` naming this phase or an earlier one, empty where the process stops, and a paragraph under the table for what the rows cannot say. Two checks are new: a required table section carries at least one row (R16), and a row naming its own kind of entity names this one or one before it."
+gh release create v0.54.0 --target main --title v0.54.0 --notes "Core 0.46.0: a phase carries a required \`## If not met\` table after \`## Gate\`, columns \`Outcome\` and \`Leads to\`, and \`## Gate\` no longer closes with a sentence on what happens when it cannot be met. An instance with processes that upgrades must, in the same change, write the table on every phase from that sentence and delete the sentence: each outcome a row, \`Leads to\` naming this phase or an earlier one, empty where the process stops, and a paragraph under the table for what the rows cannot say. Two checks are new: a required table section carries at least one row (R16), not only a phase's If not met, and a row naming its own kind of entity names this one or one before it. The parser now reads a blank cell in a table's reference column as naming nothing and draws no edge for that row, rather than the R4 it used to throw. init's starting brand.md carries a placeholder row in each of its required tables, since the first new check caught it holding none."
 gh api repos/companygraph/meta-model/git/refs/tags/v0.54.0 --jq .object.sha
 ```
 
@@ -574,7 +574,7 @@ Worktree: `cd /Users/rob/git/companygraph/mcp-server && git pull --ff-only && gi
 
 **Interfaces:**
 
-- Consumes: edges `{ from: {id,name,type}, via: "If not met.Leads to", to: {id,name,type}, attrs: { Outcome, "Leads to" } }` from `allEdges(s)`; a phase entity's `sections`, where `sections.find((x) => x.heading === "If not met")?.tables?.[0]` is `{ columns: ["Outcome", "Leads to"], rows: [[outcome, target], …] }`; the phase's `fields["escalation-authority"]`.
+- Consumes: edges `{ from: {id,name,type}, via: "If not met.Leads to", to: {id,name,type}, attrs: { Outcome } }` from `allEdges(s)`, since the parser puts only the non-reference columns in `attrs` and `Leads to`, the reference column, is not one of them; a phase entity's `sections`, where `sections.find((x) => x.heading === "If not met")?.tables?.[0]` is `{ columns: ["Outcome", "Leads to"], rows: [[outcome, target], …] }`; the phase's `fields["escalation-authority"]`.
 - Produces: `diagram(s, { shape: "process", id })` whose `mermaid` adds, after the gate lines, the dashed lines and at most one Stop node; `links` gains one entry per dashed arrow between two phases; `edges` counts gate edges plus drawn If-not-met edges; `nodes` unchanged.
 
 - [ ] **Step 1: Re-pin and see what moves**
@@ -631,10 +631,10 @@ export function withBackFlows() {
   table(byId.get(id("release"))).rows = [["held", "Release"]];
   s.edges = s.edges.filter((x) => x.via !== "If not met.Leads to");
   s.edges.push(
-    { from: id("specify"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "reshaped", "Leads to": id("specify") } },
-    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "respecified", "Leads to": id("specify") } },
-    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: 'held "for now" <#1>', "Leads to": id("specify") } },
-    { from: id("release"), via: "If not met.Leads to", to: id("release"), attrs: { Outcome: "held", "Leads to": id("release") } },
+    { from: id("specify"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "reshaped" } },
+    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: "respecified" } },
+    { from: id("build"), via: "If not met.Leads to", to: id("specify"), attrs: { Outcome: 'held "for now" <#1>' } },
+    { from: id("release"), via: "If not met.Leads to", to: id("release"), attrs: { Outcome: "held" } },
   );
   return s;
 }
