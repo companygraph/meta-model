@@ -17,7 +17,7 @@
 - A stop is an empty `Leads to` cell, written `|  |` with nothing between the pipes. Never "—", "none" or "stop" in the cell.
 - `Leads to` names the page's own phase or an earlier one in the owning process's `## Phases`; never a later one.
 - Diagram: dashed arrow `-.->`, label `<escalation authority>: <outcome>, <outcome>` merged per (phase, target) in table order; stop node written `stop((Stop))` with `classDef stop fill:none,stroke-dasharray:3 3` and `class stop stop`; the stop node is never in `nodes` and its arrows never in `links`.
-- Versions: meta-model v0.54.0 with core 0.46.0, if no other release lands first; otherwise the next minor of each. mcp-server the next minor after v0.36.0.
+- Versions: meta-model v0.55.0 with core 0.46.0, if no other release lands first; otherwise the next minor of each. mcp-server the next minor after v0.36.0.
 - American English everywhere (R14); commits and PR bodies are prose, no headings or bullets, ending `Verified: …` before the trailers; no em-dash in any model file, schema or commit written here.
 - Numbers that move are never written: no count of phases, rows, gates or checks in any prose.
 - Every branch lives in a sibling worktree named `<repo>-<branch>`; the clone stays on `main`.
@@ -413,13 +413,13 @@ EOF
 - Modify: `example/model/processes/delivery/phases/specify.md`, `build.md`, `release.md`
 - Modify: `verify/instance.test.mjs` (one parser test)
 - Modify: `core/manifest.json` → `{ "version": "0.46.0", "shape": 3 }`
-- Modify: `package.json` → `"version": "0.54.0"`
-- Modify: `.github/workflows/instance-check.yml` → `ref: v0.54.0`
+- Modify: `package.json` → `"version": "0.55.0"`
+- Modify: `.github/workflows/instance-check.yml` → `ref: v0.55.0`
 
 **Interfaces:**
 
 - Consumes: the checks from Tasks 1 and 2.
-- Produces: meta-model v0.54.0 (core 0.46.0), whose `example/` Tasks 4 and 5 read: Specify rows `reshaped` → Specify, `dropped` → stop; Build rows `reworked` → Build, `abandoned` → stop; Release row `rolled back` → stop; escalation authority `Reviewer` on all three.
+- Produces: meta-model v0.55.0 (core 0.46.0), whose `example/` Tasks 4 and 5 read: Specify rows `reshaped` → Specify, `dropped` → stop; Build rows `reworked` → Build, `abandoned` → stop; Release row `rolled back` → stop; escalation authority `Reviewer` on all three.
 
 - [ ] **Step 1: The negative control** — edit only `core/phase-schema.md` first (Steps 2 to 4), then run `npm run verify`. Expected: FAIL, three findings `no \`## If not met\``, one per example phase. That proves the section is read before the example is written.
 
@@ -512,7 +512,7 @@ test("a phase's If not met row draws an edge to its phase with the outcome on it
 });
 ```
 
-- [ ] **Step 7: Move the three version places together** — first `gh release list -R companygraph/meta-model -L 1`; Expected: `v0.53.0` is latest. If another release landed, take the next minor of core and the package and use those numbers everywhere in this plan.
+- [ ] **Step 7: Move the three version places together** — first `gh release list -R companygraph/meta-model -L 1`; Expected: `v0.55.0` is latest. If another release landed, take the next minor of core and the package and use those numbers everywhere in this plan.
 
 - [ ] **Step 8: Run everything**
 
@@ -527,7 +527,7 @@ git add core/phase-schema.md example/ verify/instance.test.mjs core/manifest.jso
 git commit -F - <<'EOF'
 A phase says where its failure leads
 
-The phase schema gains a required If not met table after Gate: each row names what the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops. Gate loses the closing sentence that used to say it in prose, which no picture could draw. The example's three phases write their tables, and a parser test shows a row drawing its edge with the outcome on it and a stop row drawing none. Core moves to 0.46.0 and the package to 0.54.0, with the instance workflow's ref moved with it.
+The phase schema gains a required If not met table after Gate: each row names what the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops. Gate loses the closing sentence that used to say it in prose, which no picture could draw. The example's three phases write their tables, and a parser test shows a row drawing its edge with the outcome on it and a stop row drawing none. Core moves to 0.46.0 and the package to 0.55.0, with the instance workflow's ref moved with it.
 
 Verified: npm run verify failed on the three example phases before they were written and passes after; node --test verify/*.test.mjs, conventions-check, conventions-format check and markdownlint pass.
 
@@ -535,7 +535,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 git push -u origin a-gate-says-where-failure-leads
 gh pr create --title "A gate says where failure leads" --body-file <(cat <<'EOF'
-A process picture draws only the happy path, because a phase has one structured exit, gate-to, and says what happens when its gate fails in a closing sentence no picture can draw. This gives a phase a required If not met table after Gate, each row an outcome the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops; the sentence goes. Two generic checks come with it: a required table section carries at least one row, which R16 now says as it already did of lists, and a table naming the page's own ordered type never names a later entity. The parser now reads a blank cell in a table's reference column as naming nothing, so the row draws no edge where it used to be an R4; a stop row in If not met needs exactly that, and mcp-server, the sites and the plugin all inherit it. R16's new rows rule caught init's starting brand.md, which held four required Table. sections and no row in any of them, so it now carries one placeholder row per required table, worded so a reader cannot mistake it for real content, and Rob's to change; the two fixtures in verify/brand.test.mjs and verify/decision.test.mjs that asserted a header-only table passes now assert it fails instead. The example's phases write their tables. The spec and plan are in docs/superpowers. An instance that upgrades must write the table on every phase in the same change, or its checks fail. This is core 0.46.0 and the package at 0.54.0.
+A process picture draws only the happy path, because a phase has one structured exit, gate-to, and says what happens when its gate fails in a closing sentence no picture can draw. This gives a phase a required If not met table after Gate, each row an outcome the escalation authority may decide and the phase the work goes to, this one or an earlier one, or none where the process stops; the sentence goes. Two generic checks come with it: a required table section carries at least one row, which R16 now says as it already did of lists, and a table naming the page's own ordered type never names a later entity. The parser now reads a blank cell in a table's reference column as naming nothing, so the row draws no edge where it used to be an R4; a stop row in If not met needs exactly that, and mcp-server, the sites and the plugin all inherit it. R16's new rows rule caught init's starting brand.md, which held four required Table. sections and no row in any of them, so it now carries one placeholder row per required table, worded so a reader cannot mistake it for real content, and Rob's to change; the two fixtures in verify/brand.test.mjs and verify/decision.test.mjs that asserted a header-only table passes now assert it fails instead. The example's phases write their tables. The spec and plan are in docs/superpowers. An instance that upgrades must write the table on every phase in the same change, or its checks fail. This is core 0.46.0 and the package at 0.55.0.
 
 Verified: npm run verify, node --test verify/*.test.mjs, conventions-check, conventions-format check and markdownlint pass locally; each new check was shown failing on its fixture before it was written.
 
@@ -550,8 +550,8 @@ Stop. The merge waits for Rob's explicit merge word.
 
 ```bash
 cd /Users/rob/git/companygraph/meta-model && git pull --ff-only
-gh release create v0.54.0 --target main --title v0.54.0 --notes "Core 0.46.0: a phase carries a required \`## If not met\` table after \`## Gate\`, columns \`Outcome\` and \`Leads to\`, and \`## Gate\` no longer closes with a sentence on what happens when it cannot be met. An instance with processes that upgrades must, in the same change, write the table on every phase from that sentence and delete the sentence: each outcome a row, \`Leads to\` naming this phase or an earlier one, empty where the process stops, and a paragraph under the table for what the rows cannot say. Two checks are new: a required table section carries at least one row (R16), not only a phase's If not met, and a row naming its own kind of entity names this one or one before it. The parser now reads a blank cell in a table's reference column as naming nothing and draws no edge for that row, rather than the R4 it used to throw. init's starting brand.md carries a placeholder row in each of its required tables, since the first new check caught it holding none."
-gh api repos/companygraph/meta-model/git/refs/tags/v0.54.0 --jq .object.sha
+gh release create v0.55.0 --target main --title v0.55.0 --notes "Core 0.46.0: a phase carries a required \`## If not met\` table after \`## Gate\`, columns \`Outcome\` and \`Leads to\`, and \`## Gate\` no longer closes with a sentence on what happens when it cannot be met. An instance with processes that upgrades must, in the same change, write the table on every phase from that sentence and delete the sentence: each outcome a row, \`Leads to\` naming this phase or an earlier one, empty where the process stops, and a paragraph under the table for what the rows cannot say. Two checks are new: a required table section carries at least one row (R16), not only a phase's If not met, and a row naming its own kind of entity names this one or one before it. The parser now reads a blank cell in a table's reference column as naming nothing and draws no edge for that row, rather than the R4 it used to throw. init's starting brand.md carries a placeholder row in each of its required tables, since the first new check caught it holding none."
+gh api repos/companygraph/meta-model/git/refs/tags/v0.55.0 --jq .object.sha
 ```
 
 Then remove the worktree and the branch by name, per the merge-then-delete rule: `git worktree remove ../meta-model-a-gate-says-where-failure-leads && git branch -d a-gate-says-where-failure-leads && git push origin --delete a-gate-says-where-failure-leads`. If the remote delete is refused, hand Rob the command and do not retry.
@@ -562,11 +562,11 @@ Then remove the worktree and the branch by name, per the merge-then-delete rule:
 
 ### Task 4: Dashed arrows and one Stop node
 
-Worktree: `cd /Users/rob/git/companygraph/mcp-server && git pull --ff-only && git worktree add -b a-gate-says-where-failure-leads ../mcp-server-a-gate-says-where-failure-leads origin/main`. Starts once v0.54.0 is tagged.
+Worktree: `cd /Users/rob/git/companygraph/mcp-server && git pull --ff-only && git worktree add -b a-gate-says-where-failure-leads ../mcp-server-a-gate-says-where-failure-leads origin/main`. Starts once v0.55.0 is tagged.
 
 **Files:**
 
-- Modify: `package.json`, `package-lock.json` (re-pin `companygraph-meta-model` to `v0.54.0`)
+- Modify: `package.json`, `package-lock.json` (re-pin `companygraph-meta-model` to `v0.55.0`)
 - Modify: `lib/diagram.mjs` (`process()` and the header comment's "one process's phases in their order")
 - Modify: `lib/tools.mjs` (the `diagram` description)
 - Modify: `test/diagram.test.mjs`
@@ -581,12 +581,12 @@ Worktree: `cd /Users/rob/git/companygraph/mcp-server && git pull --ff-only && gi
 
 ```bash
 export PATH=/opt/homebrew/bin:$PATH
-npm uninstall companygraph-meta-model && npm install "github:companygraph/meta-model#v0.54.0"
+npm uninstall companygraph-meta-model && npm install "github:companygraph/meta-model#v0.55.0"
 node -e 'console.log(require("./package-lock.json").packages["node_modules/companygraph-meta-model"].resolved)'
 npm test
 ```
 
-Expected: the lock line names the v0.54.0 commit; `npm test` passes or fails only where the example's phase text is quoted. Record any failure and its cause; do not change an expectation yet.
+Expected: the lock line names the v0.55.0 commit; `npm test` passes or fails only where the example's phase text is quoted. Record any failure and its cause; do not change an expectation yet.
 
 - [ ] **Step 2: Write the failing tests** — in `test/diagram.test.mjs`, replace the body of the existing test "a process draws its phases in its table's order, who executes each, and each gate with its approvers" with the full picture, and add the others:
 
@@ -759,7 +759,7 @@ git add package.json package-lock.json lib/diagram.mjs lib/tools.mjs test/diagra
 git commit -F - <<'EOF'
 A process picture draws where each gate's failure leads
 
-meta-model v0.54.0 gives every phase an If not met table, and the process picture now draws it after the way forward: one dashed arrow per phase and target, labeled with the escalation authority and the outcomes in table order, and one Stop node for the rows that lead nowhere. An arrow between phases is an If not met edge and goes into links; the Stop node is no entity, so it and its arrows stay out of nodes and links and no client links them. A phase without the table, as on an older core, draws exactly the picture it drew before.
+meta-model v0.55.0 gives every phase an If not met table, and the process picture now draws it after the way forward: one dashed arrow per phase and target, labeled with the escalation authority and the outcomes in table order, and one Stop node for the rows that lead nowhere. An arrow between phases is an If not met edge and goes into links; the Stop node is no entity, so it and its arrows stay out of nodes and links and no client links them. A phase without the table, as on an older core, draws exactly the picture it drew before.
 
 Verified: node --test test/diagram.test.mjs failed before the change and passes after; npm test passes; the reference instance's Delivery was rendered and shown to Rob.
 
@@ -767,7 +767,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 git push -u origin a-gate-says-where-failure-leads
 gh pr create --title "A process picture draws where each gate's failure leads" --body-file <(cat <<'EOF'
-The process picture drew only the happy path because the model held nothing else as an edge; with meta-model v0.54.0 every phase has an If not met table, and this draws it. Each phase gets one dashed arrow per target after the solid gate arrows, labeled with its escalation authority and the outcomes that lead there, and rows that stop the process lead to one Stop node. Back arrows are If not met edges and go into links with their raw labels, so the chat's note can state them; the Stop node is no entity and stays out of nodes and links, so chat-server and the widget need nothing. A phase with no table draws exactly what it drew before. It re-pins meta-model to v0.54.0.
+The process picture drew only the happy path because the model held nothing else as an edge; with meta-model v0.55.0 every phase has an If not met table, and this draws it. Each phase gets one dashed arrow per target after the solid gate arrows, labeled with its escalation authority and the outcomes that lead there, and rows that stop the process lead to one Stop node. Back arrows are If not met edges and go into links with their raw labels, so the chat's note can state them; the Stop node is no entity and stays out of nodes and links, so chat-server and the widget need nothing. A phase with no table draws exactly what it drew before. It re-pins meta-model to v0.55.0.
 
 Verified: node --test test/diagram.test.mjs and npm test pass locally; the Delivery picture of the reference instance was rendered and reviewed.
 
@@ -776,13 +776,13 @@ EOF
 )
 ```
 
-Stop. The merge and the release wait for Rob's explicit word; the release is `gh release create v<version> --target main --title v<version> --notes "The process diagram draws each phase's If not met rows: dashed arrows to a phase, labeled with the escalation authority and outcomes, and one Stop node outside nodes and links. Re-pins meta-model v0.54.0."`, then worktree and branch removed by name.
+Stop. The merge and the release wait for Rob's explicit word; the release is `gh release create v<version> --target main --title v<version> --notes "The process diagram draws each phase's If not met rows: dashed arrows to a phase, labeled with the escalation authority and outcomes, and one Stop node outside nodes and links. Re-pins meta-model v0.55.0."`, then worktree and branch removed by name.
 
 ---
 
 ## Phase C — the instances
 
-Each instance is its own worktree and PR, upgraded to v0.54.0 and rewritten in the same change. In every phase: delete the Gate's closing sentence (the paragraph starting "Where they cannot be met" or "Where a clip cannot"), and append the block named for the phase below directly after the Gate's list, as its own `## If not met` section. Each PR goes to Rob phase by phase, one question per turn, each quoting the old sentence and the new block.
+Each instance is its own worktree and PR, upgraded to v0.55.0 and rewritten in the same change. In every phase: delete the Gate's closing sentence (the paragraph starting "Where they cannot be met" or "Where a clip cannot"), and append the block named for the phase below directly after the Gate's list, as its own `## If not met` section. Each PR goes to Rob phase by phase, one question per turn, each quoting the old sentence and the new block.
 
 The blocks, written once here and named by the tasks:
 
@@ -970,7 +970,7 @@ An answer nobody can act on is not an answer, and closing the issue does not mak
 
 **Files:** `meta/core/**`, `.companygraph/manifest.json`, `.github/workflows/companygraph.yml`, `.claude/skills/**` (by the upgrade); `model/processes/delivery/phases/{shape,spec,plan,implement,integrate}.md`; `model/processes/answering/phases/answer.md`; `model/processes/narrating/phases/narrate.md`.
 
-**Interfaces:** Consumes meta-model v0.54.0. Produces the merge SHA the blust.ch host and site pin, and the worktree Task 4 Step 7 previews.
+**Interfaces:** Consumes meta-model v0.55.0. Produces the merge SHA the blust.ch host and site pin, and the worktree Task 4 Step 7 previews.
 
 - [ ] **Step 1: Worktree and upgrade**
 
@@ -979,10 +979,10 @@ export PATH=/opt/homebrew/bin:$PATH
 cd /Users/rob/git/robertblust/mental-model && git pull --ff-only
 git worktree add -b a-gate-says-where-failure-leads ../mental-model-a-gate-says-where-failure-leads origin/main
 cd ../mental-model-a-gate-says-where-failure-leads
-npx --yes "github:companygraph/meta-model#v0.54.0" upgrade .
+npx --yes "github:companygraph/meta-model#v0.55.0" upgrade .
 ```
 
-Expected: the upgrade moves core to 0.46.0, then the checks FAIL with one `no \`## If not met\`` per phase. That is the negative control. Confirm `.companygraph/manifest.json` names 0.54.0 and 0.46.0.
+Expected: the upgrade moves core to 0.46.0, then the checks FAIL with one `no \`## If not met\`` per phase. That is the negative control. Confirm `.companygraph/manifest.json` names 0.55.0 and 0.46.0.
 
 - [ ] **Step 2: Write the blocks** — Delivery's five phases take the Delivery blocks, `answering/phases/answer.md` takes Answering Answer, `narrating/phases/narrate.md` takes Narrating Narrate. Delete each closing sentence.
 
@@ -997,7 +997,7 @@ git add -A
 git commit -F - <<'EOF'
 Every phase says where its failure leads
 
-The instance moves to meta-model v0.54.0, whose phases carry a required If not met table, and every phase's closing sentence on what happens when its gate cannot be met becomes that table: Delivery's reshapes, narrowings, recuts, reworks and reverts, Answering's closed chat and Narrating's changed voice or note, with a paragraph where a row cannot say the reason or the hand-off to Delivery.
+The instance moves to meta-model v0.55.0, whose phases carry a required If not met table, and every phase's closing sentence on what happens when its gate cannot be met becomes that table: Delivery's reshapes, narrowings, recuts, reworks and reverts, Answering's closed chat and Narrating's changed voice or note, with a paragraph where a row cannot say the reason or the hand-off to Delivery.
 
 Verified: the checks failed on every phase after the upgrade and pass after the tables were written; the agent pass read each phase against the writing rules; markdownlint passes.
 
@@ -1005,7 +1005,7 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 git push -u origin a-gate-says-where-failure-leads
 gh pr create --title "Every phase says where its failure leads" --body-file <(cat <<'EOF'
-This moves the instance to meta-model v0.54.0 and writes each phase's If not met table from the sentence its Gate used to close with, so a process picture can draw where a failed gate sends the work. The rows are the ones settled in the spec on September 27, and each phase was reviewed with Rob one at a time. Where a row cannot say why, or where the work goes to another process, a short paragraph under the table says it.
+This moves the instance to meta-model v0.55.0 and writes each phase's If not met table from the sentence its Gate used to close with, so a process picture can draw where a failed gate sends the work. The rows are the ones settled in the spec on September 27, and each phase was reviewed with Rob one at a time. Where a row cannot say why, or where the work goes to another process, a short paragraph under the table says it.
 
 Verified: the instance checks failed on every phase after the upgrade and pass now; the agent pass and markdownlint pass.
 
@@ -1041,8 +1041,8 @@ Stop for Rob's merge word; then delete worktree and branch by name.
 Each is its own worktree, commit and PR, stopped for Rob's merge word; every package re-pin is proved from `package-lock.json`.
 
 - [ ] **Step 1: The three hosts** — `robertblust/mcp-blust-ch`, `companygraph/mcp-companygraph-io`, `guestgraph/mcp-guestgraph-io`: re-pin `companygraph-mcp-server` to Task 4's release and `source.json`'s `commit` to the instance's merge commit from Task 5, 6 or 7 (the three-place instance pin in each host, per the repin-hazards memory); `npm test`. chat-server needs no re-pin: the note reads `links`, which the back arrows join.
-- [ ] **Step 2: The three sites** — `robertblust/robertblust.github.io`, `companygraph/companygraph.github.io`, `guestgraph/guestgraph.github.io`: re-pin `companygraph-meta-model` to `v0.54.0` and `source.json` to the instance's merge commit; `npm run model && npm run build && npm run sitemap`; `model:check` and `build:check` pass. Confirm each site's model file carries the rows: `node -e 'const j=require("./model.json"); console.log(j.entities.filter(e=>e.type==="phase"&&!e.sections.some(x=>x.heading==="If not met")).length)'` prints `0` (the file is `company.json` on companygraph.io).
-- [ ] **Step 2b: companygraph.io's example and vocabulary** — companygraph.io's `/example/` and `/model/` pages draw `example.json` and `model.json`, which `npm run build` builds from the meta-model commit in `source.json` under `"meta-model"`, not from the package pin. Move `source.json`'s `"meta-model".commit` to the commit the `v0.54.0` tag names (`gh api repos/companygraph/meta-model/git/refs/tags/v0.54.0 --jq .object.sha`), run `npm run build`, and `build:check` passes. Confirm the example carries the tables and not the old sentence: `node -e 'const j=require("./example.json"); const p=j.entities.filter(e=>e.type==="phase"); console.log(p.length, p.filter(e=>!e.sections.some(x=>x.heading==="If not met")).length, JSON.stringify(j).includes("cannot be met"))'` prints the phase count, `0` and `false`. Confirm `model.json` holds the phase schema's `## If not met` row. This goes in the same companygraph.io PR as Step 2.
+- [ ] **Step 2: The three sites** — `robertblust/robertblust.github.io`, `companygraph/companygraph.github.io`, `guestgraph/guestgraph.github.io`: re-pin `companygraph-meta-model` to `v0.55.0` and `source.json` to the instance's merge commit; `npm run model && npm run build && npm run sitemap`; `model:check` and `build:check` pass. Confirm each site's model file carries the rows: `node -e 'const j=require("./model.json"); console.log(j.entities.filter(e=>e.type==="phase"&&!e.sections.some(x=>x.heading==="If not met")).length)'` prints `0` (the file is `company.json` on companygraph.io).
+- [ ] **Step 2b: companygraph.io's example and vocabulary** — companygraph.io's `/example/` and `/model/` pages draw `example.json` and `model.json`, which `npm run build` builds from the meta-model commit in `source.json` under `"meta-model"`, not from the package pin. Move `source.json`'s `"meta-model".commit` to the commit the `v0.55.0` tag names (`gh api repos/companygraph/meta-model/git/refs/tags/v0.55.0 --jq .object.sha`), run `npm run build`, and `build:check` passes. Confirm the example carries the tables and not the old sentence: `node -e 'const j=require("./example.json"); const p=j.entities.filter(e=>e.type==="phase"); console.log(p.length, p.filter(e=>!e.sections.some(x=>x.heading==="If not met")).length, JSON.stringify(j).includes("cannot be met"))'` prints the phase count, `0` and `false`. Confirm `model.json` holds the phase schema's `## If not met` row. This goes in the same companygraph.io PR as Step 2.
 - [ ] **Step 3: Live verification** — after the deploys, reported with the host and the model commit each names:
   - on companygraph.io, `/example/` shows each Delivery phase's If not met table and no Gate closing sentence, and `/model/` shows the phase schema's new section;
   - the instance checks are green on all three instances' `main`;
