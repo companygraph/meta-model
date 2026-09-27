@@ -37,9 +37,9 @@ const phase = (name, next, rows) => [
   "## If not met", "", "| Outcome | Leads to |", "| --- | --- |", ...rows.map(([o, t]) => `| ${o} | ${t ?? ""} |`), "",
 ].join("\n");
 
-const run = (phases, extra = []) => checkInstance(new Map([
+const run = (phases, extra = [], phaseSchema = PHASE_SCHEMA) => checkInstance(new Map([
   ["meta/core/process-schema.md", PROCESS_SCHEMA],
-  ["meta/core/phase-schema.md", PHASE_SCHEMA],
+  ["meta/core/phase-schema.md", phaseSchema],
   ["model/processes/delivery/delivery.md", "# Delivery\n\n> A process.\n\n## Phases\n\n| Phase |\n| --- |\n| Specify |\n| Build |\n| Release |\n"],
   ...phases.map(([file, name, next, rows]) => [`model/processes/delivery/phases/${file}.md`, phase(name, next, rows)]),
   ...extra,
@@ -83,4 +83,14 @@ test("a row naming another process's phase of the same name is R4's one finding,
 test("a page its owner does not list is held to nothing here: the listing check names it", () => {
   const failures = run([...OK, ["audit", "Audit", null, [["skipped", "Release"]]]]);
   assert.deepEqual(about(failures, "comes after"), []);
+});
+
+test("a column declared ref? → phase is held to order too", () => {
+  const OPTIONAL_LEADS_TO = PHASE_SCHEMA.replace(
+    "| `Leads to` | No | ref → phase | Where the work goes. |",
+    "| `Leads to` | No | ref? → phase | Where the work goes. |",
+  );
+  const phases = OK.map((p) => (p[1] === "Specify" ? [p[0], p[1], p[2], [["skipped", "Release"]]] : p));
+  const hit = about(run(phases, [], OPTIONAL_LEADS_TO), "comes after");
+  assert.equal(hit.length, 1, hit.join("\n"));
 });
