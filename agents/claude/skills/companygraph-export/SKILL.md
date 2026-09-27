@@ -1,12 +1,12 @@
 ---
 name: companygraph-export
-description: Package this CompanyGraph instance twice — dist/<instance>-skill.zip for an agent, dist/<instance>-gemini-notebook/ for Gemini Notebook. One walk, two renderings, the same entity count asserted against both.
+description: Package this CompanyGraph instance twice — dist/<skill>-skill.zip for an agent, dist/<instance>-gemini-notebook/ for Gemini Notebook. One walk, two renderings, the same entity count asserted against both.
 allowed-tools: Bash(*)
 ---
 
 # companygraph-export
 
-Two artifacts from one walk of the model, because the two readers want the same facts in different shapes. `dist/<instance>-skill.zip` is uploadable as an organization or personal skill: `SKILL.md` at the root, `model/<type>.md` per root type folder, `model/meta.md`. `dist/<instance>-gemini-notebook/` is a flat folder of Markdown sources, one per content area, carrying the model's own pages as they are written.
+Two artifacts from one walk of the model, because the two readers want the same facts in different shapes. `dist/<skill>-skill.zip` is uploadable as an organization or personal skill: `SKILL.md` at the root, `model/<type>.md` per root type folder, `model/meta.md`. `dist/<instance>-gemini-notebook/` is a flat folder of Markdown sources, one per content area, carrying the model's own pages as they are written.
 
 ## Procedure
 
@@ -25,7 +25,7 @@ The script writes the zip with `zipfile` rather than shelling out to `zip -r`, w
 
 ## What the script writes into the zip
 
-The instance name is the repository folder's name; the core version comes from `.companygraph/manifest.json`; the description comes from the root `README.md`'s opening `>` block, joined into the one sentence it wraps across. The members are `<instance>/SKILL.md` and `<instance>/model/`.
+The instance name is the repository folder's name, and the skill is named for the identity and then the instance: the H1 of `model/identity.md` and the folder's name, each lowercased with accents dropped and every other run of characters turned to a dash, so Robert Blust's `mental-model` exports as `robert-blust-mental-model`. The folder alone is what every instance `init` writes is called, and an account holds one skill per name, so a second instance uploaded beside the first would collide with it; the identity's H1 is the one name every model has and no other instance shares. Where the folder already begins with the identity, `acme` for Acme, it is not said twice, and a name longer than the 64 characters an account accepts fails the build rather than being cut. The Gemini Notebook bundle keeps the folder's name, because a notebook takes its sources one file at a time and is named by whoever makes it, so no name of the bundle's ever reaches a reader. The core version comes from `.companygraph/manifest.json`; the description comes from the root `README.md`'s opening `>` block, joined into the one sentence it wraps across. The members are `<skill>/SKILL.md` and `<skill>/model/`.
 
 One `model/<folder>.md` per type folder under `model/`, with `model/profiles/` walked recursively so experiences travel with their profile: the folder's `README.md` first, then every entity in path order, each preceded by a line `<!-- entity: <path from the repository root> -->` and a blank line.
 
@@ -35,7 +35,7 @@ A README describes the repository's layout and the zip has a different one, so i
 
 `model/meta.md` is the vendored `core/CONVENTIONS.md`, then every `*-schema.md` in every vendored unit, each preceded by its own `<!-- entity: <path> -->` line. The units sit in the folder the manifest's `units` names, `meta/` unless `init` was told otherwise, and they form the group `meta` in both artifacts whatever that folder is called. The singular entities travel too: one file per singular type, directly under `model/`, each copied whole, since there is nothing to consolidate — and they carry no marker, which `verify.py` already knows, claiming a marker-less `model/*.md` member as the entity `model/<basename>`.
 
-`<instance>/SKILL.md` carries frontmatter `name: <instance>` and a `description` built from the README tagline with Markdown link and emphasis syntax stripped to plain text (a link becomes its link text; bold and italic markers are dropped), written as a double-quoted YAML string with any inner double quote escaped as `\"`; then `export/SKILL-intro.md` verbatim when it exists; then a table of `model/` files with the entity count per type and the core version; then one paragraph on how to read the model — each entity begins at its `<!-- entity: … -->` line, its H1 is its name, references are by name, `model/meta.md` holds the rules.
+`<skill>/SKILL.md` carries frontmatter `name: <skill>`, an H1 of the same, and a `description` built from the README tagline with Markdown link and emphasis syntax stripped to plain text (a link becomes its link text; bold and italic markers are dropped), written as a double-quoted YAML string with any inner double quote escaped as `\"`; then `export/SKILL-intro.md` verbatim when it exists; then a table of `model/` files with the entity count per type and the core version; then one paragraph on how to read the model — each entity begins at its `<!-- entity: … -->` line, its H1 is its name, references are by name, `model/meta.md` holds the rules.
 
 ## What the script writes into the Gemini Notebook bundle
 
