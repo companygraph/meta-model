@@ -145,11 +145,25 @@ test("init leaves a hooks path already set, and says the seat hook is not in use
   assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: dir, encoding: "utf8" }).trim(), ".husky");
 });
 
+test("init leaves an enclosing repository's own hooks folder alone, naming what is already there", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: dir, encoding: "utf8" }).trim();
+  // git init itself writes only `*.sample` templates there; a real file is what must stop init
+  // from setting core.hooksPath and switching them off.
+  fs.writeFileSync(path.join(dir, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const said = run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: dir, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset");
+});
+
 test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
   const dir = temp();
   execFileSync("git", ["init", "-q"], { cwd: dir });
   run(["init", dir, "--name", "Acme", "--agent", "claude"]);
-  const commit = (env) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"],
+  const commit = (env, extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
     { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
   const stub = (code) => {
     const file = path.join(temp(), "stub.mjs");
@@ -160,8 +174,51 @@ test("the hook refuses only on the checker's refusal, and lets the commit throug
   const through = commit({ COMPANYGRAPH_CLI: stub(1) });
   assert.equal(through.status, 0);
   assert.match(through.stderr, /seat check did not run/);
+  // Run against the real CLI, not a stub, this passed vacuously without an identity `url`: with
+  // no domain every author is outside the model (governingOf), so nothing the real checker could
+  // ever refuse was exercised. An `r@x.io` commit stays outside once a `url` is there too, which
+  // this keeps proving; a `--author` at the instance's own domain naming no role is what proves
+  // the real CLI, reached through the hook's own `$here` resolution (also on the Windows job),
+  // actually refuses.
   assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
+  const identityPath = path.join(dir, "model/identity.md");
+  fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
+  const refused = commit({ COMPANYGRAPH_CLI: cli }, ["--author", "Ghost <ghost@acme.example>"]);
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
 });
+
+// The hook's other branch, taken with no COMPANYGRAPH_CLI set: `npx` at the manifest's own
+// `tooling`, with no network reached. A fake `npx` first on PATH stands in for the real one and
+// records what it was called with, which pins the hook's `sed` extraction of `tooling` from
+// `.companygraph/manifest.json` and the exact companygraph invocation it hands npx.
+test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manifest's own tooling release",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
+  () => {
+    const dir = temp();
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, ".companygraph/manifest.json"), "utf8"));
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a" >> "${record}"; done\nexit 0\n`);
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const result = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"],
+      { cwd: dir, encoding: "utf8", env });
+    assert.equal(result.status, 0, result.stderr);
+    const argv = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `github:companygraph/meta-model#v${manifest.tooling}`, "companygraph"]);
+    const commitsAt = argv.indexOf("commits");
+    assert.notEqual(commitsAt, -1);
+    assert.equal(fs.realpathSync(argv[commitsAt + 1]), fs.realpathSync(dir));
+    assert.equal(argv[commitsAt + 2], "--message");
+    // The hook passes git's own "$1" through unchanged, which git hands it relative to the
+    // repository root it runs the hook in, not to this process's own cwd.
+    assert.ok(fs.existsSync(path.resolve(dir, argv[commitsAt + 3])), "the message file path handed to npx exists");
+  });
 
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);

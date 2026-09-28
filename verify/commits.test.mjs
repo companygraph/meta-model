@@ -155,6 +155,41 @@ test("a family is read from a member that is no instance, and a member whose org
   assert.match(run(site, "seats", ".").stdout, /not read, no instance of its organization on this disk: acme\/tools/);
 });
 
+// End to end: a commit from before the rule, made under the identity's own name at an address
+// that names no role and is outside the domain entirely, is reported as the owner's rather than
+// outside the model — the report's own leniency, never judgeCommit's.
+test("a commit authored by the identity's own name, whatever the address, is reported as the owner's", () => {
+  const dir = instanceAt(temp());
+  git(dir, "commit", "-q", "--allow-empty", "--author", "  Beacon SYSTEMS  <robert@personal.example>", "-m", "Before the rule");
+  git(dir, "commit", "-q", "--allow-empty", "--author", "Backend Engineer <backend-engineer@beacon.example>", "-m", ok);
+  const r = run(dir, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.equal(report.owner, 1);
+  assert.deepEqual(report.seats.map((s) => s.email), ["backend-engineer@beacon.example"]);
+});
+
+// A member's local path can be a plain folder nested inside another checkout (built there by
+// accident, or copied), whose own git top is that enclosing checkout's. Reading it would report
+// the enclosing checkout's whole history as the member's; it must instead be named as not read.
+test("a member's local path that is a plain folder inside another checkout is not read as that checkout's own history", () => {
+  const top = temp();
+  const instance = instanceAt(path.join(top, "mental-model"));
+  const outer = temp();
+  git(outer, "init", "-q");
+  git(outer, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Not the member's own");
+  const nested = path.join(outer, "member");
+  fs.mkdirSync(nested);
+  vendorFamily(instance, [["beacon/mental-model", instance], ["beacon/member", nested]]);
+  const r = run(instance, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.deepEqual(report.read, ["beacon/mental-model"]);
+  assert.deepEqual(report.unread, [{ repo: "beacon/member", path: nested }]);
+  assert.equal(report.seats.length, 0);
+  assert.match(run(instance, "seats", ".").stdout, new RegExp(`not read, no clone at ${nested.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}: beacon/member`));
+});
+
 test("--since narrows the history", () => {
   const dir = instanceAt(temp());
   execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "old"],

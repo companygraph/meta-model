@@ -16,7 +16,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chmodSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chmodSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -262,11 +262,23 @@ async function init(argv, { menu = false } = {}) {
     const prefix = top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
     const hooks = prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
     const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+    // A repository that already keeps real hook files under its default hooks folder — placed
+    // there directly, without ever setting core.hooksPath, as some tools still do — must not have
+    // them silently switched off by a core.hooksPath this command sets. `git rev-parse --git-path
+    // hooks` names that folder however git resolves it (relative to root, wherever `.git` really
+    // is), asked only where core.hooksPath is not already set to something else, since that case
+    // is already the husky one below. A file git itself ships as a template ends `.sample` and is
+    // never in the way.
+    const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+    const already = hooksDir && existsSync(join(root, hooksDir))
+      ? readdirSync(join(root, hooksDir)).filter((f) => !f.endsWith(".sample"))
+      : [];
     if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
     else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
+    else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
     else {
       spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
-      console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}`);
+      console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
     }
   }
   if (menu) return;
@@ -607,7 +619,15 @@ function seats(argv) {
   const orgOf = (repo) => repo.split("/")[0];
   let targets, unread;
   if (members) {
-    const onDisk = members.filter((m) => gitTop(m.path));
+    // A member's local path is on disk only when it is itself a checkout's own top: a plain
+    // folder sitting inside another checkout (nested by accident, or a build's own copy) has a
+    // gitTop too, but it is that enclosing checkout's, and reporting by it would hand the member
+    // history that never happened in its own path. realpath on both sides, since a symlinked temp
+    // dir (macOS) or a short name (Windows) can render the same folder two ways.
+    const onDisk = members.filter((m) => {
+      const memberTop = gitTop(m.path);
+      return Boolean(memberTop) && realpathSync(memberTop) === realpathSync(m.path);
+    });
     // A member is judged by the instance of its own organization, never by another's: the
     // member's own where it is one, else the first of its organization the table lists.
     const instances = onDisk.filter((m) => isInstance(m.path)).map((m) => ({ ...m, governing: governingOf(readInstance(m.path)) }));
@@ -619,7 +639,11 @@ function seats(argv) {
     targets = [{ repo: basename(top), path: top, governing: governingOf(readInstance(root)) }];
     unread = [];
   }
-  const judged = targets.flatMap((m) => logOf(m.path, { since }).map((c) => ({ repo: m.repo, email: c.email, judgement: judgeCommit(m.governing, c) })));
+  // name/ownerName are read here, not by judgeCommit: the report alone counts a pre-rule commit
+  // whose author's name equals its own instance's identity as the owner's, and each commit is
+  // read against its own repository's governing instance, since a family report can span more
+  // than one.
+  const judged = targets.flatMap((m) => logOf(m.path, { since }).map((c) => ({ repo: m.repo, email: c.email, name: c.name, ownerName: m.governing.name, judgement: judgeCommit(m.governing, c) })));
   const report = { scope: members ? "family" : "repository", since, read: targets.map((m) => m.repo), unread, ...tally(judged) };
   console.log(given.json ? JSON.stringify(report, null, 2) : renderReport(report));
   return 0;

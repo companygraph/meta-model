@@ -96,6 +96,24 @@ test("the tally counts seats by where they worked, and the rest by kind", () => 
   assert.deepEqual([r.owner, r.outside, r.refused], [1, 1, 1]);
 });
 
+// Ruling: in the report alone, a commit whose author's name equals the identity's own name is the
+// owner's, case-insensitively and trimmed — a commit made before the rule, under the person's own
+// name and whatever address that day, which judgeCommit itself never sees this leniency, so a
+// hook or CI would still refuse it were it made now.
+test("the tally counts a commit by the identity's own name as the owner's, whatever kind judgeCommit gave it", () => {
+  const outside = { kind: "outside", failures: [] };
+  const refused = { kind: "seat", seat: null, failures: ["no role"] };
+  const judged = [
+    { email: "robert@personal.example", name: "Beacon Systems", ownerName: "Beacon Systems", judgement: outside },
+    { email: "intern@beacon.example", name: "  beacon SYSTEMS  ", ownerName: "Beacon Systems", judgement: refused },
+    { email: "x@y.z", name: "Someone Else", ownerName: "Beacon Systems", judgement: outside },
+    { email: "y@y.z", name: undefined, ownerName: "Beacon Systems", judgement: outside },
+  ];
+  const r = tally(judged);
+  assert.deepEqual([r.owner, r.outside, r.refused], [2, 2, 0]);
+  assert.deepEqual(r.seats, []);
+});
+
 test("the rendered report says its scope, its start and what it did not read", () => {
   const text = renderReport({ scope: "family", since: null, read: ["a/b"], unread: [{ repo: "a/c", path: "/nowhere/c" }], ...tally([]) });
   assert.match(text, /across the family, 1 of 2 members read, since the first commit/);
