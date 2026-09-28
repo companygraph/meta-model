@@ -12,6 +12,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
+// Quit's own number, read off a menu screen already captured: an entry added or removed moves
+// it, and a test asserting around Quit should not need to change to match.
+const quitOf = (said) => Number(said.match(/(\d+) {2}Quit/)[1]);
 
 // Every file under a folder, as the checks read one: path relative to the root with `/` on every
 // platform, text, and bytes for an image (R9).
@@ -106,6 +109,136 @@ test("an agent it cannot write for is refused by name, and nothing is written", 
   assert.deepEqual([...filesOf(root).keys()], []);
 });
 
+test("init in a git repository sets the hooks path; outside one it names the command", () => {
+  const inGit = temp();
+  execFileSync("git", ["init", "-q"], { cwd: inGit });
+  const said = run(["init", inGit, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: inGit, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use/);
+  const bare = temp();
+  assert.match(run(["init", bare, "--name", "Acme", "--agent", "claude"]), /git config core\.hooksPath \.companygraph\/hooks/);
+  const none = temp();
+  run(["init", none, "--name", "Acme", "--agent", "claude", "--no-hook"]);
+  assert.equal(fs.existsSync(path.join(none, ".companygraph/hooks/commit-msg")), false);
+});
+
+// R1: the brief's own hooks-path computation breaks on macOS, where os.tmpdir() is /var/... but
+// `git rev-parse --show-toplevel` answers /private/var/..., and on Windows' 8.3 short names.
+// Reading the prefix from git itself, instead of computing a relative path by hand against a
+// possibly-different rendering of the same folder, sidesteps both: an instance in a subfolder of
+// a git repository gets a hooksPath under that subfolder, not the repository's own top.
+test("init in a subfolder of a git repository names the hooks path relative to the repository's own root", () => {
+  const repo = temp();
+  execFileSync("git", ["init", "-q"], { cwd: repo });
+  const sub = path.join(repo, "sub");
+  fs.mkdirSync(sub);
+  const said = run(["init", sub, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repo, encoding: "utf8" }).trim(), "sub/.companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use: git reads hooks from sub\/\.companygraph\/hooks/);
+});
+
+test("init leaves a hooks path already set, and says the seat hook is not in use", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  execFileSync("git", ["config", "core.hooksPath", ".husky"], { cwd: dir });
+  assert.match(run(["init", dir, "--name", "Acme", "--agent", "claude"]), /core\.hooksPath is \.husky here/);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: dir, encoding: "utf8" }).trim(), ".husky");
+});
+
+test("init leaves an enclosing repository's own hooks folder alone, naming what is already there", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: dir, encoding: "utf8" }).trim();
+  // git init itself writes only `*.sample` templates there; a real file is what must stop init
+  // from setting core.hooksPath and switching them off.
+  fs.writeFileSync(path.join(dir, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const said = run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: dir, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset");
+});
+
+// Found in re-review: `git rev-parse --git-path hooks` answers absolute inside a worktree — the
+// hooks live under the main checkout's own `.git/`, nowhere near the worktree's own folder — and
+// `join(root, hooksDir)` had concatenated that absolute answer onto `root` into a path nothing
+// ever wrote, so the guard above never found the real hook and set core.hooksPath anyway.
+test("init in a git worktree leaves the main checkout's own hooks alone, naming the hook it found", () => {
+  const main = temp();
+  execFileSync("git", ["init", "-q"], { cwd: main });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: main, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(main, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"], { cwd: main });
+  const worktree = path.join(temp(), "wt");
+  execFileSync("git", ["worktree", "add", "-q", worktree, "-b", "wt-branch"], { cwd: main });
+  const said = run(["init", worktree, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: worktree, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset in the worktree");
+});
+
+test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  const commit = (env, extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
+    { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
+  const stub = (code) => {
+    const file = path.join(temp(), "stub.mjs");
+    fs.writeFileSync(file, `process.exit(${code});\n`);
+    return file;
+  };
+  assert.notEqual(commit({ COMPANYGRAPH_CLI: stub(3) }).status, 0);
+  const through = commit({ COMPANYGRAPH_CLI: stub(1) });
+  assert.equal(through.status, 0);
+  assert.match(through.stderr, /seat check did not run/);
+  // Run against the real CLI, not a stub, this passed vacuously without an identity `url`: with
+  // no domain every author is outside the model (governingOf), so nothing the real checker could
+  // ever refuse was exercised. An `r@x.io` commit stays outside once a `url` is there too, which
+  // this keeps proving; a `--author` at the instance's own domain naming no role is what proves
+  // the real CLI, reached through the hook's own `$here` resolution (also on the Windows job),
+  // actually refuses.
+  assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
+  const identityPath = path.join(dir, "model/identity.md");
+  fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
+  const refused = commit({ COMPANYGRAPH_CLI: cli }, ["--author", "Ghost <ghost@acme.example>"]);
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+});
+
+// The hook's other branch, taken with no COMPANYGRAPH_CLI set: `npx` at the manifest's own
+// `tooling`, with no network reached. A fake `npx` first on PATH stands in for the real one and
+// records what it was called with, which pins the hook's `sed` extraction of `tooling` from
+// `.companygraph/manifest.json` and the exact companygraph invocation it hands npx.
+test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manifest's own tooling release",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
+  () => {
+    const dir = temp();
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, ".companygraph/manifest.json"), "utf8"));
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a" >> "${record}"; done\nexit 0\n`);
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const result = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"],
+      { cwd: dir, encoding: "utf8", env });
+    assert.equal(result.status, 0, result.stderr);
+    const argv = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `github:companygraph/meta-model#v${manifest.tooling}`, "companygraph"]);
+    const commitsAt = argv.indexOf("commits");
+    assert.notEqual(commitsAt, -1);
+    assert.equal(fs.realpathSync.native(argv[commitsAt + 1]), fs.realpathSync.native(dir));
+    assert.equal(argv[commitsAt + 2], "--message");
+    // The hook passes git's own "$1" through unchanged, which git hands it relative to the
+    // repository root it runs the hook in, not to this process's own cwd.
+    assert.ok(fs.existsSync(path.resolve(dir, argv[commitsAt + 3])), "the message file path handed to npx exists");
+  });
+
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
   assert.match(run(["--help"]), /init/);
@@ -131,17 +264,20 @@ test("the menu asks before it adds to a folder that holds files, and a no writes
 test("the menu shows an upgrade before it runs one, and a pick it does not have is refused", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  assert.match(run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" }), /nothing to do/);
-  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-5/);
+  const said = run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" });
+  assert.match(said, /nothing to do/);
+  const quit = quitOf(said);
+  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), new RegExp(`9 is not one of 1-${quit}`));
 });
 
 test("the menu comes back after a pick and stays until Quit", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const said = run(["menu"], { input: `\n2\n${root}\n9\nq\n1\n`, stdio: "pipe" });
-  assert.equal(said.match(/5 {2}Quit/g).length, 4);
+  const quit = quitOf(said);
+  assert.equal(said.match(new RegExp(`${quit} {2}Quit`, "g")).length, 4);
   assert.doesNotMatch(said, /Which folder\?.*\n.*Which folder\?/s);
-  assert.match(run(["menu"], { input: "5\n", stdio: "pipe" }), /5 {2}Quit/);
+  assert.match(run(["menu"], { input: `${quit}\n`, stdio: "pipe" }), new RegExp(`${quit} {2}Quit`));
 });
 
 // A question inside a pick is left with b, and the menu comes back with nothing more done: here
@@ -154,7 +290,7 @@ test("the menu comes back from any question on b, and says so without calling it
   assert.match(said, /back to the menu/);
   assert.doesNotMatch(said, /✗/);
   assert.equal(fs.existsSync(root), false);
-  assert.equal(said.match(/5 {2}Quit/g).length, 2);
+  assert.equal(said.match(new RegExp(`${quitOf(said)} {2}Quit`, "g")).length, 2);
   // Outside the menu a b is an answer like any other: a no to a y/N, here.
   const vault = temp();
   const build = temp();
@@ -177,11 +313,13 @@ test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its o
     child.stdout.on("data", (chunk) => { said += chunk; look(); });
     look();
   });
+  await until("Pick 1-");
+  const pick = `Pick 1-${said.match(/Pick 1-(\d+)/)[1]}`;
   child.stdin.write(`1\n${temp()}\n`);
   await until("What is the company called?");
   child.kill("SIGINT");
   await until("back to the menu");
-  await until("Pick 1-5");
+  await until(pick);
   child.kill("SIGINT");
   const code = await new Promise((done) => child.on("exit", done));
   assert.equal(code, 130);
@@ -794,4 +932,22 @@ test("check reads an image as bytes: a named PNG passes, and the same bytes name
   const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.match(failing.stdout + failing.stderr, /mira\.jpg: is a PNG named as a JPEG \(R9\)/);
   assert.equal(failing.status, 1);
+});
+
+test("the instance workflow checks a pull request's commits, over the whole history", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /fetch-depth: 0/);
+  assert.match(yml, /if: github\.event_name == 'pull_request'/);
+  assert.match(yml, /companygraph\.mjs commits \. --range "\$\{\{ github\.event\.pull_request\.base\.sha \}\}\.\.\$\{\{ github\.event\.pull_request\.head\.sha \}\}"/);
+});
+
+test("the menu offers the report", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  // The menu picks by number, and the report's entry is read off the menu rather than assumed.
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  const pick = listed.match(/(\d+)\S*\s+Report by seat/)[1];
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `${pick}\n${dir}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /Commits by seat in /);
 });

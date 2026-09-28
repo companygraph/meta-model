@@ -53,6 +53,14 @@ test("a fetched core is said to be fetched, and the workflow names the tooling's
   assert.ok(!workflow.includes("v0.30.0"));
 });
 
+test("init writes the commit-msg hook, and --no-hook leaves it out", () => {
+  const withHook = initPlan(ask);
+  assert.ok(withHook.writes.get(".companygraph/hooks/commit-msg").startsWith("#!/bin/sh\n"));
+  const manifest = JSON.parse(withHook.writes.get(".companygraph/manifest.json"));
+  assert.equal(".companygraph/hooks/commit-msg" in manifest.files, false);
+  assert.equal(initPlan({ ...ask, hook: false }).writes.has(".companygraph/hooks/commit-msg"), false);
+});
+
 test("another schemas folder is written there and said in the manifest", () => {
   const { writes } = initPlan({ ...ask, units: "schemas" });
   assert.ok(writes.has("schemas/core/CONVENTIONS.md"));

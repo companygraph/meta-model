@@ -34,6 +34,8 @@ jobs:
         run: npm run test:instance-files
       - name: The command, run over real folders
         run: npm run test:cli
+      - name: A commit's seat, judged against what governs it
+        run: npm run test:seats
       - name: Another release's core is read from its tarball
         run: npm run test:untar && npm run test:fetch-core
       - name: The Obsidian plugin is put into a vault
@@ -57,7 +59,7 @@ jobs:
         run: npm run test:instance && npm run test:instance-checks && npm run test:rules
       - name: The plan, the files an instance starts with, and the command over real folders
         if: ${{ !cancelled() }}
-        run: npm run test:plan && npm run test:instance-files && npm run test:cli
+        run: npm run test:plan && npm run test:instance-files && npm run test:cli && npm run test:seats
       - name: The tarball, the fetch and the Obsidian install
         if: ${{ !cancelled() }}
         run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian

@@ -27,6 +27,8 @@ jobs:
       contents: read
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -38,3 +40,8 @@ jobs:
           path: .companygraph-checker
       - name: the instance is held to the core it vendored
         run: node .companygraph-checker/bin/check-instance.mjs .
+      # A pull request's commits, each judged against the seats this instance declares. Only on a
+      # pull request: a push to main carries the owner's merge, which is the owner's.
+      - name: every commit names a seat its phase lists
+        if: github.event_name == 'pull_request'
+        run: node .companygraph-checker/bin/companygraph.mjs commits . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
