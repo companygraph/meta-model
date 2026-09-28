@@ -2,7 +2,7 @@
 
 An instance says who does each piece of work: every phase of a process lists its `executed-by` seats, and in Delivery's Implement it is the Implementer that commits on the code track and the Writer and the Translator on the prose track. The history says none of it. Every commit an agent makes carries the owner's name, so the question the model is built to answer — which seat did this, in which process — cannot be asked of the one record every change leaves. A commit an agent makes is authored by the seat it held, at an address on the instance's own domain, `Implementer <implementer@blust.ch>`, and carries the process, phase and track it was made in as trailers. A check refuses a seat the phase does not list, and a new command reads the history back as a report by seat.
 
-Status: decided by the owner on September 28, 2026, question by question: the seat as author, the address on the instance's domain, the addresses as mail aliases, a solo agent committing as the seat whose work it did, the owner's own commits keeping the owner's name, where the check runs, where the report looks, which instance governs a family repository with no model of its own, and that `init` installs the hook. Two questions are parked at the foot of this page and are the owner's.
+Status: decided by the owner on September 28, 2026, question by question: the seat as author, the address on the instance's domain, the addresses as mail aliases, a solo agent committing as the seat whose work it did, the owner's own commits keeping the owner's name, where the check runs, where the report looks, which instance governs a family repository with no model of its own, that `init` installs the hook, and who authors an agent's re-pin. One question is parked at the foot of this page and are the owner's.
 
 ## The author
 
@@ -10,7 +10,7 @@ The author of a commit an agent makes is the seat it held, with the role's title
 
 The committer stays the person who runs the agent. Git keeps the two apart, and they answer different questions: the author says which seat did the work, the committer says who is accountable for it being there.
 
-An agent that holds several seats in one session commits as the seat whose work the commit is. A commit of a specification is the Specifier's, of a plan the Planner's, of a task the Implementer's, of English prose the Writer's, of its German the Translator's. The Controller writes nothing, so no commit is ever the Controller's; a session running a plan that finds itself committing its own edit commits it as the seat whose work that edit is.
+An agent that holds several seats in one session commits as the seat whose work the commit is. A commit of a specification is the Specifier's, of a plan the Planner's, of a task the Implementer's, of English prose the Writer's, of its German the Translator's. A re-pin, a re-sync or a release bump an agent prepares is the Implementer's under Implement, because it is its own branch and pull request, and becomes Integrate's only when the owner merges it; Integrate's `executed-by` stays as it is. The Controller writes nothing, so no commit is ever the Controller's; a session running a plan that finds itself committing its own edit commits it as the seat whose work that edit is.
 
 The owner's own commits — the merge, the tag, the moved pins — keep the identity's name and address, `Robert Blust <robert@blust.ch>`. There is no `owner@` address. A report then tells people from agents at a glance: a person's name is a person, a seat's address is an agent.
 
@@ -37,7 +37,7 @@ A commit authored at the governing instance's domain is refused when any of thes
 - The role is not in the phase's `executed-by`.
 - It has a `Track` trailer naming a track the process does not list, or none where the process lists tracks.
 
-A commit authored by the identity's own address passes, trailers or not; it is the owner's. A commit by any other author — Dependabot, a release bot, a contributor — is outside the model and passes. This leaves one gap the check cannot close: an agent committing under the owner's name looks exactly like the owner. The rule in `WORKING.md` closes it for agents that read it; parked question 2 asks whether a Claude Code hook should close it for that agent too.
+A commit authored by the identity's own address passes, trailers or not; it is the owner's. A commit by any other author — Dependabot, a release bot, a contributor — is outside the model and passes. This leaves one gap the check cannot close: an agent committing under the owner's name looks exactly like the owner. The rule in `WORKING.md` closes it for agents that read it; the parked question asks whether a Claude Code hook should close it for that agent too.
 
 The check is one command in the meta-model CLI, `companygraph commits [<folder>] [--range <a>..<b>] [--message <file>]`, so both places it runs call the same code. With `--message`, it checks the commit about to be made: the message from the file, the author from `git var GIT_AUTHOR_IDENT`. With `--range`, it checks every commit in the range.
 
@@ -71,7 +71,7 @@ The report says which of the three it did, and from what date: commits made befo
 
 `companygraph/meta-model`: the two subcommands, the menu gaining them, `init` writing the hook with its `--no-hook` flag, the reusable instance workflow running `commits --range` on a pull request, and `verify/` fixtures that each fail — an author whose role is not in the phase's `executed-by`, a missing `Phase`, a track the process does not list, a folder outside git — beside a clean history that passes, so each refusal is shown able to fire before a zero is read. A release, and the three instances re-pinned to it.
 
-The instances: nothing in the model changes. The owner sets up the aliases and verifies them on GitHub before the hook ships, since a commit authored at an unverified address shows on GitHub as a stranger's.
+The instances: nothing in the model changes. The owner sets up the aliases and verifies them on GitHub before the hook ships in an organization, since a commit authored at an unverified address shows on GitHub as a stranger's, and GitHub verifies an address only by mail to it. Git, the check and the report need no mail; only GitHub's link to the owner's account does. Until an organization's domain receives mail, the hook stays off in its repositories.
 
 ## What is not being done
 
@@ -84,5 +84,4 @@ The instances: nothing in the model changes. The owner sets up the aliases and v
 
 ## Parked for the owner
 
-1. **Commits outside a process.** A re-pin, a re-sync or a release bump an agent makes is Delivery's Integrate, whose `executed-by` is the Controller, the Reviewer and the Owner, and the Controller writes nothing, so the check would refuse the agent. Proposal: the owner's commits stay the owner's, and an agent preparing one commits it as the Implementer under Implement, which is what the work is until the owner merges it.
-2. **An agent under the owner's name.** Whether a Claude Code `PreToolUse` hook on `git commit` refuses a commit an agent makes without `--author`. Proposal: not now; the rule in `WORKING.md` and the report make the gap visible, and a hook written for one agent is a rule the others do not see.
+1. **An agent under the owner's name.** Whether a Claude Code `PreToolUse` hook on `git commit` refuses a commit an agent makes without `--author`. Proposal: not now; the rule in `WORKING.md` and the report make the gap visible, and a hook written for one agent is a rule the others do not see.
