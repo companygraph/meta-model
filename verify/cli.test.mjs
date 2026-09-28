@@ -239,6 +239,69 @@ test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manif
     assert.ok(fs.existsSync(path.resolve(dir, argv[commitsAt + 3])), "the message file path handed to npx exists");
   });
 
+// Found in review: `git commit` exports GIT_INDEX_FILE to its hooks — absolute in a linked
+// worktree and for `commit -a` — and the `git clone` npx runs to fetch the tooling inherited it,
+// writing the tooling's own index over the instance's. The hook now clears git's repository
+// variables before the checker runs. This fake npx refuses (exit 3, a refusal the hook passes on)
+// whenever one of them reaches it, so a leak refuses the commit outright; it prints a line on
+// stdout the way a passing checker does, which a passing commit must not show.
+test("the hook hands npx no repository of git's, in a worktree and on commit -a, and a passing commit prints nothing",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
+  () => {
+    const dir = temp();
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> "${record}"`,
+      'for v in GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE; do',
+      '  eval "set_=\\${$v+x}"',
+      '  if [ -n "$set_" ]; then echo "npx was handed $v" >&2; exit 3; fi',
+      "done",
+      "echo 'the checker passed'",
+      "exit 0",
+      "",
+    ].join("\n"));
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const git = (cwd, args) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", ...args], { cwd, encoding: "utf8", env });
+    const tracked = (cwd) => {
+      const status = git(cwd, ["status", "--porcelain"]);
+      assert.equal(status.status, 0, `git status works afterwards: ${status.stderr}`);
+      assert.equal(status.stdout, "", "nothing is left staged or changed");
+      const listed = git(cwd, ["ls-files"]).stdout;
+      assert.equal(listed, git(cwd, ["ls-tree", "-r", "--name-only", "HEAD"]).stdout, "the index lists the commit's own files");
+      assert.match(listed, /^\.companygraph\/manifest\.json$/m);
+      assert.doesNotMatch(listed, /^verify\/cli\.test\.mjs$/m, "no file of the tooling's own is in the index");
+    };
+    assert.equal(git(dir, ["add", "-A"]).status, 0);
+    assert.equal(git(dir, ["commit", "-q", "--no-verify", "-m", "the instance"]).status, 0);
+
+    const worktree = path.join(temp(), "wt");
+    assert.equal(git(dir, ["worktree", "add", "-q", worktree, "-b", "wt-branch"]).status, 0);
+    fs.writeFileSync(path.join(worktree, "note.md"), "a note\n");
+    assert.equal(git(worktree, ["add", "note.md"]).status, 0);
+    const inWorktree = git(worktree, ["commit", "-q", "-m", "a note"]);
+    assert.equal(inWorktree.status, 0, inWorktree.stderr);
+    assert.equal(inWorktree.stdout + inWorktree.stderr, "", "a passing commit prints nothing");
+    tracked(worktree);
+    assert.match(git(worktree, ["ls-files"]).stdout, /^note\.md$/m);
+
+    fs.appendFileSync(path.join(dir, "AGENTS.md"), "\nA line of the instance's own.\n");
+    const all = git(dir, ["commit", "-q", "-a", "-m", "a line"]);
+    assert.equal(all.status, 0, all.stderr);
+    assert.equal(all.stdout + all.stderr, "", "a passing commit prints nothing");
+    tracked(dir);
+
+    const calls = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.equal(calls.length, 2, "npx ran once for each commit the hook checked");
+    for (const call of calls) assert.match(call, /companygraph commits .* --message /);
+  });
+
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
   assert.match(run(["--help"]), /init/);
