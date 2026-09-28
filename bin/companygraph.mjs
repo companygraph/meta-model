@@ -6,9 +6,12 @@
 //   companygraph check [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
+//   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
+//   companygraph seats [<folder>] [--since <date>] [--json]
 //
-// Run with no command at a terminal, it opens a menu over the same four, which asks what the
-// flags would say and calls the same code, and stays open until Quit or Ctrl+C.
+// Run with no command at a terminal, it opens a menu over init, check, upgrade and obsidian,
+// which asks what the flags would say and calls the same code, and stays open until Quit or
+// Ctrl+C.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
@@ -23,21 +26,27 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf } from "../lib/history.mjs";
+import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
 
 const USAGE = `companygraph [<command>]
 
-  (none)              at a terminal, a menu over the four below, open until Quit or Ctrl+C
+  (none)              at a terminal, a menu over init, check, upgrade and obsidian, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
+  commits [<folder>]  refuse a commit whose seat the phase in its trailers does not list
+  seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
 upgrade: --core <tag>  --force  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
+commits: --range <a>..<b>  --message <file>
+seats: --since <date>  --json
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -76,7 +85,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -518,6 +527,51 @@ async function folder(question, fallback) {
   throw new Error("no folder was given; nothing was done.");
 }
 
+// Refused is 3, not 1, so a hook can tell a refusal from a checker that could not run — offline,
+// no npx, a release without this command — and let the second through with a sentence, since
+// the pull request's check runs it again.
+const REFUSED = 3;
+
+// The first line of a pending commit's message that is neither blank nor a `#` comment git
+// leaves below the trailers when an editor opened it; "" when the message has none. A literal
+// "this commit" here would print twice over in the refusal below, once for the missing sha and
+// once for the subject.
+function subjectOf(messageFile) {
+  for (const line of readFileSync(messageFile, "utf8").split("\n")) {
+    const trimmed = line.trim();
+    if (trimmed && !trimmed.startsWith("#")) return trimmed;
+  }
+  return "";
+}
+
+function commits(argv) {
+  const given = flags(argv);
+  const root = resolve(given._[0] ?? ".");
+  if (!given.range === !given.message) throw new Error("commits takes one of --range <a>..<b> or --message <file>");
+  // Git is read from process.cwd(), the repository whose commit is being made or checked; the
+  // instance is read from the folder argument, since a family repository with no model of its
+  // own is governed by an instance that sits elsewhere.
+  if (!gitTop(process.cwd())) throw new Error(`${process.cwd()} is not inside a git repository, so there is no commit to check`);
+  if (!isInstance(root)) {
+    console.log(`${shown(root)} is not an instance, so nothing governs these commits; nothing was checked`);
+    return 0;
+  }
+  const governing = governingOf(readInstance(root));
+  const found = given.message
+    ? [{ sha: null, subject: subjectOf(given.message), ...pendingOf(process.cwd(), given.message) }]
+    : logOf(process.cwd(), { range: given.range });
+  let refused = 0;
+  for (const c of found) {
+    const { failures } = judgeCommit(governing, c);
+    if (!failures.length) continue;
+    refused++;
+    for (const f of failures) console.error(`${bad("✗")} ${c.sha ? c.sha.slice(0, 7) : "this commit"} ${c.subject}: ${f}`);
+  }
+  if (refused) return REFUSED;
+  console.log(`${good("✓")} commits: every seat names a phase of ${governing.name} that lists it`);
+  return 0;
+}
+
 async function menu() {
   const entries = [
     ["Make a model", "a new instance in a folder, or beside the files already in one", async () => {
@@ -610,6 +664,7 @@ try {
   else if (command === "upgrade") await upgrade(rest);
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
+  else if (command === "commits") process.exitCode = commits(rest);
   // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
   // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
   // is tested with its answers piped in.
