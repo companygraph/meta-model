@@ -20,3 +20,9 @@ domain: Invoicing
 | Customer | one | billed customer |
 | Billing period | one | |
 | Invoice line | one to many | lines |
+
+## References
+
+| What | URL |
+| --- | --- |
+| A standard | https://standards.example.invalid/e-invoicing/core-invoice |
