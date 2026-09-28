@@ -24,6 +24,14 @@ The set is the instance's own. Which states a company lets a call be in, whether
 | `# [Label]` | Yes | The canonical name. Every decision references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the state means |
 | `## What it means` | Yes | When a call is in this state, when it leaves it, and what a reader may rely on while it is |
+| `## References` | No | Table. What a reader can open to learn more about the status; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a governance framework, a mandate |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

@@ -23,6 +23,14 @@ A track is owned by a process and cannot exist without it, so it nests inside th
 | --- | --- | --- |
 | `# [Track]` | Yes | The canonical name of the track. The owning process's `## Tracks` table and a phase's `### [Track]` headings reference it by this exact string. |
 | `> [Produces]` | Yes | One-paragraph statement of what one pass down this track leaves behind |
+| `## References` | No | Table. What a reader can open to learn more about the track; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a rulebook, a checklist |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

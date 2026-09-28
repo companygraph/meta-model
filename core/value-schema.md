@@ -22,6 +22,14 @@ One file per value. Both source instances kept their values in a single document
 | `# [Value]` | Yes | The canonical name. Everything references the value by this exact string. |
 | `> [Statement]` | Yes | One-paragraph statement of the value |
 | `## In practice` | Yes | What following this value looks like, and what breaking it looks like |
+| `## References` | No | Table. What a reader can open to learn more about the value; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a code of conduct, a handbook |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

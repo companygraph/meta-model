@@ -24,6 +24,14 @@ One file per objective. Nothing owns an objective and an objective owns nothing,
 | `# [Objective]` | Yes | The canonical name, the objective stated as a phrase. Everything references the objective by this exact string. |
 | `> [Statement]` | Yes | One-paragraph statement of what must become true |
 | `## What it makes true` | Yes | What is concretely different when it holds, and what falls outside it |
+| `## References` | No | Table. What a reader can open to learn more about the objective; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a plan, a board paper |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

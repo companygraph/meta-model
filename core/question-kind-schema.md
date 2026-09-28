@@ -25,6 +25,14 @@ The set is the instance's own, as an achievement kind's is. What a company's vis
 | `# [Label]` | Yes | The canonical name. Every question references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the questions of this kind are about |
 | `## What it means` | Yes | Which questions belong to this kind, and which do not |
+| `## References` | No | Table. What a reader can open to learn more about the kind; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a classification, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

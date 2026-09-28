@@ -27,6 +27,14 @@ A surface is a place the company publishes from the model. A place is published 
 | `## What it shows` | Yes | Bulleted. One item per unit the surface presents, naming the unit and what fills it |
 | `## Projection rules` | No | Bulleted. How the model becomes this surface: what is carried, what is left out and why. Required for a `written` surface, absent for a `built` one. |
 | `## Constraints` | No | Bulleted. What the published result must satisfy, each written so a reader can pass or fail it |
+| `## References` | No | Table. What a reader can open to learn more about the surface; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a platform's published limits, a style guide |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
