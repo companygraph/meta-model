@@ -221,7 +221,9 @@ async function init(argv, { menu = false } = {}) {
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const plan = initPlan({
     core,
-    skills: skillsFor(agent),
+    // An agent this release does not write for has no skills folder to read; the plan refuses it
+    // by name, so the refusal is its sentence and not a missing folder's.
+    skills: AGENTS.includes(agent) ? skillsFor(agent) : undefined,
     tooling: PACKAGE.version,
     tag,
     name,

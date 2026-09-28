@@ -98,7 +98,11 @@ test("--here names a file already there in a subfolder as a conflict, and writes
 
 test("an agent it cannot write for is refused by name, and nothing is written", () => {
   const root = temp();
-  assert.throws(() => run(["init", root, "--name", "Acme", "--agent", "codex"], { stdio: "pipe" }), /codex/);
+  // The plan's own sentence, not a missing folder that happens to carry the name in its path.
+  assert.throws(
+    () => run(["init", root, "--name", "Acme", "--agent", "codex"], { stdio: "pipe" }),
+    (error) => /codex is not an agent this release writes for; it writes for claude\./.test(error.stderr) && !/ENOENT/.test(error.stderr),
+  );
   assert.deepEqual([...filesOf(root).keys()], []);
 });
 
