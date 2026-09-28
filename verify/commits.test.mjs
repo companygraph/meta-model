@@ -14,7 +14,7 @@ import { SEATS_SINCE } from "../lib/seats.mjs";
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-commits-"));
-const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=hello@beacon.example", ...args], { cwd, encoding: "utf8", stdio: "pipe" });
+const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", ...args], { cwd, encoding: "utf8", stdio: "pipe" });
 const run = (cwd, ...args) => spawnSync(process.execPath, [cli, ...args], { cwd, encoding: "utf8" });
 
 const ok = "Subject\n\nVerified: it ran.\n\nProcess: Delivery\nPhase: Build\nTrack: Code";
@@ -227,7 +227,7 @@ test("a member's local path that is a plain folder inside another checkout is no
 
 test("--since narrows the history", () => {
   const dir = instanceAt(temp());
-  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "old"],
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=mira@example.invalid", "commit", "-q", "--allow-empty", "-m", "old"],
     { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
   git(dir, "commit", "-q", "--allow-empty", "-m", "new");
   const report = JSON.parse(run(dir, "seats", ".", "--json", "--since", "2021-01-01").stdout);
@@ -237,7 +237,7 @@ test("--since narrows the history", () => {
 
 test("with no --since, the report defaults to SEATS_SINCE and history from before it is not read", () => {
   const dir = instanceAt(temp());
-  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "before the rule"],
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=mira@example.invalid", "commit", "-q", "--allow-empty", "-m", "before the rule"],
     { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
   execFileSync("git", ["-c", "user.name=Backend Engineer", "-c", "user.email=backend-engineer@beacon.example", "commit", "-q", "--allow-empty", "-m", ok],
     { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2026-10-01T00:00:00Z", GIT_COMMITTER_DATE: "2026-10-01T00:00:00Z" } });
@@ -249,7 +249,7 @@ test("with no --since, the report defaults to SEATS_SINCE and history from befor
 
 test("--since overrides SEATS_SINCE, reaching back before it", () => {
   const dir = instanceAt(temp());
-  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "before the rule"],
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=mira@example.invalid", "commit", "-q", "--allow-empty", "-m", "before the rule"],
     { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
   const report = JSON.parse(run(dir, "seats", ".", "--json", "--since", "2000-01-01").stdout);
   assert.equal(report.since, "2000-01-01");

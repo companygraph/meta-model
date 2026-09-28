@@ -16,7 +16,7 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `nature` | Yes | enum | `human` or `agent`. What holds this profile: a person, or an agent that runs under rulebooks and stands for whichever model runs it. |
 | `roles` | No | array of ref → role | The seats this profile holds, each the H1 of a file in `roles/`. Absent for a profile without a seat. |
-| `email` | No | string | Contact address |
+| `email` | No | string | Contact address. On a profile whose `nature` is `human`, also the address the person's own commits are authored under: a commit from it is that person's, whatever seats the profile holds, and passes without trailers. |
 | `location` | No | string | Where the person works from |
 | `image` | No | image | The person's picture, a file in this profile's folder — square, 512×512 recommended, 256–1024 pixels on a side, at most 300 KB |
 
