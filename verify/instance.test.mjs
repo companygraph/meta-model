@@ -1263,3 +1263,11 @@ test("a phase's If not met row draws an edge to its phase with the outcome on it
   assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [["processes/delivery/phases/build", "reworked"]]);
   assert.deepEqual(from("processes/delivery/phases/release"), []);
 });
+
+test("the export names the core its instance vendors, and null where the core carries no readable manifest", () => {
+  const withManifest = new Map([...schemas, ["manifest.json", JSON.stringify({ version: "0.46.0", shape: 3 })]]);
+  assert.equal(parseInstance(valid, { schemas: withManifest }).core, "0.46.0");
+  assert.equal(parseInstance(valid, { schemas }).core, null);
+  assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", "{ not json"]]) }).core, null);
+  assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", JSON.stringify({ version: 46 })]]) }).core, null);
+});
