@@ -5,6 +5,8 @@ import { seatAddress, domainOf, governingOf, judgeCommit, tally, renderReport } 
 // The example instance's shape, as parseInstance returns it, holding only what the judge reads.
 const entities = [
   { id: "identity", type: "identity", name: "Beacon Systems", fields: { url: "https://www.Beacon.example/about", email: "Hello@beacon.example" }, owner: null },
+  { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen", fields: { nature: "human", email: " Mira@Example.invalid " }, owner: null },
+  { id: "profiles/ai-agent", type: "profile", name: "AI Agent", fields: { nature: "agent", email: "agent@example.invalid" }, owner: null },
   { id: "roles/backend-engineer", type: "role", name: "Backend Engineer", fields: {}, owner: null },
   { id: "roles/reviewer", type: "role", name: "Reviewer", fields: {}, owner: null },
   { id: "processes/delivery", type: "process", name: "Delivery", fields: {}, owner: null },
@@ -30,7 +32,10 @@ test("the domain is the url's host, lower-cased, without www", () => {
 });
 
 test("an identity with no url has no seats, and every author but the owner is outside", () => {
-  const none = governingOf({ entities: [{ id: "identity", type: "identity", name: "X", fields: { email: "o@x.io" }, owner: null }] });
+  const none = governingOf({ entities: [
+    { id: "identity", type: "identity", name: "X", fields: {}, owner: null },
+    { id: "profiles/o", type: "profile", name: "O", fields: { nature: "human", email: "o@x.io" }, owner: null },
+  ] });
   assert.equal(none.domain, null);
   assert.equal(judgeCommit(none, { email: "implementer@x.io", trailers: t() }).kind, "outside");
   assert.equal(judgeCommit(none, { email: "o@x.io", trailers: t() }).kind, "owner");
@@ -41,8 +46,18 @@ test("a seat the phase lists passes, whatever the address's case", () => {
   assert.deepEqual([j.kind, j.seat, j.failures], ["seat", "Backend Engineer", []]);
 });
 
+// Ruling: a person's own commit is known by a human profile's address, never the identity's. The
+// identity's `email` is where to reach the company, a role address such as info@ that no one
+// commits under; an agent's profile commits under a seat, so its address is no one's own.
+test("the identity's email and an agent's are no one's own address", () => {
+  assert.deepEqual([...governing.people], ["mira@example.invalid"]);
+  assert.equal(judgeCommit(governing, { email: "agent@example.invalid", trailers: t() }).kind, "outside");
+  assert.deepEqual(judgeCommit(governing, { email: "hello@beacon.example", trailers: t() }).failures,
+    ["hello@beacon.example is at beacon.example and names no role of Beacon Systems"]);
+});
+
 test("the owner passes without trailers, and so does any other domain", () => {
-  assert.equal(judgeCommit(governing, { email: "hello@beacon.example", trailers: t() }).kind, "owner");
+  assert.equal(judgeCommit(governing, { email: "mira@example.invalid", trailers: t() }).kind, "owner");
   const bot = judgeCommit(governing, { email: "49699333+dependabot[bot]@users.noreply.github.com", trailers: t() });
   assert.deepEqual([bot.kind, bot.failures], ["outside", []]);
 });
@@ -86,7 +101,7 @@ test("the tally counts seats by where they worked, and the rest by kind", () => 
     { repo: "a/b", email: "backend-engineer@beacon.example", judgement: seat("Build") },
     { repo: "a/b", email: "backend-engineer@beacon.example", judgement: seat("Build") },
     { repo: "a/b", email: "backend-engineer@beacon.example", judgement: seat("Specify") },
-    { repo: "a/b", email: "hello@beacon.example", judgement: { kind: "owner", failures: [] } },
+    { repo: "a/b", email: "mira@example.invalid", judgement: { kind: "owner", failures: [] } },
     { repo: "a/b", email: "x@y.z", judgement: { kind: "outside", failures: [] } },
     { repo: "a/b", email: "intern@beacon.example", judgement: { kind: "seat", seat: null, failures: ["no role"] } },
   ];
@@ -114,17 +129,18 @@ test("the tally counts a commit by the identity's own name as the owner's, whate
   assert.deepEqual(r.seats, []);
 });
 
-// Ruling: in a family, an author also counts as the owner's when their name or address matches
-// the identity of the instance the report is run from — the reporting instance — even where the
+// Ruling: in a family, an author also counts as the owner's when their name matches the identity
+// of the instance the report is run from — the reporting instance — or their address one of its
+// human profiles, even where the
 // commit's own governing instance (a different organization's) judged it outside or refused it.
 // A family read from a folder that is no instance itself passes no reporting identity, and
 // nothing extra applies.
 test("the tally also counts a commit as the owner's by the reporting instance's own name or address", () => {
   const outside = { kind: "outside", failures: [] };
   const refused = { kind: "seat", seat: null, failures: ["no role"] };
-  const reporting = { name: "Beacon Systems", ownerEmail: "hello@beacon.example" };
+  const reporting = { name: "Beacon Systems", people: new Set(["mira@example.invalid"]) };
   const judged = [
-    { email: "hello@beacon.example", name: "Robert", ownerName: "Acme Tools", judgement: outside },
+    { email: "mira@example.invalid", name: "Robert", ownerName: "Acme Tools", judgement: outside },
     { email: "x@y.z", name: "  beacon SYSTEMS  ", ownerName: "Acme Tools", judgement: refused },
     { email: "stranger@y.z", name: "Someone Else", ownerName: "Acme Tools", judgement: outside },
   ];

@@ -24,6 +24,6 @@ export function instanceAt(dir) {
   modelAt(dir);
   execFileSync("git", ["init", "-q"], { cwd: dir, encoding: "utf8" });
   execFileSync("git", ["config", "user.name", "Robert"], { cwd: dir, encoding: "utf8" });
-  execFileSync("git", ["config", "user.email", "hello@beacon.example"], { cwd: dir, encoding: "utf8" });
+  execFileSync("git", ["config", "user.email", "mira@example.invalid"], { cwd: dir, encoding: "utf8" });
   return dir;
 }
