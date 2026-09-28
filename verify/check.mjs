@@ -326,6 +326,39 @@ const CHECKS = [
     },
   },
   {
+    // R9 has every schema declare `## References`, the table of documents a reader can check a
+    // page against, with What and URL exactly. The declaration is written in each schema rather
+    // than supplied by the parser, because a section the schema states is one every reader sees
+    // there; this check is what keeps those copies from drifting apart. A schema chooses the
+    // section's Required and its description, and nothing else.
+    name: "every schema declares References",
+    rule: "R9",
+    run() {
+      const want = "What | Yes | string; URL | Yes | string";
+      for (const { type } of TYPES) {
+        const path = `core/${type}-schema.md`;
+        const text = read(path);
+        if (text === null) continue;
+        const [sections, ...captioned] = blocksOf(sectionsOf(text).get("Sections") ?? "");
+        const row = (sections?.table?.rows ?? []).find(
+          (r) => (r[0] ?? "").replace(/`/g, "").trim() === "## References",
+        );
+        if (!row) {
+          fail(`${path}: declares no \`## References\` — R9 has every schema declare it`);
+          continue;
+        }
+        const columns = captioned.find((b) => b.section === "References")?.table?.rows ?? [];
+        const got = columns
+          .map((r) => r.slice(0, 3).map((c) => (c ?? "").replace(/`/g, "").trim()).join(" | "))
+          .join("; ");
+        if (got !== want)
+          fail(
+            `${path}: \`## References\` declares ${got || "no columns"}; R9 gives it exactly What | Yes | string and URL | Yes | string`,
+          );
+      }
+    },
+  },
+  {
     name: "type vocabulary",
     rule: "R9",
     run() {
