@@ -23,6 +23,7 @@
     "test:cli": "node --test verify/cli.test.mjs",
     "test:untar": "node --test verify/untar.test.mjs",
     "test:fetch-core": "node --test verify/fetch-core.test.mjs",
-    "test:obsidian": "node --test verify/obsidian.test.mjs"
+    "test:obsidian": "node --test verify/obsidian.test.mjs",
+    "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs"
   }
 }
