@@ -106,6 +106,60 @@ test("an agent it cannot write for is refused by name, and nothing is written", 
   assert.deepEqual([...filesOf(root).keys()], []);
 });
 
+test("init in a git repository sets the hooks path; outside one it names the command", () => {
+  const inGit = temp();
+  execFileSync("git", ["init", "-q"], { cwd: inGit });
+  const said = run(["init", inGit, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: inGit, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use/);
+  const bare = temp();
+  assert.match(run(["init", bare, "--name", "Acme", "--agent", "claude"]), /git config core\.hooksPath \.companygraph\/hooks/);
+  const none = temp();
+  run(["init", none, "--name", "Acme", "--agent", "claude", "--no-hook"]);
+  assert.equal(fs.existsSync(path.join(none, ".companygraph/hooks/commit-msg")), false);
+});
+
+// R1: the brief's own hooks-path computation breaks on macOS, where os.tmpdir() is /var/... but
+// `git rev-parse --show-toplevel` answers /private/var/..., and on Windows' 8.3 short names.
+// Reading the prefix from git itself, instead of computing a relative path by hand against a
+// possibly-different rendering of the same folder, sidesteps both: an instance in a subfolder of
+// a git repository gets a hooksPath under that subfolder, not the repository's own top.
+test("init in a subfolder of a git repository names the hooks path relative to the repository's own root", () => {
+  const repo = temp();
+  execFileSync("git", ["init", "-q"], { cwd: repo });
+  const sub = path.join(repo, "sub");
+  fs.mkdirSync(sub);
+  const said = run(["init", sub, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repo, encoding: "utf8" }).trim(), "sub/.companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use: git reads hooks from sub\/\.companygraph\/hooks/);
+});
+
+test("init leaves a hooks path already set, and says the seat hook is not in use", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  execFileSync("git", ["config", "core.hooksPath", ".husky"], { cwd: dir });
+  assert.match(run(["init", dir, "--name", "Acme", "--agent", "claude"]), /core\.hooksPath is \.husky here/);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: dir, encoding: "utf8" }).trim(), ".husky");
+});
+
+test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  const commit = (env) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"],
+    { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
+  const stub = (code) => {
+    const file = path.join(temp(), "stub.mjs");
+    fs.writeFileSync(file, `process.exit(${code});\n`);
+    return file;
+  };
+  assert.notEqual(commit({ COMPANYGRAPH_CLI: stub(3) }).status, 0);
+  const through = commit({ COMPANYGRAPH_CLI: stub(1) });
+  assert.equal(through.status, 0);
+  assert.match(through.stderr, /seat check did not run/);
+  assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
+});
+
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
   assert.match(run(["--help"]), /init/);

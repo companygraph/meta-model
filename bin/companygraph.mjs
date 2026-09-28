@@ -16,7 +16,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chmodSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -42,7 +42,7 @@ const USAGE = `companygraph [<command>]
   commits [<folder>]  refuse a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
@@ -85,7 +85,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook"]);
 
 function flags(argv) {
   const out = { _: [] };
@@ -242,6 +242,7 @@ async function init(argv, { menu = false } = {}) {
     folders: given.folders?.split(",").map((f) => f.trim()).filter(Boolean),
     present: found,
     fetched: Boolean(given.core),
+    hook: !given["no-hook"],
   });
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, plan.writes);
@@ -251,6 +252,23 @@ async function init(argv, { menu = false } = {}) {
   const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
+  if (plan.writes.has(".companygraph/hooks/commit-msg")) {
+    chmodSync(join(root, ".companygraph/hooks/commit-msg"), 0o755);
+    // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
+    // instance's position under the repository's own top, whatever that top resolves to on this
+    // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
+    // a relative core.hooksPath against that same top when a hook runs, from any cwd under it.
+    const top = gitTop(root);
+    const prefix = top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+    const hooks = prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
+    const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+    if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
+    else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
+    else {
+      spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
+      console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}`);
+    }
+  }
   if (menu) return;
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
