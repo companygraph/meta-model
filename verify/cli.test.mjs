@@ -159,6 +159,25 @@ test("init leaves an enclosing repository's own hooks folder alone, naming what 
   assert.notEqual(cfg.status, 0, "core.hooksPath was left unset");
 });
 
+// Found in re-review: `git rev-parse --git-path hooks` answers absolute inside a worktree — the
+// hooks live under the main checkout's own `.git/`, nowhere near the worktree's own folder — and
+// `join(root, hooksDir)` had concatenated that absolute answer onto `root` into a path nothing
+// ever wrote, so the guard above never found the real hook and set core.hooksPath anyway.
+test("init in a git worktree leaves the main checkout's own hooks alone, naming the hook it found", () => {
+  const main = temp();
+  execFileSync("git", ["init", "-q"], { cwd: main });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: main, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(main, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"], { cwd: main });
+  const worktree = path.join(temp(), "wt");
+  execFileSync("git", ["worktree", "add", "-q", worktree, "-b", "wt-branch"], { cwd: main });
+  const said = run(["init", worktree, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: worktree, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset in the worktree");
+});
+
 test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
   const dir = temp();
   execFileSync("git", ["init", "-q"], { cwd: dir });

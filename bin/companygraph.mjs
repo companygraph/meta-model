@@ -269,9 +269,13 @@ async function init(argv, { menu = false } = {}) {
     // is), asked only where core.hooksPath is not already set to something else, since that case
     // is already the husky one below. A file git itself ships as a template ends `.sample` and is
     // never in the way.
+    // `--git-path` answers absolute in a worktree — its hooks live under the main checkout's own
+    // `.git/`, nowhere near `root` — and relative otherwise; `resolve` takes either, where `join`
+    // would concatenate an absolute answer onto `root` into a path nothing ever wrote.
     const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-    const already = hooksDir && existsSync(join(root, hooksDir))
-      ? readdirSync(join(root, hooksDir)).filter((f) => !f.endsWith(".sample"))
+    const hooksDirAbs = hooksDir ? resolve(root, hooksDir) : "";
+    const already = hooksDirAbs && existsSync(hooksDirAbs)
+      ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
       : [];
     if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
     else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
