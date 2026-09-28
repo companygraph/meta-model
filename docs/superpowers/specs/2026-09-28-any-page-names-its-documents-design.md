@@ -51,3 +51,7 @@ The core release is a minor one: every type gains an optional section, no page l
 Each instance re-pins its vendored core, which is where the schemas live. The MCP servers, the editor plugin and the three sites read the schemas the instance vendored, so they show the section with their next content re-pin and need no code. The cards on blust.ch and companygraph.io already render a References table as links, whichever type carries it.
 
 The first content is CompanyGraph's eight features, one pull request in companygraph/mental-model after the release, each row written from the place itself rather than from memory. It is not part of this change.
+
+## Left for later
+
+That a `URL` cell is an absolute `https` address to the document itself is a writing rule, held by the agent pass and by no script. A script could hold it only through a new column type, `url`, in R9's closed vocabulary, which would then hold every `url` column and the `url` fields of experience, identity, source and surface as well. That is its own change and its own release, and the owner asked for it to be recorded here rather than made now.
