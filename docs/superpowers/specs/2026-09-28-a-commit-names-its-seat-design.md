@@ -2,7 +2,7 @@
 
 An instance says who does each piece of work: every phase of a process lists its `executed-by` seats, and in Delivery's Implement it is the Implementer that commits on the code track and the Writer and the Translator on the prose track. The history says none of it. Every commit an agent makes carries the owner's name, so the question the model is built to answer — which seat did this, in which process — cannot be asked of the one record every change leaves. A commit an agent makes is authored by the seat it held, at an address on the instance's own domain, `Implementer <implementer@blust.ch>`, and carries the process, phase and track it was made in as trailers. A check refuses a seat the phase does not list, and a new command reads the history back as a report by seat.
 
-Status: decided by the owner on September 28, 2026, question by question: the seat as author, the address on the instance's domain, the addresses as mail aliases, a solo agent committing as the seat whose work it did, the owner's own commits keeping the owner's name, where the check runs, where the report looks, which instance governs a family repository with no model of its own, that `init` installs the hook, and who authors an agent's re-pin. One question is parked at the foot of this page and are the owner's.
+Status: decided by the owner on September 28, 2026, question by question: the seat as author, the address on the instance's domain, the addresses as mail aliases, a solo agent committing as the seat whose work it did, the owner's own commits keeping the owner's name, where the check runs, where the report looks, which instance governs a family repository with no model of its own, that `init` installs the hook, who authors an agent's re-pin, and that no Claude Code hook guards the owner's name.
 
 ## The author
 
@@ -37,7 +37,7 @@ A commit authored at the governing instance's domain is refused when any of thes
 - The role is not in the phase's `executed-by`.
 - It has a `Track` trailer naming a track the process does not list, or none where the process lists tracks.
 
-A commit authored by the identity's own address passes, trailers or not; it is the owner's. A commit by any other author — Dependabot, a release bot, a contributor — is outside the model and passes. This leaves one gap the check cannot close: an agent committing under the owner's name looks exactly like the owner. The rule in `WORKING.md` closes it for agents that read it; the parked question asks whether a Claude Code hook should close it for that agent too.
+A commit authored by the identity's own address passes, trailers or not; it is the owner's. A commit by any other author — Dependabot, a release bot, a contributor — is outside the model and passes. This leaves one gap the check cannot close: an agent committing under the owner's name looks exactly like the owner. The rule in `WORKING.md` closes it for agents that read it, and the report shows what it did not close. No Claude Code hook refuses a commit made without `--author`: a hook written for one agent is a rule the others do not see.
 
 The check is one command in the meta-model CLI, `companygraph commits [<folder>] [--range <a>..<b>] [--message <file>]`, so both places it runs call the same code. With `--message`, it checks the commit about to be made: the message from the file, the author from `git var GIT_AUTHOR_IDENT`. With `--range`, it checks every commit in the range.
 
@@ -81,7 +81,4 @@ The instances: nothing in the model changes. The owner sets up the aliases and v
 - No /team/ section yet.
 - No signing. An agent still signs nothing, and an author is not a signature.
 - No cloning by the report; it reads what is on the disk.
-
-## Parked for the owner
-
-1. **An agent under the owner's name.** Whether a Claude Code `PreToolUse` hook on `git commit` refuses a commit an agent makes without `--author`. Proposal: not now; the rule in `WORKING.md` and the report make the gap visible, and a hook written for one agent is a rule the others do not see.
+- No hook for one agent alone; the `commit-msg` hook is the one every agent meets.
