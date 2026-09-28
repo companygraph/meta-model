@@ -52,6 +52,17 @@ test("an empty repository has no commits, and says so without failing", () => {
   assert.deepEqual(logOf(dir, {}), []);
 });
 
+// git's own date parser reads a bare date naming *today* as "right now" rather than that day's
+// midnight, so a commit made earlier today would otherwise vanish from `--since <today>` the
+// moment any time passes between the commit and the read. today is computed here, not fixed, so
+// the test still exercises the same-day case whenever it is run.
+test("a commit made earlier today is not dropped by --since today", () => {
+  const dir = repo(temp());
+  git(dir, "commit", "-q", "--allow-empty", "-m", "Earlier today");
+  const today = new Date().toISOString().slice(0, 10);
+  assert.equal(logOf(dir, { since: today }).length, 1);
+});
+
 test("a trailer separated from the last paragraph is no trailer", () => {
   const dir = temp();
   git(dir, "init", "-q");
