@@ -155,6 +155,40 @@ test("a family is read from a member that is no instance, and a member whose org
   assert.match(run(site, "seats", ".").stdout, /not read, no instance of its organization on this disk: acme\/tools/);
 });
 
+// The example instance's identity, renamed to a second organization's, so a family can hold a
+// member governed by an instance other than the reporting one.
+function acmeInstanceAt(dir) {
+  instanceAt(dir);
+  const identityPath = path.join(dir, "model", "identity.md");
+  fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8")
+    .replace("email: hello@beacon.example", "email: hello@acme.example")
+    .replace("url: https://beacon.example", "url: https://acme.example")
+    .replace("# Beacon Systems", "# Acme Tools"));
+  return dir;
+}
+
+// Ruling: in a family, an author also counts as the owner's when their name or address matches
+// the reporting instance's own identity — the instance the report is run from — even in a member
+// of another organization, whose own governing instance judged the commit outside entirely. A
+// stranger's commit in that same member stays outside.
+test("in a family, a member of another organization's commit by the reporting identity's own name is the owner's, and a stranger stays outside", () => {
+  const top = temp();
+  const instance = instanceAt(path.join(top, "mental-model"));
+  git(instance, "commit", "-q", "--allow-empty", "-m", "The owner's own");
+  const acme = acmeInstanceAt(path.join(top, "acme-tools"));
+  git(acme, "commit", "-q", "--allow-empty", "--author", "Beacon Systems <robert@personal.example>", "-m", "Not at acme's domain");
+  git(acme, "commit", "-q", "--allow-empty", "--author", "Someone Else <stranger@other.example>", "-m", "A stranger");
+  vendorFamily(instance, [["beacon/mental-model", instance], ["acme/tools", acme]]);
+  const r = run(instance, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.equal(report.scope, "family");
+  assert.equal(report.seats.length, 0);
+  assert.equal(report.owner, 2);
+  assert.equal(report.outside, 1);
+  assert.equal(report.refused, 0);
+});
+
 // End to end: a commit from before the rule, made under the identity's own name at an address
 // that names no role and is outside the domain entirely, is reported as the owner's rather than
 // outside the model — the report's own leniency, never judgeCommit's.

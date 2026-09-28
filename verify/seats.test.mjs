@@ -114,6 +114,26 @@ test("the tally counts a commit by the identity's own name as the owner's, whate
   assert.deepEqual(r.seats, []);
 });
 
+// Ruling: in a family, an author also counts as the owner's when their name or address matches
+// the identity of the instance the report is run from — the reporting instance — even where the
+// commit's own governing instance (a different organization's) judged it outside or refused it.
+// A family read from a folder that is no instance itself passes no reporting identity, and
+// nothing extra applies.
+test("the tally also counts a commit as the owner's by the reporting instance's own name or address", () => {
+  const outside = { kind: "outside", failures: [] };
+  const refused = { kind: "seat", seat: null, failures: ["no role"] };
+  const reporting = { name: "Beacon Systems", ownerEmail: "hello@beacon.example" };
+  const judged = [
+    { email: "hello@beacon.example", name: "Robert", ownerName: "Acme Tools", judgement: outside },
+    { email: "x@y.z", name: "  beacon SYSTEMS  ", ownerName: "Acme Tools", judgement: refused },
+    { email: "stranger@y.z", name: "Someone Else", ownerName: "Acme Tools", judgement: outside },
+  ];
+  const r = tally(judged, reporting);
+  assert.deepEqual([r.owner, r.outside, r.refused], [2, 1, 0]);
+  const same = tally(judged, null);
+  assert.deepEqual([same.owner, same.outside, same.refused], [0, 2, 1]);
+});
+
 test("the rendered report says its scope, its start and what it did not read", () => {
   const text = renderReport({ scope: "family", since: null, read: ["a/b"], unread: [{ repo: "a/c", path: "/nowhere/c" }], ...tally([]) });
   assert.match(text, /across the family, 1 of 2 members read, since the first commit/);

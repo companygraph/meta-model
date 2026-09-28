@@ -620,6 +620,10 @@ function seats(argv) {
   const since = given.since ?? SEATS_SINCE;
   const members = familyOf(top);
   if (!members && !isInstance(root)) throw new Error(`${shown(root)} is not an instance: it has no .companygraph/manifest.json beside a model/ folder`);
+  // The instance the report is run from, when root is one — the reporting instance, whose
+  // identity the tally also accepts as the owner's, distinct from a member's own governing
+  // instance in a family. A family read from a folder that is no instance itself has none.
+  const reportingIdentity = isInstance(root) ? governingOf(readInstance(root)) : null;
   const orgOf = (repo) => repo.split("/")[0];
   let targets, unread;
   if (members) {
@@ -648,7 +652,7 @@ function seats(argv) {
   // read against its own repository's governing instance, since a family report can span more
   // than one.
   const judged = targets.flatMap((m) => logOf(m.path, { since }).map((c) => ({ repo: m.repo, email: c.email, name: c.name, ownerName: m.governing.name, judgement: judgeCommit(m.governing, c) })));
-  const report = { scope: members ? "family" : "repository", since, read: targets.map((m) => m.repo), unread, ...tally(judged) };
+  const report = { scope: members ? "family" : "repository", since, read: targets.map((m) => m.repo), unread, ...tally(judged, reportingIdentity) };
   console.log(given.json ? JSON.stringify(report, null, 2) : renderReport(report));
   return 0;
 }
