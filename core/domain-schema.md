@@ -21,7 +21,7 @@ A domain owns nothing, so it is a file: its concepts and its products name it ra
 | --- | --- | --- |
 | `# [Domain]` | Yes | The canonical name of the domain. A concept's or a product's `domain` references this exact string. |
 | `> [Scope]` | Yes | One-paragraph statement of what this domain covers and what it leaves to another |
-| `## References` | No | Table. Documents that describe the area outside the model; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the area; its columns are declared below. |
 
 `## References` is a table with these columns:
 

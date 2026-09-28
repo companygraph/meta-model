@@ -25,7 +25,7 @@ The set is deliberately the instance's own. Which groups a career needs is a fac
 | `# [Label]` | Yes | The canonical name. Every heading that groups achievements references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the kind covers |
 | `## What it means` | Yes | Which achievements belong to this kind, and which do not |
-| `## References` | No | Table. Where the kind is defined outside the model; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the kind; its columns are declared below. |
 
 `## References` is a table with these columns:
 

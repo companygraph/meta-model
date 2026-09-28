@@ -24,13 +24,13 @@ A feature owns nothing, so it is a file. It is not owned by a product either: a 
 | `# [Feature]` | Yes | The canonical name of the feature |
 | `> [What it gives]` | Yes | One-paragraph statement of what someone can do with this that they could not without it |
 | `## Description` | Yes | What the feature does, and where it stops |
-| `## References` | No | Table. Where someone can use the feature; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the feature; its columns are declared below. |
 
 `## References` is a table with these columns:
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `What` | Yes | string | The kind of document — a chat, a listing, a command's page |
+| `What` | Yes | string | The kind of document — documentation, a demonstration, a place to use it |
 | `URL` | Yes | string | Where it is |
 
 ## Purpose
@@ -43,4 +43,4 @@ A feature is one thing a product lets someone do, and it answers "what is this f
 - `## Description` says where the feature stops as plainly as what it does, because the boundary is what tells two neighboring features apart.
 - A feature is named for the capability, not for the vendor that supplies it. Where a vendor is what varies, the vendor is a concept the feature names and not a feature of its own.
 - Nothing about a release, a ticket or a delivery date goes here: those move, and a feature outlives all three.
-- A References row says where someone can use the feature, and `What` names the kind of place, a chat, a listing, a command's page, never the surface, product or vendor by name.
+- `What` in `## References` names the kind of thing a row opens, never the surface, product or vendor by name.

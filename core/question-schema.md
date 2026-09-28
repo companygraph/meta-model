@@ -21,7 +21,7 @@
 | `# [Question]` | Yes | The question as a visitor asks it, ending in a question mark. Every reference to it uses this exact string. |
 | `> [Answer]` | Yes | One or two sentences that say where the answer lies and state no fact the model holds elsewhere |
 | `## Rests on` | No | Table. One row per entity the answer comes from; its columns are declared below. Absent when the answer is mastered here. |
-| `## References` | No | Table. Documents that answer the question beyond the model; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the question; its columns are declared below. |
 
 `## Rests on` is a table with these columns:
 
@@ -36,7 +36,7 @@
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `What` | Yes | string | The kind of document — a standard, a published post |
+| `What` | Yes | string | The kind of document — a post that answers it at length, a standard |
 | `URL` | Yes | string | Where it is |
 
 ## Purpose

@@ -22,7 +22,7 @@ A company has one vision, so the type is a file directly in the container rather
 | `# [Name]` | Yes | Short name for the vision, the thing people call it |
 | `> [Statement]` | Yes | One-paragraph statement of the future being worked toward |
 | `## What it means` | Yes | What is true when it holds, and what it excludes |
-| `## References` | No | Table. Documents the vision is published in; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the vision; its columns are declared below. |
 
 `## References` is a table with these columns:
 

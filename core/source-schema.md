@@ -20,7 +20,7 @@ A source is where a page's facts come from: the repository itself, or a system t
 | --- | --- | --- |
 | `# [Name]` | Yes | The canonical name. Everything references the source by this exact string. |
 | `> [Description]` | No | One-paragraph description of what the source holds |
-| `## References` | No | Table. Documents that describe the source; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the source; its columns are declared below. |
 
 `## References` is a table with these columns:
 

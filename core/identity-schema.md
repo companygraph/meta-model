@@ -28,7 +28,7 @@ The file is the graph's root as well as its subject: every other file in the ins
 | `> [Tagline]` | Yes | One-paragraph statement of what the company is |
 | `## What it is` | Yes | What the company does, and for whom |
 | `## Also at` | No | Table. One row per presence the company maintains elsewhere; its columns are declared below. |
-| `## References` | No | Table. Documents a reader can check the company against; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the company; its columns are declared below. |
 
 `## Also at` is a table with these columns:
 

@@ -24,7 +24,7 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 | `> [Definition]` | Yes | One-paragraph definition of what the concept is |
 | `## Also known as` | No | Table. The other names this concept goes by, none of which resolves. |
 | `## Relations` | No | Table. What this concept points at. |
-| `## References` | No | Table. Where the term is defined outside the model; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the term; its columns are declared below. |
 
 `## Also known as` is a table with these columns:
 

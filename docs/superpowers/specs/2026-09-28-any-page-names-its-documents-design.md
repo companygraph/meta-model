@@ -16,7 +16,7 @@ The six schemas that declare `## References` today are brand (required), decisio
 
 R9 gains a paragraph after the one on joins:
 
-> Every schema declares `## References`, a table of the documents a reader can check the page against, with the columns `What`, a required `string` naming the kind of document — a specification, a recording, a listing — and `URL`, a required `string` saying where it is, written exactly so. It declares no reference and so draws nothing (R16). A schema chooses its `Required`, `No` unless the type cannot be applied without its documents, and says in the sentence after `Table.` what its references are for. A schema without the section, or with other columns, is an error.
+> Every schema declares `## References`, a table of what a reader can open to learn more than the page says: a document that backs it, a place where what it describes is found or used, a fuller account of it. Its columns are `What`, a required `string` naming the kind of document — a specification, a recording, a listing — and `URL`, a required `string` saying where it is, written exactly so. It declares no reference and so draws nothing (R16). A schema chooses its `Required`, `No` unless the type cannot be applied without its documents, and says in the sentence after `Table.` what its references are for. A schema without the section, or with other columns, is an error.
 
 Nothing that reads a schema changes. The parser, the checker, the MCP server's `describe_schema` and the editor's section picker already read a declared table section, so each reads `## References` on every type the moment the schema declares it. No parser release is needed.
 
@@ -26,9 +26,9 @@ Nothing that reads a schema changes. The parser, the checker, the MCP server's `
 
 The six that declare it keep their declarations as they are: brand's required, the other five optional.
 
-Every other schema in `core/` gains the row in `## Sections`, optional, and the column table after its last one. The sentence after `Table.` says what the type's references are for, in the type's own terms. For a feature: "Where someone can use the feature: a chat, a listing, a command's page." For a concept: "Where the term is defined outside the model: a standard, a glossary." Each is written when the schema is, and the pull request lists them for the owner.
+Every other schema in `core/` gains the row in `## Sections`, optional, and the column table after its last one. The sentence after `Table.` is the same for each, "What a reader can open to learn more about" the type's subject, and what is particular to the type is in the kinds `What` names: for a feature, documentation, a demonstration, a place to use it; for a concept, a standard, a glossary. The owner decided on September 28, 2026 that what a reference is belongs in R9 once, and a schema names only its usual kinds.
 
-The feature schema also gains one writing rule, since it is the type this started from: `What` names the kind of place, never the surface, product or vendor by name.
+The feature schema also gains one writing rule, since it is the type this started from: `What` names the kind of thing a row opens, never the surface, product or vendor by name. Where to use a feature is one kind of reference among several, not what a feature's references are.
 
 ## Writing the table
 

@@ -24,7 +24,7 @@ The set is the instance's own, as an experience kind's is. Which sorts of call a
 | `# [Label]` | Yes | The canonical name. Every decision references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the kind covers |
 | `## What it means` | Yes | Which calls belong to this kind, and which do not |
-| `## References` | No | Table. Where the kind is defined outside the model; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the kind; its columns are declared below. |
 
 `## References` is a table with these columns:
 

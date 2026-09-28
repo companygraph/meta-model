@@ -23,13 +23,13 @@ A product owns nothing, so it is a file. Nothing owns a product either, and it l
 | --- | --- | --- |
 | `# [Product]` | Yes | The canonical name of the product. A feature's `products` references this exact string. |
 | `> [What it is]` | Yes | One-paragraph statement of what the product is and who opens it |
-| `## References` | No | Table. Where the product is documented and obtained; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the product; its columns are declared below. |
 
 `## References` is a table with these columns:
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `What` | Yes | string | The kind of document — its documentation, its release page |
+| `What` | Yes | string | The kind of document — documentation, a release page |
 | `URL` | Yes | string | Where it is |
 
 ## Purpose
