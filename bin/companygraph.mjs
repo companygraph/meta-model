@@ -630,7 +630,7 @@ function seats(argv) {
     // dir (macOS) or a short name (Windows) can render the same folder two ways.
     const onDisk = members.filter((m) => {
       const memberTop = gitTop(m.path);
-      return Boolean(memberTop) && realpathSync(memberTop) === realpathSync(m.path);
+      return Boolean(memberTop) && realpathSync.native(memberTop) === realpathSync.native(m.path);
     });
     // A member is judged by the instance of its own organization, never by another's: the
     // member's own where it is one, else the first of its organization the table lists.

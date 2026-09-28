@@ -232,7 +232,7 @@ test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manif
     assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `github:companygraph/meta-model#v${manifest.tooling}`, "companygraph"]);
     const commitsAt = argv.indexOf("commits");
     assert.notEqual(commitsAt, -1);
-    assert.equal(fs.realpathSync(argv[commitsAt + 1]), fs.realpathSync(dir));
+    assert.equal(fs.realpathSync.native(argv[commitsAt + 1]), fs.realpathSync.native(dir));
     assert.equal(argv[commitsAt + 2], "--message");
     // The hook passes git's own "$1" through unchanged, which git hands it relative to the
     // repository root it runs the hook in, not to this process's own cwd.

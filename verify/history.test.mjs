@@ -22,7 +22,7 @@ test("outside git there is no top, and inside it is the working tree's", () => {
   const dir = temp();
   assert.equal(gitTop(dir), null);
   git(dir, "init", "-q");
-  assert.equal(fs.realpathSync(gitTop(dir)), fs.realpathSync(dir));
+  assert.equal(fs.realpathSync.native(gitTop(dir)), fs.realpathSync.native(dir));
 });
 
 test("an instance is read against the core it vendors", () => {
