@@ -30,6 +30,7 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 | `## Evidence` | No | Table. Under `## Skills`. One row per fact a claim rests on; its columns are declared below. |
 | `## Summary` | No | A paragraph of context |
 | `## Also at` | No | Table. One row per presence the person maintains elsewhere; its columns are declared below. |
+| `## References` | No | Table. Documents a reader can check the person against; its columns are declared below. |
 
 `## Skills` is a table with these columns:
 
@@ -62,6 +63,13 @@ The column is `What it shows` rather than `Evidence` so that it does not restate
 | `URL` | Yes | string | The person's own page there |
 
 A presence is a place the person maintains a page on, named by the place and addressed by that page — never a single post, an article or a recording, which document an experience and belong in that experience's `## References`.
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a register entry, a published CV |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

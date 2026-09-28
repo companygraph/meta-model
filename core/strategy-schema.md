@@ -27,6 +27,14 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 | `## The approach` | Yes | How, concretely enough that someone could follow it |
 | `## What it rules out` | Yes | The options this choice forecloses |
 | `## What would show it is working` | Yes | What is observable, early enough to change course |
+| `## References` | No | Table. Documents the strategy is set out in; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a plan, a board paper |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

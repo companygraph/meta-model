@@ -23,6 +23,14 @@ A level owns nothing and nothing owns it: many profiles claim the same few, and 
 | `# [Label]` | Yes | The canonical name. Every assessment references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the level claims |
 | `## What it means` | Yes | What someone at this level can actually do |
+| `## References` | No | Table. Where the scale is defined outside the model; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a competency framework, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

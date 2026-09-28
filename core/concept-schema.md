@@ -24,6 +24,7 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 | `> [Definition]` | Yes | One-paragraph definition of what the concept is |
 | `## Also known as` | No | Table. The other names this concept goes by, none of which resolves. |
 | `## Relations` | No | Table. What this concept points at. |
+| `## References` | No | Table. Where the term is defined outside the model; its columns are declared below. |
 
 `## Also known as` is a table with these columns:
 
@@ -39,6 +40,13 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 | `Concept` | Yes | ref → concept | What this concept points at, by its canonical name |
 | `Cardinality` | Yes | enum | `one`, `maybe one`, `many` or `one to many`. How many of the target one of these has: exactly one, none or one, none or more, or one or more. |
 | `As` | No | string | The role the target plays in this relation. Required where two rows name the same concept, which is the only thing that tells them apart. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a standard, a glossary |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

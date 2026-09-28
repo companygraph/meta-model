@@ -10,6 +10,9 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import fs from "node:fs";
+import { checkInstance } from "../lib/checks.mjs";
+
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const SCHEMA = "process";
@@ -81,4 +84,49 @@ test("a row with no column table fails once more than the shape check's own find
   });
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /declares no columns/);
+});
+
+// The instance checks hold a References table on a type that declares it newly, as they hold
+// any declared table: through its real schema, read from disk, so the test fails if the schema
+// and the checks part. Value stands for every type that gains the section; identity is the type
+// that carries it beside `## Also at`.
+
+const schema = (type) => fs.readFileSync(new URL(`../core/${type}-schema.md`, import.meta.url), "utf8");
+const SOURCE_SCHEMA = ["# Source Schema", "", "> A source.", "", "## File Location", "", "`model/sources/*.md`", "",
+  "## Frontmatter", "", "No YAML frontmatter.", "", "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ""].join("\n");
+const refs = (header, rows) => ["## References", "", header, "| --- | --- |", ...rows, ""];
+const value = (table) => ["---", "source: Local", "---", "", "# Candor", "", "> We say what happened.", "",
+  "## In practice", "", "Saying it early.", "", ...table].join("\n");
+const identity = (table) => ["---", "source: Local", "---", "", "# Acme", "", "> Billing software.", "",
+  "## What it is", "", "Acme makes billing software for small firms.", "",
+  "## Also at", "", "| Where | URL |", "| --- | --- |", "| GitHub | https://example.invalid/acme |", "", ...table].join("\n");
+const failuresOf = (path, type, page) =>
+  checkInstance(new Map([
+    [`meta/core/${type}-schema.md`, schema(type)],
+    ["meta/core/source-schema.md", SOURCE_SCHEMA],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    [path, page],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes(path));
+
+test("a value whose References row names its document passes", () => {
+  assert.deepEqual(failuresOf("model/values/candor.md", "value",
+    value(refs("| What | URL |", ["| Code of conduct | https://example.invalid/conduct |"]))), []);
+});
+
+test("a References row with no URL fails once", () => {
+  const f = failuresOf("model/values/candor.md", "value", value(refs("| What | URL |", ["| Code of conduct |  |"])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /"## References" row has no url/);
+});
+
+test("a References table with Also at's columns fails once, on the columns", () => {
+  const f = failuresOf("model/values/candor.md", "value",
+    value(refs("| Where | URL |", ["| GitHub | https://example.invalid/a |", "| LinkedIn |  |"])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /columns are Where\|URL; the schema declares What\|URL/);
+});
+
+test("an identity carrying Also at and References passes", () => {
+  assert.deepEqual(failuresOf("model/identity.md", "identity",
+    identity(refs("| What | URL |", ["| Register entry | https://example.invalid/register |"]))), []);
 });

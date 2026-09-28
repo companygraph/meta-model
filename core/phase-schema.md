@@ -35,6 +35,7 @@ A phase is owned by a process and cannot exist without it, so it nests inside th
 | `## What it never does` | Yes | Bulleted. One sentence each, of what the phase refuses |
 | `## Gate` | Yes | Bulleted. The criteria that must be satisfied to leave the phase, one item each |
 | `## If not met` | Yes | Table. What the escalation authority may decide when the gate's criteria cannot be met, one row each, and where the work goes; its columns are declared below. A paragraph under the table may say what the rows cannot. |
+| `## References` | No | Table. The rulebooks and checklists the phase is run by; its columns are declared below. |
 
 `## Activities` is grouped under these headings:
 
@@ -55,6 +56,13 @@ A phase is owned by a process and cannot exist without it, so it nests inside th
 | --- | --- | --- | --- |
 | `Outcome` | Yes | string | What the escalation authority may decide, in a few words: `reworked`, `dropped` |
 | `Leads to` | No | ref → phase | The phase the work goes to: this one, or one before it in the owning process's `## Phases`. Empty where the process stops. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a rulebook, a checklist |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

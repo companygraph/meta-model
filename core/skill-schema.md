@@ -23,6 +23,14 @@ A skill owns nothing, so it is a file. Nothing owns a skill either: a profile cl
 | `# [Skill]` | Yes | The canonical name. Profiles, experiences and roles reference this exact string. |
 | `> [Definition]` | Yes | One-paragraph definition of what the skill is |
 | `## In practice` | No | What someone using this skill actually does |
+| `## References` | No | Table. Where the skill is defined outside the model; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a framework, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
