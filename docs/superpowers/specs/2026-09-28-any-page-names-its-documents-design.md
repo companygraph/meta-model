@@ -42,7 +42,7 @@ Three rules apply on every type and are written once, under R9's new paragraph:
 
 `verify` holds every schema to the rule: a fixture schema with no `## References` fails, one that declares it with a third column fails, and one whose `URL` column is optional fails; every schema in `core/` and `example/` passes. Each fixture is run failing before the passing case is read, so the zero means the check can fire. The instance checks already hold a declared table's columns and rows under R16 and need no change; a fixture page carrying a `## References` row with an empty `URL` cell shows they hold it on a type that newly declares the section.
 
-A pack's schema is held to the same rule, so a pack written before the release fails `verify` until it declares the section. No pack exists yet.
+R9's rule reaches a pack's schema as it reaches core's, but `verify` reads core's schemas only and the instance checks shape-check none, so no script holds a pack to it. No pack exists yet; the check that holds one is written with the first pack.
 
 ## What moves downstream
 
