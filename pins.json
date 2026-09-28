@@ -1,0 +1,21 @@
+{
+  "pins": [
+    { "kind": "conventions", "file": "conventions.json", "repo": "robertblust/conventions" }
+  ],
+  "verify": [
+    "npm run verify",
+    "npm run test:instance",
+    "npm run test:instance-checks",
+    "npm run test:rules",
+    "npm run test:plan",
+    "npm run test:instance-files",
+    "npm run test:cli",
+    "npm run test:untar",
+    "npm run test:fetch-core",
+    "npm run test:obsidian"
+  ],
+  "release": [
+    "npm version {version} --no-git-tag-version",
+    "node -e \"const fs=require('fs');const f='.github/workflows/instance-check.yml';fs.writeFileSync(f, fs.readFileSync(f,'utf8').replace(/ref: v[0-9.]+/, 'ref: v{version}'))\""
+  ]
+}
