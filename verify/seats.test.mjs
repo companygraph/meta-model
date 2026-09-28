@@ -102,5 +102,7 @@ test("the rendered report says its scope, its start and what it did not read", (
   assert.match(text, /not read, no clone at \/nowhere\/c: a\/c/);
   assert.match(text, /no commit is authored by a seat yet/);
   assert.match(text, /counted as the owner's/);
+  const other = renderReport({ scope: "family", since: null, read: [], unread: [{ repo: "a/d", path: "/here/d", reason: "no instance of its organization on this disk" }], ...tally([]) });
+  assert.match(other, /not read, no instance of its organization on this disk: a\/d/);
   assert.match(renderReport({ scope: "repository", since: "2026-10-01", read: ["a/b"], unread: [], ...tally([]) }), /in a\/b, since 2026-10-01/);
 });

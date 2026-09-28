@@ -572,6 +572,41 @@ function commits(argv) {
   return 0;
 }
 
+// Where the report looks is decided by what it finds, in the spec's order: a folder outside git
+// has no history; a repository that vendors the family's conventions reads every member on this
+// disk, and need not be an instance itself; any other reads itself, and must be one. It never
+// clones: a member with no clone at its local path is named as not read.
+const NO_ORG_INSTANCE = "no instance of its organization on this disk";
+
+function seats(argv) {
+  const given = flags(argv);
+  const root = resolve(given._[0] ?? ".");
+  const top = gitTop(root);
+  if (!top) throw new Error(`${shown(root)} is not inside a git repository, so the model has no history to report on`);
+  const since = given.since ?? SEATS_SINCE;
+  const members = familyOf(top);
+  if (!members && !isInstance(root)) throw new Error(`${shown(root)} is not an instance: it has no .companygraph/manifest.json beside a model/ folder`);
+  const orgOf = (repo) => repo.split("/")[0];
+  let targets, unread;
+  if (members) {
+    const onDisk = members.filter((m) => gitTop(m.path));
+    // A member is judged by the instance of its own organization, never by another's: the
+    // member's own where it is one, else the first of its organization the table lists.
+    const instances = onDisk.filter((m) => isInstance(m.path)).map((m) => ({ ...m, governing: governingOf(readInstance(m.path)) }));
+    const governs = (m) => (instances.find((i) => i.repo === m.repo) ?? instances.find((i) => orgOf(i.repo) === orgOf(m.repo)))?.governing;
+    targets = onDisk.filter(governs).map((m) => ({ ...m, governing: governs(m) }));
+    unread = members.flatMap((m) =>
+      !onDisk.includes(m) ? [{ repo: m.repo, path: m.path }] : governs(m) ? [] : [{ repo: m.repo, path: m.path, reason: NO_ORG_INSTANCE }]);
+  } else {
+    targets = [{ repo: basename(top), path: top, governing: governingOf(readInstance(root)) }];
+    unread = [];
+  }
+  const judged = targets.flatMap((m) => logOf(m.path, { since }).map((c) => ({ repo: m.repo, email: c.email, judgement: judgeCommit(m.governing, c) })));
+  const report = { scope: members ? "family" : "repository", since, read: targets.map((m) => m.repo), unread, ...tally(judged) };
+  console.log(given.json ? JSON.stringify(report, null, 2) : renderReport(report));
+  return 0;
+}
+
 async function menu() {
   const entries = [
     ["Make a model", "a new instance in a folder, or beside the files already in one", async () => {
@@ -665,6 +700,7 @@ try {
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
   else if (command === "commits") process.exitCode = commits(rest);
+  else if (command === "seats") process.exitCode = seats(rest);
   // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
   // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
   // is tested with its answers piped in.

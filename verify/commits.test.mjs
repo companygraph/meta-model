@@ -8,7 +8,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
-import { instanceAt } from "./seats-fixture.mjs";
+import { instanceAt, modelAt } from "./seats-fixture.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
@@ -76,4 +76,91 @@ test("without --range or --message, or outside git, it cannot run", () => {
   const bare = temp();
   fs.cpSync(dir, bare, { recursive: true, filter: (src) => !src.includes(`${path.sep}.git`) });
   assert.equal(run(bare, "commits", ".", "--range", "HEAD").status, 1);
+});
+
+// The family's conventions as a repository vendors them: conventions.json and the members' table.
+function vendorFamily(dir, rows) {
+  fs.writeFileSync(path.join(dir, "conventions.json"), "{}");
+  fs.mkdirSync(path.join(dir, "conventions"));
+  fs.writeFileSync(path.join(dir, "conventions", "REPOSITORIES.md"),
+    `| Repository | Title | Purpose | Default branch | Local path |\n| --- | --- | --- | --- | --- |\n` +
+    rows.map(([repo, local]) => `| ${repo} | T | p | main | ${local} |\n`).join(""));
+}
+
+test("the report refuses a folder outside git, and in a lone repository a folder that is no instance", () => {
+  let r = run(temp(), "seats", modelAt(temp()));
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /not inside a git repository, so the model has no history to report on/);
+  const plain = temp();
+  git(plain, "init", "-q");
+  r = run(plain, "seats", ".");
+  assert.equal(r.status, 1);
+  assert.match(r.stderr, /is not an instance/);
+});
+
+test("without a family it reports this repository alone", () => {
+  const dir = instanceAt(temp());
+  git(dir, "commit", "-q", "--allow-empty", "--author", "Backend Engineer <backend-engineer@beacon.example>", "-m", ok);
+  git(dir, "commit", "-q", "--allow-empty", "-m", "The owner's own");
+  const r = run(dir, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.equal(report.scope, "repository");
+  assert.deepEqual(report.seats.map((s) => [s.email, s.commits]), [["backend-engineer@beacon.example", 1]]);
+  assert.equal(report.owner, 1);
+});
+
+test("with a family it reads every member on disk, judges each by its organization's instance, and names the missing", () => {
+  const top = temp();
+  const instance = instanceAt(path.join(top, "mental-model"));
+  const site = path.join(top, "site");
+  fs.mkdirSync(site);
+  git(site, "init", "-q");
+  git(site, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Subject\n\nProcess: Delivery\nPhase: Build\nTrack: Code");
+  git(instance, "commit", "-q", "--allow-empty", "-m", "The owner's own");
+  vendorFamily(instance, [["beacon/mental-model", instance], ["beacon/site", site], ["beacon/gone", path.join(top, "gone")]]);
+  const r = run(instance, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.equal(report.scope, "family");
+  assert.deepEqual(report.read, ["beacon/mental-model", "beacon/site"]);
+  assert.deepEqual(report.unread.map((u) => u.repo), ["beacon/gone"]);
+  assert.deepEqual(report.seats.map((s) => s.email), ["reviewer@beacon.example"]);
+  assert.equal(report.owner, 1);
+  assert.match(run(instance, "seats", ".").stdout, /across the family, 2 of 3 members read/);
+});
+
+test("a family is read from a member that is no instance, and a member whose organization has none on disk is not judged", () => {
+  const top = temp();
+  const instance = instanceAt(path.join(top, "mental-model"));
+  const site = path.join(top, "site");
+  const other = path.join(top, "other");
+  for (const dir of [site, other]) {
+    fs.mkdirSync(dir);
+    git(dir, "init", "-q");
+  }
+  git(site, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Subject\n\nProcess: Delivery\nPhase: Build\nTrack: Code");
+  // At beacon's domain but in another organization's repository: judged against beacon's
+  // instance it would be refused for its missing trailers; it must not be judged at all.
+  git(other, "commit", "-q", "--allow-empty", "--author", "Stranger <stranger@beacon.example>", "-m", "No trailers");
+  vendorFamily(site, [["beacon/mental-model", instance], ["beacon/site", site], ["acme/tools", other]]);
+  const r = run(site, "seats", ".", "--json");
+  assert.equal(r.status, 0, r.stderr);
+  const report = JSON.parse(r.stdout);
+  assert.equal(report.scope, "family");
+  assert.deepEqual(report.read, ["beacon/mental-model", "beacon/site"]);
+  assert.deepEqual(report.unread, [{ repo: "acme/tools", path: other, reason: "no instance of its organization on this disk" }]);
+  assert.deepEqual(report.seats.map((s) => s.email), ["reviewer@beacon.example"]);
+  assert.equal(report.refused, 0);
+  assert.match(run(site, "seats", ".").stdout, /not read, no instance of its organization on this disk: acme\/tools/);
+});
+
+test("--since narrows the history", () => {
+  const dir = instanceAt(temp());
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "old"],
+    { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
+  git(dir, "commit", "-q", "--allow-empty", "-m", "new");
+  const report = JSON.parse(run(dir, "seats", ".", "--json", "--since", "2021-01-01").stdout);
+  assert.equal(report.owner, 1);
+  assert.equal(report.since, "2021-01-01");
 });
