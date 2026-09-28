@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { instanceAt, modelAt } from "./seats-fixture.mjs";
+import { SEATS_SINCE } from "../lib/seats.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
@@ -232,4 +233,26 @@ test("--since narrows the history", () => {
   const report = JSON.parse(run(dir, "seats", ".", "--json", "--since", "2021-01-01").stdout);
   assert.equal(report.owner, 1);
   assert.equal(report.since, "2021-01-01");
+});
+
+test("with no --since, the report defaults to SEATS_SINCE and history from before it is not read", () => {
+  const dir = instanceAt(temp());
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "before the rule"],
+    { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
+  execFileSync("git", ["-c", "user.name=Backend Engineer", "-c", "user.email=backend-engineer@beacon.example", "commit", "-q", "--allow-empty", "-m", ok],
+    { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2026-10-01T00:00:00Z", GIT_COMMITTER_DATE: "2026-10-01T00:00:00Z" } });
+  const report = JSON.parse(run(dir, "seats", ".", "--json").stdout);
+  assert.equal(report.since, SEATS_SINCE);
+  assert.equal(report.owner, 0);
+  assert.deepEqual(report.seats.map((s) => s.email), ["backend-engineer@beacon.example"]);
+});
+
+test("--since overrides SEATS_SINCE, reaching back before it", () => {
+  const dir = instanceAt(temp());
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=hello@beacon.example", "commit", "-q", "--allow-empty", "-m", "before the rule"],
+    { cwd: dir, env: { ...process.env, GIT_AUTHOR_DATE: "2020-01-01T00:00:00Z", GIT_COMMITTER_DATE: "2020-01-01T00:00:00Z" } });
+  const report = JSON.parse(run(dir, "seats", ".", "--json", "--since", "2000-01-01").stdout);
+  assert.equal(report.since, "2000-01-01");
+  assert.notEqual(report.since, SEATS_SINCE);
+  assert.equal(report.owner, 1);
 });
