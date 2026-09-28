@@ -9,9 +9,9 @@
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
 //   companygraph seats [<folder>] [--since <date>] [--json]
 //
-// Run with no command at a terminal, it opens a menu over init, check, upgrade and obsidian,
-// which asks what the flags would say and calls the same code, and stays open until Quit or
-// Ctrl+C.
+// Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
+// seats, which asks what the flags would say and calls the same code, and stays open until Quit
+// or Ctrl+C.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
@@ -34,7 +34,7 @@ const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"
 
 const USAGE = `companygraph [<command>]
 
-  (none)              at a terminal, a menu over init, check, upgrade and obsidian, open until Quit or Ctrl+C
+  (none)              at a terminal, a menu over init, check, upgrade, obsidian and seats, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
@@ -655,6 +655,10 @@ async function menu() {
     ["Obsidian", "make an instance a vault: the plugins, the graph, the panes, and Obsidian itself", async () => {
       await obsidian([await folder("Which vault?", ".")]);
       return 0;
+    }],
+    ["Report by seat", "the history's commits, by the seat that made them", async () => {
+      const root = await folder("Which model?", ".");
+      return seats([root]);
     }],
   ];
   const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);

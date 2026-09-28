@@ -12,6 +12,9 @@ const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
+// Quit's own number, read off a menu screen already captured: an entry added or removed moves
+// it, and a test asserting around Quit should not need to change to match.
+const quitOf = (said) => Number(said.match(/(\d+) {2}Quit/)[1]);
 
 // Every file under a folder, as the checks read one: path relative to the root with `/` on every
 // platform, text, and bytes for an image (R9).
@@ -185,17 +188,20 @@ test("the menu asks before it adds to a folder that holds files, and a no writes
 test("the menu shows an upgrade before it runs one, and a pick it does not have is refused", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  assert.match(run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" }), /nothing to do/);
-  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-5/);
+  const said = run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" });
+  assert.match(said, /nothing to do/);
+  const quit = quitOf(said);
+  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), new RegExp(`9 is not one of 1-${quit}`));
 });
 
 test("the menu comes back after a pick and stays until Quit", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const said = run(["menu"], { input: `\n2\n${root}\n9\nq\n1\n`, stdio: "pipe" });
-  assert.equal(said.match(/5 {2}Quit/g).length, 4);
+  const quit = quitOf(said);
+  assert.equal(said.match(new RegExp(`${quit} {2}Quit`, "g")).length, 4);
   assert.doesNotMatch(said, /Which folder\?.*\n.*Which folder\?/s);
-  assert.match(run(["menu"], { input: "5\n", stdio: "pipe" }), /5 {2}Quit/);
+  assert.match(run(["menu"], { input: `${quit}\n`, stdio: "pipe" }), new RegExp(`${quit} {2}Quit`));
 });
 
 // A question inside a pick is left with b, and the menu comes back with nothing more done: here
@@ -208,7 +214,7 @@ test("the menu comes back from any question on b, and says so without calling it
   assert.match(said, /back to the menu/);
   assert.doesNotMatch(said, /✗/);
   assert.equal(fs.existsSync(root), false);
-  assert.equal(said.match(/5 {2}Quit/g).length, 2);
+  assert.equal(said.match(new RegExp(`${quitOf(said)} {2}Quit`, "g")).length, 2);
   // Outside the menu a b is an answer like any other: a no to a y/N, here.
   const vault = temp();
   const build = temp();
@@ -231,11 +237,13 @@ test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its o
     child.stdout.on("data", (chunk) => { said += chunk; look(); });
     look();
   });
+  await until("Pick 1-");
+  const pick = `Pick 1-${said.match(/Pick 1-(\d+)/)[1]}`;
   child.stdin.write(`1\n${temp()}\n`);
   await until("What is the company called?");
   child.kill("SIGINT");
   await until("back to the menu");
-  await until("Pick 1-5");
+  await until(pick);
   child.kill("SIGINT");
   const code = await new Promise((done) => child.on("exit", done));
   assert.equal(code, 130);
@@ -848,4 +856,22 @@ test("check reads an image as bytes: a named PNG passes, and the same bytes name
   const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.match(failing.stdout + failing.stderr, /mira\.jpg: is a PNG named as a JPEG \(R9\)/);
   assert.equal(failing.status, 1);
+});
+
+test("the instance workflow checks a pull request's commits, over the whole history", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /fetch-depth: 0/);
+  assert.match(yml, /if: github\.event_name == 'pull_request'/);
+  assert.match(yml, /companygraph\.mjs commits \. --range "\$\{\{ github\.event\.pull_request\.base\.sha \}\}\.\.\$\{\{ github\.event\.pull_request\.head\.sha \}\}"/);
+});
+
+test("the menu offers the report", () => {
+  const dir = temp();
+  execFileSync("git", ["init", "-q"], { cwd: dir });
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  // The menu picks by number, and the report's entry is read off the menu rather than assumed.
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  const pick = listed.match(/(\d+)\S*\s+Report by seat/)[1];
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `${pick}\n${dir}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /Commits by seat in /);
 });
