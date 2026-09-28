@@ -2,7 +2,7 @@
 
 A feature says what someone can do and names no screen, service or vendor, so it cannot say where someone goes to do it. The chat on three sites, the MCP server, the editor plugin's listing and the command line's page are all addresses a reader of *A visitor asks the model* or *Checks while a file is edited* would follow, and the feature schema has nowhere to write one. Six schemas already have that place, a `## References` table with the columns `What | URL`, declared six times in the same words and missing from every other type. This change states the table once, in CONVENTIONS, as a section every type may carry, and removes the six copies.
 
-Status: decided by the owner on September 28, 2026: every type may carry an optional `## References` with the columns `What | URL`, stated once rather than per schema, and the brand keeps it required. The rest of this document is proposed and goes to the owner question by question: where the rule is written, what a schema may still say about it, whether the five optional declarations go, and that no type is exempt.
+Status: decided by the owner on September 28, 2026: every type may carry an optional `## References` with the columns `What | URL`, stated once rather than per schema, and the brand keeps it required; the rule as R9 words it, with the parser adding the declaration to every schema and a schema re-declaring the section only to change its `Required` and its description. The rest of this document is proposed and goes to the owner question by question: whether the five optional declarations go, and that no type is exempt.
 
 ## Where this comes from
 
