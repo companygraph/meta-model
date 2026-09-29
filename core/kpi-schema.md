@@ -20,6 +20,7 @@ One file per key performance indicator. Nothing owns a KPI and a KPI owns nothin
 | `unit` | Yes | string | What one value is counted in, with its period where it has one: `hours`, `deployments per week`, `percent of deployments` |
 | `direction` | Yes | enum | `lower`, `higher` or `target`. Which way is better: down, up, or toward a band, where too high and too low are both worse. |
 | `read-with` | No | array of ref → kpi | The KPIs it is read beside, because each can be moved alone at the other's cost — the H1 of a file in `kpis/` |
+| `can-cost` | No | array of ref → value | The values that pushing this number can wear down, each the H1 of a file in `values/` |
 
 ## Sections
 
@@ -57,6 +58,10 @@ A KPI is a quantity the company has chosen to watch, defined once so that everyo
   can be misread" hides nothing a reader can check.
 - `read-with` names a KPI that moves against this one when this one is gamed, never the KPI
   itself and not every KPI of the same process.
+- `can-cost` names a value only where `## What it can hide` says how pushing the number wears
+  it down. The field is the edge; the section is the reason, and a name with no reason under it
+  is a claim nothing backs.
+- A value any KPI could cost tells a reader nothing, and is not named.
 - `direction: target` is written only where both too high and too low are worse; an indicator
   that is better lower down to some floor is `lower`.
 - `unit` names the period wherever the value is a rate: `deployments per week`, not `count`.

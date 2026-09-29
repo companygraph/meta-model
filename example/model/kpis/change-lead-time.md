@@ -6,6 +6,8 @@ unit: hours
 direction: lower
 read-with:
   - Change Fail Rate
+can-cost:
+  - Craftsmanship
 ---
 
 # Change Lead Time
