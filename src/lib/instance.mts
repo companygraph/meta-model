@@ -1,0 +1,991 @@
+// Turns one instance — a map of path → Markdown, or path → bytes for a file `IMAGE_FILE`
+// matches, beside a map of the schemas it is written against — into the graph the example page
+// draws.
+//
+// It reads the fixed shape: YAML frontmatter as key/scalar or key/list, the H1 as the canonical
+// name, the `>` tagline, `##` sections as heading plus text, a table by its header row. Types
+// are folder names singularized by R7, ownership is nesting on disk (R5, R6). The schema for a
+// page's type is the one thing consulted beyond the shape, and it decides everything about
+// edges (R16): a field, a column, or a grouped section's `###` heading it declares as a
+// reference resolves against the type it names and draws an edge, a qualifier resolves and
+// draws nothing, and anything else is a fact. `declarationsOf` reads a schema into that
+// decision — `fields` for frontmatter, `tables` for a column, `headings` for a `###` heading —
+// and this file resolves every one of the three against it the same way. A reference that
+// resolves to nothing is an R4 error here, so the page can never draw a line to nowhere.
+// CONVENTIONS.md in companygraph/meta-model is the source of the rule numbers.
+//
+// Pure: no filesystem, no network, so verify/instance.test.mjs can feed it fixture maps.
+
+// The shapes this file reads and returns. A frontmatter value is a scalar or, for a block
+// sequence (R11), a list of them.
+export type Fields = Record<string, string | string[]>;
+// A table by its header row; `caption` is the line ending in `:` that stands right above it.
+export interface Table { caption: string | null; columns: string[]; rows: string[][] }
+// A `##` section: its text with the captions pulled out, every table in it, and the first one
+// again as `table` where there is one.
+export interface Section { heading: string; text: string; tables: Table[]; table?: Table }
+// A period's kind, start and end, as parseInstance attaches them.
+export interface Stamp { kind: string | null; start: string | null; end: string | null }
+export interface Entity {
+  id: string; type: string; name: string; tagline: string;
+  fields: Fields; sections: Section[]; owner: string | null; path: string;
+  stamp?: Stamp;
+}
+// `via` is the field, `<Section>.<Column>` or `<Section>.<Heading>` that draws the edge; `attrs`
+// holds a row's other cells, or the Type cell in the vocabulary graph.
+export interface Edge { from: string; to: string; via: string; attrs: Record<string, string> }
+// A type as the graph lists it: its folder, null for a singular type, and its owner type.
+export interface GraphType { type: string; folder: string | null; owner: string | null; singular?: boolean }
+export interface Graph {
+  commit: string | null; root: string; rootId: string | null;
+  types: GraphType[]; entities: Entity[]; edges: Edge[];
+}
+// An instance's graph adds the core version it vendors, and always has a root.
+export interface InstanceGraph extends Graph { core: string | null; rootId: string }
+// A map of path → text: the schemas, keyed `<type>-schema.md`, or the pages of an instance.
+export type Files = Map<string, string>;
+// An instance as the checks and the image reader take it: every file, an image as bytes (R9).
+export type InstanceFiles = Map<string, string | Uint8Array>;
+// A declaration names its type, or, in the form `ref → by <Column> in <Owner>` (R4, R9), reads
+// it from its row: `target` is then null, and `by` and `in` name the columns of the same table
+// that carry the type and the owner, `in` null where the form has none.
+export type Declaration =
+  | { form: "ref" | "ref?" | "qualifier"; target: string; by?: undefined; in?: undefined }
+  | { form: "ref"; target: null; by: string; in: string | null };
+// A type's declarations: `fields` for frontmatter, `tables` for a section's columns, `headings`
+// for a grouped section's `###` headings.
+export interface Declarations {
+  fields: Map<string, Declaration>;
+  tables: Map<string, Map<string, Declaration>>;
+  headings: Map<string, { name: string; decl: Declaration }>;
+}
+// The least a row resolver needs of an entity, so a caller that has no parse can pass its own.
+export interface RowEntity { type: string; name: string; path: string; id?: string }
+export type RowError = { error: string; subject: "value" | "owner" };
+// An image a page names, read and ready to publish beside the model: see imagesOf.
+export interface Image { id: string; field: string; from: string; to: string; bytes: Uint8Array }
+// What the schemas constrain for one type: see constraintsOf.
+export interface Constraints {
+  references: {
+    via: string; form: Declaration["form"]; target: string | null; by: string | null; in: string | null;
+    array: boolean; required: boolean; min: number; max: number | null;
+  }[];
+  enums: { via: string; tokens: string[]; required: boolean }[];
+  joins: (
+    | { kind: "under"; section: string; under: string }
+    | { kind: "lists"; section: string; column: string; field: string; by: string }
+    | { kind: "roles"; section: string; column: string; by: string }
+  )[];
+  lists: { section: string; kind: "Bulleted" | "Numbered"; required: boolean; min: number }[];
+}
+
+// What a row's cells narrow the entities down to, or why they cannot.
+type Scope<E> =
+  | { error: { subject: "value" | "owner"; text: string }; within?: undefined; ownerId?: undefined }
+  | { error?: undefined; within: E[]; ownerId: string | null };
+interface SchemaTypes { ownerTypes: Map<string, string>; declaredTypes: Set<string> }
+interface Link { folder: string | null; name: string; ownerId: string | null; id: string; isFile: boolean; type?: string }
+
+// The one invented string of the model page — nothing in core/ names the vocabulary itself.
+export const CORE_LABEL = "Core";
+
+// R7 says a folder is the plural of its type. Reading that backwards — stripping the plural's
+// last letter — worked until two types sat one inside the other: `processes` is `process` plus
+// `es` and `phases` is `phase` plus `s`, so no suffix rule separates them, and `processes` came
+// back as `processe`. Nothing in this repository caught it, because `lib/checks.mjs` declares
+// each folder as a literal string and only the parser ever guessed.
+//
+// So the parser stops guessing, the same way it stopped resolving references by name alone:
+// every schema's `## File Location` names the folder its type lives in, and that declaration is
+// read instead. R9 fixes where to look — for a type with many entities the last folder the path
+// names is the type's own, and the `<placeholder>` segments before it are its owners.
+const folderTypes = (schemas: Files) => {
+  const byFolder = new Map() as Map<string | null, string> & { names: Map<string | null, string> };
+  byFolder.names = new Map();
+  for (const e of parseSchemas(schemas).entities) {
+    const type = e.id.slice("core/".length);
+    const location = e.sections.find((s) => s.heading === "File Location");
+    const cited = location?.text.match(/`([^`]+)`/)?.[1];
+    if (!cited) continue;
+    const dirs = cited.split("/").slice(0, -1).filter((d) => !/^<.+>$/.test(d));
+    const folder = dirs[dirs.length - 1];
+    if (folder) {
+      byFolder.set(folder, type);
+      // R7 wants the plural on disk. Keeping the singular too is what lets a folder named for
+      // the type itself — `value/` where `values/` belongs — still be reported as the R7 it is,
+      // rather than collapsing into "no schema declares this folder" with the others.
+      byFolder.names.set(type, folder);
+    }
+  }
+  return byFolder;
+};
+
+// R11: a list is a block sequence, one entry per line. This read only the bracketed form the
+// rule forbids, so a conforming instance had every list silently dropped — the key matched
+// with nothing after it and became the empty string, and each `- entry` line matched no key
+// and was skipped. Twenty-three of twenty-four experiences in the instance this was extracted
+// from carried no skills at all, and the published graph had not one `skills` edge.
+//
+// Nothing caught it because every fixture in this parser's own tests used the flow form: the
+// one shape the parser could read was the one shape the conventions forbid. So the flow form
+// is now the error R11 says it is, rather than the only thing that works — a rule this file
+// can see is a rule it enforces, which is how R4 has always behaved here.
+function parseFrontmatter(lines: string[]): [Fields, string[]] {
+  if (lines[0] !== "---") return [{}, lines];
+  const end = lines.indexOf("---", 1);
+  const fields: Fields = {};
+  const body = lines.slice(1, end);
+  for (let i = 0; i < body.length; i++) {
+    const m = body[i].match(/^([\w-]+):\s*(.*)$/);
+    if (!m) continue;
+    const [, key, raw] = m;
+    if (raw.startsWith("[")) {
+      throw new Error(`R11: \`${key}\` is a flow sequence; a list is one entry per line`);
+    }
+    if (raw === "") {
+      // A key with nothing after it opens a block sequence — or is simply an empty value, in
+      // which case no `- ` follows and it stays the empty string it was.
+      const items: string[] = [];
+      while (i + 1 < body.length && /^\s*-\s+/.test(body[i + 1])) {
+        items.push(body[++i].replace(/^\s*-\s+/, "").trim());
+      }
+      fields[key] = items.length ? items : "";
+      continue;
+    }
+    fields[key] = raw.trim();
+  }
+  return [fields, lines.slice(end + 1)];
+}
+
+function parseTable(lines: string[]) {
+  const cells = (l: string) => l.trim().replace(/^\||\|$/g, "").split("|").map(c => c.trim());
+  const columns = cells(lines[0]);
+  const rows = lines.slice(2).map(cells);
+  return { columns, rows };
+}
+
+function parseBody(lines: string[]) {
+  let name = "", tagline = "";
+  const sections: Section[] = [];
+  let cur: { heading: string; lines: string[] } | null = null;
+  const flush = () => {
+    if (!cur) return;
+    // Split the section's lines into alternating runs of table lines and non-table lines.
+    // A non-table run whose last non-blank line ends with ":" and is immediately followed by
+    // a table run is that table's caption; the caption line is pulled out of the text.
+    const blocks: { isTable: boolean; lines: string[]; caption?: string }[] = [];
+    let i = 0;
+    while (i < cur.lines.length) {
+      const isTable = cur.lines[i].trim().startsWith("|");
+      const start = i;
+      while (i < cur.lines.length && cur.lines[i].trim().startsWith("|") === isTable) i++;
+      blocks.push({ isTable, lines: cur.lines.slice(start, i) });
+    }
+    const tables: Table[] = [];
+    const textLines: string[] = [];
+    for (let bi = 0; bi < blocks.length; bi++) {
+      const block = blocks[bi];
+      if (block.isTable) {
+        const { columns, rows } = parseTable(block.lines);
+        tables.push({ caption: block.caption ?? null, columns, rows });
+        continue;
+      }
+      let lines = block.lines;
+      const next = blocks[bi + 1];
+      if (next && next.isTable) {
+        let idx = -1;
+        for (let j = lines.length - 1; j >= 0; j--) {
+          if (lines[j].trim() !== "") { idx = j; break; }
+        }
+        if (idx >= 0 && lines[idx].trim().endsWith(":")) {
+          next.caption = lines[idx].trim();
+          lines = lines.slice(0, idx).concat(lines.slice(idx + 1));
+        }
+      }
+      textLines.push(...lines);
+    }
+    // A section always carries its `tables` array (empty when it holds none); `table` — the
+    // first table — is a plain enumerable property added only when there is at least one, so
+    // it deep-equals and serializes as a normal object either way.
+    const section: Section = { heading: cur.heading, text: textLines.join("\n").trim(), tables };
+    if (tables.length) section.table = tables[0];
+    sections.push(section);
+  };
+  // R9: the tagline is the first blockquote paragraph before any section, and Markdown reads a
+  // run of `>` lines as one paragraph, so every line of the run is joined with a space. A blank
+  // line or a bare `>` ends it, and nothing after that joins it.
+  let inTagline = false;
+  for (const line of lines) {
+    if (inTagline && line.startsWith("> ") && line.slice(2).trim()) { tagline += " " + line.slice(2).trim(); continue; }
+    inTagline = false;
+    if (line.startsWith("# ") && !name) name = line.slice(2).trim();
+    else if (line.startsWith("> ") && !tagline && !cur) { tagline = line.slice(2).trim(); inTagline = true; }
+    else if (line.startsWith("## ")) { flush(); cur = { heading: line.slice(3).trim(), lines: [] }; }
+    else if (cur) cur.lines.push(line);
+  }
+  flush();
+  return { name, tagline, sections };
+}
+
+// A path is read pairwise: a folder, then the thing in it. `x.md` in a folder is an entity
+// file; a directory `x` is an entity in folder form (its own file is `x/x.md`) and whatever
+// follows it is a folder it owns.
+function locate(path: string): { chain: Link[]; self: Link } | null {
+  const parts = path.split("/");
+  const chain: Link[] = [];              // [{ folder, name, ownerId }]
+  // A singular type is one file directly in the container (core 0.4.0, R6/R13): the type is
+  // the filename, there is no folder to pluralise, and nothing owns it.
+  if (parts.length === 1 && parts[0].endsWith(".md")) {
+    const type = parts[0].slice(0, -3);
+    const self: Link = { folder: null, name: type, ownerId: null, id: type, isFile: true, type };
+    return { chain: [self], self };
+  }
+  let ownerId: string | null = null;
+  for (let i = 0; i + 1 < parts.length; i += 2) {
+    const folder = parts[i], item = parts[i + 1];
+    const isFile = item.endsWith(".md");
+    const name = isFile ? item.slice(0, -3) : item;
+    const id: string = (ownerId ? ownerId + "/" : "") + folder + "/" + name;
+    chain.push({ folder, name, ownerId, id, isFile });
+    if (isFile) return { chain, self: chain[chain.length - 1] };
+    if (i + 2 === parts.length - 1 && parts[i + 2] === name + ".md") {
+      return { chain, self: chain[chain.length - 1] };
+    }
+    ownerId = id;
+  }
+  return null;
+}
+
+// `sub` is where these files sit in the repository they came from — `model/` for a company's
+// own instance, `example/model/` for the one shipped here. It is prefixed to every entity's
+// `path`, which is what a page turns into a link to the file on GitHub. It used to be hardcoded
+// to `example/model/`: true of this repository and false of every other instance, so every file
+// link on a site whose model sits at `model/` was a 404. The caller knows this and always did —
+// it is the same constant it walks the tree with.
+// The version of the vocabulary an instance is written in, as it vendors it: the `version` in
+// the core's own manifest, which a site hands the parser with the schemas it reads from
+// `meta/core/`. A reader of the export can then say which core it answers from without a second
+// fetch. Null where the core carries no readable manifest, so an older export's shape still holds.
+function coreVersionOf(schemas: Files): string | null {
+  const raw = schemas && typeof schemas.get === "function" ? schemas.get("manifest.json") : undefined;
+  if (typeof raw !== "string") return null;
+  try {
+    const v = JSON.parse(raw).version;
+    return typeof v === "string" && v ? v : null;
+  } catch {
+    return null;
+  }
+}
+
+export function parseInstance(files: InstanceFiles, { sub = "", schemas }: { sub?: string; schemas?: Files } = {}): InstanceGraph {
+  // R16 makes the declared type the only thing that decides what a field is, so an instance is
+  // read beside its schemas or not at all. Resolving by name alone is not a fallback here; it
+  // is the mode this parser no longer has.
+  if (!schemas)
+    throw new Error(
+      "R16: an instance is read against its schemas, and none were given — pass `schemas`, keyed the way parseSchemas reads them (`<type>-schema.md`)",
+    );
+  const declared = declarationsOf(schemas);
+  const typeOfFolder = folderTypes(schemas);
+  const entities: Entity[] = [], typeMap = new Map<string, GraphType>();
+  for (const [path, text] of [...files.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (!path.endsWith(".md") || path.split("/").pop() === "README.md") continue;
+    const loc = locate(path);
+    if (!loc) continue;
+    const { self, chain } = loc;
+    const type = self.type ?? typeOfFolder.get(self.folder);
+    if (!type) {
+      const plural = typeOfFolder.names.get(self.folder);
+      if (plural) throw new Error(`R7: folder "${self.folder}" is a type's name; the folder is its plural, "${plural}" (${path})`);
+      throw new Error(`R13: ${path} sits in "${self.folder}", and no schema declares that folder as its own — a schema's \`## File Location\` is what names it`);
+    }
+    const ownerType = self.ownerId ? typeOfFolder.get(chain[chain.length - 2].folder) ?? null : null;
+    typeMap.set(type, { type, folder: self.folder, owner: ownerType, singular: !self.folder });
+    const lines = (text as string).split("\n");
+    const [fields, body] = parseFrontmatter(lines);
+    const { name, tagline, sections } = parseBody(body);
+    entities.push({ id: self.id, type, name, tagline, fields, sections,
+                    owner: self.ownerId, path: sub + path });
+  }
+  entities.sort((a, b) => (a.id < b.id ? -1 : 1));
+
+  // R2: a canonical name identifies an entity within its type, and for an owned type within its
+  // owner. So the index is one map per type, and for an owned type one per owner: two processes
+  // may each have a phase called Review, two people each a period of one title, and two entities
+  // of one name in one owner, or of an unowned type, are the error they always were. Two entities
+  // of different types may share one — the company of one, where the identity and the only
+  // profile are the same human — and the declared type is what chooses between them.
+  // Which type owns which is the schema's `**Owner:**` line (R10), never inferred from where the
+  // files happen to sit: a stray file in the wrong owner's folder must not change how every
+  // correct one is read. Lifted into `ownerTypesOf`, below, so a consumer that needs this same
+  // map — the Obsidian plugin, resolving and completing `by <Column> in <Owner>` rows — reads it
+  // rather than rebuilds it.
+  const ownerTypes = ownerTypesOf(schemas);
+  const ownerTypeOf = (type: string | null) => ownerTypes.get(type as string) ?? null;
+  const byId = new Map(entities.map((e) => [e.id, e]));
+  // The entity of `type` that `e` is, or is owned by, walking up its owners; null when none.
+  const ancestorOf = (e: Entity | null | undefined, type: string): string | null => {
+    for (let x = e; x; x = x.owner ? byId.get(x.owner) : null) if (x.type === type) return x.id;
+    return null;
+  };
+  const scopeKey = (type: string | null, owner: string | null) => (owner ? `${type}\u0000${owner}` : type);
+  const byScope = new Map<string | null, Map<string, string>>();
+  for (const e of entities) {
+    const ownerType = ownerTypeOf(e.type);
+    const owner = ownerType ? ancestorOf(e.owner ? byId.get(e.owner) : null, ownerType) : null;
+    if (ownerType && !owner)
+      throw new Error(`R5: ${e.path} is a ${e.type}, and a ${e.type} is owned by a ${ownerType}; it sits in no ${ownerType}`);
+    const key = scopeKey(e.type, owner);
+    if (!byScope.has(key)) byScope.set(key, new Map());
+    const names = byScope.get(key)!;
+    if (names.has(e.name))
+      throw new Error(`R2: two ${e.type} entities share the name "${e.name}"${owner ? ` in ${owner}` : ""}`);
+    names.set(e.name, e.id);
+  }
+
+  // One written value against one declaration, from the entity it is written in. A `ref` and a
+  // `qualifier` must resolve (R4, R16); a `ref?` that names nothing of its type stays a fact and
+  // returns null. Nothing here looks in any type but the declared one, which is why a name that
+  // exists under another type reads as unresolvable rather than ambiguous. A name of an owned type
+  // is looked for within the owner the referring entity is, or is owned by (R4): that is where a
+  // reference whose schema names the owned type is written, so the scope is known and never
+  // guessed. Written outside every owner of the type, this has no owner to be resolved in — that
+  // is `resolveBy`'s to do, reached only through the `by … in` form (R4, R9).
+  const resolve = (decl: Declaration, value: string, where: string, from: Entity): string | null => {
+    const ownerType = ownerTypeOf(decl.target);
+    const scope = ownerType ? ancestorOf(from, ownerType) : null;
+    const id = ownerType && !scope ? null : byScope.get(scopeKey(decl.target, scope))?.get(value) ?? null;
+    if (id) return id;
+    if (decl.form === "ref?") return null;
+    if (ownerType && !scope)
+      throw new Error(`R4: "${value}" in ${where} names no ${decl.target}: ${decl.target} entities are named only within the ${ownerType} that owns them`);
+    throw new Error(`R4: "${value}" in ${where} names no ${decl.target}${scope ? ` of ${scope}` : ""}`);
+  };
+
+  // `ref → by <Column> in <Owner>` (R4, R9): the row's own cells say what the name is. The type
+  // cell names a type a schema declares; where that type is owned, the owner cell names the
+  // owner the name is resolved within, and where it is not, the owner cell is blank. The page's
+  // own place is never consulted: a row written outside every owner says which one it means.
+  // The rule itself — what the row's cells may name, and which of it one name is — is
+  // `resolveWithin`, above, exported as `rowScope`/`resolveRow` so a consumer besides this
+  // parser reads the one rule rather than a copy of it. This closure calls `resolveWithin`
+  // directly, with the `ownerTypes` this parse already built and `declaredTypes` beside it,
+  // rather than through `resolveRow`, which would otherwise re-derive both from `schemas` on
+  // every row; it adds only the R4 text's quoted subject and `where`, neither of which
+  // `resolveWithin` is given.
+  const declaredTypes = new Set(declared.keys());
+  const resolveBy = (decl: Declaration, row: string[], columns: string[], value: string, where: string): string => {
+    const cellOf = (name: string | null | undefined) => (name ? (row[columns.indexOf(name)] ?? "").replace(/`/g, "").trim() : "");
+    const type = cellOf(decl.by), owner = cellOf(decl.in);
+    const result = resolveWithin(entities, { ownerTypes, declaredTypes }, type, value, owner);
+    if (result.error) throw new Error(`R4: "${result.subject === "owner" ? owner : value}" in ${where} ${result.error}`);
+    return result.entity!.id;
+  };
+
+  const edges: Edge[] = [];
+  for (const e of entities) {
+    // R13: a folder under the container is named by a schema, so a page whose type has none is
+    // not content and the parser has nothing to read it against.
+    const schema = declared.get(e.type);
+    if (!schema) throw new Error(`R13: ${e.path} has type ${e.type}, and no schema declares it — the schemas map is keyed \`<type>-schema.md\` with no folder`);
+
+    // R16: a declared reference draws an edge from every page that carries it, a list from
+    // every entry, and a field declared anything else — or not declared at all — draws
+    // nothing and keeps its value. A `location: Bergen` beside a skill called Bergen is a
+    // fact, because the schema said string. A qualifier declared in frontmatter — a shape R9
+    // does not allow — still resolves, so a bad name is caught, and still draws nothing.
+    for (const [key, value] of Object.entries(e.fields)) {
+      const decl = schema.fields.get(key);
+      if (!decl) continue;
+      const values = Array.isArray(value) ? value : value === "" ? [] : [value];
+      for (const v of values) {
+        const to = resolve(decl, v, e.path, e);
+        if (to && decl.form !== "qualifier") edges.push({ from: e.id, to, via: key, attrs: {} });
+      }
+    }
+
+    // A body table draws from the one column its schema declares as a reference, wherever it
+    // stands; the other declared columns are qualifiers and resolve into the edge's attributes
+    // (R16). A table whose schema declares no reference — an Also at, a References — draws
+    // nothing and is data, whatever its cells happen to say. A row whose `ref?` column names
+    // nothing stays data too; a row whose `ref` column names something that is not there is
+    // the R4 it always was.
+    // A cell with nothing in it names nothing, so a declared column that is empty is not
+    // resolved and keeps its empty value — the rule frontmatter has always had, where an
+    // empty field yields no value to resolve. Whether the cell was allowed to be empty is
+    // the schema's Required column, which the checker reads; the parser holds only what it
+    // was given. The reference column is no exception: a blank cell there also names nothing
+    // and draws no edge, whatever form it is declared in — an optional reference column, one
+    // whose Required says No, is what lets a row leave it blank at all. A cell that is not
+    // blank and still names nothing stays R4, exactly as it always was.
+    for (const s of e.sections) {
+      const columns = schema.tables.get(s.heading);
+      if (!s.table || !columns) continue;
+      const reference = [...columns.entries()].find(([, d]) => d.form !== "qualifier");
+      if (!reference) continue;
+      const [refName, refDecl] = reference;
+      const where = `${e.path} "## ${s.heading}"`;
+      for (const row of s.table.rows) {
+        const attrs: Record<string, string> = {};
+        let to: string | null = null;
+        s.table.columns.forEach((col, i) => {
+          const cell = row[i] ?? "";
+          if (col === refName) {
+            const named = refDecl.by ? cell.replace(/`/g, "").trim() : cell;
+            if (named) to = refDecl.by ? resolveBy(refDecl, row, s.table!.columns, named, where) : resolve(refDecl, named, where, e);
+            return;
+          }
+          const d = columns.get(col);
+          // The type and owner cells a `by` reference reads (R4, R9) are backtick-quoted as
+          // written — `experience`, `Mira Halvorsen` — since that is how a name is written
+          // anywhere else in a row, while the edge these two cells name is resolved on the
+          // stripped value. Their own attrs carry that same stripped value, not the markup.
+          const value = (col === refDecl.by || col === refDecl.in) && cell ? cell.replace(/`/g, "").trim() : cell;
+          attrs[col] = d && value ? resolve(d, value, where, e) ?? value : value;
+        });
+        // A reference column the page's header lacks leaves `to` null on every row and
+        // draws nothing; the header itself is the column check's business (checks.mjs),
+        // not the parser's.
+        if (!to) continue;
+        edges.push({ from: e.id, to, via: `${s.heading}.${refName}`, attrs });
+      }
+    }
+
+    // A grouped section draws from its `###` headings (R9, R16). A heading is not a field and
+    // not a cell, so until a schema could declare one it drew nothing and R4 was not true of
+    // it. The heading's text is the canonical name and resolves against the declared type like
+    // any other reference; the section's text is left as written, headings and all, so every
+    // consumer that renders it is unchanged. A heading carries nothing to qualify the edge
+    // with, so `attrs` is empty.
+    //
+    // `grouping.decl.form !== "qualifier"` mirrors the frontmatter walk above for the same
+    // reason: R9 gives a heading table's one row a Type of `ref → <type>`, but a schema is
+    // prose an author can still mistype as `qualifier → <type>`, and a qualifier resolves and
+    // draws nothing (R16) wherever it is declared. Without the guard a heading declared that
+    // way drew an edge the row it qualifies does not exist to carry.
+    for (const s of e.sections) {
+      const grouping = schema.headings.get(s.heading);
+      if (!grouping) continue;
+      const where = `${e.path} "## ${s.heading}"`;
+      for (const line of s.text.split("\n")) {
+        if (!line.startsWith("### ")) continue;
+        const to = resolve(grouping.decl, line.slice(4).trim(), where, e);
+        if (to && grouping.decl.form !== "qualifier")
+          edges.push({ from: e.id, to, via: `${s.heading}.${grouping.name}`, attrs: {} });
+      }
+    }
+  }
+  edges.sort((a, b) => (a.from + a.via + a.to < b.from + b.via + b.to ? -1 : 1));
+
+  const types = [...typeMap.values()].sort((a, b) => (a.type < b.type ? -1 : 1));
+  // The root of an instance is the company, and core 0.4.0 has an entity for it: `identity`.
+  // The page names the root after it and draws the two as one node, so `rootId` travels for
+  // the stage to find — which keeps the type's name here, where core's vocabulary is already
+  // known, rather than in a renderer that should not have to know it.
+  //
+  // R6: a company has one identity, so an instance carrying none has no root to name. This
+  // returned the string "Fictional Company" before — a plausible-looking answer, and wrong on
+  // every instance that is not the example. The parser is not the validator, so it is handed
+  // invalid instances; it fails on this one the way it fails on an unresolvable name.
+  // Core's vocabulary, resolved once for a renderer that should not have to know it — the
+  // same reason `rootId` is computed here rather than in a drawing. `start` and `end` are
+  // core's date fields and `kind` names an experience-kind; a renderer places this beside a
+  // node and translates it, but has no business knowing which field names carry it. Attached
+  // only where a period is there to carry it, so an entity with none keeps the shape it had.
+  // The stamp is a period's: a decision carries a `kind` too, a decision kind, and no
+  // period, and a kind alone would reach a renderer that translates it against the
+  // experience kinds.
+  for (const e of entities) {
+    const pick = (k: string) => (typeof e.fields[k] === "string" && e.fields[k] ? e.fields[k] : null);
+    const stamp = { kind: pick("kind"), start: pick("start"), end: pick("end") };
+    if (stamp.start) e.stamp = stamp;
+  }
+
+  const identity = entities.find(e => e.type === "identity");
+  if (!identity) throw new Error("R6: the instance has no identity entity to be its root");
+  return { commit: null, core: coreVersionOf(schemas), root: identity.name, rootId: identity.id, types, entities, edges };
+}
+
+// A schema's Type cell names one of five forms: the three that name their type —
+// `ref → <type>`, `ref? → <type>`, `qualifier → <type>` — optionally preceded by `array of `,
+// and the two that read their type from the row instead — `ref → by <Column>`,
+// `ref → by <Column> in <Owner>` — and may or may not carry backticks around the whole thing.
+// Both parseSchemas (the vocabulary graph, below) and declarationsOf (what an instance resolves
+// against, after it) read this same cell shape, so there is one reader of it: backticks
+// stripped and trimmed before the pattern is tried, so a cell written `` `ref → skill` `` and
+// one written `ref → skill` parse alike.
+// `ref → by <Column>` and `ref → by <Column> in <Owner>` (R9): a reference whose type is read
+// from its own row, and where that type is owned, whose owner is too. It is matched before the
+// three forms that name their type, which would otherwise take `by Type in Owner` for a type.
+const BY_DECLARATION = /^ref → by (.+?)(?: in (.+))?$/;
+const DECLARATION = /^(?:array of )?(ref\??|qualifier) → (.+)$/;
+export function declarationOf(cell: string | undefined): Declaration | null {
+  const bare = (cell ?? "").replace(/`/g, "").trim();
+  const by = bare.match(BY_DECLARATION);
+  if (by) return { form: "ref", target: null, by: by[1].trim(), in: by[2]?.trim() ?? null };
+  const m = bare.match(DECLARATION);
+  return m ? { form: m[1] as "ref" | "ref?" | "qualifier", target: m[2].trim() } : null;
+}
+
+// A captioned column table's caption names the section it declares columns for — `` `## Skills`
+// is a table with these columns: `` — and both walks below match it the same way.
+const SECTION_CAPTION = /^`##\s*([^`]+)`/;
+
+// R9's third declared shape, the grouped section: a table saying what the `###` headings under
+// one section name — `` `## Achievements` is grouped under these headings: ``. Both captions
+// open by naming a section in backticks, so the words are what separate them and this one is
+// matched first everywhere; SECTION_CAPTION is deliberately loose and would swallow it.
+const HEADING_CAPTION = /^`##\s*([^`]+)`\s+is grouped under these headings:$/;
+
+// Turns core/ — the vocabulary itself, one *-schema.md file per type — into the same shape.
+// A schema file is read by the fixed shape an instance is read by: H1, tagline, `##` sections,
+// a `**Owner:**` line before the first section. No schema is consulted to read a schema; R9
+// is the floor every schema must clear (Frontmatter and Sections present) for the rest to make
+// sense. Edges come only from the tables: a cell in Frontmatter or in a captioned column table
+// under Sections that names a type — `ref`, `ref?` or `qualifier` — and the Owner line itself.
+export function parseSchemas(files: Files, { sub = "" }: { sub?: string } = {}): Graph {
+  const entities: Entity[] = [];
+  for (const [file, text] of [...files.entries()].sort(([a], [b]) => (a < b ? -1 : 1))) {
+    if (!file.endsWith("-schema.md")) continue;
+    const type = file.replace(/-schema\.md$/, "");
+    const path = sub + file;
+    const lines = text.split("\n");
+    const [, body] = parseFrontmatter(lines); // core/ files carry no YAML frontmatter
+    // Only the preamble — before the first "## " heading — is searched for the Owner line, so
+    // a later section's prose that merely mentions "**Owner:**" is never mistaken for one; it
+    // stays untouched, ordinary text in that section.
+    const headingIdx = body.findIndex(l => l.startsWith("## "));
+    const preamble = headingIdx === -1 ? body : body.slice(0, headingIdx);
+    const ownerLine = preamble.find(l => l.startsWith("**Owner:**"));
+    const owner = ownerLine ? ownerLine.slice("**Owner:**".length).trim() : null;
+    const { name, tagline, sections } = parseBody(body);
+    const bySection = new Map(sections.map(s => [s.heading, s]));
+    if (!bySection.has("Frontmatter") || !bySection.has("Sections")) {
+      throw new Error(`R9: ${path} lacks ## Frontmatter or ## Sections`);
+    }
+    const fields: Fields = {};
+    if (owner) fields.owner = owner;
+    entities.push({ id: "core/" + type, type: "schema", name, tagline, fields, sections,
+                    owner: null, path });
+  }
+  entities.sort((a, b) => (a.id < b.id ? -1 : 1));
+
+  const byType = new Map<string | null, string>(entities.map(e => [e.id.slice("core/".length), e.id]));
+  const resolveType = (t: string | null, where: string): string => {
+    if (!byType.has(t)) throw new Error(`R4: "${t}" in ${where} names no schema`);
+    return byType.get(t)!;
+  };
+
+  // Every form that names a type, not only the one that draws an edge in an instance. This
+  // graph is the vocabulary, so what it shows is which type a declaration points at: a
+  // `ref? → <type>` points at one whether or not a given page's value resolves, and a
+  // `qualifier → <type>` points at one while drawing no edge of its own in an instance. The
+  // declared form travels on the edge, so a reader sees which of the three it is; `attrs.type`
+  // keeps the cell as written, backticks and all, since this graph is read by people as well.
+  const edges: Edge[] = [];
+  for (const e of entities) {
+    const frontmatter = e.sections.find(s => s.heading === "Frontmatter");
+    if (frontmatter?.table) {
+      const { columns, rows } = frontmatter.table;
+      const fieldIdx = columns.indexOf("Field"), typeIdx = columns.indexOf("Type");
+      for (const row of rows) {
+        const cell = row[typeIdx];
+        const decl = declarationOf(cell);
+        if (!decl || decl.by) continue;
+        const to = resolveType(decl.target, e.path);
+        const via = row[fieldIdx].replace(/`/g, "");
+        edges.push({ from: e.id, to, via, attrs: { type: cell } });
+      }
+    }
+    const sectionsSection = e.sections.find(s => s.heading === "Sections");
+    for (const t of sectionsSection?.tables ?? []) {
+      if (!t.caption) continue; // the section's own index table, not a column or heading table
+      // A heading table declares one reference for every `###` heading in its section, and a
+      // column table one per column, so the two differ only in which column holds the name.
+      const grouped = t.caption.match(HEADING_CAPTION);
+      const heading = grouped ?? t.caption.match(SECTION_CAPTION);
+      if (!heading) continue;
+      const colIdx = t.columns.indexOf(grouped ? "Heading" : "Column"), typeIdx = t.columns.indexOf("Type");
+      // The loose SECTION_CAPTION is what makes this reachable at all: a caption one word off
+      // the grouped form — "is grouped under these heading:" for "headings:" — fails
+      // HEADING_CAPTION and falls through to it, so this block sometimes reads a heading
+      // table's rows as if they were a column table's. `colIdx` then names a column the
+      // header does not have, and a row read at a missing index is `undefined` — reading
+      // `.replace` off it threw a bare TypeError naming no path. Neither index found is a
+      // caption this file cannot make sense of either way, so the block is skipped rather
+      // than read; "schema fixed shape" (verify/check.mjs) is what tells the author the
+      // caption is wrong.
+      if (colIdx < 0 || typeIdx < 0) continue;
+      // R9 gives a heading table exactly one row, because every heading in the section names
+      // the same type — a second row would be a second reference a heading table cannot
+      // declare. Reading every row here anyway drew a second `Section.Heading` edge for a
+      // two-row table while `declarationsOf` below declared only the first row's reference, so
+      // the vocabulary graph showed an edge the instance parser never draws. One reader of
+      // "how many rows does a heading table have" is what keeps the two answering the same
+      // question the same way.
+      for (const row of grouped ? t.rows.slice(0, 1) : t.rows) {
+        const cell = row[typeIdx];
+        const decl = declarationOf(cell);
+        if (!decl || decl.by) continue;
+        const to = resolveType(decl.target, e.path);
+        const via = `${heading[1]}.${row[colIdx].replace(/`/g, "")}`;
+        edges.push({ from: e.id, to, via, attrs: { type: cell } });
+      }
+    }
+    if (e.fields.owner) {
+      edges.push({ from: e.id, to: resolveType(e.fields.owner as string, e.path), via: "owner", attrs: {} });
+    }
+  }
+  edges.sort((a, b) => (a.from + a.via + a.to < b.from + b.via + b.to ? -1 : 1));
+
+  return { commit: null, root: CORE_LABEL, rootId: null,
+           types: [{ type: "schema", folder: "core", owner: null }], entities, edges };
+}
+
+// The owner types read from the schemas' `**Owner:**` lines (R10): every owned type mapped to
+// its owner type. `parseInstance` used to build this map inline, from `parseSchemas(schemas)`,
+// on every parse; lifted out so a consumer that needs the same map without parsing an instance —
+// the Obsidian plugin, resolving and completing `ref → by <Column> in <Owner>` rows (R4, R9) —
+// reads it instead of copying the walk over the schemas that builds it. Not cached: a caller
+// that resolves one row at a time against schemas that never change would read and walk the
+// schema files again on every call, but nothing here remembers a `schemas` map between calls to
+// notice that, or a stray change to one, so there is no cache to go stale either. `parseInstance`
+// below still asks for this only once, by calling it once and holding the result itself.
+function schemaTypesOf(schemas: Files): SchemaTypes {
+  const declaredTypes = new Set<string>(), ownerTypes = new Map<string, string>();
+  for (const e of parseSchemas(schemas).entities) {
+    const type = e.id.slice("core/".length);
+    declaredTypes.add(type);
+    if (e.fields.owner) ownerTypes.set(type, e.fields.owner as string);
+  }
+  return { declaredTypes, ownerTypes };
+}
+export function ownerTypesOf(schemas: Files): Map<string, string> {
+  return schemaTypesOf(schemas).ownerTypes;
+}
+
+// R6: an owner is a folder, its own file is `<folder>/<slug>/<slug>.md`, and what it owns sits
+// under `<folder>/<slug>/`. An owner named by a plain file — `<folder>/<slug>.md`, with no
+// folder of its own beside it — or a singular type's own root file (`<type>.md`, no folder at
+// all) owns nothing, whatever it is named: there is no folder under either shape for anything to
+// sit in. Read from a path alone, so it works the same over the parser's own entities and a
+// caller's that carries only `{ type, name, path }`; null when the path is not folder-form.
+//
+// A plain file whose own name happens to equal its containing folder's — `profiles/profiles.md`,
+// a profile named "Pro" filed directly under `profiles/` — reads exactly like folder form's last
+// two segments to that check alone: `parts[len - 2]` is `"profiles"`, the slug read off the
+// filename is `"profiles"` too, and they match by coincidence rather than because anything
+// really sits under `profiles/profiles/`. Where the owner carries an `id` (the parser's own
+// entities always do), that coincidence is caught by requiring the folder this returns to be the
+// owner's own id — `…/<id>` — which a plain file's never is, however its name happens to read;
+// an id-less caller (a consumer with only `{ type, name, path }`, such as the plugin) has no id
+// to check against and keeps the path-alone reading, the one place this can still be fooled.
+function ownedDirOf(path: string, id: string | null): string | null {
+  const parts = path.split("/");
+  const slug = parts[parts.length - 1].replace(/\.md$/, "");
+  if (parts[parts.length - 2] !== slug) return null;
+  const dir = parts.slice(0, -1).join("/");
+  if (id != null && dir !== id && !dir.endsWith("/" + id)) return null;
+  return dir;
+}
+
+// The rule `resolveBy` in `parseInstance` above reads a `ref → by <Column> in <Owner>` row by
+// (R4, R9): `type` and `owner` are the row's own by/in cells, bare — a caller strips backticks,
+// this does not. `ownerTypes`/`declaredTypes` are `schemaTypesOf`'s own two maps, handed in
+// rather than derived here, so a caller resolving many rows against one `schemas` map — every
+// row of a parse, or a plugin serving completions — derives them once and passes the same pair
+// through every call, and `parseInstance` below does exactly that. `entities` is scanned fresh
+// on every call and never kept between them, so a caller that pushes, removes or edits an entity
+// in the same array between two calls is read correctly on the very next one, and `within` is
+// always a newly built array, so nothing a caller does to what one call returns — sorting it in
+// place, say — can reach the next call.
+//
+// On success: `within` is the entities of `type` the row may name, and `ownerId` is the label
+// for the owner it named — its own `id` where the owner entity carries one; otherwise its owned
+// directory, where it is folder-form (a plain caller's best reading of what would have been the
+// id); the owner's own bare `path` failing both, since a plain-file owner has no folder-shaped
+// label to offer. `ownerId` is `null` when `type` is unowned. On failure: `error` is the R4 text
+// this rule has always thrown, minus the quoted subject and the `in <page>` that `resolveBy`
+// below adds back, and `subject` says which of the caller's own values that quote would have
+// been — `"value"`, the name being resolved, for every case but one, where the row's own owner
+// cell fails to resolve before a name is even looked for, and the message quotes that instead.
+function scopeOf<E extends RowEntity>(entities: E[], { ownerTypes, declaredTypes }: SchemaTypes, type: string | undefined, owner: string | undefined): Scope<E> {
+  if (!type) return { error: { subject: "value", text: "has no type in its row" } };
+  if (!declaredTypes.has(type))
+    return { error: { subject: "value", text: `is of type "${type}", which no schema declares` } };
+  const ownerType = ownerTypes.get(type) ?? null;
+  const of = (t: string) => entities.filter((e) => e.type === t);
+  if (!ownerType) {
+    if (owner)
+      return { error: { subject: "value", text: `is a ${type}, which nothing owns, and its row names "${owner}" as its owner` } };
+    return { within: of(type), ownerId: null };
+  }
+  if (!owner)
+    return { error: { subject: "value", text: `is a ${type}, which a ${ownerType} owns, and the row names no ${ownerType}` } };
+  if (ownerTypes.has(ownerType))
+    return { error: { subject: "value", text: `is a ${type} of a ${ownerType}, which is itself owned; a row names one owner` } };
+  const ownerEntity = of(ownerType).find((e) => e.name === owner);
+  if (!ownerEntity)
+    return { error: { subject: "owner", text: `names no ${ownerType}` } };
+  const ownedDir = ownedDirOf(ownerEntity.path, ownerEntity.id ?? null);
+  const ownerId = ownerEntity.id ?? ownedDir ?? ownerEntity.path;
+  return { within: ownedDir ? of(type).filter((e) => e.path.startsWith(ownedDir + "/")) : [], ownerId };
+}
+
+// `scopeOf`, then the one entity within `within` with the given name (R2: a name is unique
+// within its scope) — what `parseInstance`'s `resolveBy` needs to draw the edge, and what
+// `resolveRow` below needs too. `error`/`subject` read as `scopeOf`'s own when the row's cells
+// never resolve to a scope at all; once they do, a name absent from `within` is `"value"` and
+// the "names no …" text, since that message always quotes the name being resolved.
+function resolveWithin<E extends RowEntity>(entities: E[], precomputed: SchemaTypes, type: string | undefined, name: string | undefined, owner: string | undefined):
+  | { entity: E; error?: undefined; subject?: undefined }
+  | (RowError & { entity?: undefined }) {
+  const scope = scopeOf(entities, precomputed, type, owner);
+  if (scope.error) return { error: scope.error.text, subject: scope.error.subject };
+  const found = scope.within.find((e) => e.name === name);
+  if (found) return { entity: found };
+  return { error: scope.ownerId ? `names no ${type} of ${scope.ownerId}` : `names no ${type}`, subject: "value" };
+}
+
+// What a `ref → by <Column> in <Owner>` row's own `Type`/`Owner` cells narrow the model down to
+// (R4, R9) — every entity a name in this row could resolve to — before any particular name is
+// chosen from it. `entities` are the model's entities, each carrying at least `{ type, name,
+// path }`; `schemas` is the map `parseInstance` takes, keyed `<type>-schema.md`. A consumer
+// offering completion for the row's own name cell — the Obsidian plugin — calls this with what
+// the row's Type and Owner cells hold so far and offers `within`'s names. Errors are always
+// `{ error, subject }` — the same shape `resolveRow` returns them in, `error` the sentence's
+// text and `subject` which of the caller's own values it quotes — never text with a value
+// already folded in, so a caller always assembles the final sentence the same way.
+export function rowScope<E extends RowEntity>(entities: E[], schemas: Files, { type, owner }: { type?: string; owner?: string } = {}):
+  | { within: E[]; error?: undefined; subject?: undefined }
+  | (RowError & { within?: undefined }) {
+  const scope = scopeOf(entities, schemaTypesOf(schemas), type, owner);
+  return scope.error ? { error: scope.error.text, subject: scope.error.subject } : { within: scope.within };
+}
+
+// `rowScope`, then the one entity within it with the given name — what a consumer offering
+// completion for the row's name cell needs once a name has actually been chosen from what
+// `rowScope` offered, and what `parseInstance`'s `resolveBy` needs to draw the edge, though it
+// calls `resolveWithin` directly with the `ownerTypes`/`declaredTypes` it already built for its
+// own parse rather than asking this to derive them again for every row.
+export function resolveRow<E extends RowEntity>(entities: E[], schemas: Files, { type, name, owner }: { type?: string; name?: string; owner?: string } = {}):
+  | { entity: E; error?: undefined; subject?: undefined }
+  | (RowError & { entity?: undefined }) {
+  return resolveWithin(entities, schemaTypesOf(schemas), type, name, owner);
+}
+
+// The three things a Description may open with beyond `Table.` and `Grouped.` (R9): that the
+// entity a qualifier names `lists` its row's reference in a field, that a table section stands
+// `Under` another, and which kind of list a section holds. Each is read off the front of the
+// cell and nowhere else, so a sentence that mentions one further in declares nothing, and a
+// misspelled opener is prose. They live beside `declarationOf` for its reason: the instance
+// checks hold a page to these declarations and a consumer serves or draws them, and two readers
+// of one cell are two readings the day one of them is edited. `listKindOf` reads a kind after
+// `Table.` too, so that whoever holds a schema to R9 can name the mistake.
+const LISTS = /^`([^`]+)` lists `([^`]+)`\./;
+const UNDER = /^Table\.\s+Under `##\s+([^`]+?)`\./;
+const LIST_KIND = /^(?:(Table|Grouped)\.\s+)?(Bulleted|Numbered)\./;
+export function listsDeclarationOf(description: string | undefined): { field: string; by: string } | null {
+  const m = (description ?? "").trim().match(LISTS);
+  return m ? { field: m[1], by: m[2] } : null;
+}
+export function underDeclarationOf(description: string | undefined): { under: string } | null {
+  const m = (description ?? "").trim().match(UNDER);
+  return m ? { under: m[1].trim() } : null;
+}
+export function listKindOf(description: string | undefined): { kind: "Bulleted" | "Numbered"; after: "Table" | "Grouped" | null } | null {
+  const m = (description ?? "").trim().match(LIST_KIND);
+  return m ? { kind: m[2] as "Bulleted" | "Numbered", after: (m[1] as "Table" | "Grouped" | undefined) ?? null } : null;
+}
+
+// R8: the backticked tokens an `enum` field's Description opens with — read once here so the
+// R8 check and the required-field check, which both name an enum's permitted values, read the
+// same run of tokens the same way. The run must end at a sentence boundary — a period or the
+// end of the cell — not merely stop matching, so a separator R8 does not name (`and`, `/`) ends
+// the match silently rather than reading as a complete list that happens to be short one value.
+// Empty when the description opens with prose or no readable list, which is the caller's
+// finding to make, not this function's.
+export function enumTokensOf(description: string): string[] {
+  const leading = description.match(/^((?:`[^`]+`(?:\s*,\s*(?:or\s+)?|\s+or\s+))*`[^`]+`)(?:\.|$)/)?.[1] ?? "";
+  return [...leading.matchAll(/`([^`]+)`/g)].map((m) => m[1]);
+}
+
+// R9's image: a file beside the page that names it, a JPEG or a PNG. Every reader of an instance
+// reads a file this matches as bytes and everything else as text, because an image read as text
+// is corrupted before anything sees it, and a reader that decided by a list of its own would be
+// the second copy that drifts.
+export const IMAGE_FILE = /\.(jpe?g|png)$/;
+
+// An image's bytes as the one form everything here reads: a Uint8Array, which a Node Buffer is,
+// or the ArrayBuffer a fetch hands back, wrapped. Null for anything else — text above all, which
+// is what a reader that did not decide by IMAGE_FILE hands over, and which a caller reports as
+// the reader's mistake rather than the file's.
+export const bytesOf = (value: unknown): Uint8Array | null =>
+  value instanceof Uint8Array ? value : value instanceof ArrayBuffer ? new Uint8Array(value) : null;
+
+// The images an instance's pages name, for a site that publishes them beside its model.json:
+// each entity's id, the field, the path the file was read from (relative to the container, as
+// `files` is keyed) and where a site puts it, `<entity id>.<extension>` — ids are unique across
+// the model, file names only within a folder. Which fields are images is read from the schemas,
+// as R16 has every field's meaning read, so nothing here names profile. A named file that is
+// missing, or was read as text rather than bytes, throws: the checker has already reported it,
+// and a build that went on would publish a page pointing at nothing.
+export function imagesOf(files: InstanceFiles, data: { entities: Entity[] }, { sub = "", schemas }: { sub?: string; schemas?: Files } = {}): Image[] {
+  if (!schemas) throw new Error("R16: images are found by their declared type, and no schemas were given — pass `schemas`");
+  const imageFields = new Map<string, string[]>();
+  for (const e of parseSchemas(schemas).entities) {
+    const fm = e.sections.find((s) => s.heading === "Frontmatter")?.table;
+    if (!fm) continue;
+    const f = fm.columns.indexOf("Field"), t = fm.columns.indexOf("Type");
+    const fields = fm.rows.filter((r) => (r[t] ?? "").replace(/`/g, "").trim() === "image").map((r) => r[f].replace(/`/g, "").trim());
+    if (fields.length) imageFields.set(e.id.slice("core/".length), fields);
+  }
+  const out: Image[] = [];
+  for (const e of data.entities) {
+    for (const field of imageFields.get(e.type) ?? []) {
+      const name = e.fields?.[field];
+      if (typeof name !== "string" || !name) continue;
+      const dir = e.path.slice(sub.length).split("/").slice(0, -1).join("/");
+      const from = dir ? `${dir}/${name}` : name;
+      const bytes = bytesOf(files.get(from));
+      if (!bytes) throw new Error(`R9: ${sub}${from}, named by ${e.path}, ${files.has(from) ? "was read as text, not bytes — a reader reads what IMAGE_FILE matches as bytes" : "is not there"}`);
+      // Two image fields of one extension on one entity would publish under one name, and a
+      // site would overwrite the first with the second in silence.
+      const to = `${e.id}.${name.split(".").pop()}`;
+      const taken = out.find((o) => o.to === to);
+      if (taken) throw new Error(`R9: ${e.path} would publish ${to} twice, from both \`${taken.field}\` and \`${field}\``);
+      out.push({ id: e.id, field, from, to, bytes });
+    }
+  }
+  return out;
+}
+
+// What the schemas constrain, per type and as plain data, for whoever serves or draws the
+// vocabulary: every declared reference with how many of it a page may hold, the enums with the
+// values each permits, the joins, and the list sections with their kind. It says only what a rule states and a check holds. A
+// frontmatter field is there once or not at all, or is a list, and a required list carries at
+// least one entry (R9), so `min` and `max` are of the page. A column and a grouped heading are
+// of a row or a heading, and nothing bounds how many rows a table has, so there `required` is
+// of each row, `min` is 0 and `max` is open. A required section that declares a kind carries at
+// least one item (R16). An enum is a field's or a column's alike (R8, R9), named by `via` as a
+// reference is. The `roles` join is R16's: where a table's drawing reference stands beside a
+// column named `As`, two rows naming one entity carry roles of their own — found by that shape,
+// as the check finds it, and never by the type the table belongs to.
+export function constraintsOf(files: Files, { sub = "" }: { sub?: string } = {}): Record<string, Constraints> {
+  const bare = (cell: string | undefined) => (cell ?? "").replace(/`/g, "").trim();
+  const yes = (cell: string | undefined) => bare(cell) === "Yes";
+  const out: Record<string, Constraints> = {};
+  for (const e of parseSchemas(files, { sub }).entities) {
+    const references: Constraints["references"] = [], enums: Constraints["enums"] = [], joins: Constraints["joins"] = [], lists: Constraints["lists"] = [];
+    const reference = (via: string, row: string[], columns: string[], ofPage: boolean) => {
+      const cell = row[columns.indexOf("Type")];
+      const decl = declarationOf(cell);
+      if (!decl) return;
+      const array = bare(cell).startsWith("array of "), required = yes(row[columns.indexOf("Required")]);
+      references.push({ via, form: decl.form, target: decl.target, by: decl.by ?? null, in: decl.in ?? null, array, required,
+                        min: ofPage && required ? 1 : 0, max: ofPage && !array ? 1 : null });
+    };
+    const enumOf = (via: string, row: string[], columns: string[]) => {
+      if (bare(row[columns.indexOf("Type")]) !== "enum") return;
+      enums.push({ via, tokens: enumTokensOf((row[columns.indexOf("Description")] ?? "").trim()),
+                   required: yes(row[columns.indexOf("Required")]) });
+    };
+    const frontmatter = e.sections.find((s) => s.heading === "Frontmatter")?.table;
+    if (frontmatter) {
+      const k = frontmatter.columns.indexOf("Field");
+      if (k >= 0) for (const row of frontmatter.rows) {
+        reference(bare(row[k]), row, frontmatter.columns, true);
+        enumOf(bare(row[k]), row, frontmatter.columns);
+      }
+    }
+    for (const t of e.sections.find((s) => s.heading === "Sections")?.tables ?? []) {
+      if (!t.caption) {
+        // The sections table itself: where a section says it stands under another, and its kind.
+        const s = t.columns.indexOf("Section"), d = t.columns.indexOf("Description");
+        for (const row of s < 0 || d < 0 ? [] : t.rows) {
+          const section = bare(row[s]).match(/^##\s+(.+)$/)?.[1];
+          if (!section) continue;
+          const under = underDeclarationOf(row[d]);
+          if (under) joins.push({ kind: "under", section, under: under.under });
+          const kind = listKindOf(row[d]);
+          if (kind && kind.after !== "Table") {
+            const required = yes(row[t.columns.indexOf("Required")]);
+            lists.push({ section, kind: kind.kind, required, min: required ? 1 : 0 });
+          }
+        }
+        continue;
+      }
+      const grouped = t.caption.match(HEADING_CAPTION);
+      const heading = grouped ?? t.caption.match(SECTION_CAPTION);
+      if (!heading) continue;
+      const k = t.columns.indexOf(grouped ? "Heading" : "Column"), d = t.columns.indexOf("Description");
+      if (k < 0 || t.columns.indexOf("Type") < 0) continue;
+      const section = heading[1].trim();
+      for (const row of grouped ? t.rows.slice(0, 1) : t.rows) {
+        reference(`${section}.${bare(row[k])}`, row, t.columns, false);
+        if (!grouped) enumOf(`${section}.${bare(row[k])}`, row, t.columns);
+        const declared = grouped || d < 0 ? null : listsDeclarationOf(row[d]);
+        if (declared) joins.push({ kind: "lists", section, column: bare(row[k]), field: declared.field, by: declared.by });
+      }
+      if (!grouped) {
+        const drawing = t.rows.find((row) => { const decl = declarationOf(row[t.columns.indexOf("Type")]); return decl && decl.form !== "qualifier"; });
+        if (drawing && t.rows.some((row) => bare(row[k]) === "As"))
+          joins.push({ kind: "roles", section, column: "As", by: bare(drawing[k]) });
+      }
+    }
+    out[e.id.slice("core/".length)] = { references, enums, joins, lists };
+  }
+  return out;
+}
+
+// What every schema declares about the type it describes: per type, `fields` maps a
+// frontmatter field to its declaration, `tables` maps a section heading to the declarations of
+// its columns, and `headings` maps a grouped section's heading to the declaration of what its
+// `###` headings name — `{ name, decl }`, the way a column's declaration carries the column's
+// own name beside it. A declaration is `{ form, target }` where `form` is `ref`, `ref?` or
+// `qualifier`; a field declared any other way is absent, which is what makes it a fact (R16).
+// A `by` declaration is `{ form, target: null, by, in }`: its type comes from the row, not the
+// schema, so `target` is null and `by` and `in` name the columns that carry it.
+// This walks the same Frontmatter and captioned Sections tables parseSchemas walks to build its
+// edges — that walk is still its own, since one builds edges of a graph and the other builds
+// declarations an instance resolves against — but every Type cell in both passes through the
+// one declarationOf above, so the two readings of a cell can never disagree.
+function declarationsOf(schemas: Files): Map<string, Declarations> {
+  const declared = new Map<string, Declarations>();
+  const bare = (cell: string | undefined) => (cell ?? "").replace(/`/g, "").trim();
+  const readInto = (table: Table, keyColumn: string, into: Map<string, Declaration>) => {
+    const k = table.columns.indexOf(keyColumn), t = table.columns.indexOf("Type");
+    if (k < 0 || t < 0) return;
+    for (const row of table.rows) {
+      const decl = declarationOf(row[t]);
+      if (decl) into.set(bare(row[k]), decl);
+    }
+  };
+  for (const e of parseSchemas(schemas).entities) {
+    const type = e.id.slice("core/".length);
+    const fields = new Map<string, Declaration>(), tables = new Map<string, Map<string, Declaration>>(), headings = new Map<string, { name: string; decl: Declaration }>();
+    const frontmatter = e.sections.find((s) => s.heading === "Frontmatter");
+    if (frontmatter?.table) readInto(frontmatter.table, "Field", fields);
+    for (const t of e.sections.find((s) => s.heading === "Sections")?.tables ?? []) {
+      // A grouped section's heading table is read beside the column tables and told apart by
+      // its caption. It declares one reference — R9 gives it one row — and the Heading cell is
+      // what the edge is called, the way a column's name is.
+      const grouped = t.caption?.match(HEADING_CAPTION);
+      if (grouped) {
+        const k = t.columns.indexOf("Heading"), i = t.columns.indexOf("Type");
+        const row = t.rows[0];
+        if (k < 0 || i < 0 || !row) continue;
+        const decl = declarationOf(row[i]);
+        if (decl) headings.set(grouped[1].trim(), { name: bare(row[k]), decl });
+        continue;
+      }
+      const heading = t.caption?.match(SECTION_CAPTION);
+      if (!heading) continue;
+      const columns = new Map<string, Declaration>();
+      readInto(t, "Column", columns);
+      tables.set(heading[1].trim(), columns);
+    }
+    declared.set(type, { fields, tables, headings });
+  }
+  return declared;
+}

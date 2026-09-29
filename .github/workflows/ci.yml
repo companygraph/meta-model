@@ -13,9 +13,15 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      # No install step: nothing run below has a dependency — check.mjs reads this
-      # repository's own files, and the parser and its tests are pure, fed fixture maps —
-      # and there is no lockfile to install from. `npm ci` here would fail, not pass emptily.
+      # The JavaScript in lib/ and bin/ is written from src/ by TypeScript and committed, because
+      # a consumer installs it by tag and builds nothing. TypeScript and Node's types are this
+      # repository's only dependencies, both dev: they are installed here to compile src/ into a
+      # temporary folder and fail when the committed JavaScript is not what it compiles to. Nothing
+      # a consumer installs changes, and nothing below runs against anything but the committed files.
+      - name: Install the compiler
+        run: npm ci
+      - name: The committed JavaScript is what src/ compiles to
+        run: npm run build:check
       - name: Check the repository's own shape
         run: npm run verify
       - name: The parser still parses
@@ -52,7 +58,14 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
+      # As in `verify`: the compiler is installed only to hold the committed JavaScript to src/,
+      # here with the line ends and path separators a Windows checkout has.
+      - name: Install the compiler
+        run: npm ci
+      - name: The committed JavaScript is what src/ compiles to
+        run: npm run build:check
       - name: Check the repository's own shape
+        if: ${{ !cancelled() }}
         run: npm run verify
       - name: The parser, the instance checks and the rules
         if: ${{ !cancelled() }}

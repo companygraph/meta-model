@@ -20,12 +20,14 @@ core/              the shipped unit, copied whole into an instance
   manifest.json    the release this unit is
   LICENSE          Apache 2.0, travelling with what it covers
 example/           a fictional company, described in those types
+src/               the TypeScript lib/ and bin/ are compiled from: edit here, then npm run build
 lib/instance.mjs   the instance parser, the module a site imports
 lib/checks.mjs     the checks an instance is held to, shared by the suite and the checker
 lib/obsidian.mjs   the vault: the plugins' install, shared with the plugin's e2e suite, the graph, the panes, and where Obsidian is
 bin/check-instance.mjs     the mechanical half of R0, run over one instance by its workflow
 bin/companygraph.mjs       the command: init, upgrade, check, obsidian, commits and seats, with a menu over init, check, upgrade, obsidian and seats
 agents/claude/skills/      the skills init writes for Claude and upgrade moves
+tools/build-check.mjs      npm run build:check — lib/ and bin/ are what src/ compiles to
 verify/
   check.mjs                npm run verify — asserts this repo's own shape
   instance.test.mjs        npm run test:instance — the parser, against fixtures
@@ -35,7 +37,7 @@ verify/
 
 Everything a unit ships lives inside it, so vendoring is a copy rather than a recipe. There is no file outside `core/` that an instance also needs.
 
-`lib/` is what a consumer imports and `bin/` is what a workflow runs: the parser a site builds its pages with, and the instance checker a caller invokes by path at the release its manifest names, because every instance's CI calls it there rather than through a command. The package's own command is `bin/companygraph.mjs`, the package's `bin`, run straight from a release tag as `npx github:companygraph/meta-model#<tag> <command>`; what it does is under Instantiating it, below. Nothing here is published to npm, so the tag is what a command names, the same way a consumer takes the package.
+`lib/` is what a consumer imports and `bin/` is what a workflow runs: the parser a site builds its pages with, and the instance checker a caller invokes by path at the release its manifest names, because every instance's CI calls it there rather than through a command. The package's own command is `bin/companygraph.mjs`, the package's `bin`, run straight from a release tag as `npx github:companygraph/meta-model#<tag> <command>`; what it does is under Instantiating it, below. Nothing here is published to npm, so the tag is what a command names, the same way a consumer takes the package. `lib/` and `bin/` are compiled from `src/` and committed, each module with its `.d.mts` beside it, so a consumer takes the JavaScript and its types from the tag and builds nothing.
 
 A site reads an instance with `import { parseInstance, parseSchemas, CORE_LABEL } from "companygraph-meta-model/instance"` — `parseInstance` turns a map of path → Markdown into the graph, read beside a second map of the schemas it is written against — `parseInstance(files, { sub, schemas })`, the second map keyed the way `parseSchemas` reads it, one bare `<type>-schema.md` per type whatever folder or pack it came from — and `parseSchemas` turns that second map into the graph of the vocabulary itself. The graph `parseInstance` returns names the core it is written in as `core`, the `version` in the `manifest.json` the second map carries when it holds the whole vendored core, and null where it holds none, so a page that draws the graph can say which vocabulary it answers from. It is the version string alone: the MCP server's snapshot carries a `core` of its own that is an object, with the version, the parser and the path, and the two are different files.
 

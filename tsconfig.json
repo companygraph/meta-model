@@ -1,0 +1,26 @@
+{
+  "compilerOptions": {
+    "rootDir": "src",
+    "outDir": ".",
+    "target": "ES2024",
+    "lib": ["ES2024"],
+    "types": ["node"],
+    "module": "NodeNext",
+    "moduleResolution": "NodeNext",
+    "strict": true,
+    "noImplicitAny": true,
+    "exactOptionalPropertyTypes": true,
+    "erasableSyntaxOnly": true,
+    "verbatimModuleSyntax": true,
+    "allowImportingTsExtensions": true,
+    "rewriteRelativeImportExtensions": true,
+    "declaration": true,
+    "noEmitOnError": true,
+    "removeComments": false,
+    "newLine": "lf",
+    "sourceMap": false,
+    "skipLibCheck": false
+  },
+  "include": ["src"],
+  "exclude": []
+}
