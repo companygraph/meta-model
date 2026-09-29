@@ -14,7 +14,7 @@ const bare = (type, location) => [`# ${type[0].toUpperCase()}${type.slice(1)} Sc
 const kpi = (name, fm, sections = ["How it is measured", "What it can hide"]) => [
   "---", ...fm, "---", "", `# ${name}`, "", "> What it measures.", "",
   ...sections.flatMap((s) => [`## ${s}`, "", "Prose.", ""])].join("\n");
-const GOOD = ["source: Local", "owner: Owner", "measures: Delivery", "unit: hours", "direction: lower", "read-with:", "  - Change Fail Rate"];
+const GOOD = ["source: Local", "owner: Owner", "measures: Delivery", "unit: hours", "direction: lower", "read-with:", "  - Change Fail Rate", "can-cost:", "  - Craftsmanship"];
 
 const tree = (fm, sections) => new Map([
   ["meta/core/kpi-schema.md", KPI_SCHEMA],
@@ -22,9 +22,11 @@ const tree = (fm, sections) => new Map([
   ["meta/core/role-schema.md", bare("role", "model/roles/*.md")],
   ["meta/core/process-schema.md", bare("process", "model/processes/<process>/<process>.md")],
   ["meta/core/strategic-objective-schema.md", bare("strategic-objective", "model/strategic-objectives/*.md")],
+  ["meta/core/value-schema.md", bare("value", "model/values/*.md")],
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
   ["model/roles/owner.md", "# Owner\n\n> The seat.\n"],
   ["model/processes/delivery/delivery.md", "# Delivery\n\n> How things ship.\n"],
+  ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
   ["model/kpis/change-fail-rate.md", kpi("Change Fail Rate", ["source: Local", "owner: Owner", "unit: percent of deployments", "direction: lower"])],
   ["model/kpis/change-lead-time.md", kpi("Change Lead Time", fm, sections)],
 ]);
@@ -37,7 +39,7 @@ test("a KPI with every required field and section, naming another in read-with, 
 });
 
 test("a KPI whose read-with names itself passes; the writing rule, not the checker, refuses it", () => {
-  assert.deepEqual(about(GOOD.slice(0, -1).concat("  - Change Lead Time")), []);
+  assert.deepEqual(about(GOOD.map((l) => l.replace("  - Change Fail Rate", "  - Change Lead Time"))), []);
 });
 
 test("a direction outside its three tokens fails and names them", () => {
@@ -62,9 +64,26 @@ test("a quoted empty unit fails the same way, whichever quote it is written in",
 });
 
 test("a read-with naming no KPI fails", () => {
-  assert.equal(about(GOOD.slice(0, -1).concat("  - Uptime"), undefined, "\"Uptime\"").length, 1);
+  assert.equal(about(GOOD.map((l) => l.replace("  - Change Fail Rate", "  - Uptime")), undefined, "\"Uptime\"").length, 1);
 });
 
 test("a missing What it can hide fails", () => {
   assert.equal(about(GOOD, ["How it is measured"], "no `## What it can hide`").length, 1);
+});
+
+test("a can-cost naming no value fails", () => {
+  assert.equal(about(GOOD.map((l) => l.replace("  - Craftsmanship", "  - Speed")), undefined, "\"Speed\"").length, 1);
+});
+
+test("a can-cost naming a KPI, not a value, fails: a reference resolves by its declared type", () => {
+  assert.equal(about(GOOD.map((l) => l.replace("  - Craftsmanship", "  - Change Fail Rate")), undefined, "\"Change Fail Rate\"").length, 1);
+});
+
+test("a can-cost written as a flow sequence fails under R11", () => {
+  const fm = GOOD.filter((l) => l !== "  - Craftsmanship").map((l) => (l === "can-cost:" ? "can-cost: [Craftsmanship]" : l));
+  assert.equal(about(fm, undefined, "`can-cost` is a flow sequence").length, 1);
+});
+
+test("a KPI without can-cost passes, since the field is optional", () => {
+  assert.deepEqual(about(GOOD.filter((l) => l !== "can-cost:" && l !== "  - Craftsmanship")), []);
 });
