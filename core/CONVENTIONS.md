@@ -4,6 +4,8 @@
 > that names an issue tracker, a wiki, a chat tool or a mail domain belongs in the instance,
 > not here.
 
+The pages are written by agents, on a person's request or in a workflow that runs on its own, and a person approves each change before it enters a model. The rules below are written for the agent that writes a page and the check that reads it; the person approving is not expected to apply them by hand, and judges what no rule can, whether the change is true.
+
 Validation is agent-run, and part of it is also a script's. Invoke it in prose — *"check cross-references in this repository"* — and the rules below are what is being checked. Where a rule's shape is fixed, a script reads it from the same schemas an agent reads; there is no second schema for the script. R0 says which rules a script reaches and where it runs.
 
 ## Structure
@@ -183,7 +185,7 @@ That one is *chosen* rather than derived, and the schema says so rather than nam
 
 Two entities in one folder that end up with the same filename are an error. The folder, not the type: an owned type shares a folder only with its owner's other entities, so two profiles may each hold an experience named the same way and both files are correctly named.
 
-This is here rather than in a tooling document because a filename is written by whoever writes the file, and the first instance was written by hand. A rule only a program can consult is not a convention.
+This is here rather than in a tooling document because a filename is written by whoever writes the file, an agent as a rule and a person now and then, and either has to be able to derive it from this page. A rule only a program can consult is not a convention.
 
 ### R15 — A page's frontmatter fields are the ones its schema declares
 
@@ -215,7 +217,7 @@ What the rule costs is that a schema's types stop being decoration: retype a fie
 
 ### R0 — Validation runs before committing
 
-Nothing is committed without a validation pass over the rules above. The pass is an agent reading the files against these rules and, where a repository runs one, a script reading part of them from the same schemas. The agent pass is the one every repository has; nothing here depends on the script.
+Nothing is committed without a validation pass over the rules above. The pass is an agent reading the files against these rules and, where a repository runs one, a script reading part of them from the same schemas. The agent pass is the one every repository has; nothing here depends on the script. A pass that finds nothing approves nothing: it says a change has the right shape, and the change enters the model when a person approves it.
 
 Which rules those scripts reach is worth stating plainly. In the CompanyGraph repository, `npm run verify` runs `verify/check.mjs`, which mechanically checks part of R2, R3, R4, R5, R6, R8, R9, R10, R11, R12, R15 and R16 against this repository's own files, plus a meta-check under R0 that fails if any check cites a rule this document does not define. `npm run test:instance` exercises the instance parser's implementation of the rules it cites — R2, R4, R5, R6, R7, R9, R11, R13 and R16 — against fixtures rather than files, and `npm run test:rules` extends that meta-check to the rules the parser cites in its comments and error messages. Part is the word that matters. Of R3 a script reads one thing, a link from an entity to a file of the model, of R2 that a name of an owned type is unique within its owner, and of R5 that a name of an owned type is one of its owner's own and that an owner's table of what it owns agrees with its folder; that a name written in prose is the canonical one, no script can tell. No file is checked against R1, R7 or R17; where a check happens to touch one, it is incidental to the rule that check cites. Treat these, and the rest of every rule a script reads in part, as agent-enforced — which is by design, not by omission: the claim this model ships under is that a schema written as prose is the only schema, which an agent reads whole and a script reads where its shape is fixed.
 
