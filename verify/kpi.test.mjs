@@ -5,6 +5,10 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
 import { checkInstance } from "../lib/checks.mjs";
+import { readdirSync, statSync } from "node:fs";
+import { join } from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseInstance } from "../lib/instance.mjs";
 
 const KPI_SCHEMA = fs.readFileSync(new URL("../core/kpi-schema.md", import.meta.url), "utf8");
 const bare = (type, location) => [`# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "",
@@ -86,4 +90,34 @@ test("a can-cost written as a flow sequence fails under R11", () => {
 
 test("a KPI without can-cost passes, since the field is optional", () => {
   assert.deepEqual(about(GOOD.filter((l) => l !== "can-cost:" && l !== "  - Craftsmanship")), []);
+});
+
+// The example read the way a site reads it: every page under example/model and every schema
+// under core, so the edge is drawn by the parser from the real schema and not by the test.
+const ROOT = fileURLToPath(new URL("..", import.meta.url));
+const folder = (rel) => {
+  const out = new Map();
+  const walk = (d) => {
+    for (const name of readdirSync(join(ROOT, rel, d))) {
+      const child = d ? `${d}/${name}` : name;
+      if (statSync(join(ROOT, rel, child)).isDirectory()) walk(child);
+      else if (child.endsWith(".md")) out.set(child, fs.readFileSync(join(ROOT, rel, child), "utf8"));
+    }
+  };
+  walk("");
+  return out;
+};
+
+test("the example's Change Lead Time names Craftsmanship, and the parser draws the edge", () => {
+  const { edges } = parseInstance(folder("example/model"), { sub: "model/", schemas: folder("core") });
+  const costs = edges.filter((e) => e.via === "can-cost").map(({ from, to }) => ({ from, to }));
+  assert.deepEqual(costs, [{ from: "kpis/change-lead-time", to: "values/craftsmanship" }]);
+});
+
+test("two values under can-cost draw two edges", () => {
+  const files = folder("example/model");
+  const page = files.get("kpis/change-lead-time.md");
+  files.set("kpis/change-lead-time.md", page.replace("  - Craftsmanship\n", "  - Craftsmanship\n  - Say The Hard Thing\n"));
+  const { edges } = parseInstance(files, { sub: "model/", schemas: folder("core") });
+  assert.deepEqual(edges.filter((e) => e.via === "can-cost").map((e) => e.to).sort(), ["values/craftsmanship", "values/say-the-hard-thing"]);
 });
