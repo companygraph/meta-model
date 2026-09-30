@@ -12,7 +12,8 @@
     "./checks": "./lib/checks.mjs",
     "./plan": "./lib/plan.mjs",
     "./write": "./lib/write.mjs",
-    "./obsidian": "./lib/obsidian.mjs"
+    "./obsidian": "./lib/obsidian.mjs",
+    "./localization": "./lib/localization.mjs"
   },
   "scripts": {
     "verify": "node verify/check.mjs",

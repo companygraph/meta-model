@@ -1,8 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import {
   LANGUAGE_TAG, localizationOf, languageSectionsOf, asPage, primaryElementsOf, translationElementsOf, withoutFrontmatter, staleTranslationsOf,
 } from "../lib/localization.mjs";
+
+const repoRoot = new URL("..", import.meta.url);
 
 const LOCALIZATION = (rows) =>
   `---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads this model.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n`;
@@ -158,6 +161,21 @@ test("a re-padded table and a re-wrapped paragraph in the primary, with the tran
     "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
   );
   assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
+});
+
+// Review fix 9: a consumer outside this repository — the MCP server, refusing a question asked
+// in a locale the instance does not declare — reads `localizationOf` from
+// `companygraph-meta-model/localization`, the same way `companygraph-meta-model/ids` already
+// resolves by the package's own name.
+test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
+  const script = `
+    import { localizationOf } from "companygraph-meta-model/localization";
+    const declared = localizationOf("---\\nid: x\\n---\\n\\n# Languages\\n\\n## Locales\\n\\n| Locale | Role |\\n| --- | --- |\\n| en-US | primary |\\n");
+    if (declared.primary !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
+    process.stdout.write("ok");
+  `;
+  const out = execFileSync(process.execPath, ["--input-type=module", "-e", script], { cwd: repoRoot, encoding: "utf8" });
+  assert.equal(out, "ok");
 });
 
 test("a real word change beside the same kind of re-padding and re-wrapping still fails", () => {
