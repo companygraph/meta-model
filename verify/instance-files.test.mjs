@@ -68,10 +68,10 @@ test("a type with a noun spells its folder README with it, and one without reads
 test("an instance starts with a source and its singular entities, naming the instance", () => {
   // Ids are handed out in order from a fixed list, so each page's id is known and the pages
   // are seen to take one each (R18), none shared.
-  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005"];
+  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005", "01a0f10b-0000-7000-8000-000000000006"];
   let next = 0;
   const files = startingEntities({ name: "Acme", id: () => ids[next++] });
-  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
+  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/localization.md", "model/sources/local.md", "model/vision.md"]);
   assert.equal(next, ids.length);
   assert.deepEqual(new Set([...files.values()].map((text) => text.match(/^---\nid: (\S+)\n/)[1])), new Set(ids));
   assert.match(files.get("model/identity.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
