@@ -113,7 +113,7 @@ Writing rules. A control names at least one risk it mitigates or one rule it enf
 
 **The control is the entity.** The family's controls are hooks, checks and gates, none of them an entity. A control says in prose how it is carried out and points at the file that does it; a gate's criteria and a check's code stay where they are, and no `check` type describes the company's tooling in its model.
 
-**A risk is a downside.** ISO 31000 and COSO also call an opportunity a risk; BMM calls it a potential reward. Controls only make sense against a downside, and an opportunity is what an objective or a strategy already pursues.
+**A risk is a downside.** [ISO 31000](https://www.iso.org/standard/65694.html) defines risk as the "effect of uncertainty on objectives", and [COSO's enterprise risk management](https://www.coso.org/enterprise-risk-management) likewise counts an opportunity as a risk; the [Business Motivation Model](https://www.omg.org/spec/BMM/1.3/PDF) keeps risk for "the possibility of loss, injury, disadvantage, or destruction" and calls the upside a potential reward. Controls only make sense against a downside, and an opportunity is what an objective or a strategy already pursues.
 
 ## Where this departs from its sources
 
@@ -134,3 +134,21 @@ Adopting the types in the family's instances, which moves restated "never" bulle
 ## What it costs
 
 Three schemas in `core/`, three rows in the checker's `TYPES`, and one rule, one risk and one control in the example instance so the checks and the parser meet them. A core release that adds types, which every instance takes on its own re-pin and may leave empty. The name "rule" is shared: the conventions' R0 and onwards and each schema's `## Writing rules` are rules of the vocabulary, and the MCP server's `list_rules` and `describe_rule` describe them, so those two tools say "convention" in their descriptions, and a company's rules are listed with `list_entities` and type `rule`. In German the types are «Regel», «Risiko» and «Kontrolle», never «Massnahme».
+
+## References
+
+| What | URL |
+| --- | --- |
+| OMG, Business Motivation Model 1.3 | https://www.omg.org/spec/BMM/1.3/PDF |
+| OMG, Semantics of Business Vocabulary and Business Rules (SBVR) 1.5 | https://www.omg.org/spec/SBVR/1.5/PDF |
+| ISO 31000:2018, Risk management — Guidelines | https://www.iso.org/standard/65694.html |
+| COSO, Enterprise Risk Management | https://www.coso.org/enterprise-risk-management |
+| COSO, Internal Control — Integrated Framework | https://www.coso.org/internal-control |
+| ISO/IEC 27002:2022, Information security controls | https://www.iso.org/standard/75652.html |
+| ISO/IEC 27035-1:2023, Information security incident management | https://www.iso.org/standard/78973.html |
+| NIST, Cybersecurity Framework 2.0 | https://nvlpubs.nist.gov/nistpubs/CSWP/NIST.CSWP.29.pdf |
+| NIST, AI Risk Management Framework 1.0 | https://nvlpubs.nist.gov/nistpubs/ai/NIST.AI.100-1.pdf |
+| The Open Group, ArchiMate 3.2 | https://pubs.opengroup.org/architecture/archimate32-doc/ |
+| Open Policy Agent, Philosophy | https://www.openpolicyagent.org/docs/philosophy |
+| The family's working conventions | https://github.com/robertblust/conventions |
+| meta-model #196 | https://github.com/companygraph/meta-model/issues/196 |
