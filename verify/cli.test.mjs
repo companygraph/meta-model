@@ -1054,8 +1054,27 @@ test("ids --backfill refuses whole when model/identifier.md declares a pattern",
     "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n",
   );
   const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /✗ model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(fs.readFileSync(identity, "utf8"), before);
+});
+
+// A format neither `uuidv7` nor `pattern` is a declaration the tooling cannot read, refused the
+// same way and for the same reason as a declared pattern: stamping ids past it could write ids
+// no later check would accept, so the whole backfill refuses and no page is touched.
+test("ids --backfill refuses whole when model/identifier.md declares an unreadable format", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const identity = path.join(root, "model/identity.md");
+  fs.writeFileSync(identity, fs.readFileSync(identity, "utf8").replace(/^id: .*\n/m, ""));
+  const before = fs.readFileSync(identity, "utf8");
+  fs.writeFileSync(
+    path.join(root, "model/identifier.md"),
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: serial\n---\n\n# Entity id\n",
+  );
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/identifier\.md: `format` is "serial"; it is `uuidv7` or `pattern` \(R18\)/);
   assert.equal(fs.readFileSync(identity, "utf8"), before);
 });
 
@@ -1073,18 +1092,21 @@ test("ids --range refuses a commit that changed an id, across a rename", () => {
   g("commit", "-qam", "second", "--no-verify");
   const head = g("rev-parse", "HEAD");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${head}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
   assert.match(said.stderr, /\(then model\/vision\.md\)/);
   assert.match(said.stderr, new RegExp(`before this change \\(${base.slice(0, 7)}\\)`), "the base is named short, as git names a commit to a reader");
 });
 
+// Not an instance is a run that could not happen at all, not a refusal, so it stays 1 where a
+// `--range` or `--backfill` refusal is 3.
 test("ids refuses a folder that is not an instance, and says so", () => {
   const said = spawnSync(process.execPath, [cli, "ids", temp(), "--backfill"], { encoding: "utf8" });
   assert.equal(said.status, 1);
   assert.match(said.stderr, /is not an instance: it has no \.companygraph\/manifest\.json beside a model\/ folder/);
 });
 
+// A missing flag is a run that could not happen, not a refusal, so it stays 1.
 test("ids with neither --backfill nor --range refuses, naming both", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -1095,6 +1117,7 @@ test("ids with neither --backfill nor --range refuses, naming both", () => {
 
 // A three-dot range asks git for the change since the merge base, and split on ".." it read its
 // head as ".<head>", which git then failed on. It is refused by name, as is a range with no dots.
+// A malformed range is a run that could not happen, not a refusal, so it stays 1.
 test("ids --range refuses a three-dot range and a range without two dots", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -1103,6 +1126,19 @@ test("ids --range refuses a three-dot range and a range without two dots", () =>
     assert.equal(said.status, 1, range);
     assert.match(said.stderr, /✗ --range takes <a>\.\.<b>, two dots between two commits/, range);
   }
+});
+
+// A range shaped like <a>..<b> but naming a commit git does not have is a git failure, not a
+// refusal: it cannot run at all, so it exits 1, the same as a malformed range.
+test("ids --range with a commit that does not exist exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const missing = "0000000000000000000000000000000000000000";
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${missing}..HEAD`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
 });
 
 // A folder that holds core/ and is not an instance — this repository — is stamped and ranged over
@@ -1140,6 +1176,6 @@ test("ids --range on a folder that holds core refuses a commit that changed a sc
   fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Skill Schema\n");
   g("commit", "-qam", "second", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
 });
