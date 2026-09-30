@@ -1313,3 +1313,42 @@ test("a blank required reference column is named the same way a blank required e
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /## Relations/);
 });
+
+const sid = (n) => `0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b${String(n).padStart(2, "0")}`;
+const withSchemaId = (id, text) => `---\nid: ${id}\n---\n\n${text}`;
+const schemaFailures = (entries) =>
+  checkInstance(new Map(entries), { core: "meta/core", model: "model" }).failures.filter((f) => f.startsWith("meta/core/"));
+
+test("a core where one schema carries an id fails every schema that does not", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", withSchemaId(sid(1), schema("skill", []))],
+    ["meta/core/source-schema.md", schema("source", [])],
+  ]);
+  assert.ok(failures.some((f) => f.startsWith("meta/core/source-schema.md: no `id`")), failures.join("\n"));
+});
+
+test("a core where no schema carries an id predates the rule and is not held to it", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["meta/core/source-schema.md", schema("source", [])],
+  ]);
+  assert.ok(!failures.some((f) => /`id`/.test(f)), failures.join("\n"));
+});
+
+test("two schemas with one id fail, naming the other", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", withSchemaId(sid(1), schema("skill", []))],
+    ["meta/core/source-schema.md", withSchemaId(sid(1), schema("source", []))],
+  ]);
+  assert.ok(failures.some((f) => f.startsWith("meta/core/source-schema.md:") && f.includes("is shared with meta/core/skill-schema.md")), failures.join("\n"));
+});
+
+test("an uppercase schema id fails as not a lowercase UUID version 7", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", withSchemaId(sid(1).toUpperCase(), schema("skill", []))]]);
+  assert.ok(failures.some((f) => f.includes("which is not a lowercase UUID version 7")), failures.join("\n"));
+});
+
+test("a schema's frontmatter holding more than its id fails", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", `---\nid: ${sid(1)}\nsource: Local\n---\n\n${schema("skill", [])}`]]);
+  assert.ok(failures.some((f) => f.includes('frontmatter holds "source: Local"')), failures.join("\n"));
+});
