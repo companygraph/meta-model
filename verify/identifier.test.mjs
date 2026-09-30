@@ -34,6 +34,13 @@ test("an uppercase UUID fails the format", () => {
   assert.match(f[0], /is not the uuidv7 model\/identifier\.md declares/);
 });
 
+test("a quoted id fails once, saying it is quoted, whether the quotes are double or single", () => {
+  for (const q of ['"', "'"]) {
+    const f = r18(tree({ local: `---\nid: ${q}${A}${q}\n---\n\n# Local\n` }));
+    assert.deepEqual(f, [`model/sources/local.md: \`id\` is written in quotes, ${q}${A}${q}; an id is written bare, as the parser reads every field as written (R18)`]);
+  }
+});
+
 // The check walks in path order, so the page named the duplicate is the later path; the copy's
 // name sorts after local.md so that the page this test calls the copy is the one reported.
 test("a page copied with its id fails as a duplicate, naming both files", () => {
