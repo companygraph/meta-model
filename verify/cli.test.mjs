@@ -1398,3 +1398,20 @@ test("translations --range exits 1 in a folder that is not a git repository", ()
   assert.equal(said.status, 1, said.stdout + said.stderr);
   assert.match(said.stderr, /✗/);
 });
+
+// Re-review, one more edge: only `<b>` was confirmed to resolve; `<a>` was left to mergeBaseOf,
+// called after the "no translated language" short circuit. An instance with no translated
+// language declared and a `<a>` that does not resolve never reached mergeBaseOf at all — it
+// exited 0 on "no translated language is declared" before the bad start revision was ever
+// noticed. `<a>` is now confirmed to resolve alongside `<b>`, before either is read.
+test("translations --range exits 1 when the start revision does not resolve, even with no translated language declared", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "nosuchrev..HEAD"], { encoding: "utf8" });
+  assert.equal(said.status, 1, said.stdout + said.stderr);
+  assert.match(said.stderr, /✗/);
+  assert.doesNotMatch(said.stdout, /no translated language is declared/);
+});

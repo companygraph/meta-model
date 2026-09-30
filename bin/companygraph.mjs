@@ -759,10 +759,17 @@ function translations(argv) {
     console.error(`✗ translations takes --range <a>..<b>, two dots between two commits`);
     return 1;
   }
-  // Confirmed before anything is read from it (Re-review, Important): `fileAt` used to catch
-  // every git error and return null the same way for "no such file at a valid head" and "no such
-  // head at all", and a range naming a head this repository does not have then read as the
-  // instance declaring no translated language — a silent 0, where README already promised 1.
+  // Both ends confirmed before anything is read (Re-review, Important, and one more edge):
+  // `fileAt` used to catch every git error and return null the same way for "no such file at a
+  // valid head" and "no such head at all", and a range naming a head this repository does not
+  // have then read as the instance declaring no translated language — a silent 0, where README
+  // already promised 1. `<a>` had the same gap from the other side: it is only ever read later,
+  // by `mergeBaseOf`, and an instance with no translated language declared exits on that check
+  // before `<a>` is ever touched, so a bad start revision went unnoticed the same way.
+  if (!isCommit(root, ends[0])) {
+    console.error(`✗ ${ends[0]} does not resolve to a commit ${root} has`);
+    return 1;
+  }
   if (!isCommit(root, ends[1])) {
     console.error(`✗ ${ends[1]} does not resolve to a commit ${root} has`);
     return 1;
