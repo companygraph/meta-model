@@ -133,3 +133,47 @@ test("a frontmatter change asks nothing of a translation", () => {
   const before = page("Same.", "Gleich.");
   assert.deepEqual(staleTranslationsOf(change(before, before.replace("id: x", "id: x\nsource: Local")), ["de-CH"], new Set()), []);
 });
+
+// Review fix 7: a table re-padded and a paragraph re-wrapped change no word, but the comparison
+// was raw text equality, so either read as the primary having changed and asked the unchanged
+// translation to follow it — a formatting pass alone would have failed every translated instance
+// it touched. Whitespace, including a soft line break inside a paragraph, is collapsed to one
+// space before comparing; a table cell is trimmed the same way, so tight and wide padding around
+// `|` read the same.
+const tablePage = (notes, table, deNotes, deTable) =>
+  `---\nid: x\n---\n\n# Billing\n\n> Same.\n\n## Notes\n\n${notes}\n\n## References\n\n${table}\n\n` +
+  `## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> Same.\n\n### Notes\n\n${deNotes}\n\n### References\n\n${deTable}\n`;
+
+test("a re-padded table and a re-wrapped paragraph in the primary, with the translation untouched, is not stale", () => {
+  const before = tablePage(
+    "Billed monthly,\nin advance.",
+    "| What | URL |\n| --- | --- |\n| Terms | https://a.example |",
+    "Monatlich abgerechnet,\nim Voraus.",
+    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
+  );
+  const after = tablePage(
+    "Billed monthly, in\nadvance.",
+    "| What  |URL|\n|---|---|\n|Terms   |https://a.example|",
+    "Monatlich abgerechnet,\nim Voraus.",
+    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
+  );
+  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
+});
+
+test("a real word change beside the same kind of re-padding and re-wrapping still fails", () => {
+  const before = tablePage(
+    "Billed monthly,\nin advance.",
+    "| What | URL |\n| --- | --- |\n| Terms | https://a.example |",
+    "Monatlich abgerechnet,\nim Voraus.",
+    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
+  );
+  const after = tablePage(
+    "Billed monthly, in\nadvance.",
+    "| What  |URL|\n|---|---|\n|Terms   |https://b.example|",
+    "Monatlich abgerechnet,\nim Voraus.",
+    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
+  );
+  const out = staleTranslationsOf(change(before, after), ["de-CH"], new Set());
+  assert.equal(out.length, 1);
+  assert.match(out[0], /^model\/features\/billing\.md#section\/References changed, and its de-CH translation did not/);
+});
