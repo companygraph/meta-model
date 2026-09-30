@@ -144,3 +144,41 @@ test("two kinds with one German name fail", () => {
   const f = r19Deep(EXPERIENCE(DE_EXPERIENCE), { kinds: [["delivery.md", KIND("Delivery", "Lieferung")], ["results.md", KIND("Results", "Lieferung")]] });
   assert.ok(f.some((x) => x.includes("de-CH name \"Lieferung\" is also")), f.join("\n"));
 });
+
+// A name's scope is R2's: an owned type's owner, never the type alone. A process owns its
+// tracks, so two processes may each name a track `Code`, translated differently, and a phase's
+// grouped heading is held to the translation in its own process — never the other one's.
+const PROCESS = (id, name, de) =>
+  `---\nid: 01a0f10d-64f0-71c7-8329-86453b0479${id}\nsource: Local\n---\n\n# ${name}\n\n> A path.\n\n## de-CH\n\n### Name\n\n${de}\n\n### Statement\n\n> Ein Pfad.\n`;
+const TRACK = (id, de) =>
+  `---\nid: 01a0f10d-64f0-71c7-8329-86453b0479${id}\nsource: Local\n---\n\n# Code\n\n> Delivered.\n\n## de-CH\n\n### Name\n\n${de}\n\n### Statement\n\n> Geliefert.\n`;
+const PHASE = (id, heading) =>
+  `---\nid: 01a0f10d-64f0-71c7-8329-86453b0479${id}\nsource: Local\n---\n\n# Build\n\n> What happens.\n\n## Activities\n\n### Code\n\n1. Write it.\n\n` +
+  `## de-CH\n\n### Name\n\nBauen\n\n### Statement\n\n> Was passiert.\n\n### Activities\n\n#### ${heading}\n\n1. Geschrieben.\n`;
+
+const r19Scoped = (files) =>
+  checkInstance(new Map([
+    ...["process", "phase", "track", "source", "localization"].map((t) => [`meta/core/${t}-schema.md`, read(`${t}-schema.md`)]),
+    ["model/localization.md", DE_LOC],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+    ...files,
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("a grouped heading's target name is looked up in the page's own process, not another's", () => {
+  const f = r19Scoped([
+    ["model/processes/a/a.md", PROCESS("0c1", "Process A", "Ablauf A")],
+    ["model/processes/a/tracks/code.md", TRACK("0c2", "Programmcode")],
+    ["model/processes/a/phases/build.md", PHASE("0c3", "Programmcode")],
+    ["model/processes/b/b.md", PROCESS("0c4", "Process B", "Ablauf B")],
+    ["model/processes/b/tracks/code.md", TRACK("0c5", "Quelltext")],
+  ]);
+  assert.ok(!f.some((x) => x.includes("#### Programmcode") && x.includes("is not")), f.join("\n"));
+});
+
+test("two processes with the same German name fail, as R2 holds the primary's unique", () => {
+  const f = r19Scoped([
+    ["model/processes/a/a.md", PROCESS("0d1", "Process A", "Ablauf")],
+    ["model/processes/b/b.md", PROCESS("0d2", "Process B", "Ablauf")],
+  ]);
+  assert.ok(f.some((x) => x.includes("de-CH name \"Ablauf\" is also")), f.join("\n"));
+});
