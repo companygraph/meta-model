@@ -2,7 +2,7 @@
 
 R14 makes the names and prose of every instance American English, and the model has no place for a second language. A company whose knowledge is written in German keeps it in a language it does not think in, and a chat answering in Polish from English pages translates on the fly, with nothing to check that translation against. meta-model #195 said so, after the chat answered "The model does not say." An instance now declares the locale it is written in and the locales it is translated into, and every page carries its translations in sections of its own, which the check holds complete and current.
 
-Status: decided by the owner on September 30, 2026: a translation decorates the one page and is never a second one, a primary locale per instance, references that resolve in the language they are written in, complete and current locales, the layout of a locale section, what the tools do with a locale, a required `locale` singleton, and the Translator writing into the model while the adoption is left to each instance.
+Status: decided by the owner on September 30, 2026, and amended the same day to name the singleton `localization`, since R12 names a singular type's file for the type: a translation decorates the one page and is never a second one, a primary locale per instance, references that resolve in the language they are written in, complete and current locales, the layout of a locale section, what the tools do with a locale, a required `localization` singleton, and the Translator writing into the model while the adoption is left to each instance.
 
 ## Where this comes from
 
@@ -14,7 +14,7 @@ Three shapes were open in the issue: fields, sections, sibling files or an insta
 
 R14 becomes **Names are American English, and prose is in the primary locale**:
 
-> Every name this vocabulary chooses is spelled in American English — a field, a type, a folder, a section heading a schema declares — and so is the prose of `core/`. An instance's content is written in the primary locale its `model/locales.md` declares, and translated into the locales it declares beside it, each in a section of the page it translates (R19).
+> Every name this vocabulary chooses is spelled in American English — a field, a type, a folder, a section heading a schema declares — and so is the prose of `core/`. An instance's content is written in the primary locale its `model/localization.md` declares, and translated into the locales it declares beside it, each in a section of the page it translates (R19).
 
 Its exceptions and its argument stay as they are.
 
@@ -26,7 +26,7 @@ R2, R3 and R4 gain a sentence each pointing to R19 for names in a locale.
 
 ## The singleton
 
-`core/locale-schema.md` declares a type with one file, `model/locales.md`, which every instance carries:
+`core/localization-schema.md` declares the type `localization`, with one file, `model/localization.md`, which every instance carries:
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
@@ -72,13 +72,15 @@ Die Funktion …
 
 ## What the check holds
 
+A name in prose is not read by a script in the primary either: R3 leaves it to the agent pass, and so does R19. What a script reads of a locale's names is what has structure. A repeated table's reference cells are the primary's, and a grouped section's `####` headings are the locale's names of the entities the primary's `###` headings name, in the same order, so a German list of achievement kinds reads in German and still resolves.
+
 The instance check fails:
 
-- an instance without `model/locales.md`, one with no primary or more than one, and a tag written twice;
+- an instance without `model/localization.md`, one with no primary or more than one, and a tag written twice;
 - a page with no section for a declared translated locale, a `## <locale>` section for a locale not declared as translated, and one out of the declared order;
 - a locale section missing an element the page has, or holding one the page does not;
 - a repeated table whose rows, references, URLs, dates or enum values differ from the primary's;
-- two entities of a type with the same name in one locale, and a reference in a locale's prose that does not resolve in that locale.
+- two entities of a type with the same name in one locale, and a grouped heading in a locale section that is not the locale's name of the entity the primary's heading names.
 
 A pull request that changes an element of the primary and not its translation in every declared locale fails as well. A commit trailer `Translation-unchanged: <file>#<path>` releases one element, for a change that does not touch what the translation says, as `German-unchanged:` releases a site's German today. The check compares the pull request's head with its base, as `design german stale` does.
 
@@ -116,4 +118,4 @@ Translating any of the family's instances. The release gives an instance the mea
 
 ## What it costs
 
-A new required singleton makes the release breaking in the terms of `WORKING.md`: every instance adds `model/locales.md` with the re-pin. An instance that declares no translated locale changes nothing else. The parser, the instance check, the MCP server, the chat, each site's renderer and `conventions/TRANSLATOR.md` change with it. The work follows the build of the schema id, whose paths it keys by.
+A new required singleton makes the release breaking in the terms of `WORKING.md`: every instance adds `model/localization.md` with the re-pin. An instance that declares no translated locale changes nothing else. The parser, the instance check, the MCP server, the chat, each site's renderer and `conventions/TRANSLATOR.md` change with it. The work follows the build of the schema id, whose paths it keys by.
