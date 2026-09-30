@@ -1,9 +1,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
+import { execFileSync } from "node:child_process";
 import { UUIDV7, uuidv7, msOf, idOf, withId, idFormatOf } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
 
 const ZERO = Buffer.alloc(10);
+const repoRoot = new URL("..", import.meta.url);
 
 test("a UUID version 7 carries its moment in its first 48 bits, its version and its variant", () => {
   const id = uuidv7(Date.UTC(2026, 7, 29, 7, 57, 8), ZERO);
@@ -84,4 +86,24 @@ test("a rename that keeps its id, and a page that gains its first id, pass", () 
     { before: "model/skills/a.md", after: "model/skills/b.md", beforeText: page("a1"), afterText: page("a1") },
     { before: "model/skills/c.md", after: "model/skills/c.md", beforeText: "# C\n", afterText: page("c1") },
   ], "main"), []);
+});
+
+test("uuidv7 takes any byte array of at least ten bytes, and a plain Uint8Array gives the same id as a Buffer of the same bytes", () => {
+  const bytes = [3, 200, 17, 44, 91, 6, 255, 0, 128, 9];
+  const fromBuffer = uuidv7(Date.UTC(2026, 8, 30, 12, 0, 0), Buffer.from(bytes));
+  const fromUint8Array = uuidv7(Date.UTC(2026, 8, 30, 12, 0, 0), new Uint8Array(bytes));
+  assert.equal(fromUint8Array, fromBuffer);
+});
+
+test("companygraph-meta-model/ids resolves by the package's own name, the way a consumer imports it", () => {
+  const script = `
+    import { UUIDV7, uuidv7 } from "companygraph-meta-model/ids";
+    if (!UUIDV7.test(uuidv7())) throw new Error("uuidv7() did not pass its own UUIDV7 pattern");
+    process.stdout.write("ok");
+  `;
+  const out = execFileSync(process.execPath, ["--input-type=module", "-e", script], {
+    cwd: repoRoot,
+    encoding: "utf8",
+  });
+  assert.equal(out, "ok");
 });
