@@ -9,3 +9,6 @@ __pycache__
 
 # Local, untracked: paths that must not be published.
 /LOCAL.md
+
+# What a skill writes for the operator alone: companygraph-vocabulary's research report quotes private sources.
+dist
