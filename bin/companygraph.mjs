@@ -29,7 +29,7 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
@@ -754,7 +754,13 @@ function translations(argv) {
     return 0;
   }
   const released = new Set(trailerValuesOf(root, given.range, "Translation-unchanged"));
-  const failures = staleTranslationsOf(changedPagesOf(root, given.range), declared.translated, released);
+  // A page's change is read from the merge base, not from `a` itself: a PR behind `a` has not
+  // merged a later, unrelated edit `a` made since they forked, and diffing straight from `a`
+  // would show that edit too, reversed, as though the PR's own head had just undone it — failing
+  // the PR for a change it never made, and never released by a trailer the PR's own range could
+  // ever hold (`a`'s trailer sits on `a`, and every range excludes its own base).
+  const base = mergeBaseOf(root, ends[0], ends[1]);
+  const failures = staleTranslationsOf(changedPagesOf(root, `${base}..${ends[1]}`), declared.translated, released);
   if (failures.length) {
     for (const f of failures) console.error(`✗ ${f}`);
     return 1;

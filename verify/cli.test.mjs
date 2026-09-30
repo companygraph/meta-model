@@ -1164,3 +1164,37 @@ test("translations --range refuses a change to the primary its translation did n
   const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
   assert.equal(released.status, 0, released.stderr);
 });
+
+// `translations --range` compared `base..head` trees directly. A PR behind main sees main's own
+// later, unrelated primary-only edit as part of that diff too, reversed — main has the new text
+// and the PR still has the old, so the diff reads as though the PR's own head had just reverted
+// it — and the `Translation-unchanged` trailer that released it lives on main's commit, which is
+// never inside `base..head` (base is that very commit, so it is excluded as every range's own end
+// is). The PR fails for an edit it never made. Comparing from `git merge-base base head` instead
+// leaves that page out of the diff entirely, since the PR branch never touched it.
+test("translations --range compares from the merge base, not the base tip, so a PR behind main is not held to main's own later edit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const trunk = g("branch", "--show-current");
+  // The PR forks here and never touches vision.md again.
+  g("checkout", "-qb", "pr");
+  const readme = path.join(root, "model/README.md");
+  fs.writeFileSync(readme, `${fs.readFileSync(readme, "utf8").trimEnd()}\nUnrelated PR work.\n`);
+  g("commit", "-qam", "pr work", "--no-verify");
+  const prHead = g("rev-parse", "HEAD");
+  // Main moves on without the PR: a primary-only edit, released by its own trailer.
+  g("checkout", "-q", trunk);
+  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
+  g("commit", "-qam", "second", "-m", "Translation-unchanged: model/vision.md#section/What it means", "--no-verify");
+  const mainTip = g("rev-parse", "HEAD");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${mainTip}..${prHead}`], { encoding: "utf8" });
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, /✓ every change to the primary reached its translations/);
+});
