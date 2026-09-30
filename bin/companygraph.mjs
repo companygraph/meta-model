@@ -9,7 +9,7 @@
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
 //   companygraph seats [<folder>] [--since <date>] [--json]
 //   companygraph id
-//   companygraph ids [<folder>] (--backfill | --range <a>..<b>)
+//   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
 //
 // Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
 // seats, which asks what the flags would say and calls the same code, and stays open until Quit
@@ -22,7 +22,7 @@ import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chm
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan } from "../lib/plan.mjs";
+import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
@@ -665,14 +665,19 @@ function seats(argv) {
 }
 
 // R18. `--backfill` gives every page without an id one stamped with its first commit and writes
-// model/identifier.md where there is none; `--range` is Task 6's.
+// model/identifier.md where there is none; `--range` fails a change to an id on the default
+// branch. A folder that holds core/ and is not an instance is the repository that makes core,
+// and both work on its schemas instead; `--core` already names a tag, so what the folder holds
+// is what tells the two apart.
 function ids(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
-  if (!isInstance(root)) {
-    console.error(`✗ ${root} is not an instance: it has no .companygraph/manifest.json beside a model/ folder`);
+  const onCore = !isInstance(root) && existsSync(join(root, "core", "CONVENTIONS.md"));
+  if (!onCore && !isInstance(root)) {
+    console.error(`✗ ${root} is not an instance: it has no .companygraph/manifest.json beside a model/ folder, and no core/CONVENTIONS.md`);
     return 1;
   }
+  const folder = onCore ? "core" : "model";
   if (given.backfill) {
     const files = new Map();
     const walk = (rel) => {
@@ -682,15 +687,17 @@ function ids(argv) {
         else if (entry.name.endsWith(".md")) files.set(child, unixLines(readFileSync(join(root, child), "utf8")));
       }
     };
-    walk("model");
+    walk(folder);
     const top = gitTop(root);
-    const writes = backfillPlan(files, { firstCommitMs: (rel) => (top ? firstCommitMsOf(root, rel) : null) });
+    const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
+    const writes = onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs });
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
       return 1;
     }
     writePlan(root, writes);
-    console.log(`✓ ${writes.size ? `wrote an id into ${writes.size === 1 ? "one page" : "each page listed"}` : "every page already carries an id"}`);
+    const what = onCore ? "schema" : "page";
+    console.log(`✓ ${writes.size ? `wrote an id into ${writes.size === 1 ? `one ${what}` : `each ${what} listed`}` : `every ${what} already carries an id`}`);
     for (const path of writes.keys()) console.log(`  ${path}`);
     return 0;
   }
@@ -705,7 +712,7 @@ function ids(argv) {
     }
     // A full commit name is shortened to seven characters for a reader; a branch name is kept.
     const base = /^[0-9a-f]{40}$/.test(ends[0]) ? ends[0].slice(0, 7) : ends[0];
-    const failures = idChangesOf(changedPagesOf(root, given.range), base);
+    const failures = idChangesOf(changedPagesOf(root, given.range, folder), base);
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
       return 1;

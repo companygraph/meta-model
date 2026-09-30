@@ -1104,3 +1104,42 @@ test("ids --range refuses a three-dot range and a range without two dots", () =>
     assert.match(said.stderr, /✗ --range takes <a>\.\.<b>, two dots between two commits/, range);
   }
 });
+
+// A folder that holds core/ and is not an instance — this repository — is stamped and ranged over
+// its schemas, as an instance is over its pages.
+const coreFolder = () => {
+  const root = temp();
+  fs.mkdirSync(path.join(root, "core"));
+  fs.writeFileSync(path.join(root, "core/CONVENTIONS.md"), "# Conventions\n");
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "# Skill Schema\n\n> A skill.\n");
+  return root;
+};
+
+test("ids --backfill on a folder that holds core stamps its schemas with their first commit", () => {
+  const root = coreFolder();
+  const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
+  g("init", "-q");
+  g("add", "-A");
+  execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first", "--no-verify"], {
+    cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-23T10:00:00+02:00" },
+  });
+  run(["ids", root, "--backfill"]);
+  const text = fs.readFileSync(path.join(root, "core/skill-schema.md"), "utf8");
+  const id = text.match(/^id: (.+)$/m)[1];
+  assert.equal(parseInt(id.replace(/-/g, "").slice(0, 12), 16), Date.parse("2026-08-23T08:00:00Z"));
+  assert.equal(fs.readFileSync(path.join(root, "core/CONVENTIONS.md"), "utf8"), "# Conventions\n");
+});
+
+test("ids --range on a folder that holds core refuses a commit that changed a schema's id", () => {
+  const root = coreFolder();
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60\n---\n\n# Skill Schema\n");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Skill Schema\n");
+  g("commit", "-qam", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+});

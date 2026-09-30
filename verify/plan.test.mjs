@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AGENTS, initPlan, upgradePlan, backfillPlan } from "../lib/plan.mjs";
+import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
 
@@ -432,4 +432,24 @@ test("the backfill refuses whole when model/identifier.md cannot be read as a fo
   files.set("model/identifier.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: serial\n---\n\n# Entity id\n");
   const plan = backfillPlan(files, { firstCommitMs: () => MS });
   assert.match(plan.refused, /model\/identifier\.md: `format` is "serial"; it is `uuidv7` or `pattern` \(R18\)/);
+});
+
+const coreTree = () => new Map([
+  ["core/CONVENTIONS.md", "# Conventions\n"],
+  ["core/skill-schema.md", "# Skill Schema\n\n> A skill.\n"],
+  ["core/source-schema.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Source Schema\n"],
+]);
+
+test("the schema backfill stamps a schema without an id with its first commit, and nothing else", () => {
+  const writes = schemaBackfillPlan(coreTree(), { firstCommitMs: () => MS });
+  assert.deepEqual([...writes.keys()], ["core/skill-schema.md"]);
+  const text = writes.get("core/skill-schema.md");
+  assert.match(text, /^---\nid: [0-9a-f-]{36}\n---\n\n# Skill Schema\n\n> A skill\.\n$/);
+  assert.equal(msOf(text.slice(8, 44)), MS);
+});
+
+test("run twice, the schema backfill writes nothing the second time", () => {
+  const files = coreTree();
+  for (const [path, text] of schemaBackfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
+  assert.equal(schemaBackfillPlan(files, { firstCommitMs: () => MS }).size, 0);
 });
