@@ -137,3 +137,13 @@ test("an address that names no element is refused, naming it", () => {
   for (const bad of [`${SCHEMA}/field`, `${SCHEMA}/name/extra`, `${SCHEMA}/column/References`, `${SCHEMA}/row/x`, "core/skill/name"])
     assert.throws(() => elementOf(bad), /is no element address/, bad);
 });
+
+test("an address is built only from a UUID version 7, the one format a schema's id takes", () => {
+  assert.throws(() => addressOf("core", { kind: "name" }), /"core" is no schema id/);
+  assert.throws(() => addressOf(SCHEMA.toUpperCase(), { kind: "name" }), /is no schema id/);
+});
+
+test("a kind is one of the element kinds, never a property every object inherits", () => {
+  for (const kind of ["toString", "constructor", "valueOf", "__proto__"])
+    assert.throws(() => addressOf(SCHEMA, { kind }), new RegExp(`"${kind}" is no kind of schema element`), kind);
+});

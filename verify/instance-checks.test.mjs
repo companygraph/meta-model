@@ -1365,3 +1365,8 @@ test("a core that must carry ids fails every schema without one, even when none 
     if (check.name === "every schema carries an id, and no two share one") check.run();
   assert.equal(failures.filter((f) => f.includes("no `id`; every schema opens with one")).length, 2, failures.join("\n"));
 });
+
+test("a schema's frontmatter with its id written twice fails", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", `---\nid: ${sid(1)}\nid: ${sid(2)}\n---\n\n${schema("skill", [])}`]]);
+  assert.ok(failures.some((f) => f.includes("`id` is written twice")), failures.join("\n"));
+});
