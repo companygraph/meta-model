@@ -1370,6 +1370,32 @@ test("translations --range judges by the head's declared languages, not whatever
   assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
 });
 
+// Re-review, Important: `fileAt` ran `git show <rev>:<path>` with `<path>` relative to the
+// instance's own root, but git resolves a bare `rev:path` relative to the repository's top, not
+// cwd — unlike a `--` pathspec, which git diff and git log resolve relative to cwd. An instance
+// committed below its repository's top (here under `inst/`) had its own model/localization.md
+// read as though it lived at the container's top, found nothing there, and declared no
+// translated language whatever the instance's own file said — passing silently instead of
+// catching the primary-only edit below.
+test("translations --range reads localization.md from an instance nested below its repository's top", () => {
+  const container = temp();
+  const root = path.join(container, "inst");
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: container, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
+  g("commit", "-qam", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3, said.stdout + said.stderr);
+  assert.match(said.stderr, /inst\/model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
+});
+
 // Re-review, Important: `fileAt` caught every git error and returned null, which
 // `translations` read the same as "no such file at the head" — no declared language, exit 0 —
 // when the real story for a `<b>` that does not resolve at all (a typo, a rebased-away commit)
