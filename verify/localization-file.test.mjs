@@ -182,3 +182,47 @@ test("two processes with the same German name fail, as R2 holds the primary's un
   ]);
   assert.ok(f.some((x) => x.includes("de-CH name \"Ablauf\" is also")), f.join("\n"));
 });
+
+// Spec, "Concept aliases": an alias of kind `translation` stays for a language the instance does
+// not declare. Where the locale IS declared, the concept's name in it is its `### Name`, and an
+// alias that repeats it is not naming an undeclared language at all.
+const DOMAIN = (de) => `---\nid: 01a0f10d-64f0-71c7-8329-86453b047992\nsource: Local\n---\n\n# Ops\n\n> The area.\n${de}`;
+const DE_DOMAIN = "\n## de-CH\n\n### Name\n\nBetrieb\n\n### Statement\n\n> Der Bereich.\n";
+const CONCEPT = (aliasRow, de) =>
+  `---\nid: 01a0f10d-64f0-71c7-8329-86453b047993\nsource: Local\ndomain: Ops\n---\n\n# Invoice line\n\n> One line on an invoice.\n\n` +
+  `## Also known as\n\n| Term | Kind |\n| --- | --- |\n${aliasRow}\n${de}`;
+const DE_CONCEPT = (name, term) =>
+  `\n## de-CH\n\n### Name\n\n${name}\n\n### Statement\n\n> Eine Zeile auf einer Rechnung.\n\n` +
+  `### Also known as\n\n| Term | Kind |\n| --- | --- |\n| ${term} | translation |\n`;
+
+const r19Concept = (aliasRow, { deLoc = false, deConcept = "", deDomain = "" } = {}) =>
+  checkInstance(new Map([
+    ...["localization", "source", "domain", "concept"].map((t) => [`meta/core/${t}-schema.md`, read(`${t}-schema.md`)]),
+    ["model/localization.md", deLoc ? DE_LOC : LOC("| en-US | primary |")],
+    ["model/sources/local.md", LOCAL(deLoc ? DE_LOCAL : "")],
+    ["model/domains/ops.md", DOMAIN(deDomain)],
+    ["model/concepts/invoice-line.md", CONCEPT(aliasRow, deConcept)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("a translation alias that repeats the concept's declared de-CH name fails", () => {
+  const f = r19Concept("| Rechnungszeile | translation |", {
+    deLoc: true, deConcept: DE_CONCEPT("Rechnungszeile", "Rechnungszeile"), deDomain: DE_DOMAIN,
+  });
+  assert.ok(
+    f.some((x) => x.includes(
+      'model/concepts/invoice-line.md: the alias "Rechnungszeile" of kind translation repeats the concept\'s de-CH name; a declared language\'s name is its `### Name`, and an alias is for a language the instance does not declare (R19)',
+    )),
+    f.join("\n"),
+  );
+});
+
+test("the same alias passes where de-CH is not declared at all", () => {
+  assert.deepEqual(r19Concept("| Rechnungszeile | translation |"), []);
+});
+
+test("a translation alias for a different name than the declared de-CH one passes", () => {
+  const f = r19Concept("| Ligne de facture | translation |", {
+    deLoc: true, deConcept: DE_CONCEPT("Rechnungszeile", "Rechnungszeile"), deDomain: DE_DOMAIN,
+  });
+  assert.deepEqual(f, []);
+});
