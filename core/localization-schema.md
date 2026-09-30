@@ -49,6 +49,6 @@ The localization file says which language the pages are written in and which one
 ## Writing rules
 
 - Exactly one row is `primary`, and no tag is written twice.
-- A locale is declared `translated` only once every page carries it; a translation that is not finished stays undeclared, since a reader would otherwise get two languages on one page.
+- A language is written on a branch and declared `translated` in the same pull request that completes it, since a page may not carry a section for a language the file does not declare.
 - The statement names who reads the model in which language: the owner, a customer, an agent answering in it.
 - Names and prose are in the primary locale (R14).
