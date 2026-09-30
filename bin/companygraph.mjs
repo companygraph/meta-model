@@ -31,7 +31,7 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf, fileAt } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
@@ -758,8 +758,12 @@ function translations(argv) {
     console.error(`✗ translations takes --range <a>..<b>, two dots between two commits`);
     return 1;
   }
-  const file = join(root, "model", "localization.md");
-  const declared = existsSync(file) ? localizationOf(unixLines(readFileSync(file, "utf8"))) : { translated: [] };
+  // The head's own file, not whatever the working tree has checked out (Review fix 5): a caller
+  // may run this against a merge commit CI checked out, or against a worktree a reviewer moved
+  // elsewhere in history, and either way the languages that govern the range are the range's
+  // head's. A file missing at the head is no declared language, the same as one missing on disk.
+  const text = fileAt(root, ends[1], "model/localization.md");
+  const declared = text !== null ? localizationOf(text) : { translated: [] };
   if (declared.error) {
     console.error(`✗ model/localization.md: ${declared.error} (R19)`);
     return REFUSED;

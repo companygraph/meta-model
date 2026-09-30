@@ -1334,3 +1334,38 @@ test("translations --range names only the stale language when one of two declare
   assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
   assert.doesNotMatch(said.stderr, /pl-PL/);
 });
+
+// Review fix 5: `translations` read model/localization.md from the working tree, but the
+// languages that govern a range are the range's head's, per the function's own header comment.
+// A range whose head declares a language the checkout on disk does not judged by whatever
+// happened to be checked out, not by the head — reachable in CI, which checks out a PR's merge
+// commit, and locally, whenever a reviewer moves around history without re-running
+// `git checkout <b>` first. Here de-CH is written at base already, undeclared, so the page has
+// the section without yet being held to it; the head commit declares de-CH translated and
+// changes the primary without touching the translation, which is R19's actual staleness. The
+// working tree is then moved to base, which declares no language at all, so reading the file
+// from disk would say "no translated language is declared" and let the stale translation
+// through — the read from the head is what has to catch it.
+test("translations --range judges by the head's declared languages, not whatever the working tree has checked out", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(
+    vision,
+    `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`,
+  );
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
+  g("commit", "-qam", "second", "--no-verify");
+  const head = g("rev-parse", "HEAD");
+  g("checkout", "-q", base);
+  assert.doesNotMatch(fs.readFileSync(loc, "utf8"), /de-CH/, "the working tree is at base, which declares no de-CH");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${head}`], { encoding: "utf8" });
+  assert.equal(said.status, 3, said.stdout + said.stderr);
+  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
+});

@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, fileAt } from "../lib/history.mjs";
 import { instanceAt } from "./seats-fixture.mjs";
 
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-history-"));
@@ -90,4 +90,20 @@ test("the family is the members REPOSITORIES.md lists, at their local paths", ()
     { repo: "acme/mental-model", path: path.join(os.homedir(), "git/acme/mental-model") },
     { repo: "acme/site", path: "/srv/acme/site" },
   ]);
+});
+
+// Review fix 5: `translations` needs a revision's file, not the working tree's, so the languages
+// that govern a range are the range's head's rather than whatever happens to be checked out.
+test("a file at a revision is read with \\n line ends, and a revision without it is null", () => {
+  const dir = repo(temp());
+  fs.writeFileSync(path.join(dir, "a.md"), "one\r\ntwo\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-qm", "first");
+  const base = git(dir, "rev-parse", "HEAD").trim();
+  fs.writeFileSync(path.join(dir, "b.md"), "new\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-qm", "second");
+  assert.equal(fileAt(dir, base, "a.md"), "one\ntwo\n");
+  assert.equal(fileAt(dir, base, "b.md"), null, "b.md was not added until after base");
+  assert.equal(fileAt(dir, "HEAD", "no-such-file.md"), null);
 });
