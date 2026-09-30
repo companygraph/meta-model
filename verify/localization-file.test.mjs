@@ -81,6 +81,16 @@ test("a page without a statement is not asked for one", () => {
   assert.deepEqual(r19([["model/localization.md", DE_LOC], ["model/sources/local.md", local]]), []);
 });
 
+// Re-review: text before a language section's first `###` belongs to no element —
+// `translationElementsOf` (lib/localization.mjs) drops the `""` key `splitSections` gives it for
+// that text, so it was read as nothing, and the completeness check passed a page that said
+// something there and meant it translated.
+test("a language section with text before its first `###` fails, since it translates no element", () => {
+  const stray = "\n## de-CH\n\nStray preamble text.\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n";
+  const f = r19([["model/localization.md", DE_LOC], ["model/sources/local.md", LOCAL(stray)]]);
+  assert.ok(f.some((x) => x.includes("`## de-CH` holds text before its first `###`, which translates no element of the page")), f.join("\n"));
+});
+
 test("a schema section standing below a language section fails", () => {
   const f = r19([["model/localization.md", DE_LOC], ["model/sources/local.md", LOCAL(`${DE_LOCAL}\n## References\n\n| What | URL |\n| --- | --- |\n`)]]);
   assert.ok(f.some((x) => x.includes("`## References` stands below a language section")), f.join("\n"));
