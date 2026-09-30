@@ -1,3 +1,7 @@
+---
+id: 01a0f10d-64f0-71c7-8329-86453b047994
+---
+
 # Identifier Schema
 
 > Required structure for the identifier file: what an entity's id looks like in this instance.

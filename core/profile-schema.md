@@ -1,3 +1,7 @@
+---
+id: 01a02f3d-4e30-7b02-9ed7-cc37d8a2aa93
+---
+
 # Profile Schema
 
 > Required structure for profile files.

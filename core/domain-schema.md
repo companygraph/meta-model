@@ -1,3 +1,7 @@
+---
+id: 01a0c233-ae50-7bfb-8010-1e997f829ce3
+---
+
 # Domain Schema
 
 > Required structure for domain files.

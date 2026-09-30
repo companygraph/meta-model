@@ -1,3 +1,7 @@
+---
+id: 01a0dd34-8da0-7631-83df-1cf924855e48
+---
+
 # Decision Schema
 
 > Required structure for decision files.

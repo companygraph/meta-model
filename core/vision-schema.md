@@ -1,3 +1,7 @@
+---
+id: 01a04c7b-6b80-711e-bc03-252a77c875ab
+---
+
 # Vision Schema
 
 > Required structure for the vision file — the future the company is working toward.

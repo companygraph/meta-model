@@ -1,3 +1,7 @@
+---
+id: 01a0d896-7c40-707d-92ca-c0568838830a
+---
+
 # KPI Schema
 
 > Required structure for KPI files.

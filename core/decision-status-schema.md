@@ -1,3 +1,7 @@
+---
+id: 01a0dd34-8da0-7db6-9762-c04c62f55fe0
+---
+
 # Decision Status Schema
 
 > Required structure for decision status files.

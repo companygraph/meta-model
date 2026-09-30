@@ -1,3 +1,7 @@
+---
+id: 01a0ddf7-ed40-7c28-9b18-65b95ea6de95
+---
+
 # Question Kind Schema
 
 > Required structure for question kind files.

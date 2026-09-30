@@ -1,3 +1,7 @@
+---
+id: 01a02f41-4da0-7f80-93be-7ae6d0bfc85d
+---
+
 # Experience Schema
 
 > Required structure for experience files.

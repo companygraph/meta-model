@@ -1,3 +1,7 @@
+---
+id: 01a04c7b-6b80-73dc-8007-6a193b1138d3
+---
+
 # Identity Schema
 
 > Required structure for the identity file — who the company is.

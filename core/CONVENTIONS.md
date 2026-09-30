@@ -74,7 +74,7 @@ A file in the model therefore records the rules by which something is made, and 
 
 ### R18 — An entity keeps its id
 
-Every page carries an `id` in its frontmatter, in the format the instance's identifier file declares. It is unique within the instance, it is set when the entity is made and never changed once it is on the default branch, and the id of a deleted entity is never used again. An id means nothing: it carries no name, type, language or owner, because each of those can change and the id cannot.
+Every page carries an `id` in its frontmatter, in the format the instance's identifier file declares. It is unique within the instance, it is set when the entity is made and never changed once it is on the default branch, and the id of a deleted entity is never used again. An id means nothing: it carries no name, type, language or owner, because each of those can change and the id cannot. A schema keeps its id by the same rule, and an element of a schema — a field, a section, a column or an enum value — is addressed by its schema's id and the key the schema writes it under.
 
 An id works like the key of a database row. A deleted row is gone, a consumer that holds its key finds nothing, and the key is never handed to another row. So an old name is not kept as a second way in: R3 and R4 hold every reference to the current name, and an id is what a reader outside the model holds instead.
 
@@ -94,7 +94,7 @@ So a list of *bare names* stays in frontmatter, typed `array of ref → <type>`;
 
 ### R9 — Schema files have a fixed shape
 
-Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**` line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then `## Purpose` and `## Writing rules` where the type has them. The path under `## File Location` is written in backticks and begins at the container, `model/` (R13). For a type with many entities the last folder it names is the type's own, and what comes before it is where that folder sits: `model/` alone, for a type nothing owns; the owner's path, for a type that is owned (R10). So `model/skills/*.md`, and `model/profiles/<profile>/experiences/*.md`. A singular type names its file instead, directly in the container: `model/vision.md`.
+A schema file opens with YAML frontmatter holding one field, `id`: a UUID version 7 (RFC 9562), in lowercase, that R18 holds as it holds an entity's. Named for the type, singular. In order: `# <Type> Schema`, a `>` tagline, an `**Owner:**` line if the type is owned, `## File Location`, `## Frontmatter`, `## Sections`, and then `## Purpose` and `## Writing rules` where the type has them. The path under `## File Location` is written in backticks and begins at the container, `model/` (R13). For a type with many entities the last folder it names is the type's own, and what comes before it is where that folder sits: `model/` alone, for a type nothing owns; the owner's path, for a type that is owned (R10). So `model/skills/*.md`, and `model/profiles/<profile>/experiences/*.md`. A singular type names its file instead, directly in the container: `model/vision.md`.
 
 `## Frontmatter` holds one table and only one — a field is a row in it — with columns `Field | Required | Type | Description`. A type with no fields says `No YAML frontmatter.` instead, so that "no table" and "forgot the table" stay distinguishable. `## Sections` opens with the sections table, whose columns are `Section | Required | Description`.
 

@@ -1,3 +1,7 @@
+---
+id: 01a0b09c-6e48-7e25-abfc-8efc23e2d25a
+---
+
 # Achievement Kind Schema
 
 > Required structure for achievement kind files.

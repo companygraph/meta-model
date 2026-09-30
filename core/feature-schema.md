@@ -1,3 +1,7 @@
+---
+id: 01a0c234-71a0-7313-94b7-15be3be5e2d3
+---
+
 # Feature Schema
 
 > Required structure for feature files.

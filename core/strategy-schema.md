@@ -1,3 +1,7 @@
+---
+id: 01a0a48b-9818-7d5d-a7eb-46aee2dfe2a7
+---
+
 # Strategy Schema
 
 > Required structure for strategy files.

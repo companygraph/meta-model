@@ -1,3 +1,7 @@
+---
+id: 01a0a8b4-7978-7026-a388-b10e041b45b5
+---
+
 # Process Schema
 
 > Required structure for process files.
