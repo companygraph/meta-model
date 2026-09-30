@@ -178,6 +178,31 @@ test("companygraph-meta-model/localization resolves by the package's own name, t
   assert.equal(out, "ok");
 });
 
+// A grouped section's `###` heading names another entity — an experience's `## Achievements`
+// carries `### Context`, naming an achievement kind — and renaming that entity rewrites the
+// heading on every page listing it, while each translation's own heading (the language's own
+// name of the entity, read through `asPage` as `###` too) rightly stays as it is. R19
+// (lib/checks.mjs) already holds a translated grouped heading to the primary's; staleness must
+// not also compare the heading lines, or such a rename fails every page as a stale translation
+// though nothing the page says changed.
+const experiencePage = (heading, bullets, deHeading, deBullets) =>
+  `---\nid: x\n---\n\n# Some Experience\n\n> Statement.\n\n## Achievements\n\n### ${heading}\n\n${bullets}\n\n` +
+  `## de-CH\n\n### Name\n\nSome Experience DE\n\n### Statement\n\n> Statement DE.\n\n### Achievements\n\n#### ${deHeading}\n\n${deBullets}\n`;
+
+test("a renamed grouped heading, with the bullets and the translation unchanged, is not stale", () => {
+  const before = experiencePage("Context", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
+  const after = experiencePage("Background", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
+  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
+});
+
+test("a renamed grouped heading beside a real bullet change still fails", () => {
+  const before = experiencePage("Context", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
+  const after = experiencePage("Background", "- Did Z.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
+  const out = staleTranslationsOf(change(before, after), ["de-CH"], new Set());
+  assert.equal(out.length, 1);
+  assert.match(out[0], /^model\/features\/billing\.md#section\/Achievements changed, and its de-CH translation did not/);
+});
+
 test("a real word change beside the same kind of re-padding and re-wrapping still fails", () => {
   const before = tablePage(
     "Billed monthly,\nin advance.",
