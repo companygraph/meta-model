@@ -151,6 +151,15 @@ test("a grouped heading in German is the German name of the kind the English hea
   assert.ok(f.some((x) => x.includes("`#### Delivery` under `### Achievements` is not \"Lieferung\"")), f.join("\n"));
 });
 
+// Re-review: the grouped-heading loop only ever walked the primary's own headings (`want`),
+// checking that each has a matching translated one at the same index — an extra `####` heading
+// the translation holds beyond the primary's, with no primary heading at its index to compare it
+// against, was simply never visited and passed silently.
+test("a grouped section with an extra German heading beyond the primary's fails", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE.replace("### References", "#### Banana\n\n- Extra.\n\n### References")));
+  assert.ok(f.some((x) => x.includes("`#### Banana` under `### Achievements` in `## de-CH` has no heading in the page to translate")), f.join("\n"));
+});
+
 test("two kinds with one German name fail", () => {
   const f = r19Deep(EXPERIENCE(DE_EXPERIENCE), { kinds: [["delivery.md", KIND("Delivery", "Lieferung")], ["results.md", KIND("Results", "Lieferung")]] });
   assert.ok(f.some((x) => x.includes("de-CH name \"Lieferung\" is also")), f.join("\n"));
