@@ -1066,12 +1066,14 @@ test("ids --range refuses a commit that changed an id, across a rename", () => {
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
   g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
-  const old = path.join(root, "model/vision.md");
-  const text = fs.readFileSync(old, "utf8").replace(/^id: .*$/m, "id: 01a04c85-bc20-7092-a266-845d81173e9f");
-  fs.writeFileSync(old, text);
+  g("mv", "model/vision.md", "model/outlook.md");
+  const renamed = path.join(root, "model/outlook.md");
+  const text = fs.readFileSync(renamed, "utf8").replace(/^id: .*$/m, "id: 01a04c85-bc20-7092-a266-845d81173e9f");
+  fs.writeFileSync(renamed, text);
   g("commit", "-qam", "second", "--no-verify");
   const head = g("rev-parse", "HEAD");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${head}`], { encoding: "utf8" });
   assert.equal(said.status, 1);
-  assert.match(said.stderr, /model\/vision\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+  assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+  assert.match(said.stderr, /\(then model\/vision\.md\)/);
 });
