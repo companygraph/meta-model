@@ -57,7 +57,8 @@ flowchart TB
   BC -- "relationships (Pattern)" --> BC
   BC -- consumes --> DE
   AG -- root --> CD
-  AG -- emits --> DE
+  DE -- emitted-by --> AG
+  AG -- members --> CD
   DE -- payload --> CD
   CD -- relations --> CD
   FD -. refines .-> F
@@ -95,7 +96,7 @@ A term of the context's ubiquitous language, owned by its bounded context, so a 
 | `kind` | Yes | enum | `entity`: defined by an identity that persists through changes to its attributes. `value object`: defined only by its attributes, and replaced rather than changed (Evans) |
 | `refines` | No | ref → concept | The enterprise concept this term narrows |
 
-Sections: `## Attributes` (table, optional: `Attribute`, `Type`, `Description`, where `Type` is a plain string or the name of a value-object concept design in the same context), `## Relations` (table, optional, the same form as core's concept relations: `Concept` as ref → concept-design, `Cardinality`, `As`, written on one side only), `## References`.
+Sections: `## Attributes` (table, optional: `Attribute`, `Type`, `Description`, where `Type` is a string: a plain type such as `Money` or `date`, or the name of a value-object concept design in the same context, which a reader follows and which draws no edge), `## Relations` (table, optional, the same form as core's concept relations: `Concept` as ref → concept-design, `Cardinality`, `As`, written on one side only), `## References`.
 
 ### aggregate
 
@@ -104,9 +105,10 @@ A cluster of concept designs kept consistent as one unit, reached only through i
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
 | `root` | Yes | ref → concept-design | The entity through which the aggregate is reached; its kind is `entity` |
+| `members` | No | array of ref → concept-design | The other concept designs the aggregate holds, beside its root |
 | `decisions` | No | array of ref → decision | The decisions that shaped it |
 
-Sections: `## Members` (bulleted, refs to concept designs in the context), `## Invariants` (numbered, one rule each, required), `## Handled commands` (table: `Command`, `Description`), `## Emits` (bulleted, refs to domain events in the context), `## State transitions` (optional), `## References`. A command is a row and not a type, because nothing outside its aggregate names it.
+Sections: `## Invariants` (numbered, one rule each, required), `## Handled commands` (table: `Command`, `Description`), `## State transitions` (optional), `## References`. A command is a row and not a type, because nothing outside its aggregate names it. The members are a field and not a bulleted section, because a list draws no edge. The events an aggregate emits are not written on it: the edge is written once, on the event, as `emitted-by`, and the aggregate's references show it from the other end.
 
 ### domain-event
 
@@ -128,7 +130,7 @@ How a feature is built across the contexts it touches: the solution side of what
 | `contexts` | Yes | array of ref → bounded-context | The contexts it takes part in, at least one |
 | `decisions` | No | array of ref → decision | The decisions that shaped it |
 
-Sections: `## Operational principle` (required: the one scenario that shows why it exists, after Jackson), `## Scenarios` (grouped, one `###` per scenario, written Given, When, Then after Gherkin), `## Uses` (table: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context, one row per concept design or domain event the design touches), `## References`.
+Sections: `## Operational principle` (required: the one scenario that shows why it exists, after Jackson), `## Scenarios` (prose, one `###` per scenario, written Given, When, Then after Gherkin; not `Grouped.`, since a scenario is not an entity a heading could name), `## Uses` (table: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context, one row per concept design or domain event the design touches), `## References`.
 
 ## Architecture decisions
 
@@ -150,7 +152,7 @@ The pack lives in `packs/software/` in meta-model: five schemas and a README tha
 
 `init --pack software` vendors the pack to `meta/software/` in the instance and writes `"packs": ["software"]` to `.companygraph/manifest.json`, which the tooling spec reserved. `check` reads every unit the manifest lists.
 
-Three places assume core is the only unit and learn otherwise: `bin/check-instance.mjs`, which hard-codes `core` as the units folder; the `TYPES` constant in `lib/checks.mjs`, which becomes derived from the schemas read; and `parseSchemas` in `lib/instance.mjs`, whose `address` still reads `core/<type>` for whatever reads a type and will read `<unit>/<type>`. A schema's id is untouched: a pack schema carries one as core's do. The parser then receives core's and the pack's schemas as one map, as the typed-resolution spec already says.
+Three places assume core is the only unit and learn otherwise: `bin/check-instance.mjs`, which hard-codes `core` as the units folder; the `TYPES` constant in `lib/checks.mjs`, beside which a `PACKS` constant states each pack's types as `TYPES` states core's, because the folder, owner and filename form a check needs are stated there and never derived; and `parseSchemas` in `lib/instance.mjs`, whose `address` still reads `core/<type>` for whatever reads a type and will read `<unit>/<type>`. A schema's id is untouched: a pack schema carries one as core's do. The parser then receives core's and the pack's schemas as one map, as the typed-resolution spec already says.
 
 Three checks are added, each holding one sentence of a new rule after R19: a schema in `core/` names only types core declares; a pack's type name is not a core type's; and a pack's schema names only core's types and its own. The rule:
 
