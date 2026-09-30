@@ -92,3 +92,55 @@ test("a core with no localization schema holds no page to R19", () => {
   const all = checkInstance(files, { core: "meta/core", model: "model" }).failures;
   assert.deepEqual(all.filter((f) => f.includes("(R19)") || f.includes("localization")), []);
 });
+
+const KIND = (name, de) => `---\nid: 01a0f10d-64f0-71c7-8329-86453b04799${name.length}\nsource: Local\n---\n\n# ${name}\n\n> A kind.\n\n## de-CH\n\n### Name\n\n${de}\n\n### Statement\n\n> Eine Art.\n`;
+const EXPERIENCE = (de) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b0479a0\nsource: Local\nstart: 2020\nkind: Employment\n---\n\n# Rebuilding billing\n\n> A period.\n\n" +
+  "## Achievements\n\n### Delivery\n\n- Shipped it.\n\n## References\n\n| What | URL |\n| --- | --- |\n| A record | https://example.com/record |\n" +
+  `\n## de-CH\n\n### Name\n\nAbrechnung neu gebaut\n\n### Statement\n\n> Eine Phase.\n\n${de}`;
+const DE_EXPERIENCE = "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\n| What | URL |\n| --- | --- |\n| Ein Eintrag | https://example.com/record |\n";
+
+const r19Deep = (experience, { kinds = [["delivery.md", KIND("Delivery", "Lieferung")]] } = {}) =>
+  checkInstance(new Map([
+    ...["localization", "source", "experience", "achievement-kind", "profile"].map((t) => [`meta/core/${t}-schema.md`, read(`${t}-schema.md`)]),
+    ["model/localization.md", DE_LOC],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+    ...kinds.map(([f, text]) => [`model/achievement-kinds/${f}`, text]),
+    ["model/profiles/ana/experiences/2020-billing.md", experience],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("a translation that keeps the page's structure and names its kinds in German passes", () => {
+  assert.deepEqual(r19Deep(EXPERIENCE(DE_EXPERIENCE)), []);
+});
+
+test("a URL a translator changed fails, while the text beside it may change", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE.replace("https://example.com/record", "https://example.com/de/record")));
+  assert.ok(f.some((x) => x.includes("row 1 of `### References` column URL is \"https://example.com/de/record\"")), f.join("\n"));
+});
+
+test("an enum cell of a repeated table is the primary's", () => {
+  // The last `| de-CH | translated |` is the German section's repeated table.
+  const loc = DE_LOC.replace(/(### Locales[\s\S]*)\| de-CH \| translated \|/, "$1| de-CH | übersetzt |");
+  const f = checkInstance(new Map([
+    ["meta/core/localization-schema.md", read("localization-schema.md")],
+    ["meta/core/source-schema.md", read("source-schema.md")],
+    ["model/localization.md", loc],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((x) => x.includes("(R19)"));
+  assert.ok(f.some((x) => x.includes("column Role is \"übersetzt\"")), f.join("\n"));
+});
+
+test("a repeated table with another row count fails", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE.replace("| Ein Eintrag | https://example.com/record |\n", "")));
+  assert.ok(f.some((x) => x.includes("`### References` holds 0 rows, and the page's table 1")), f.join("\n"));
+});
+
+test("a grouped heading in German is the German name of the kind the English heading names", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE.replace("#### Lieferung", "#### Delivery")));
+  assert.ok(f.some((x) => x.includes("`#### Delivery` under `### Achievements` is not \"Lieferung\"")), f.join("\n"));
+});
+
+test("two kinds with one German name fail", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE), { kinds: [["delivery.md", KIND("Delivery", "Lieferung")], ["results.md", KIND("Results", "Lieferung")]] });
+  assert.ok(f.some((x) => x.includes("de-CH name \"Lieferung\" is also")), f.join("\n"));
+});
