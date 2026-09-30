@@ -107,7 +107,7 @@ The release that follows is a minor.
 **Repositories:** robertblust/robertblust.github.io, companygraph/companygraph.github.io, guestgraph/guestgraph.github.io. Starts after the owner has released Tasks 1 to 3.
 
 - [ ] Each site re-pins design (the `npm run design` fence), meta-model (v0.65.1) and mcp-server, runs `npm ci`, rebuilds (`npm run model` or `npm run build`, then `npm run pages`, `npm run pictures` where pictures changed) and commits what the build writes; model.json gains `address` on every entity.
-- [ ] blust.ch: `build/jsonld.mjs`'s `imageOf` reads `profile.address ?? profile.id` and its comment says so, with `build/renderers.test.mjs`'s fixture carrying an address and a second fixture without one; `timeline/index.html`'s `stem()` slices the address; `verify/check.mjs`'s ledger checks (`stem`, the `endsWith` matches, the `#skills/` regex, the `sameTab` fixture) read the address.
+- [ ] blust.ch: `build/jsonld.mjs`'s `imageOf` reads `profile.address ?? profile.id` and its comment says so, with `build/renderers.test.mjs`'s fixture carrying an address and a second fixture without one; `timeline/index.html`'s `stem()` slices the address, and its `goLink` builds the stage href from `byId[id].address ?? id`, so a skill link on the timeline stays `#skills/…`; `verify/check.mjs`'s ledger checks (`stem`, the `endsWith` matches, the `#skills/` regex, the `sameTab` fixture) read the address.
 - [ ] Run each site's `npm run test:build`, its `*:check` steps and `npm run verify`, and commit. Each site is its own pull request.
 
 ### Task 7: the MCP deployments take wave A
@@ -121,4 +121,4 @@ The release that follows is a minor.
 
 ## After wave B
 
-Step 2: each instance re-pins core with `companygraph upgrade`, runs `companygraph ids --backfill` in a full clone, and commits; then each site's `source.json` and each deployment's `source.json` move to the backfilled commit. The spec's `/id/<uuid>` redirect and a JSON-LD `@id` per entity are not built here: no site emits a per-entity JSON-LD node today, so nothing breaks without them, and they are their own change.
+Step 2: each instance re-pins core with `companygraph upgrade`, runs `companygraph ids --backfill` in a full clone, and commits; then each site's `source.json` and each deployment's `source.json` move to the backfilled commit, the site no later than its deployment: a chat cite carrying a UUID into a `model.json` whose ids are still paths finds nothing and opens the root, while a path cite into a backfilled `model.json` still resolves through the address. The spec's `/id/<uuid>` redirect and a JSON-LD `@id` per entity are not built here: no site emits a per-entity JSON-LD node today, so nothing breaks without them, and they are their own change.
