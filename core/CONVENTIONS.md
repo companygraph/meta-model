@@ -26,11 +26,11 @@ A tool resolves a reference by the type its schema declares and the name written
 
 ### R3 — Every reference is by canonical name
 
-Never by file path and never by filename. Paths move; a canonical name is the entity. In a locale's section, the canonical name is the entity's name in that locale (R19).
+Never by file path and never by filename. Paths move; a canonical name is the entity. In a locale's prose and its grouped headings, the canonical name is the entity's name in that locale (R19).
 
 ### R4 — An unresolvable reference is an error
 
-Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check. A reference in a locale's section resolves among that locale's names (R19).
+Not a warning. A reference naming an entity that does not exist, or that exists under a different type, fails the check. A reference in a locale's prose or grouped headings resolves among that locale's names; a repeated table's references stay the primary's (R19).
 
 A reference whose schema names an owned type, `ref → <type>` and its sibling forms, is resolved within the owner it is written in: the owner itself, or an entity the same owner owns. Every reference declared this way is written inside an owner, so the scope is read from where the name is, never guessed from the nearest folder, which is the failure R2 warns of, and a name that is only another owner's entity is unresolvable from here. A reference written outside every owner reaches an owned type only through the `in <Owner>` form, `ref → by <Column> in <Owner>` (R9), whose row names the owner in its own cell, never folded into the name, and resolves within it.
 
