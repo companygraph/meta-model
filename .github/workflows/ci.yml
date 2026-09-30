@@ -38,6 +38,8 @@ jobs:
         run: npm run test:cli
       - name: An entity's id, made and read
         run: npm run test:ids
+      - name: A model's languages, read
+        run: npm run test:localization
       - name: A commit's seat, judged against what governs it
         run: npm run test:seats
       - name: Another release's core is read from its tarball
@@ -68,7 +70,7 @@ jobs:
         run: npm run test:instance && npm run test:instance-checks && npm run test:rules
       - name: The plan, the files an instance starts with, and the command over real folders
         if: ${{ !cancelled() }}
-        run: npm run test:plan && npm run test:instance-files && npm run test:cli && npm run test:ids && npm run test:seats
+        run: npm run test:plan && npm run test:instance-files && npm run test:cli && npm run test:ids && npm run test:localization && npm run test:seats
       - name: The tarball, the fetch and the Obsidian install
         if: ${{ !cancelled() }}
         run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian
