@@ -544,6 +544,21 @@ test("upgrade writes a reading guide the instance lacks, names it, and keeps the
   assert.match(run(["upgrade", root]), /already on core/i);
 });
 
+// Review fix 1: an instance made before R19's schema landed has no model/localization.md at
+// all, and `init` alone never revisits an existing instance. `upgrade` now writes it once,
+// reading `source` off model/identity.md, and the instance it lands on still passes `check`.
+test("upgrade writes model/localization.md the instance lacks, with source read from identity, and the instance still checks clean", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/localization.md"));
+  const said = run(["upgrade", root]);
+  assert.match(said, /written, since the instance had none.*model\/localization\.md/);
+  const page = fs.readFileSync(path.join(root, "model/localization.md"), "utf8");
+  assert.match(page, /\nsource: Local\n/);
+  assert.match(page, /\| en-US \| primary \|/);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested
@@ -680,9 +695,18 @@ test("upgrade refuses a core newer than itself, and writes nothing", () => {
 // Defect 5: checkPath can still throw after a real move — here because the model is gone — and
 // an upgrade that stood is not to be hidden by it: the throw is printed with the "✗ " prefix
 // `check` uses, and the upgrade is said to stand.
+//
+// Review fix 1 made `upgrade` write model/localization.md where the instance lacks one and the
+// core carries `localization-schema.md`, which every bundled core does from here on — so
+// deleting model/ before an upgrade against this package's own core no longer leaves it empty
+// afterward, and checkPath's "has no model/" guard would never fire. A private copy of the
+// package with that one schema file removed stands in for a release from before R19, which is
+// what this defect actually needs: a target core that does not heal the folder back.
 test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const pkg = tempPackage();
+  fs.rmSync(path.join(pkg, "core/localization-schema.md"));
   const manifestPath = path.join(root, ".companygraph/manifest.json");
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   const older = "# Conventions\n\nAs an older release shipped it.\n";
@@ -691,7 +715,7 @@ test("upgrade's own check prints a guard failure with its prefix and still says 
   manifest.files["meta/core/CONVENTIONS.md"] = sha256(older);
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   fs.rmSync(path.join(root, "model"), { recursive: true });
-  const result = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [path.join(pkg, "bin/companygraph.mjs"), "upgrade", root], { encoding: "utf8" });
   assert.equal(result.status, 0);
   assert.match(result.stderr, /✗ .*has no model\//);
   assert.match(result.stdout, /the upgrade stands/);

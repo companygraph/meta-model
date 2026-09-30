@@ -330,10 +330,17 @@ async function upgrade(argv) {
   const workflow = existsSync(workflowPath) ? read(workflowPath) : null;
   // The export's inputs are the instance's own and only written where absent, so all the plan
   // needs is which of them are there, and the name its guide opens on: the identity's H1, or the
-  // folder's name where the identity has none to read.
+  // folder's name where the identity has none to read. The plan also reads model/identity.md's
+  // `source` for a fresh model/localization.md, and needs to see model/localization.md itself to
+  // know whether the instance already has one — both unhashed, so both are read into `held`
+  // directly rather than through the manifest's tracked paths.
   const identityPath = join(root, "model/identity.md");
-  const identity = existsSync(identityPath) ? read(identityPath).match(/^# (.+)$/m)?.[1].trim() : undefined;
+  const identityText = existsSync(identityPath) ? read(identityPath) : undefined;
+  if (identityText !== undefined) held.set("model/identity.md", identityText);
+  const identity = identityText?.match(/^# (.+)$/m)?.[1].trim();
   const name = identity || basename(resolve(root));
+  const localizationPath = join(root, "model/localization.md");
+  if (existsSync(localizationPath)) held.set("model/localization.md", read(localizationPath));
   const exportPaths = [...exportFilesFor({ name }).keys()];
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
