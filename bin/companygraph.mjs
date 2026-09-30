@@ -1,6 +1,8 @@
 #!/usr/bin/env node
 // The CompanyGraph tooling: making an instance, and the checks over one. Subcommands, each
-// exiting non-zero on any problem and writing nothing when its pre-flight fails:
+// exiting non-zero on any problem and writing nothing when its pre-flight fails; commits and ids
+// exit 3 to refuse, so a caller such as a hook can tell a refusal from a run that could not
+// happen, and 1 for anything else:
 //
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
 //   companygraph check [<folder>]
@@ -43,10 +45,10 @@ const USAGE = `companygraph [<command>]
   check [<folder>]    the mechanical checks over an instance
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
-  commits [<folder>]  refuse a commit whose seat the phase in its trailers does not list
+  commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
-  ids [<folder>]      give every page an id from its first commit, or refuse an id a range changed
+  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
@@ -669,6 +671,11 @@ function seats(argv) {
 // branch. A folder that holds core/ and is not an instance is the repository that makes core,
 // and both work on its schemas instead; `--core` already names a tag, so what the folder holds
 // is what tells the two apart.
+//
+// Refused is 3, not 1, so a caller such as a hook can tell a refusal — a `--range` that changed
+// an id already on the default branch, or a `--backfill` that a declared `pattern` format or an
+// unreadable identifier file refuses — from a run that could not happen at all: not an instance,
+// neither flag, a malformed range, or a git failure, each of which is 1.
 function ids(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -693,7 +700,7 @@ function ids(argv) {
     const writes = onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs });
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
-      return 1;
+      return REFUSED;
     }
     writePlan(root, writes);
     const what = onCore ? "schema" : "page";
@@ -715,7 +722,7 @@ function ids(argv) {
     const failures = idChangesOf(changedPagesOf(root, given.range, folder), base);
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
-      return 1;
+      return REFUSED;
     }
     console.log("✓ no id on the default branch changed");
     return 0;
