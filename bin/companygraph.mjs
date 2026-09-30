@@ -685,6 +685,10 @@ function ids(argv) {
     walk("model");
     const top = gitTop(root);
     const writes = backfillPlan(files, { firstCommitMs: (rel) => (top ? firstCommitMsOf(root, rel) : null) });
+    if (writes.refused) {
+      console.error(`✗ ${writes.refused}`);
+      return 1;
+    }
     writePlan(root, writes);
     console.log(`✓ ${writes.size ? `wrote an id into ${writes.size === 1 ? "one page" : "each page listed"}` : "every page already carries an id"}`);
     for (const path of writes.keys()) console.log(`  ${path}`);

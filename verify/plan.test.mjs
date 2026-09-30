@@ -415,3 +415,21 @@ test("run twice, the backfill writes nothing the second time", () => {
   for (const [path, text] of backfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
   assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).size, 0);
 });
+
+// The spec: under a pattern format, the instance makes its own ids, and the tooling only checks
+// them. Stamping UUIDv7 ids anyway would give an instance two id formats at once, so the backfill
+// refuses whole rather than writing over what it cannot itself make.
+test("the backfill refuses whole when model/identifier.md declares a pattern, and writes nothing", () => {
+  const files = tree();
+  files.set("model/identifier.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n");
+  const plan = backfillPlan(files, { firstCommitMs: () => MS });
+  assert.match(plan.refused, /model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(plan.writes, undefined);
+});
+
+test("the backfill refuses whole when model/identifier.md cannot be read as a format, and names why", () => {
+  const files = tree();
+  files.set("model/identifier.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: serial\n---\n\n# Entity id\n");
+  const plan = backfillPlan(files, { firstCommitMs: () => MS });
+  assert.match(plan.refused, /model\/identifier\.md: `format` is "serial"; it is `uuidv7` or `pattern` \(R18\)/);
+});

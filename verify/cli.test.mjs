@@ -1040,6 +1040,25 @@ test("ids --backfill stamps an instance's pages with their first commit", () => 
   assert.ok(fs.existsSync(path.join(root, "model/identifier.md")));
 });
 
+// The spec: under a pattern format, the instance makes its own ids, and the tooling only checks
+// them. A backfill that stamped UUIDv7 ids over that declaration anyway would leave the instance
+// with two id formats at once, so it refuses whole, and no page is touched.
+test("ids --backfill refuses whole when model/identifier.md declares a pattern", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const identity = path.join(root, "model/identity.md");
+  fs.writeFileSync(identity, fs.readFileSync(identity, "utf8").replace(/^id: .*\n/m, ""));
+  const before = fs.readFileSync(identity, "utf8");
+  fs.writeFileSync(
+    path.join(root, "model/identifier.md"),
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n",
+  );
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /✗ model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(fs.readFileSync(identity, "utf8"), before);
+});
+
 test("ids --range refuses a commit that changed an id, across a rename", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
