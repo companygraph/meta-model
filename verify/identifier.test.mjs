@@ -50,6 +50,13 @@ test("a page copied with its id fails once, naming both files and neither as the
   assert.match(f[0], /model\/sources\/the-copy\.md: `id` ".+" is shared with model\/sources\/local\.md; .*a page copied to start another keeps the id of the page it was copied from/);
 });
 
+test("a duplicate says which page may take a fresh id, and a quoted copy is the same id", () => {
+  const f = r18(tree({ extra: [["model/sources/the-copy.md", `---\nid: "${A}"\n---\n\n# Copy\n`]] }));
+  assert.equal(f.length, 2);
+  assert.match(f[0], /the-copy\.md: `id` is written in quotes/);
+  assert.equal(f[1], `model/sources/the-copy.md: \`id\` "${A}" is shared with model/sources/local.md; an id is unique within the instance, and a page copied to start another keeps the id of the page it was copied from — give whichever page is not yet on the default branch a fresh one with \`companygraph id\` (R18)`);
+});
+
 test("the identifier's own id counts: a page sharing it fails", () => {
   const f = r18(tree({ local: `---\nid: ${C}\n---\n\n# Local\n` }));
   assert.equal(f.length, 1);
