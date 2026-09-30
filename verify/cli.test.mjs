@@ -1198,3 +1198,79 @@ test("translations --range compares from the merge base, not the base tip, so a 
   assert.equal(said.status, 0, said.stderr);
   assert.match(said.stdout, /✓ every change to the primary reached its translations/);
 });
+
+// Fix 11 (test only): `changedPagesOf` pairs a renamed page with its old path (git's own rename
+// detection, `-M`), so a page that moved and changed in the same range is read as one entity
+// changing, not as one deleted and another appearing from nowhere; the trailer that releases it
+// names the entity's new path, since that is where R19 finds it from here on.
+test("translations --range follows a rename, and a trailer naming the new path releases it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  const renamed = path.join(root, "model/vision2.md");
+  fs.renameSync(vision, renamed);
+  fs.writeFileSync(renamed, fs.readFileSync(renamed, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
+  g("add", "-A"); g("commit", "-qm", "rename and reword", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /model\/vision2\.md#section\/What it means changed, and its de-CH translation did not/);
+  g("commit", "-q", "--allow-empty", "-m", "release", "-m", "Translation-unchanged: model/vision2.md#section/What it means", "--no-verify");
+  const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(released.status, 0, released.stderr);
+});
+
+test("translations --range reads Translation-unchanged trailers spread across two commits, releasing two elements", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const identity = path.join(root, "model/identity.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(identity, `${fs.readFileSync(identity, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nAcme\n\n### Statement\n\n> Ein Satz.\n\n### What it is\n\nWas es ist.\n`);
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  let text = fs.readFileSync(identity, "utf8");
+  text = text.replace("One paragraph saying what this company is.", "One paragraph now saying more.");
+  text = text.replace("What the company does, and for whom.", "What the company does now, and for whom.");
+  fs.writeFileSync(identity, text);
+  g("commit", "-qam", "second", "--no-verify");
+  g("commit", "-q", "--allow-empty", "-m", "release one", "-m", "Translation-unchanged: model/identity.md#statement", "--no-verify");
+  g("commit", "-q", "--allow-empty", "-m", "release two", "-m", "Translation-unchanged: model/identity.md#section/What it is", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, /✓ every change to the primary reached its translations/);
+});
+
+test("translations --range names only the stale language when one of two declared languages follows the change", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |\n"));
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(
+    vision,
+    `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n\n` +
+      "## pl-PL\n\n### Name\n\nWizja\n\n### Statement\n\n> Jeden akapit.\n\n### What it means\n\nCo obowiazuje.\n",
+  );
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  let text = fs.readFileSync(vision, "utf8");
+  text = text.replace("What is true when it holds, and what it excludes.", "What is true when it holds.");
+  text = text.replace("Co obowiazuje.", "Co teraz obowiazuje.");
+  fs.writeFileSync(vision, text);
+  g("commit", "-qam", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
+  assert.doesNotMatch(said.stderr, /pl-PL/);
+});
