@@ -1,3 +1,7 @@
+---
+id: 01a0c233-ae50-7e67-96c8-bb9a8d116ca7
+---
+
 # Concept Schema
 
 > Required structure for concept files.

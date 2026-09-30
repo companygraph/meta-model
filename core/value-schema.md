@@ -1,3 +1,7 @@
+---
+id: 01a02f39-6248-779b-b3d9-aed29f14e367
+---
+
 # Value Schema
 
 > Required structure for value files.

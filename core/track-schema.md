@@ -1,3 +1,7 @@
+---
+id: 01a0bfb0-acf0-79e1-bc25-474cf0bd7ac0
+---
+
 # Track Schema
 
 > Required structure for track files.

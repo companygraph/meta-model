@@ -456,6 +456,36 @@ test("a ref → cell in a column table is an edge via Section.Column; the Owner 
     { from: "core/experience", to: "core/profile", via: "owner", attrs: {} });
 });
 
+const SKILL_ID = "0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60";
+const stamped = () => {
+  const withId = new Map(core);
+  withId.set("skill-schema.md", `---\nid: ${SKILL_ID}\n---\n\n${core.get("skill-schema.md")}`);
+  return withId;
+};
+
+test("a schema that carries an id leaves the parse by it, and keeps core/<type> as its address", () => {
+  const { entities, edges } = parseSchemas(stamped());
+  const skill = entities.find((e) => e.address === "core/skill");
+  assert.equal(skill.id, SKILL_ID);
+  assert.equal(skill.name, "Skill Schema");
+  const source = entities.find((e) => e.address === "core/source");
+  assert.equal(source.id, "core/source", "a schema with no id keeps core/<type> as its id");
+  assert.deepEqual(edges.find((x) => x.from === "core/experience" && x.via === "skills"),
+    { from: "core/experience", to: SKILL_ID, via: "skills", attrs: { type: "array of ref → skill" } });
+  assert.ok(entities.every((e) => e.address === `core/${e.path.replace(/-schema\.md$/, "")}`));
+});
+
+test("an instance parses against schemas that carry ids exactly as against ones that do not", () => {
+  const plain = parseInstance(valid, { schemas });
+  const withIds = new Map(schemas);
+  let n = 10; // two hex digits, one per schema, so no two share an id
+  for (const [file, text] of schemas)
+    if (file.endsWith("-schema.md")) withIds.set(file, `---\nid: ${SKILL_ID.slice(0, -2)}${n++}\n---\n\n${text}`);
+  const read = parseInstance(valid, { schemas: withIds });
+  assert.deepEqual(read.entities, plain.entities);
+  assert.deepEqual(read.edges, plain.edges);
+});
+
 test("a ref → a type with no schema is an R4 error", () => {
   const broken = new Map(core);
   broken.set("skill-schema.md", broken.get("skill-schema.md").replace("ref → source", "ref → team"));

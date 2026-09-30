@@ -1,3 +1,7 @@
+---
+id: 01a03a36-9dc8-749f-a36f-4d922c5d16a8
+---
+
 # Source Schema
 
 > Required structure for source files.

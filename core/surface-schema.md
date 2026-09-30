@@ -1,3 +1,7 @@
+---
+id: 01a08666-4360-7bac-8ac9-4b7c234e01fc
+---
+
 # Surface Schema
 
 > Required structure for surface files.

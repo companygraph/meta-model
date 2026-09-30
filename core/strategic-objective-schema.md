@@ -1,3 +1,7 @@
+---
+id: 01a0a48a-b970-7f8e-b95f-0769904c5a94
+---
+
 # Strategic Objective Schema
 
 > Required structure for strategic objective files.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { UUIDV7, uuidv7, msOf, idOf, withId, idFormatOf } from "../lib/ids.mjs";
+import { UUIDV7, uuidv7, msOf, idOf, withId, idFormatOf, addressOf, elementOf } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
 
 const ZERO = Buffer.alloc(10);
@@ -106,4 +106,44 @@ test("companygraph-meta-model/ids resolves by the package's own name, the way a 
     encoding: "utf8",
   });
   assert.equal(out, "ok");
+});
+const SCHEMA = "0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60";
+
+test("every kind of schema element has an address, and the address reads back to it", () => {
+  const cases = [
+    [{ kind: "type" }, SCHEMA],
+    [{ kind: "name" }, `${SCHEMA}/name`],
+    [{ kind: "statement" }, `${SCHEMA}/statement`],
+    [{ kind: "field", key: "products" }, `${SCHEMA}/field/products`],
+    [{ kind: "section", heading: "Also at" }, `${SCHEMA}/section/Also at`],
+    [{ kind: "column", section: "References", column: "What" }, `${SCHEMA}/column/References/What`],
+    [{ kind: "enum", via: "format", value: "uuidv7" }, `${SCHEMA}/enum/format/uuidv7`],
+    [{ kind: "enum", via: "Aliases.Kind", value: "translation" }, `${SCHEMA}/enum/Aliases.Kind/translation`],
+  ];
+  for (const [element, address] of cases) {
+    assert.equal(addressOf(SCHEMA, element), address);
+    assert.deepEqual(elementOf(address), { schemaId: SCHEMA, element });
+  }
+});
+
+test("an address is built only from a stable id and keys with no slash", () => {
+  assert.throws(() => addressOf("core/skill", { kind: "name" }), /"core\/skill" is no schema id/);
+  assert.throws(() => addressOf(SCHEMA, { kind: "section", heading: "In/Out" }), /"In\/Out" cannot stand in an address/);
+  assert.throws(() => addressOf(SCHEMA, { kind: "field", key: "" }), /cannot stand in an address/);
+  assert.throws(() => addressOf(SCHEMA, { kind: "row" }), /"row" is no kind of schema element/);
+});
+
+test("an address that names no element is refused, naming it", () => {
+  for (const bad of [`${SCHEMA}/field`, `${SCHEMA}/name/extra`, `${SCHEMA}/column/References`, `${SCHEMA}/row/x`, "core/skill/name"])
+    assert.throws(() => elementOf(bad), /is no element address/, bad);
+});
+
+test("an address is built only from a UUID version 7, the one format a schema's id takes", () => {
+  assert.throws(() => addressOf("core", { kind: "name" }), /"core" is no schema id/);
+  assert.throws(() => addressOf(SCHEMA.toUpperCase(), { kind: "name" }), /is no schema id/);
+});
+
+test("a kind is one of the element kinds, never a property every object inherits", () => {
+  for (const kind of ["toString", "constructor", "valueOf", "__proto__"])
+    assert.throws(() => addressOf(SCHEMA, { kind }), new RegExp(`"${kind}" is no kind of schema element`), kind);
 });

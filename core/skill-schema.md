@@ -1,3 +1,7 @@
+---
+id: 01a02f31-3488-773e-a919-f51e729f2ba4
+---
+
 # Skill Schema
 
 > Required structure for skill files.

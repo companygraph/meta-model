@@ -1,3 +1,7 @@
+---
+id: 01a06385-9d00-7eef-86a5-d2218d053998
+---
+
 # Experience Kind Schema
 
 > Required structure for experience kind files.

@@ -1,3 +1,7 @@
+---
+id: 01a0dd34-8da0-7615-9223-70458cc2b8b0
+---
+
 # Decision Kind Schema
 
 > Required structure for decision kind files.

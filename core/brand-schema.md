@@ -1,3 +1,7 @@
+---
+id: 01a0d905-a160-77e9-b344-4f37b52b849e
+---
+
 # Brand Schema
 
 > Required structure for the brand file — what the company looks and sounds like.

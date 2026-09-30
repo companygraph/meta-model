@@ -1,3 +1,7 @@
+---
+id: 01a0d1c8-57f8-7233-ac27-d1160347d7a8
+---
+
 # Question Schema
 
 > Required structure for question files.

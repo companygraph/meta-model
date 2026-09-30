@@ -1,3 +1,7 @@
+---
+id: 01a0c231-9ef8-7add-8875-3ed58850ec6e
+---
+
 # Product Schema
 
 > Required structure for product files.

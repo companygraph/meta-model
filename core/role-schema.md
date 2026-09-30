@@ -1,3 +1,7 @@
+---
+id: 01a0a6a7-53f8-7824-b858-32860e752f35
+---
+
 # Role Schema
 
 > Required structure for role files.

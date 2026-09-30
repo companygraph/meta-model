@@ -92,7 +92,10 @@ const CHECKS = [
         // only, the "**Owner:**" line. Nothing else belongs there but blank lines. This is
         // the one check that validates POSITION; "ownership declared" validates the Owner
         // line's VALUE.
-        const header = (s.get("") ?? "").split("\n");
+        // A schema opens with its id (R9, R18), before the H1; the id check reads the frontmatter,
+        // and the header this check reads in order starts after it.
+        let header = (s.get("") ?? "").split("\n");
+        if (header[0] === "---") header = header.slice(header.indexOf("---", 1) + 1);
         let i = 0;
         const skipBlank = () => {
           while (i < header.length && header[i].trim() === "") i++;
@@ -488,7 +491,7 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail }),
+    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, requireSchemaIds: true }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at

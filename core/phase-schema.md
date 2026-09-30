@@ -1,3 +1,7 @@
+---
+id: 01a0a8b4-7978-7d24-aac9-850b3c9a4d9c
+---
+
 # Phase Schema
 
 > Required structure for phase files.
