@@ -1076,4 +1076,31 @@ test("ids --range refuses a commit that changed an id, across a rename", () => {
   assert.equal(said.status, 1);
   assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
   assert.match(said.stderr, /\(then model\/vision\.md\)/);
+  assert.match(said.stderr, new RegExp(`before this change \\(${base.slice(0, 7)}\\)`), "the base is named short, as git names a commit to a reader");
+});
+
+test("ids refuses a folder that is not an instance, and says so", () => {
+  const said = spawnSync(process.execPath, [cli, "ids", temp(), "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /is not an instance: it has no \.companygraph\/manifest\.json beside a model\/ folder/);
+});
+
+test("ids with neither --backfill nor --range refuses, naming both", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const said = spawnSync(process.execPath, [cli, "ids", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /✗ ids needs --backfill or --range <a>\.\.<b>/);
+});
+
+// A three-dot range asks git for the change since the merge base, and split on ".." it read its
+// head as ".<head>", which git then failed on. It is refused by name, as is a range with no dots.
+test("ids --range refuses a three-dot range and a range without two dots", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  for (const range of ["main...HEAD", "HEAD"]) {
+    const said = spawnSync(process.execPath, [cli, "ids", root, "--range", range], { encoding: "utf8" });
+    assert.equal(said.status, 1, range);
+    assert.match(said.stderr, /✗ --range takes <a>\.\.<b>, two dots between two commits/, range);
+  }
 });

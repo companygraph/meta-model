@@ -1314,6 +1314,8 @@ test("an owned entity's owner is its owner's stable id, and a row's owner scope 
   assert.ok(edges.some((e) => e.from === experienceId && e.via === "skills"), "an edge from the experience leaves from its stable id");
   const scope = rowScope(entities, schemas, { type: "experience", owner: "Mira Halvorsen" });
   assert.deepEqual(scope.within.map((e) => e.id), [experienceId]);
+  const missing = resolveRow(entities, schemas, { type: "experience", owner: "Mira Halvorsen", name: "No such period" });
+  assert.equal(missing.error, "names no experience of profiles/mira-halvorsen");
 });
 
 test("a qualifier resolves into its row's attrs as the stable id of what it names, and the root carries its own", () => {
@@ -1323,7 +1325,8 @@ test("a qualifier resolves into its row's attrs as the stable id of what it name
   withIds.set("proficiency-levels/proficient.md", valid.get("proficiency-levels/proficient.md").replace(/^---\n/, `---\nid: ${levelId}\n`));
   withIds.set("identity.md", `---\nid: ${rootStableId}\n---\n\n` + valid.get("identity.md"));
   const { edges, rootId } = parseInstance(withIds, { schemas });
-  const row = edges.find((e) => e.via === "Skills.Skill");
-  assert.equal(row.attrs.Level, levelId);
+  const rows = edges.filter((e) => e.via === "Skills.Skill");
+  assert.ok(rows.some((e) => e.attrs.Level === levelId), "a row at Proficient carries the level's stable id");
+  assert.ok(!rows.some((e) => e.attrs.Level === "proficiency-levels/proficient"), "no row still carries the level's path");
   assert.equal(rootId, rootStableId);
 });

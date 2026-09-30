@@ -71,7 +71,7 @@ const page = (id) => `---\nid: ${id}\n---\n\n# X\n`;
 
 test("an id that changed on a page fails, naming both", () => {
   const f = idChangesOf([{ before: "model/skills/a.md", after: "model/skills/a.md", beforeText: page("a1"), afterText: page("a2") }], "main");
-  assert.deepEqual(f, ['model/skills/a.md: `id` is "a2", and on main this entity carries "a1"; an id never changes once it is on the default branch (R18)']);
+  assert.deepEqual(f, ['model/skills/a.md: `id` is "a2", and before this change (main) this entity carried "a1"; an id never changes once it is on the default branch (R18)']);
 });
 
 test("a rename that changes the id fails, naming the old path too", () => {

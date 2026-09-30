@@ -695,7 +695,17 @@ function ids(argv) {
     return 0;
   }
   if (given.range) {
-    const failures = idChangesOf(changedPagesOf(root, given.range), given.range.split("..")[0]);
+    // Two dots between two commits and nothing else: a three-dot range asks git for the change
+    // since the merge base, which is not the base whose ids this compares against, and split on
+    // ".." it would read its head as ".<head>".
+    const ends = given.range.split("..");
+    if (given.range.includes("...") || ends.length !== 2 || !ends[0] || !ends[1]) {
+      console.error(`✗ --range takes <a>..<b>, two dots between two commits; "${given.range}" is not that`);
+      return 1;
+    }
+    // A full commit name is shortened as git shortens one for a reader; a branch name is kept.
+    const base = /^[0-9a-f]{40}$/.test(ends[0]) ? ends[0].slice(0, 7) : ends[0];
+    const failures = idChangesOf(changedPagesOf(root, given.range), base);
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
       return 1;

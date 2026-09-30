@@ -7,7 +7,7 @@ import { checkInstance } from "../lib/checks.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 
 const read = (name) => fs.readFileSync(new URL(`../core/${name}`, import.meta.url), "utf8");
-const A = uuidv7(), B = uuidv7(), C = uuidv7();
+const A = uuidv7(), C = uuidv7();
 const IDENTIFIER = (fm = "format: uuidv7\n") => `---\nid: ${C}\nsource: Local\n${fm}---\n\n# Entity id\n\n> What an id is for.\n`;
 
 const tree = ({ identifier = IDENTIFIER(), local = `---\nid: ${A}\n---\n\n# Local\n\n> Here.\n`, extra = [] } = {}) => new Map([
@@ -41,12 +41,13 @@ test("a quoted id fails once, saying it is quoted, whether the quotes are double
   }
 });
 
-// The check walks in path order, so the page named the duplicate is the later path; the copy's
-// name sorts after local.md so that the page this test calls the copy is the one reported.
-test("a page copied with its id fails as a duplicate, naming both files", () => {
+// The check walks in path order and reports on the later path, and the message names the pair
+// without saying which is the copy, since path order cannot know. The copy's name sorts after
+// local.md only so the assertion can say which page the failure lands on.
+test("a page copied with its id fails once, naming both files and neither as the copy", () => {
   const f = r18(tree({ extra: [["model/sources/the-copy.md", `---\nid: ${A}\n---\n\n# Copy\n`]] }));
   assert.equal(f.length, 1);
-  assert.match(f[0], /model\/sources\/the-copy\.md: `id` ".+" is also model\/sources\/local\.md's/);
+  assert.match(f[0], /model\/sources\/the-copy\.md: `id` ".+" is shared with model\/sources\/local\.md; .*a page copied to start another keeps the id of the page it was copied from/);
 });
 
 test("the identifier's own id counts: a page sharing it fails", () => {
