@@ -1014,3 +1014,28 @@ test("the menu offers the report", () => {
   const out = spawnSync(process.execPath, [cli, "menu"], { input: `${pick}\n${dir}\n`, encoding: "utf8" });
   assert.match(out.stdout, /Commits by seat in /);
 });
+
+test("id prints one fresh UUID version 7", () => {
+  assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("ids --backfill stamps an instance's pages with their first commit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // init writes ids from Task 3 on; strip them so this test holds before and after it.
+  for (const rel of ["model/identity.md", "model/vision.md", "model/brand.md", "model/sources/local.md"]) {
+    const full = path.join(root, rel);
+    fs.writeFileSync(full, fs.readFileSync(full, "utf8").replace(/^id: .*\n/m, "").replace(/^---\n---\n\n/, ""));
+  }
+  fs.rmSync(path.join(root, "model/identifier.md"), { force: true });
+  const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
+  g("init", "-q");
+  g("add", "-A");
+  execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first"], {
+    cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-29T09:57:08+02:00" },
+  });
+  run(["ids", root, "--backfill"]);
+  const id = fs.readFileSync(path.join(root, "model/identity.md"), "utf8").match(/^id: (.+)$/m)[1];
+  assert.equal(parseInt(id.replace(/-/g, "").slice(0, 12), 16), Date.parse("2026-08-29T07:57:08Z"));
+  assert.ok(fs.existsSync(path.join(root, "model/identifier.md")));
+});
