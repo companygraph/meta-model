@@ -491,7 +491,7 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail }),
+    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, requireSchemaIds: true }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at
