@@ -1054,7 +1054,7 @@ test("ids --backfill refuses whole when model/identifier.md declares a pattern",
     "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n",
   );
   const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /✗ model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
   assert.equal(fs.readFileSync(identity, "utf8"), before);
 });
@@ -1073,18 +1073,21 @@ test("ids --range refuses a commit that changed an id, across a rename", () => {
   g("commit", "-qam", "second", "--no-verify");
   const head = g("rev-parse", "HEAD");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${head}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
   assert.match(said.stderr, /\(then model\/vision\.md\)/);
   assert.match(said.stderr, new RegExp(`before this change \\(${base.slice(0, 7)}\\)`), "the base is named short, as git names a commit to a reader");
 });
 
+// Not an instance is a run that could not happen at all, not a refusal, so it stays 1 where a
+// `--range` or `--backfill` refusal is 3.
 test("ids refuses a folder that is not an instance, and says so", () => {
   const said = spawnSync(process.execPath, [cli, "ids", temp(), "--backfill"], { encoding: "utf8" });
   assert.equal(said.status, 1);
   assert.match(said.stderr, /is not an instance: it has no \.companygraph\/manifest\.json beside a model\/ folder/);
 });
 
+// A missing flag is a run that could not happen, not a refusal, so it stays 1.
 test("ids with neither --backfill nor --range refuses, naming both", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -1095,6 +1098,7 @@ test("ids with neither --backfill nor --range refuses, naming both", () => {
 
 // A three-dot range asks git for the change since the merge base, and split on ".." it read its
 // head as ".<head>", which git then failed on. It is refused by name, as is a range with no dots.
+// A malformed range is a run that could not happen, not a refusal, so it stays 1.
 test("ids --range refuses a three-dot range and a range without two dots", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -1140,6 +1144,6 @@ test("ids --range on a folder that holds core refuses a commit that changed a sc
   fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Skill Schema\n");
   g("commit", "-qam", "second", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
 });
