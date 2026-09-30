@@ -87,6 +87,11 @@ test("a page without a statement has no statement element", () => {
   assert.deepEqual([...primaryElementsOf("# Local\n\n## Description\n\nHere.\n").keys()], ["name", "section/Description"]);
 });
 
+test("every heading below a language section is named in after, even after another", () => {
+  const { after } = languageSectionsOf(`${PAGE}\n## References\n\n| What | URL |\n| --- | --- |\n\n## Also at\n\nHere.\n`);
+  assert.deepEqual(after, ["References", "Also at"]);
+});
+
 test("frontmatter is taken off before a body is read", () => {
   assert.equal(withoutFrontmatter("---\nid: x\n---\n\n# A\n"), "\n# A\n");
   assert.equal(withoutFrontmatter("# A\n"), "# A\n");
