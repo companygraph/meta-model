@@ -27,6 +27,14 @@ test("a localization file that cannot be read says why", () => {
   assert.match(localizationOf("---\nid: x\n---\n\n# Languages\n").error, /no `## Locales` table/);
 });
 
+// Fix 8: `localizationOf` assumed row 2 of `## Locales` is the separator row and destructured it
+// away unread; a table missing one silently read its first data row as if it were the separator
+// and dropped it.
+test("a `## Locales` table without a separator row is refused", () => {
+  const text = "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| en-US | primary |\n";
+  assert.match(localizationOf(text).error, /`## Locales` is not a table with the columns Locale \| Role/);
+});
+
 const PAGE = [
   "# Invoice lines explained",
   "",
