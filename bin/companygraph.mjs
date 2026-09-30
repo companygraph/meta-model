@@ -51,7 +51,7 @@ const USAGE = `companygraph [<command>]
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
-  translations [<folder>]  refuse a change to the primary its translations did not follow
+  translations [<folder>]  refuse (exit 3) a change to the primary its translations did not follow
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
@@ -737,7 +737,8 @@ function ids(argv) {
 
 // R19's history half: a pull request that changes an element of the primary changes it in every
 // translated language, or names it in a `Translation-unchanged` trailer. The languages are the
-// head's, read from the checkout the range ends at.
+// head's, read from the checkout the range ends at. A refusal, a stale translation or a localization
+// file that cannot be read, exits 3, as `ids` and `commits` do; 1 means the command could not run.
 function translations(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -754,7 +755,7 @@ function translations(argv) {
   const declared = existsSync(file) ? localizationOf(unixLines(readFileSync(file, "utf8"))) : { translated: [] };
   if (declared.error) {
     console.error(`✗ model/localization.md: ${declared.error} (R19)`);
-    return 1;
+    return REFUSED;
   }
   if (!declared.translated.length) {
     console.log("✓ no translated language is declared");
@@ -770,7 +771,7 @@ function translations(argv) {
   const failures = staleTranslationsOf(changedPagesOf(root, `${base}..${ends[1]}`), declared.translated, released);
   if (failures.length) {
     for (const f of failures) console.error(`✗ ${f}`);
-    return 1;
+    return REFUSED;
   }
   console.log("✓ every change to the primary reached its translations");
   return 0;

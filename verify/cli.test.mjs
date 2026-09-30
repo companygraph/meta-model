@@ -1194,7 +1194,7 @@ test("translations --range refuses a change to the primary its translation did n
   fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
   g("commit", "-qam", "second", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
   g("commit", "-q", "--allow-empty", "-m", "third", "-m", "Translation-unchanged: model/vision.md#section/What it means", "--no-verify");
   const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
@@ -1255,7 +1255,7 @@ test("translations --range follows a rename, and a trailer naming the new path r
   fs.writeFileSync(renamed, fs.readFileSync(renamed, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
   g("add", "-A"); g("commit", "-qm", "rename and reword", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /model\/vision2\.md#section\/What it means changed, and its de-CH translation did not/);
   g("commit", "-q", "--allow-empty", "-m", "release", "-m", "Translation-unchanged: model/vision2.md#section/What it means", "--no-verify");
   const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
@@ -1306,7 +1306,7 @@ test("translations --range names only the stale language when one of two declare
   fs.writeFileSync(vision, text);
   g("commit", "-qam", "second", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 1);
+  assert.equal(said.status, 3);
   assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
   assert.doesNotMatch(said.stderr, /pl-PL/);
 });
