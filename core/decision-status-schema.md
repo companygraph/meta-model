@@ -1,3 +1,7 @@
+---
+id: 01a0dd34-8da0-7db6-9762-c04c62f55fe0
+---
+
 # Decision Status Schema
 
 > Required structure for decision status files.
@@ -14,6 +18,7 @@ The set is the instance's own. Which states a company lets a call be in, whether
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
 

@@ -1,3 +1,7 @@
+---
+id: 01a0b09c-6e48-7e25-abfc-8efc23e2d25a
+---
+
 # Achievement Kind Schema
 
 > Required structure for achievement kind files.
@@ -14,6 +18,7 @@ The set is deliberately the instance's own. Which groups a career needs is a fac
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `rank` | Yes | number | The kind's position within an entry. Spaced in tens so a kind can be added without renumbering the others. |

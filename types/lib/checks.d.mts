@@ -1,6 +1,7 @@
 import { enumTokensOf, IMAGE_FILE } from "./instance.mjs";
 export { enumTokensOf, IMAGE_FILE };
 export type InstanceFiles = import("./instance.mjs").InstanceFiles;
+export type PageChange = import("./history.mjs").PageChange;
 export type TypeEntry = {
     type: string;
     folder?: string;
@@ -33,6 +34,7 @@ export type Check = {
     run: () => void;
 };
 /** @typedef {import("./instance.mjs").InstanceFiles} InstanceFiles */
+/** @typedef {import("./history.mjs").PageChange} PageChange */
 /**
  * A type as this release ships it: its folder, with `<placeholder>` segments for its owners, or
  * its one file; what owns it and what it owns; how prose writes it where its id will not do; and
@@ -125,14 +127,15 @@ export declare const tablesOf: (body: string) => (PipeTable | null)[];
  */
 export declare function typeOfPath(rel: string, model: string): string | null;
 /**
- * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void }} options
+ * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void, requireSchemaIds?: boolean }} options
  * @returns {Check[]}
  */
-export declare function instanceChecks({ files, core, model, fail }: {
+export declare function instanceChecks({ files, core, model, fail, requireSchemaIds }: {
     files: InstanceFiles;
     core?: string;
     model?: string;
     fail: (message: string) => void;
+    requireSchemaIds?: boolean;
 }): Check[];
 /**
  * @param {InstanceFiles} files
@@ -146,3 +149,9 @@ export declare function checkInstance(files: InstanceFiles, { core, model }?: {
     failures: string[];
     skipped: string[];
 };
+/**
+ * @param {PageChange[]} changes
+ * @param {string} base
+ * @returns {string[]}
+ */
+export declare function idChangesOf(changes: PageChange[], base: string): string[];

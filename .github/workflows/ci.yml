@@ -10,6 +10,8 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
@@ -41,12 +43,19 @@ jobs:
         run: npm run test:instance-files
       - name: The command, run over real folders
         run: npm run test:cli
+      - name: An entity's id, made and read
+        run: npm run test:ids
       - name: A commit's seat, judged against what governs it
         run: npm run test:seats
       - name: Another release's core is read from its tarball
         run: npm run test:untar && npm run test:fetch-core
       - name: The Obsidian plugin is put into a vault
         run: npm run test:obsidian
+      # R18: a schema's id on the default branch never changes. Only on a pull request, over its
+      # own range, as an instance's workflow runs the same command over its pages.
+      - name: No schema's id changed
+        if: github.event_name == 'pull_request'
+        run: node bin/companygraph.mjs ids . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
   # The same suite on Windows, where the command is also run: a checkout there has `\r\n` line
   # ends unless `.gitattributes` says otherwise, and `path` answers with `\`. A job of its own
@@ -73,7 +82,7 @@ jobs:
         run: npm run test:instance && npm run test:instance-checks && npm run test:rules
       - name: The plan, the files an instance starts with, and the command over real folders
         if: ${{ !cancelled() }}
-        run: npm run test:plan && npm run test:instance-files && npm run test:cli && npm run test:seats
+        run: npm run test:plan && npm run test:instance-files && npm run test:cli && npm run test:ids && npm run test:seats
       - name: The tarball, the fetch and the Obsidian install
         if: ${{ !cancelled() }}
         run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian

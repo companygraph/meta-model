@@ -1,3 +1,7 @@
+---
+id: 01a0c233-ae50-7e67-96c8-bb9a8d116ca7
+---
+
 # Concept Schema
 
 > Required structure for concept files.
@@ -12,6 +16,7 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `domain` | Yes | ref → domain | The area of the vocabulary this concept belongs to — the H1 of a file in `domains/` |

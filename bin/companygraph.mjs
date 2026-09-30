@@ -8,6 +8,8 @@
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
 //   companygraph seats [<folder>] [--since <date>] [--json]
+//   companygraph id
+//   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
 //
 // Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
 // seats, which asks what the flags would say and calls the same code, and stays open until Quit
@@ -20,14 +22,16 @@ import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chm
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTS, SKILLS, initPlan, upgradePlan } from "../lib/plan.mjs";
+import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
+import { uuidv7 } from "../lib/ids.mjs";
+import { idChangesOf } from "../lib/checks.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
 /** @import { UpgradeWrites } from "../lib/plan.mjs" */
@@ -47,7 +51,7 @@ import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../l
  * @typedef {{
  *   _: string[];
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
- *   open?: boolean; json?: boolean; "no-hook"?: boolean;
+ *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean;
  *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; release?: string;
  *   from?: string; range?: string; message?: string; since?: string;
  * }} Flags
@@ -65,12 +69,15 @@ const USAGE = `companygraph [<command>]
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
+  id                  print a fresh id, a UUID version 7
+  ids [<folder>]      give every page an id from its first commit, or refuse an id a range changed
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
+ids: --backfill  --range <a>..<b>
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -117,7 +124,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill"]);
 
 /**
  * @param {string[]} argv
@@ -760,6 +767,73 @@ function seats(argv) {
   return 0;
 }
 
+// R18. `--backfill` gives every page without an id one stamped with its first commit and writes
+// model/identifier.md where there is none; `--range` fails a change to an id on the default
+// branch. A folder that holds core/ and is not an instance is the repository that makes core,
+// and both work on its schemas instead; `--core` already names a tag, so what the folder holds
+// is what tells the two apart.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
+function ids(argv) {
+  const given = flags(argv);
+  const root = resolve(given._[0] ?? ".");
+  const onCore = !isInstance(root) && existsSync(join(root, "core", "CONVENTIONS.md"));
+  if (!onCore && !isInstance(root)) {
+    console.error(`✗ ${root} is not an instance: it has no .companygraph/manifest.json beside a model/ folder, and no core/CONVENTIONS.md`);
+    return 1;
+  }
+  const folder = onCore ? "core" : "model";
+  if (given.backfill) {
+    /** @type {Map<string, string>} */
+    const files = new Map();
+    /** @param {string} rel */
+    const walk = (rel) => {
+      for (const entry of readdirSync(join(root, rel), { withFileTypes: true })) {
+        const child = `${rel}/${entry.name}`;
+        if (entry.isDirectory()) walk(child);
+        else if (entry.name.endsWith(".md")) files.set(child, unixLines(readFileSync(join(root, child), "utf8")));
+      }
+    };
+    walk(folder);
+    const top = gitTop(root);
+    /** @param {string} rel */
+    const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
+    const writes = onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs });
+    if ("refused" in writes) {
+      console.error(`✗ ${writes.refused}`);
+      return 1;
+    }
+    writePlan(root, writes);
+    const what = onCore ? "schema" : "page";
+    console.log(`✓ ${writes.size ? `wrote an id into ${writes.size === 1 ? `one ${what}` : `each ${what} listed`}` : `every ${what} already carries an id`}`);
+    for (const path of writes.keys()) console.log(`  ${path}`);
+    return 0;
+  }
+  if (given.range) {
+    // Two dots between two commits and nothing else: a three-dot range asks git for the change
+    // since the merge base, which is not the base whose ids this compares against, and split on
+    // ".." it would read its head as ".<head>".
+    const ends = given.range.split("..");
+    if (given.range.includes("...") || ends.length !== 2 || !ends[0] || !ends[1]) {
+      console.error(`✗ --range takes <a>..<b>, two dots between two commits; "${given.range}" is not that`);
+      return 1;
+    }
+    // A full commit name is shortened to seven characters for a reader; a branch name is kept.
+    const base = /^[0-9a-f]{40}$/.test(ends[0]) ? ends[0].slice(0, 7) : ends[0];
+    const failures = idChangesOf(changedPagesOf(root, given.range, folder), base);
+    if (failures.length) {
+      for (const f of failures) console.error(`✗ ${f}`);
+      return 1;
+    }
+    console.log("✓ no id on the default branch changed");
+    return 0;
+  }
+  console.error("✗ ids needs --backfill or --range <a>..<b>");
+  return 1;
+}
+
 /** @returns {Promise<number>} */
 async function menu() {
   /** @type {[string, string, () => Promise<number>][]} */
@@ -861,6 +935,8 @@ try {
   else if (command === "check") process.exitCode = await check(rest);
   else if (command === "commits") process.exitCode = commits(rest);
   else if (command === "seats") process.exitCode = seats(rest);
+  else if (command === "id") console.log(uuidv7());
+  else if (command === "ids") process.exitCode = ids(rest);
   // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
   // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
   // is tested with its answers piped in.

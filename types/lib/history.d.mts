@@ -42,6 +42,29 @@ export declare function pendingOf(cwd: string, messageFile: string): {
     email: string;
     trailers: Trailers;
 };
+export type PageChange = {
+    before: string;
+    after: string;
+    beforeText: string;
+    afterText: string;
+};
+/**
+ * A page a range modified or renamed: its path and text at the range's base and at its head.
+ * @typedef {{ before: string; after: string; beforeText: string; afterText: string }} PageChange
+ */
+/**
+ * @param {string} cwd
+ * @param {string} rel
+ * @returns {number | null}
+ */
+export declare function firstCommitMsOf(cwd: string, rel: string): number | null;
+/**
+ * @param {string} cwd
+ * @param {string} range
+ * @param {string} [model]
+ * @returns {PageChange[]}
+ */
+export declare function changedPagesOf(cwd: string, range: string, model?: string): PageChange[];
 /**
  * @param {string} top
  * @returns {Member[] | null}

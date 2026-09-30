@@ -20,6 +20,7 @@ export type Flags = {
     open?: boolean;
     json?: boolean;
     "no-hook"?: boolean;
+    backfill?: boolean;
     agent?: string;
     name?: string;
     core?: string;

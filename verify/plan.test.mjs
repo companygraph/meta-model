@@ -1,7 +1,8 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AGENTS, initPlan, upgradePlan } from "../lib/plan.mjs";
+import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
+import { msOf, UUIDV7 } from "../lib/ids.mjs";
 
 const core = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
@@ -379,4 +380,76 @@ test("an instance whose manifest records no skills is given them where it holds 
   assert.equal(kept.refused, undefined);
   assert.ok(![...kept.writes.keys()].some((path) => path.startsWith(".claude/")));
   assert.ok(!Object.keys(JSON.parse(kept.writes.get(".companygraph/manifest.json")).files).some((path) => path.startsWith(".claude/")));
+});
+
+const MS = Date.UTC(2026, 7, 29);
+const tree = () => new Map([
+  ["model/README.md", "# The model\n"],
+  ["model/sources/local.md", "# Local\n\n> Here.\n"],
+  ["model/identity.md", "---\nsource: Local\n---\n\n# Acme\n"],
+  ["model/skills/java.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\n---\n\n# Java\n"],
+]);
+
+test("the backfill gives a page without an id one stamped with its first commit, and leaves a README alone", () => {
+  const writes = backfillPlan(tree(), { firstCommitMs: () => MS });
+  assert.equal(writes.has("model/README.md"), false);
+  assert.equal(writes.has("model/skills/java.md"), false);
+  const local = writes.get("model/sources/local.md");
+  assert.match(local, /^---\nid: [0-9a-f-]{36}\n---\n\n# Local\n\n> Here\.\n$/);
+  assert.equal(msOf(local.slice(8, 44)), MS);
+});
+
+test("a page with no commit takes the moment of the run", () => {
+  const writes = backfillPlan(tree(), { firstCommitMs: () => null, now: MS + 5 });
+  assert.equal(msOf(writes.get("model/identity.md").slice(8, 44)), MS + 5);
+});
+
+test("the backfill writes model/identifier.md where there is none, with the identity's source", () => {
+  const page = backfillPlan(tree(), { firstCommitMs: () => MS }).get("model/identifier.md");
+  assert.match(page, /^---\nid: [0-9a-f-]{36}\nsource: Local\nformat: uuidv7\n---\n\n# Entity id\n/);
+  assert.match(page.slice(8, 44), UUIDV7);
+});
+
+test("run twice, the backfill writes nothing the second time", () => {
+  const files = tree();
+  for (const [path, text] of backfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
+  assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).size, 0);
+});
+
+// The spec: under a pattern format, the instance makes its own ids, and the tooling only checks
+// them. Stamping UUIDv7 ids anyway would give an instance two id formats at once, so the backfill
+// refuses whole rather than writing over what it cannot itself make.
+test("the backfill refuses whole when model/identifier.md declares a pattern, and writes nothing", () => {
+  const files = tree();
+  files.set("model/identifier.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n");
+  const plan = backfillPlan(files, { firstCommitMs: () => MS });
+  assert.match(plan.refused, /model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(plan.writes, undefined);
+});
+
+test("the backfill refuses whole when model/identifier.md cannot be read as a format, and names why", () => {
+  const files = tree();
+  files.set("model/identifier.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: serial\n---\n\n# Entity id\n");
+  const plan = backfillPlan(files, { firstCommitMs: () => MS });
+  assert.match(plan.refused, /model\/identifier\.md: `format` is "serial"; it is `uuidv7` or `pattern` \(R18\)/);
+});
+
+const coreTree = () => new Map([
+  ["core/CONVENTIONS.md", "# Conventions\n"],
+  ["core/skill-schema.md", "# Skill Schema\n\n> A skill.\n"],
+  ["core/source-schema.md", "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Source Schema\n"],
+]);
+
+test("the schema backfill stamps a schema without an id with its first commit, and nothing else", () => {
+  const writes = schemaBackfillPlan(coreTree(), { firstCommitMs: () => MS });
+  assert.deepEqual([...writes.keys()], ["core/skill-schema.md"]);
+  const text = writes.get("core/skill-schema.md");
+  assert.match(text, /^---\nid: [0-9a-f-]{36}\n---\n\n# Skill Schema\n\n> A skill\.\n$/);
+  assert.equal(msOf(text.slice(8, 44)), MS);
+});
+
+test("run twice, the schema backfill writes nothing the second time", () => {
+  const files = coreTree();
+  for (const [path, text] of schemaBackfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
+  assert.equal(schemaBackfillPlan(files, { firstCommitMs: () => MS }).size, 0);
 });

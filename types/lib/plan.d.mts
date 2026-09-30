@@ -52,6 +52,11 @@ export type UpgradeWrites = {
 export type UpgradePlan = {
     refused: string;
 } | UpgradeWrites;
+export type BackfillAsk = {
+    firstCommitMs: (path: string) => number | null;
+    now?: number;
+    random?: () => ArrayLike<number>;
+};
 /** @import { Files } from "./instance.mjs" */
 /**
  * What `init` is asked for: the core and skills to vendor, as path → text; this tooling's release
@@ -105,6 +110,14 @@ export type UpgradePlan = {
  * @property {string} to
  */
 /** @typedef {{ refused: string } | UpgradeWrites} UpgradePlan */
+/**
+ * What a backfill is asked for: the moment a path was first committed, null where it never was;
+ * the moment to stamp a page with none; and the random bytes of each new id, where a test fixes them.
+ * @typedef {object} BackfillAsk
+ * @property {(path: string) => number | null} firstCommitMs
+ * @property {number} [now]
+ * @property {() => ArrayLike<number>} [random]
+ */
 export declare const AGENTS: string[];
 export declare const SKILLS = ".claude/skills/";
 /**
@@ -117,3 +130,21 @@ export declare function initPlan({ core, skills, tooling, tag, name, agent, unit
  * @returns {UpgradePlan}
  */
 export declare function upgradePlan({ core, skills, tooling, tag, manifest, held, workflow, fetched, force, name, present }: UpgradeAsk): UpgradePlan;
+/**
+ * @param {Map<string, string | Uint8Array>} files
+ * @param {BackfillAsk & { model?: string }} ask
+ * @returns {Map<string, string> | { refused: string }}
+ */
+export declare function backfillPlan(files: Map<string, string | Uint8Array>, { model, firstCommitMs, now, random }: BackfillAsk & {
+    model?: string;
+}): Map<string, string> | {
+    refused: string;
+};
+/**
+ * @param {Map<string, string | Uint8Array>} files
+ * @param {BackfillAsk & { core?: string }} ask
+ * @returns {Map<string, string>}
+ */
+export declare function schemaBackfillPlan(files: Map<string, string | Uint8Array>, { core, firstCommitMs, now, random }: BackfillAsk & {
+    core?: string;
+}): Map<string, string>;

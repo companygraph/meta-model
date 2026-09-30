@@ -17,6 +17,7 @@ export type Stamp = {
 };
 export type Entity = {
     id: string;
+    address: string;
     type: string;
     name: string;
     tagline: string;
@@ -81,6 +82,7 @@ export type RowEntity = {
     name: string;
     path: string;
     id?: string;
+    address?: string;
 };
 export type RowError = {
     error: string;
@@ -164,6 +166,7 @@ export type Constraints = {
 /**
  * @typedef {object} Entity
  * @property {string} id
+ * @property {string} address
  * @property {string} type
  * @property {string} name
  * @property {string} tagline
@@ -240,6 +243,7 @@ export type Constraints = {
  * @property {string} name
  * @property {string} path
  * @property {string} [id]
+ * @property {string} [address]
  */
 /**
  * @typedef {{ error: string; subject: "value" | "owner" }} RowError

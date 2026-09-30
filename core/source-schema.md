@@ -1,3 +1,7 @@
+---
+id: 01a03a36-9dc8-749f-a36f-4d922c5d16a8
+---
+
 # Source Schema
 
 > Required structure for source files.
@@ -12,6 +16,7 @@ A source is where a page's facts come from: the repository itself, or a system t
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `url` | No | string | Where the source lives, for a person or a sync to open |
 
 ## Sections

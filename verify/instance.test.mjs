@@ -163,7 +163,7 @@ test("an entity is its H1, tagline, fields, sections and path; a README is not o
   assert.equal(entities.length, 6);
   const java = entities.find(e => e.id === "skills/java-programming");
   assert.deepEqual(java, {
-    id: "skills/java-programming", type: "skill", name: "Java Programming",
+    id: "skills/java-programming", address: "skills/java-programming", type: "skill", name: "Java Programming",
     tagline: "JVM services.", fields: { group: "Programming Languages" },
     sections: [{ heading: "In practice", text: "Reading the stack trace.", tables: [] }],
     owner: null, path: "skills/java-programming.md",
@@ -454,6 +454,36 @@ test("a ref → cell in a column table is an edge via Section.Column; the Owner 
     { from: "core/profile", to: "core/proficiency-level", via: "Skills.Level", attrs: { type: "ref → proficiency-level" } });
   assert.deepEqual(edges.find(x => x.via === "owner"),
     { from: "core/experience", to: "core/profile", via: "owner", attrs: {} });
+});
+
+const SKILL_ID = "0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60";
+const stamped = () => {
+  const withId = new Map(core);
+  withId.set("skill-schema.md", `---\nid: ${SKILL_ID}\n---\n\n${core.get("skill-schema.md")}`);
+  return withId;
+};
+
+test("a schema that carries an id leaves the parse by it, and keeps core/<type> as its address", () => {
+  const { entities, edges } = parseSchemas(stamped());
+  const skill = entities.find((e) => e.address === "core/skill");
+  assert.equal(skill.id, SKILL_ID);
+  assert.equal(skill.name, "Skill Schema");
+  const source = entities.find((e) => e.address === "core/source");
+  assert.equal(source.id, "core/source", "a schema with no id keeps core/<type> as its id");
+  assert.deepEqual(edges.find((x) => x.from === "core/experience" && x.via === "skills"),
+    { from: "core/experience", to: SKILL_ID, via: "skills", attrs: { type: "array of ref → skill" } });
+  assert.ok(entities.every((e) => e.address === `core/${e.path.replace(/-schema\.md$/, "")}`));
+});
+
+test("an instance parses against schemas that carry ids exactly as against ones that do not", () => {
+  const plain = parseInstance(valid, { schemas });
+  const withIds = new Map(schemas);
+  let n = 10; // two hex digits, one per schema, so no two share an id
+  for (const [file, text] of schemas)
+    if (file.endsWith("-schema.md")) withIds.set(file, `---\nid: ${SKILL_ID.slice(0, -2)}${n++}\n---\n\n${text}`);
+  const read = parseInstance(valid, { schemas: withIds });
+  assert.deepEqual(read.entities, plain.entities);
+  assert.deepEqual(read.edges, plain.edges);
 });
 
 test("a ref → a type with no schema is an R4 error", () => {
@@ -1259,8 +1289,11 @@ const mdFiles = (root) => {
 test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
   const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: mdFiles(path.join(here, "../core")) });
-  const from = (id) => inst.edges.filter((x) => x.from === id && x.via === "If not met.Leads to");
-  assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [["processes/delivery/phases/build", "reworked"]]);
+  // The example's pages carry ids (R18), so an edge names its ends by them; the phases are found
+  // by their address, the path a reader knows them by.
+  const at = (address) => inst.entities.find((e) => e.address === address).id;
+  const from = (address) => inst.edges.filter((x) => x.from === at(address) && x.via === "If not met.Leads to");
+  assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [[at("processes/delivery/phases/build"), "reworked"]]);
   assert.deepEqual(from("processes/delivery/phases/release"), []);
 });
 
@@ -1270,4 +1303,60 @@ test("the export names the core its instance vendors, and null where the core ca
   assert.equal(parseInstance(valid, { schemas }).core, null);
   assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", "{ not json"]]) }).core, null);
   assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", JSON.stringify({ version: 46 })]]) }).core, null);
+});
+
+// R18: an entity is handed out by the stable id its page carries, and keeps the path it sits at
+// as `address`, which is what ownership and a row's owner scope still read. A page with no id —
+// an instance on a core before R18 — is handed out by its path, as it always was. `files` is the
+// `valid` map every `skills/java-programming` case above reads.
+test("an entity with an id is handed out by it, and keeps its path as address", () => {
+  const files = valid;
+  const id = "01a04c85-bc20-7092-a266-845d81173e9f";
+  const withIdFiles = new Map([...files].map(([p, t]) => [p, p === "skills/java-programming.md" ? t.replace(/^---\n/, `---\nid: ${id}\n`) : t]));
+  const { entities, edges } = parseInstance(withIdFiles, { schemas });
+  const java = entities.find((e) => e.address === "skills/java-programming");
+  assert.equal(java.id, id);
+  assert.ok(edges.some((e) => e.to === id), "an edge to the skill lands on its stable id");
+  assert.ok(!edges.some((e) => e.to === "skills/java-programming"), "no edge still names its path");
+});
+
+test("an entity without an id is handed out by its path, as before", () => {
+  const files = valid;
+  const java = parseInstance(files, { schemas }).entities.find((e) => e.address === "skills/java-programming");
+  assert.equal(java.id, "skills/java-programming");
+});
+
+// The owned-type pair the R5 and rowScope cases above read — Mira's profile and her experience —
+// each carrying an id. Her experience's owner is her stable id, and a row naming her as owner
+// still finds the experience, since the owner's folder is read from its address, not its id.
+test("an owned entity's owner is its owner's stable id, and a row's owner scope still finds it", () => {
+  const profileId = "01a04c85-bc20-7092-a266-000000000001";
+  const experienceId = "01a04c85-bc20-7092-a266-000000000002";
+  const withIds = new Map([...valid].map(([p, t]) => [p,
+    p === "profiles/mira-halvorsen/mira-halvorsen.md" ? t.replace(/^---\n/, `---\nid: ${profileId}\n`)
+    : p === "profiles/mira-halvorsen/experiences/2022-beacon-systems.md" ? t.replace(/^---\n/, `---\nid: ${experienceId}\n`)
+    : t]));
+  const { entities, edges } = parseInstance(withIds, { schemas });
+  const experience = entities.find((e) => e.address === "profiles/mira-halvorsen/experiences/2022-beacon-systems");
+  assert.equal(experience.id, experienceId);
+  assert.equal(experience.owner, profileId);
+  assert.ok(edges.some((e) => e.from === profileId && e.via === "Skills.Skill"), "an edge from the profile leaves from its stable id");
+  assert.ok(edges.some((e) => e.from === experienceId && e.via === "skills"), "an edge from the experience leaves from its stable id");
+  const scope = rowScope(entities, schemas, { type: "experience", owner: "Mira Halvorsen" });
+  assert.deepEqual(scope.within.map((e) => e.id), [experienceId]);
+  const missing = resolveRow(entities, schemas, { type: "experience", owner: "Mira Halvorsen", name: "No such period" });
+  assert.equal(missing.error, "names no experience of profiles/mira-halvorsen");
+});
+
+test("a qualifier resolves into its row's attrs as the stable id of what it names, and the root carries its own", () => {
+  const levelId = "01a04c85-bc20-7092-a266-000000000003";
+  const rootStableId = "01a04c85-bc20-7092-a266-000000000004";
+  const withIds = new Map(valid);
+  withIds.set("proficiency-levels/proficient.md", valid.get("proficiency-levels/proficient.md").replace(/^---\n/, `---\nid: ${levelId}\n`));
+  withIds.set("identity.md", `---\nid: ${rootStableId}\n---\n\n` + valid.get("identity.md"));
+  const { edges, rootId } = parseInstance(withIds, { schemas });
+  const rows = edges.filter((e) => e.via === "Skills.Skill");
+  assert.ok(rows.some((e) => e.attrs.Level === levelId), "a row at Proficient carries the level's stable id");
+  assert.ok(!rows.some((e) => e.attrs.Level === "proficiency-levels/proficient"), "no row still carries the level's path");
+  assert.equal(rootId, rootStableId);
 });
