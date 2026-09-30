@@ -127,7 +127,9 @@ test("an enum cell of a repeated table is the primary's", () => {
     ["model/localization.md", loc],
     ["model/sources/local.md", LOCAL(DE_LOCAL)],
   ]), { core: "meta/core", model: "model" }).failures.filter((x) => x.includes("(R19)"));
-  assert.ok(f.some((x) => x.includes("column Role is \"übersetzt\"")), f.join("\n"));
+  // Fix 7: the failure names what kind of value is held in words a translator reads, not the
+  // schema's own declared-type spelling.
+  assert.ok(f.some((x) => x.includes("column Role is \"übersetzt\"") && x.includes("an enum value is the page's, \"translated\"")), f.join("\n"));
 });
 
 test("a repeated table with another row count fails", () => {
@@ -225,4 +227,208 @@ test("a translation alias for a different name than the declared de-CH one passe
     deLoc: true, deConcept: DE_CONCEPT("Rechnungszeile", "Rechnungszeile"), deDomain: DE_DOMAIN,
   });
   assert.deepEqual(f, []);
+});
+
+// Fix 1(a): a `ref → by <Column>`/`ref → by <Column> in <Owner>` column names the row's own
+// Type/Owner cells (R4, R9), so those two are held to the primary though their own declared
+// kind is `string`. `For` is ordinary free text and may still be translated.
+const ROW = (typeCell, ownerCell, forCell) => `| ${typeCell} | \`Basic\` | ${ownerCell} | ${forCell} |`;
+const QUESTION = (row, deRow) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047996\nsource: Local\nkind: Pricing\n---\n\n# Does pricing include support?\n\n" +
+  `> See the plan page.\n\n## Rests on\n\n| Type | Entity | Owner | For |\n| --- | --- | --- | --- |\n${row}\n\n` +
+  `## de-CH\n\n### Name\n\nDeckt der Preis Support ab?\n\n### Statement\n\n> Siehe die Planseite.\n\n` +
+  `### Rests on\n\n| Type | Entity | Owner | For |\n| --- | --- | --- | --- |\n${deRow}\n`;
+
+const r19Question = (files) =>
+  checkInstance(new Map([
+    ...["localization", "source", "question"].map((t) => [`meta/core/${t}-schema.md`, read(`${t}-schema.md`)]),
+    ["model/localization.md", DE_LOC],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+    ...files,
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("a `Rests on` row keeps its Type and Owner, and its free-text For column may differ", () => {
+  const f = r19Question([["model/questions/pricing.md", QUESTION(
+    ROW("kpi", "", "the sequence"),
+    ROW("kpi", "", "die Reihenfolge"),
+  )]]);
+  assert.deepEqual(f, []);
+});
+
+test("a `Rests on` row whose de-CH Type cell differs from the primary's fails, though Type is declared string", () => {
+  const f = r19Question([["model/questions/pricing.md", QUESTION(
+    ROW("kpi", "", "the sequence"),
+    ROW("risiko", "", "die Reihenfolge"),
+  )]]);
+  assert.ok(f.some((x) => x.includes('column Type is "risiko"') && x.includes("a reference is the page's, \"kpi\"")), f.join("\n"));
+});
+
+test("a `Rests on` row whose de-CH Owner cell differs from the primary's fails", () => {
+  const f = r19Question([["model/questions/pricing.md", QUESTION(
+    ROW("track", "`Delivery`", "the sequence"),
+    ROW("track", "`Auslieferung`", "die Reihenfolge"),
+  )]]);
+  assert.ok(f.some((x) => x.includes('column Owner is "`Auslieferung`"') && x.includes("a reference is the page's, \"`Delivery`\"")), f.join("\n"));
+});
+
+// Fix 1(b): a cell whose primary value is a language tag the localization file declares — the
+// localization page's own `Locale` column above all — is held without the column being named.
+test("a translated cell whose primary value is a declared language tag is held, without the column being named", () => {
+  const loc = DE_LOC.replace(/(### Locales[\s\S]*)\| de-CH \| translated \|/, "$1| fr-CH | translated |");
+  const f = checkInstance(new Map([
+    ["meta/core/localization-schema.md", read("localization-schema.md")],
+    ["meta/core/source-schema.md", read("source-schema.md")],
+    ["model/localization.md", loc],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((x) => x.includes("(R19)"));
+  assert.ok(f.some((x) => x.includes('column Locale is "fr-CH"') && x.includes("a language tag is the page's, \"de-CH\"")), f.join("\n"));
+});
+
+// Fix 2: a URL is held wherever it stands inside a free-text cell, not only where the whole cell
+// is one; the words around it may still be translated.
+const REF_EXPERIENCE = (refCell, deRefCell) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b0479a0\nsource: Local\nstart: 2020\nkind: Employment\n---\n\n# Rebuilding billing\n\n> A period.\n\n" +
+  "## Achievements\n\n### Delivery\n\n- Shipped it.\n\n## References\n\n| What | URL |\n| --- | --- |\n" +
+  `| A record | ${refCell} |\n\n## de-CH\n\n### Name\n\nAbrechnung neu gebaut\n\n### Statement\n\n> Eine Phase.\n\n` +
+  "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\n| What | URL |\n| --- | --- |\n" +
+  `| Ein Eintrag | ${deRefCell} |\n`;
+
+test("a URL embedded in a free-text cell is held; the words around it may still change", () => {
+  const failing = r19Deep(REF_EXPERIENCE("[Docs](https://x.example/en/a)", "[Doku](https://x.example/de/a)"));
+  assert.ok(failing.some((x) => x.includes("column URL") && x.includes("a URL is the page's")), failing.join("\n"));
+  const passing = r19Deep(REF_EXPERIENCE("[Docs](https://x.example/en/a)", "[Doku](https://x.example/en/a)"));
+  assert.deepEqual(passing, []);
+});
+
+// Fix 4: an element the primary itself leaves empty may be left empty in its translation too —
+// only an element the primary actually says something in must be said in the translation.
+const FEATURE = (de) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047997\nsource: Local\n---\n\n# Invoice lines\n\n> One paragraph.\n\n## Description\n\n\n" + de;
+const DE_FEATURE_EMPTY = "\n## de-CH\n\n### Name\n\nRechnungszeilen\n\n### Statement\n\n> Ein Absatz.\n\n### Description\n\n\n";
+
+test("a primary section left empty passes when its translation is empty too", () => {
+  const f = r19([
+    ["meta/core/feature-schema.md", read("feature-schema.md")],
+    ["model/localization.md", DE_LOC],
+    ["model/features/invoice-lines.md", FEATURE(DE_FEATURE_EMPTY)],
+  ]);
+  assert.deepEqual(f, []);
+});
+
+// Fix 5: an empty repeated section is reported once — the completeness check reports it as
+// empty, and the structure check's table comparison is skipped for it, not run again.
+const DE_EXPERIENCE_EMPTY_REFS = "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\n";
+
+test("an empty repeated section gives exactly one R19 failure for it", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE_EMPTY_REFS));
+  const about = f.filter((x) => x.includes("References"));
+  assert.equal(about.length, 1, f.join("\n"));
+  assert.ok(about[0].includes("leaves `### References` empty"), about[0]);
+});
+
+// Fix 6: a changed table header is reported once, and never with "undefined" for a cell the
+// mismatched shape left with nothing to compare — a shorter row prints "(none)" instead.
+const DE_EXPERIENCE_BAD_HEADER = "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\n| Was |\n| --- |\n| Ein Eintrag |\n";
+
+test("a changed table header gives the header failure and never prints undefined", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE_BAD_HEADER));
+  assert.ok(f.some((x) => x.includes("heads its table under `### References` Was; it keeps the page's columns, What | URL")), f.join("\n"));
+  assert.ok(!f.some((x) => x.includes("undefined")), f.join("\n"));
+});
+
+const DE_EXPERIENCE_SHORT_ROW = "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\n| What | URL |\n| --- | --- |\n| Ein Eintrag |\n";
+
+test("a shorter translated row prints (none) rather than undefined", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE_SHORT_ROW));
+  assert.ok(f.some((x) => x.includes('column URL is "(none)"')), f.join("\n"));
+  assert.ok(!f.some((x) => x.includes("undefined")), f.join("\n"));
+});
+
+// Fix 10 (test only): coverage that should already be right. A translated language declared and
+// missing from a page is "a page without a declared language's section fails, naming the
+// language", above; the rest follow here.
+const LOC2 =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047998\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n" +
+  "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |\n\n" +
+  "## de-CH\n\n### Name\n\nSprachen\n\n### Statement\n\n> Wer es liest.\n\n### Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |\n\n" +
+  "## pl-PL\n\n### Name\n\nJęzyki\n\n### Statement\n\n> Kto to czyta.\n\n### Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |\n";
+const LOCAL2_OK =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047991\n---\n\n# Local\n\n> Here.\n\n" +
+  "## de-CH\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n\n" +
+  "## pl-PL\n\n### Name\n\nLokalny\n\n### Statement\n\n> Tutaj.\n";
+const LOCAL2_BAD_ORDER =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047991\n---\n\n# Local\n\n> Here.\n\n" +
+  "## pl-PL\n\n### Name\n\nLokalny\n\n### Statement\n\n> Tutaj.\n\n" +
+  "## de-CH\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n";
+const LOCAL2_TWICE =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047991\n---\n\n# Local\n\n> Here.\n\n" +
+  "## de-CH\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n\n" +
+  "## de-CH\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n\n" +
+  "## pl-PL\n\n### Name\n\nLokalny\n\n### Statement\n\n> Tutaj.\n";
+
+const r19Two = (localPage) =>
+  checkInstance(new Map([
+    ["meta/core/localization-schema.md", read("localization-schema.md")],
+    ["meta/core/source-schema.md", read("source-schema.md")],
+    ["model/localization.md", LOC2],
+    ["model/sources/local.md", localPage],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("(test only) two declared languages written in the declared order pass", () => {
+  assert.deepEqual(r19Two(LOCAL2_OK), []);
+});
+
+test("(test only) a page writing two declared languages out of the declared order fails", () => {
+  const f = r19Two(LOCAL2_BAD_ORDER);
+  assert.ok(f.some((x) => x.includes("its language sections stand as pl-PL, de-CH") && x.includes("declares them as de-CH, pl-PL")), f.join("\n"));
+});
+
+test("(test only) a language section written twice fails", () => {
+  const f = r19Two(LOCAL2_TWICE);
+  assert.ok(f.some((x) => x.includes("`## de-CH` is written twice")), f.join("\n"));
+});
+
+const LOCAL_ELEMENTS_SWAPPED =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047991\n---\n\n# Local\n\n> Here.\n\n## de-CH\n\n### Statement\n\n> Hier.\n\n### Name\n\nLokal\n";
+
+test("(test only) a language section with the page's elements in another order fails", () => {
+  const f = r19([["model/localization.md", DE_LOC], ["model/sources/local.md", LOCAL_ELEMENTS_SWAPPED]]);
+  assert.ok(f.some((x) => x.includes("holds the page's elements in another order")), f.join("\n"));
+});
+
+const DE_EXPERIENCE_NO_TABLE = "### Achievements\n\n#### Lieferung\n\n- Ausgeliefert.\n\n### References\n\nSiehe oben.\n";
+
+test("(test only) a repeated table missing entirely fails", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE_NO_TABLE));
+  assert.ok(f.some((x) => x.includes("has no table 1 under `### References`, which the page has")), f.join("\n"));
+});
+
+// A profile's Skills table's Level column is `qualifier → proficiency-level`; a changed cell in
+// German should already fail, as every non-`string` declared kind already did before this pass.
+const SKILL = "---\nid: 01a0f10d-64f0-71c7-8329-86453b0479b0\nsource: Local\n---\n\n# Delivery\n\n> Shipping the work.\n\n## de-CH\n\n### Name\n\nLieferung\n\n### Statement\n\n> Die Arbeit ausliefern.\n";
+const LEVEL = (name, de, id) =>
+  `---\nid: 01a0f10d-64f0-71c7-8329-86453b0479${id}\nsource: Local\nrank: ${id === "b1" ? 10 : 20}\n---\n\n# ${name}\n\n> A rung.\n\n## What it means\n\nWhat it means.\n\n## de-CH\n\n### Name\n\n${de}\n\n### Statement\n\n> Eine Sprosse.\n\n### What it means\n\nWas es bedeutet.\n`;
+const PROFILE = (levelCell, deLevelCell) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b0479b3\nsource: Local\nnature: human\n---\n\n# Ana\n\n> Works on delivery.\n\n" +
+  `## Skills\n\n| Skill | Level |\n| --- | --- |\n| Delivery | ${levelCell} |\n\n` +
+  `## de-CH\n\n### Name\n\nAna\n\n### Statement\n\n> Arbeitet an der Lieferung.\n\n### Skills\n\n| Skill | Level |\n| --- | --- |\n| Delivery | ${deLevelCell} |\n`;
+
+const r19Skills = (levelCell, deLevelCell) =>
+  checkInstance(new Map([
+    ...["localization", "source", "skill", "proficiency-level", "profile"].map((t) => [`meta/core/${t}-schema.md`, read(`${t}-schema.md`)]),
+    ["model/localization.md", DE_LOC],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+    ["model/skills/delivery.md", SKILL],
+    ["model/proficiency-levels/proficient.md", LEVEL("Proficient", "Kompetent", "b1")],
+    ["model/proficiency-levels/expert.md", LEVEL("Expert", "Experte", "b2")],
+    ["model/profiles/ana/ana.md", PROFILE(levelCell, deLevelCell)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("(test only) a profile's de-CH Skills table keeps its Level cell and passes", () => {
+  assert.deepEqual(r19Skills("Proficient", "Proficient"), []);
+});
+
+test("(test only) a profile's de-CH Skills table with a changed Level cell fails", () => {
+  const f = r19Skills("Proficient", "Expert");
+  assert.ok(f.some((x) => x.includes("column Level is \"Expert\"") && x.includes("a reference is the page's, \"Proficient\"")), f.join("\n"));
 });
