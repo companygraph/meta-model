@@ -1360,3 +1360,32 @@ test("a qualifier resolves into its row's attrs as the stable id of what it name
   assert.ok(!rows.some((e) => e.attrs.Level === "proficiency-levels/proficient"), "no row still carries the level's path");
   assert.equal(rootId, rootStableId);
 });
+
+// The localization schema joins the fixture's, since the parser places a page only by a schema.
+const schemasWithLocalization = new Map(schemas).set(
+  "localization-schema.md",
+  fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../core/localization-schema.md"), "utf8"),
+);
+const LOCALIZED = (() => {
+  const files = new Map(valid);
+  // The localization schema's `source` field is a required `ref → source`, so the fixture needs
+  // an entity for it to resolve to — the same `sources/local.md` the scalar-vs-list fixture
+  // above already uses for the same name.
+  files.set("sources/local.md", "# Local\n\n> Kept in this repository.\n");
+  files.set("localization.md", "---\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n| de-CH | translated |\n");
+  const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));
+  files.set(path, `${text.trimEnd()}\n\n## de-CH\n\n### Name\n\nJava-Programmierung\n\n### Statement\n\n> Auf Deutsch.\n`);
+  return { files, path };
+})();
+
+test("a page's language section leaves its sections and arrives as its translation", () => {
+  const { entities } = parseInstance(LOCALIZED.files, { schemas: schemasWithLocalization });
+  const skill = entities.find((e) => e.path === LOCALIZED.path);
+  assert.deepEqual(skill.translations["de-CH"], { name: "Java-Programmierung", statement: "Auf Deutsch.", sections: [] });
+  assert.ok(!skill.sections.some((s) => s.heading === "de-CH"));
+});
+
+test("an instance that declares no translated language parses exactly as before", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.ok(entities.every((e) => !("translations" in e)));
+});
