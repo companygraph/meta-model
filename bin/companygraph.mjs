@@ -800,8 +800,8 @@ function ids(argv) {
     const top = gitTop(root);
     /** @param {string} rel */
     const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
-    const writes = onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs });
-    if ("refused" in writes) {
+    const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs }));
+    if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
       return 1;
     }

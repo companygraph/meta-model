@@ -135,7 +135,7 @@ export declare function upgradePlan({ core, skills, tooling, tag, manifest, held
  * @param {BackfillAsk & { model?: string }} ask
  * @returns {Map<string, string> | { refused: string }}
  */
-export declare function backfillPlan(files: Map<string, string | Uint8Array>, { model, firstCommitMs, now, random }: BackfillAsk & {
+export declare function backfillPlan(files: Map<string, string | Uint8Array>, { model, firstCommitMs, now, random }?: BackfillAsk & {
     model?: string;
 }): Map<string, string> | {
     refused: string;
@@ -145,6 +145,6 @@ export declare function backfillPlan(files: Map<string, string | Uint8Array>, { 
  * @param {BackfillAsk & { core?: string }} ask
  * @returns {Map<string, string>}
  */
-export declare function schemaBackfillPlan(files: Map<string, string | Uint8Array>, { core, firstCommitMs, now, random }: BackfillAsk & {
+export declare function schemaBackfillPlan(files: Map<string, string | Uint8Array>, { core, firstCommitMs, now, random }?: BackfillAsk & {
     core?: string;
 }): Map<string, string>;
