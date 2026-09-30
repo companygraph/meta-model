@@ -55,9 +55,18 @@ test("a page without a declared language's section fails, naming the language", 
   assert.ok(f.some((x) => x.startsWith("model/sources/local.md: no `## de-CH` section")), f.join("\n"));
 });
 
-test("a section for an undeclared language fails", () => {
+// Review fix 6: a heading that merely looks like a language tag — lowercase, hyphenated, no
+// schema-declared capital — reads exactly like an undeclared translation to this check, and the
+// failure alone does not say that writing it capitalized is the way out for a section that is
+// really the instance's own (a `## faq` a schema does not declare, say). The hint names that.
+test("a section for an undeclared language fails, with a hint that a capitalized heading is not read as a tag", () => {
   const f = r19([["model/localization.md", LOC("| en-US | primary |")], ["model/sources/local.md", LOCAL("\n## fr-CH\n\n### Name\n\nLocal\n")]]);
-  assert.ok(f.some((x) => x.includes("`## fr-CH` is a language model/localization.md does not declare as translated")), f.join("\n"));
+  assert.ok(
+    f.some((x) =>
+      x.includes("`## fr-CH` is a language model/localization.md does not declare as translated") &&
+      x.includes("a section of the instance's own whose heading only looks like a tag is written capitalized")),
+    f.join("\n"),
+  );
 });
 
 test("a language section missing an element or holding one the page lacks fails", () => {
