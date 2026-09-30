@@ -432,3 +432,76 @@ test("(test only) a profile's de-CH Skills table with a changed Level cell fails
   const f = r19Skills("Proficient", "Expert");
   assert.ok(f.some((x) => x.includes("column Level is \"Expert\"") && x.includes("a reference is the page's, \"Proficient\"")), f.join("\n"));
 });
+
+// Follow-up 1: `urlsOf` kept a URL match's trailing sentence punctuation, so an English sentence
+// ending "...https://x.example/a, and more" (URL followed by a comma) and a German one ending
+// "...https://x.example/a und mehr" (no comma) read as two different URLs and failed, though the
+// address is the same and only the punctuation around it, which the sentence owns, differs.
+test("(follow-up 1) a URL's trailing sentence punctuation is not part of the URL that is held", () => {
+  const failing = r19Deep(REF_EXPERIENCE("See https://x.example/a, and more.", "Siehe https://x.example/a und mehr."));
+  assert.deepEqual(failing, []);
+});
+
+// Follow-up 2: only `ref`/`ref?`/`qualifier`/`enum`/`date`/`number` were held; R9's closed type
+// vocabulary also has `image` and `array`, and any of those was free before this fix (silently
+// passed whatever the translator wrote, since it is not a URL either). No shipped core schema
+// declares a body-table column of either kind, so this table's own schema is a fixture the test
+// builds — the real `source-schema.md` with one synthetic captioned table appended.
+const EXTRAS_TABLE =
+  "\n`## Extras` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n" +
+  "| `Note` | Yes | array | A column of an uncommon declared kind, for this test only |\n\n";
+const FAKE_SOURCE_SCHEMA = read("source-schema.md").replace("\n## Purpose\n", `${EXTRAS_TABLE}## Purpose\n`);
+const FAKE_SOURCE = (noteCell, deNoteCell) =>
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b0479c1\n---\n\n# Local\n\n> Here.\n\n" +
+  `## Extras\n\n| Note |\n| --- |\n| ${noteCell} |\n\n` +
+  "## de-CH\n\n### Name\n\nLokal\n\n### Statement\n\n> Hier.\n\n" +
+  `### Extras\n\n| Note |\n| --- |\n| ${deNoteCell} |\n`;
+
+const r19ArrayKind = (noteCell, deNoteCell) =>
+  checkInstance(new Map([
+    ["meta/core/localization-schema.md", read("localization-schema.md")],
+    ["meta/core/source-schema.md", FAKE_SOURCE_SCHEMA],
+    ["model/localization.md", DE_LOC],
+    ["model/sources/local.md", FAKE_SOURCE(noteCell, deNoteCell)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((f) => f.includes("(R19)"));
+
+test("(follow-up 2) a declared kind besides ref/qualifier/enum/date/number — array — is held too", () => {
+  assert.deepEqual(r19ArrayKind("alpha, beta", "alpha, beta"), []);
+  const f = r19ArrayKind("alpha, beta", "gamma");
+  assert.ok(f.some((x) => x.includes('column Note is "gamma"') && x.includes("a value is the page's, \"alpha, beta\"")), f.join("\n"));
+});
+
+// Follow-up 3: an empty translated grouped section (a `### Achievements` with no `####`
+// headings under it) was reported by the completeness check as empty, and then again by the
+// grouped-heading loop as "`#### (none)` ... is not ...", for every heading the primary has.
+const DE_EXPERIENCE_EMPTY_ACHIEVEMENTS = "### Achievements\n\n### References\n\n| What | URL |\n| --- | --- |\n| Ein Eintrag | https://example.com/record |\n";
+
+test("(follow-up 3) an empty translated grouped section gives exactly one R19 failure for it", () => {
+  const f = r19Deep(EXPERIENCE(DE_EXPERIENCE_EMPTY_ACHIEVEMENTS));
+  const about = f.filter((x) => x.includes("Achievements"));
+  assert.equal(about.length, 1, f.join("\n"));
+  assert.ok(about[0].includes("leaves `### Achievements` empty"), about[0]);
+});
+
+// Follow-up 4: `tablesOf` keeps a cell's backticks, but `localizationOf` strips them before
+// building the declared tag set, so a Locale cell written backticked — `` `de-CH` `` — never
+// matched a plain "de-CH" in that set and read as ordinary, unconstrained free text.
+const LOC_BACKTICKED =
+  "---\nid: 01a0f10d-64f0-71c7-8329-86453b047999\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n" +
+  "## Locales\n\n| Locale | Role |\n| --- | --- |\n| `en-US` | primary |\n| `de-CH` | translated |\n\n" +
+  "## de-CH\n\n### Name\n\nSprachen\n\n### Statement\n\n> Wer es liest.\n\n### Locales\n\n| Locale | Role |\n| --- | --- |\n| `en-US` | primary |\n| `de-CH` | translated |\n";
+
+const r19Backticked = (loc) =>
+  checkInstance(new Map([
+    ["meta/core/localization-schema.md", read("localization-schema.md")],
+    ["meta/core/source-schema.md", read("source-schema.md")],
+    ["model/localization.md", loc],
+    ["model/sources/local.md", LOCAL(DE_LOCAL)],
+  ]), { core: "meta/core", model: "model" }).failures.filter((x) => x.includes("(R19)"));
+
+test("(follow-up 4) a backticked Locale cell is held to the primary too", () => {
+  assert.deepEqual(r19Backticked(LOC_BACKTICKED), []);
+  const bad = LOC_BACKTICKED.replace(/(### Locales[\s\S]*)\| `de-CH` \| translated \|/, "$1| `fr-CH` | translated |");
+  const f = r19Backticked(bad);
+  assert.ok(f.some((x) => x.includes('column Locale is "`fr-CH`"') && x.includes("a language tag is the page's, \"`de-CH`\"")), f.join("\n"));
+});
