@@ -87,7 +87,7 @@ The release that follows is a minor.
 - [ ] Rule 4's "get_entity with the id identity first" becomes a sentence that holds under stable ids: the identity is taken by its address, `identity`, which every instance's identity page has, since the file is named for its type (R12), and which the MCP server accepts from Task 3's release on. Keep the rule's intent and the test's check that the rule is there, reworded to match.
 - [ ] Run `npm test` and commit.
 
-The mcp-server re-pin is wave B's, with the deployments. The release that follows is a patch.
+Dropped after a local measurement. Reworded to "get_entity for identity first", the model called `get_entity` with `type: "identity"` and took three calls where the old wording took one. The old sentence names the tool's argument, `id`, and Task 3's server resolves the address `identity` there, so it stays true under stable ids and chat-server needs no change or release.
 
 ### Task 5: the Obsidian plugin scopes owners by address and writes an id into a new page
 
@@ -114,7 +114,7 @@ The release that follows is a minor.
 
 **Repositories:** robertblust/mcp-blust-ch, companygraph/mcp-companygraph-io, guestgraph/mcp-guestgraph-io. Starts after the owner has released Tasks 2 to 4.
 
-- [ ] Each re-pins mcp-server, chat-server and design as its `package.json` files name them, rebuilds its snapshot, and runs its tests. mcp-blust-ch's `test/instance.test.mjs` takes its ids off the snapshot, and its JSON-LD image assertion builds from the address.
+- [ ] Each re-pins mcp-server and design as its `package.json` files name them, rebuilds its snapshot, and runs its tests. mcp-blust-ch's `test/instance.test.mjs` takes its ids off the snapshot, and its JSON-LD image assertion builds from the address.
 - [ ] Deploying is the owner's word, as it always is.
 
 ---
