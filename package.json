@@ -7,6 +7,7 @@
   "files": ["lib", "bin", "core", "agents"],
   "bin": { "companygraph": "./bin/companygraph.mjs" },
   "exports": {
+    "./ids": "./lib/ids.mjs",
     "./instance": "./lib/instance.mjs",
     "./checks": "./lib/checks.mjs",
     "./plan": "./lib/plan.mjs",
