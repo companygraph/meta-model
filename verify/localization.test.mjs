@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  LANGUAGE_TAG, localizationOf, languageSectionsOf, asPage, primaryElementsOf, translationElementsOf, withoutFrontmatter,
+  LANGUAGE_TAG, localizationOf, languageSectionsOf, asPage, primaryElementsOf, translationElementsOf, withoutFrontmatter, staleTranslationsOf,
 } from "../lib/localization.mjs";
 
 const LOCALIZATION = (rows) =>
@@ -95,4 +95,33 @@ test("every heading below a language section is named in after, even after anoth
 test("frontmatter is taken off before a body is read", () => {
   assert.equal(withoutFrontmatter("---\nid: x\n---\n\n# A\n"), "\n# A\n");
   assert.equal(withoutFrontmatter("# A\n"), "# A\n");
+});
+
+const page = (en, de, extra = "") =>
+  `---\nid: x\n---\n\n# Billing\n\n> ${en}\n${extra}\n## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> ${de}\n`;
+const change = (before, after) => [{ before: "model/features/billing.md", after: "model/features/billing.md", beforeText: before, afterText: after }];
+
+test("a changed primary element whose translation stayed fails, naming the element", () => {
+  const out = staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Alt.")), ["de-CH"], new Set());
+  assert.equal(out.length, 1);
+  assert.match(out[0], /^model\/features\/billing\.md#statement changed, and its de-CH translation did not/);
+});
+
+test("a changed primary element whose translation changed with it passes", () => {
+  assert.deepEqual(staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Neu.")), ["de-CH"], new Set()), []);
+});
+
+test("a trailer naming the element releases it", () => {
+  assert.deepEqual(staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Alt.")), ["de-CH"], new Set(["model/features/billing.md#statement"])), []);
+});
+
+test("a new section added with its translation passes", () => {
+  const before = page("Same.", "Gleich.");
+  const after = `---\nid: x\n---\n\n# Billing\n\n> Same.\n\n## Description\n\nNew.\n\n## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> Gleich.\n\n### Description\n\nNeu.\n`;
+  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
+});
+
+test("a frontmatter change asks nothing of a translation", () => {
+  const before = page("Same.", "Gleich.");
+  assert.deepEqual(staleTranslationsOf(change(before, before.replace("id: x", "id: x\nsource: Local")), ["de-CH"], new Set()), []);
 });

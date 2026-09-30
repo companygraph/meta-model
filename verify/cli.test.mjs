@@ -1143,3 +1143,24 @@ test("ids --range on a folder that holds core refuses a commit that changed a sc
   assert.equal(said.status, 1);
   assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
 });
+
+test("translations --range refuses a change to the primary its translation did not follow, and a trailer releases it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const vision = path.join(root, "model/vision.md");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
+  g("commit", "-qam", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
+  g("commit", "-q", "--allow-empty", "-m", "third", "-m", "Translation-unchanged: model/vision.md#section/What it means", "--no-verify");
+  const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(released.status, 0, released.stderr);
+});

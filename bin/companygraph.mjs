@@ -10,6 +10,7 @@
 //   companygraph seats [<folder>] [--since <date>] [--json]
 //   companygraph id
 //   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
+//   companygraph translations [<folder>] --range <a>..<b>
 //
 // Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
 // seats, which asks what the flags would say and calls the same code, and stays open until Quit
@@ -28,10 +29,11 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
+import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
@@ -47,6 +49,7 @@ const USAGE = `companygraph [<command>]
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse an id a range changed
+  translations [<folder>]  refuse a change to the primary its translations did not follow
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
@@ -54,6 +57,7 @@ obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --ope
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
 ids: --backfill  --range <a>..<b>
+translations: --range <a>..<b>
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -724,6 +728,41 @@ function ids(argv) {
   return 1;
 }
 
+// R19's history half: a pull request that changes an element of the primary changes it in every
+// translated language, or names it in a `Translation-unchanged` trailer. The languages are the
+// head's, read from the checkout the range ends at.
+function translations(argv) {
+  const given = flags(argv);
+  const root = resolve(given._[0] ?? ".");
+  if (!isInstance(root)) {
+    console.error(`✗ ${root} is not an instance: it has no .companygraph/manifest.json beside a model/ folder`);
+    return 1;
+  }
+  const ends = (given.range ?? "").split("..");
+  if (!given.range || given.range.includes("...") || ends.length !== 2 || !ends[0] || !ends[1]) {
+    console.error(`✗ translations takes --range <a>..<b>, two dots between two commits`);
+    return 1;
+  }
+  const file = join(root, "model", "localization.md");
+  const declared = existsSync(file) ? localizationOf(unixLines(readFileSync(file, "utf8"))) : { translated: [] };
+  if (declared.error) {
+    console.error(`✗ model/localization.md: ${declared.error} (R19)`);
+    return 1;
+  }
+  if (!declared.translated.length) {
+    console.log("✓ no translated language is declared");
+    return 0;
+  }
+  const released = new Set(trailerValuesOf(root, given.range, "Translation-unchanged"));
+  const failures = staleTranslationsOf(changedPagesOf(root, given.range), declared.translated, released);
+  if (failures.length) {
+    for (const f of failures) console.error(`✗ ${f}`);
+    return 1;
+  }
+  console.log("✓ every change to the primary reached its translations");
+  return 0;
+}
+
 async function menu() {
   const entries = [
     ["Make a model", "a new instance in a folder, or beside the files already in one", async () => {
@@ -824,6 +863,7 @@ try {
   else if (command === "seats") process.exitCode = seats(rest);
   else if (command === "id") console.log(uuidv7());
   else if (command === "ids") process.exitCode = ids(rest);
+  else if (command === "translations") process.exitCode = translations(rest);
   // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
   // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
   // is tested with its answers piped in.
