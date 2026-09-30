@@ -1014,3 +1014,93 @@ test("the menu offers the report", () => {
   const out = spawnSync(process.execPath, [cli, "menu"], { input: `${pick}\n${dir}\n`, encoding: "utf8" });
   assert.match(out.stdout, /Commits by seat in /);
 });
+
+test("id prints one fresh UUID version 7", () => {
+  assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("ids --backfill stamps an instance's pages with their first commit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // init writes ids from Task 3 on; strip them so this test holds before and after it.
+  for (const rel of ["model/identity.md", "model/vision.md", "model/brand.md", "model/sources/local.md"]) {
+    const full = path.join(root, rel);
+    fs.writeFileSync(full, fs.readFileSync(full, "utf8").replace(/^id: .*\n/m, "").replace(/^---\n---\n\n/, ""));
+  }
+  fs.rmSync(path.join(root, "model/identifier.md"), { force: true });
+  const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
+  g("init", "-q");
+  g("add", "-A");
+  execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first"], {
+    cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-29T09:57:08+02:00" },
+  });
+  run(["ids", root, "--backfill"]);
+  const id = fs.readFileSync(path.join(root, "model/identity.md"), "utf8").match(/^id: (.+)$/m)[1];
+  assert.equal(parseInt(id.replace(/-/g, "").slice(0, 12), 16), Date.parse("2026-08-29T07:57:08Z"));
+  assert.ok(fs.existsSync(path.join(root, "model/identifier.md")));
+});
+
+// The spec: under a pattern format, the instance makes its own ids, and the tooling only checks
+// them. A backfill that stamped UUIDv7 ids over that declaration anyway would leave the instance
+// with two id formats at once, so it refuses whole, and no page is touched.
+test("ids --backfill refuses whole when model/identifier.md declares a pattern", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const identity = path.join(root, "model/identity.md");
+  fs.writeFileSync(identity, fs.readFileSync(identity, "utf8").replace(/^id: .*\n/m, ""));
+  const before = fs.readFileSync(identity, "utf8");
+  fs.writeFileSync(
+    path.join(root, "model/identifier.md"),
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n",
+  );
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /✗ model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(fs.readFileSync(identity, "utf8"), before);
+});
+
+test("ids --range refuses a commit that changed an id, across a rename", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  g("mv", "model/vision.md", "model/outlook.md");
+  const renamed = path.join(root, "model/outlook.md");
+  const text = fs.readFileSync(renamed, "utf8").replace(/^id: .*$/m, "id: 01a04c85-bc20-7092-a266-845d81173e9f");
+  fs.writeFileSync(renamed, text);
+  g("commit", "-qam", "second", "--no-verify");
+  const head = g("rev-parse", "HEAD");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${head}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+  assert.match(said.stderr, /\(then model\/vision\.md\)/);
+  assert.match(said.stderr, new RegExp(`before this change \\(${base.slice(0, 7)}\\)`), "the base is named short, as git names a commit to a reader");
+});
+
+test("ids refuses a folder that is not an instance, and says so", () => {
+  const said = spawnSync(process.execPath, [cli, "ids", temp(), "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /is not an instance: it has no \.companygraph\/manifest\.json beside a model\/ folder/);
+});
+
+test("ids with neither --backfill nor --range refuses, naming both", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const said = spawnSync(process.execPath, [cli, "ids", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /✗ ids needs --backfill or --range <a>\.\.<b>/);
+});
+
+// A three-dot range asks git for the change since the merge base, and split on ".." it read its
+// head as ".<head>", which git then failed on. It is refused by name, as is a range with no dots.
+test("ids --range refuses a three-dot range and a range without two dots", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  for (const range of ["main...HEAD", "HEAD"]) {
+    const said = spawnSync(process.execPath, [cli, "ids", root, "--range", range], { encoding: "utf8" });
+    assert.equal(said.status, 1, range);
+    assert.match(said.stderr, /✗ --range takes <a>\.\.<b>, two dots between two commits/, range);
+  }
+});

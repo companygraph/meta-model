@@ -178,8 +178,11 @@ test("imagesOf names each image a page carries, where it came from and where a s
   const schemas = tree("core");
   const data = parseInstance(files, { sub: "model/", schemas });
   const images = imagesOf(files, data, { sub: "model/", schemas });
+  // The example's pages carry ids (R18): the image names its entity by that id, and is put where
+  // the entity's address, its path, says.
+  const agent = data.entities.find((e) => e.address === "profiles/ai-agent").id;
   assert.deepEqual(images.map(({ bytes, ...rest }) => rest), [
-    { id: "profiles/ai-agent", field: "image", from: "profiles/ai-agent/ai-agent.png", to: "profiles/ai-agent.png" },
+    { id: agent, field: "image", from: "profiles/ai-agent/ai-agent.png", to: "profiles/ai-agent.png" },
   ]);
   assert.deepEqual(imageInfoOf(images[0].bytes), { format: "png", width: 256, height: 256 });
 });

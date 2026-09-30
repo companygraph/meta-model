@@ -109,15 +109,18 @@ const folder = (rel) => {
 };
 
 test("the example's Change Lead Time names Craftsmanship, and the parser draws the edge", () => {
-  const { edges } = parseInstance(folder("example/model"), { sub: "model/", schemas: folder("core") });
+  const { entities, edges } = parseInstance(folder("example/model"), { sub: "model/", schemas: folder("core") });
+  // The example's pages carry ids (R18), so an edge names its ends by them; found by address.
+  const at = (address) => entities.find((e) => e.address === address).id;
   const costs = edges.filter((e) => e.via === "can-cost").map(({ from, to }) => ({ from, to }));
-  assert.deepEqual(costs, [{ from: "kpis/change-lead-time", to: "values/craftsmanship" }]);
+  assert.deepEqual(costs, [{ from: at("kpis/change-lead-time"), to: at("values/craftsmanship") }]);
 });
 
 test("two values under can-cost draw two edges", () => {
   const files = folder("example/model");
   const page = files.get("kpis/change-lead-time.md");
   files.set("kpis/change-lead-time.md", page.replace("  - Craftsmanship\n", "  - Craftsmanship\n  - Say The Hard Thing\n"));
-  const { edges } = parseInstance(files, { sub: "model/", schemas: folder("core") });
-  assert.deepEqual(edges.filter((e) => e.via === "can-cost").map((e) => e.to).sort(), ["values/craftsmanship", "values/say-the-hard-thing"]);
+  const { entities, edges } = parseInstance(files, { sub: "model/", schemas: folder("core") });
+  const at = (address) => entities.find((e) => e.address === address).id;
+  assert.deepEqual(edges.filter((e) => e.via === "can-cost").map((e) => e.to).sort(), [at("values/craftsmanship"), at("values/say-the-hard-thing")].sort());
 });
