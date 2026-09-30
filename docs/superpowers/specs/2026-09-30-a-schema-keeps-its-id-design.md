@@ -1,12 +1,12 @@
 # A schema keeps its id
 
-An entity keeps its id since R18, and a schema does not. The parser hands out `core/feature` for the feature schema, which is its file name, so the day a type is renamed every link to it breaks. The next thing that needs such a link is a translation. meta-model #195 asks for a model kept in more than one language, and the owner has settled the part of it this spec prepares: the meta-model stays American English, an instance may carry other languages, and a translation decorates the element it translates, keyed by that element's stable address. Every schema gains an `id` in the form R18 gives an entity, and every element of a schema gains an address built from that id.
+An entity keeps its id since R18, and a schema does not. The parser hands out `core/feature` for the feature schema, which is its file name, so the day a type is renamed every link to it breaks: in the MCP server's answers, in a consumer's graph, in anything outside the model that names a type. meta-model #195, a model kept in more than one language, brought the question up, and the owner has settled what this spec takes from it: the meta-model stays American English, an instance may carry other languages, and a translation decorates the element it translates, named by that element's path. Every schema gains an `id` in the form R18 gives an entity, and every element of a schema gains an address built from that id.
 
-Status: decided by the owner on September 30, 2026: an id per schema and none per element, UUID version 7, a backfill from the first commit, element addresses built from the keys the schema already writes, a spec and a pull request of their own after the entity-id build merges.
+Status: decided by the owner on September 30, 2026: an id per schema and none per element, UUID version 7, a backfill from the first commit, element addresses built from the keys the schema already writes, a spec and a pull request of their own after the entity-id build merges, and no translated labels for schema elements.
 
 ## Where this comes from
 
-meta-model #194 gave every entity an id that survives a rename, in `2026-09-30-an-entity-keeps-its-id-design.md`. meta-model #195 asks for one entity with its name and prose in several languages, and leans on #194. Talking it through, the owner split #195 in two: this spec, which gives a translation something stable to name, and a second one for the translations themselves, with a singleton that declares which locales an instance supports. A translation is not a second page of the entity: it decorates the one page, so R18's rule that no two pages share an id stands unchanged.
+meta-model #194 gave every entity an id that survives a rename, in `2026-09-30-an-entity-keeps-its-id-design.md`. meta-model #195 asks for one entity with its name and prose in several languages, and leans on #194. Talking it through, the owner split #195 in two: this spec, which gives a type an id that outlives its name and every element a path, and a second one for the translations themselves, with a singleton that declares which locales an instance supports. A translation is not a second page of the entity: it decorates the one page, so R18's rule that no two pages share an id stands unchanged.
 
 ## The rule
 
@@ -42,6 +42,8 @@ An element's address is its schema's id, a slash and a path:
 
 When a breaking release renames a key, the addresses under it change with it. An instance's translations follow the rename as its pages do.
 
+The second spec keys an entity's translations by the path alone, `name` or `section/Description`, since a page's type is already known on the page. The schema id matters where a type is named from outside a page.
+
 ## What the tools return
 
 `parseSchemas` returns the schema's `id` as the entity's `id`, where it returns `core/<type>` today, and keeps `core/<type>` as the path. A function in `lib/ids.mjs`, `addressOf(schemaId, element)`, builds an address, and `elementOf(address)` reads one back. The MCP server's `describe_schema` and `list_types` accept the id or the type and always return the id, as its entity tools do under R18.
@@ -58,7 +60,11 @@ Each schema's id takes the author time of its file's first commit, followed acro
 
 ## Out of scope
 
-Translations, and the singleton that declares an instance's locales. They are the second spec #195 needs, and it builds on the addresses here.
+Translations, and the singleton that declares an instance's locales. They are the second spec #195 needs, and it builds on the paths here.
+
+## What was left out
+
+Translated labels for schema elements, «Funktion» for `feature` or «Referenzen» for `## References`. Nothing reads them: a site's headings are its own `data-de` strings, a chat answering in German translates a type's name as it translates any word, an author writes the English keys in every language, and consistent terms already come from a glossary. Every core release that added a field would stall every multilingual instance's re-pin until someone wrote its labels. A surface that renders the model with no chrome of its own, in another language, would need them, and none exists; the addresses here let one add them later without breaking anything.
 
 ## What it costs
 
