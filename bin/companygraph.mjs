@@ -48,7 +48,7 @@ const USAGE = `companygraph [<command>]
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
-  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) an id a range changed
+  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
 upgrade: --core <tag>  --force  --dry-run
