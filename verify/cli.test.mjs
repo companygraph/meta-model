@@ -1369,3 +1369,32 @@ test("translations --range judges by the head's declared languages, not whatever
   assert.equal(said.status, 3, said.stdout + said.stderr);
   assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
 });
+
+// Re-review, Important: `fileAt` caught every git error and returned null, which
+// `translations` read the same as "no such file at the head" — no declared language, exit 0 —
+// when the real story for a `<b>` that does not resolve at all (a typo, a rebased-away commit)
+// is that the command could not run. README says translations "stays 1 where it could not run";
+// this was silently exiting 0 instead. The head is confirmed to resolve before anything is read
+// from it.
+test("translations --range exits 1 when the head does not resolve, rather than reading no declared language", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("commit", "-q", "--allow-empty", "-m", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "HEAD~1..nosuchrev"], { encoding: "utf8" });
+  assert.equal(said.status, 1, said.stdout + said.stderr);
+  assert.match(said.stderr, /✗/);
+  assert.doesNotMatch(said.stdout, /no translated language is declared/);
+});
+
+test("translations --range exits 1 in a folder that is not a git repository", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "HEAD~1..HEAD"], { encoding: "utf8" });
+  assert.equal(said.status, 1, said.stdout + said.stderr);
+  assert.match(said.stderr, /✗/);
+});

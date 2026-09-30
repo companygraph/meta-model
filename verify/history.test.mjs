@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, fileAt } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, fileAt, isCommit } from "../lib/history.mjs";
 import { instanceAt } from "./seats-fixture.mjs";
 
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-history-"));
@@ -106,4 +106,18 @@ test("a file at a revision is read with \\n line ends, and a revision without it
   assert.equal(fileAt(dir, base, "a.md"), "one\ntwo\n");
   assert.equal(fileAt(dir, base, "b.md"), null, "b.md was not added until after base");
   assert.equal(fileAt(dir, "HEAD", "no-such-file.md"), null);
+});
+
+// Re-review, Important: fileAt used to catch every git error alike, so a revision that does not
+// resolve at all read the same as one that resolves but lacks the file — both null. A caller
+// (translations) that means to ask "is this file declared at the head" cannot tell "there is no
+// such head" from that. isCommit is the check translations runs first; fileAt enforces the same
+// thing itself, so a caller that skips the check still cannot mistake one for the other.
+test("isCommit is false for a revision that does not resolve, and fileAt throws rather than returning null for one", () => {
+  const dir = repo(temp());
+  git(dir, "commit", "-q", "--allow-empty", "-m", "first");
+  assert.equal(isCommit(dir, "HEAD"), true);
+  assert.equal(isCommit(dir, "nosuchrev"), false);
+  assert.equal(isCommit(temp(), "HEAD"), false, "a folder with no git repository at all");
+  assert.throws(() => fileAt(dir, "nosuchrev", "a.md"), /nosuchrev/);
 });

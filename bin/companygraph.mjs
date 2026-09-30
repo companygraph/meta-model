@@ -31,7 +31,7 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf, fileAt } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf, fileAt, isCommit } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
@@ -744,8 +744,9 @@ function ids(argv) {
 
 // R19's history half: a pull request that changes an element of the primary changes it in every
 // translated language, or names it in a `Translation-unchanged` trailer. The languages are the
-// head's, read from the checkout the range ends at. A refusal, a stale translation or a localization
-// file that cannot be read, exits 3, as `ids` and `commits` do; 1 means the command could not run.
+// head's, read from the range's head revision, `<b>`. A refusal, a stale translation or a
+// localization file that cannot be read, exits 3, as `ids` and `commits` do; 1 means the command
+// could not run.
 function translations(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -756,6 +757,14 @@ function translations(argv) {
   const ends = (given.range ?? "").split("..");
   if (!given.range || given.range.includes("...") || ends.length !== 2 || !ends[0] || !ends[1]) {
     console.error(`✗ translations takes --range <a>..<b>, two dots between two commits`);
+    return 1;
+  }
+  // Confirmed before anything is read from it (Re-review, Important): `fileAt` used to catch
+  // every git error and return null the same way for "no such file at a valid head" and "no such
+  // head at all", and a range naming a head this repository does not have then read as the
+  // instance declaring no translated language — a silent 0, where README already promised 1.
+  if (!isCommit(root, ends[1])) {
+    console.error(`✗ ${ends[1]} does not resolve to a commit ${root} has`);
     return 1;
   }
   // The head's own file, not whatever the working tree has checked out (Review fix 5): a caller
