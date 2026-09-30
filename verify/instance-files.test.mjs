@@ -66,17 +66,24 @@ test("a type with a noun spells its folder README with it, and one without reads
 });
 
 test("an instance starts with a source and its singular entities, naming the instance", () => {
-  const files = startingEntities({ name: "Acme" });
-  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
-  assert.match(files.get("model/identity.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
+  // Ids are handed out in order from a fixed list, so each page's id is known and the pages
+  // are seen to take one each (R18), none shared.
+  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005"];
+  let next = 0;
+  const files = startingEntities({ name: "Acme", id: () => ids[next++] });
+  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
+  assert.equal(next, ids.length);
+  assert.deepEqual(new Set([...files.values()].map((text) => text.match(/^---\nid: (\S+)\n/)[1])), new Set(ids));
+  assert.match(files.get("model/identity.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
   assert.match(files.get("model/identity.md"), /\n## What it is\n/);
   assert.match(files.get("model/vision.md"), /\n## What it means\n/);
-  assert.match(files.get("model/brand.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
+  assert.match(files.get("model/brand.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
   for (const section of ["Mark", "Color", "Typography", "Voice", "References"]) assert.match(files.get("model/brand.md"), new RegExp(`\n## ${section}\n`));
   // A required table section carries at least one row (R16), so the starting table holds a
   // placeholder row a reader cannot mistake for a real color, and the checks pass it.
   assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\| .+ \|\n\n## Typography\n/);
-  assert.match(files.get("model/sources/local.md"), /^# Local\n/);
+  assert.match(files.get("model/sources/local.md"), /^---\nid: \S+\n---\n\n# Local\n/);
+  assert.match(files.get("model/identifier.md"), /^---\nid: \S+\nsource: Local\nformat: uuidv7\n---\n\n# /);
 });
 
 test("the workflow calls the reusable check at the release it is given", () => {
