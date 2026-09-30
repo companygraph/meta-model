@@ -1,6 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { UUIDV7, uuidv7, msOf, idOf, withId, idFormatOf } from "../lib/ids.mjs";
+import { idChangesOf } from "../lib/checks.mjs";
 
 const ZERO = Buffer.alloc(10);
 
@@ -64,4 +65,23 @@ test("a pattern with no anchors, a pattern that is no expression, and a pattern 
   assert.match(idFormatOf(identifier("format: pattern\n")).error, /no `pattern`/);
   assert.match(idFormatOf(identifier("format: uuidv7\npattern: ^x$\n")).error, /only with `format: pattern`/);
   assert.match(idFormatOf(identifier("format: serial\n")).error, /`uuidv7` or `pattern`/);
+});
+
+const page = (id) => `---\nid: ${id}\n---\n\n# X\n`;
+
+test("an id that changed on a page fails, naming both", () => {
+  const f = idChangesOf([{ before: "model/skills/a.md", after: "model/skills/a.md", beforeText: page("a1"), afterText: page("a2") }], "main");
+  assert.deepEqual(f, ['model/skills/a.md: `id` is "a2", and on main this entity carries "a1"; an id never changes once it is on the default branch (R18)']);
+});
+
+test("a rename that changes the id fails, naming the old path too", () => {
+  const f = idChangesOf([{ before: "model/skills/a.md", after: "model/skills/b.md", beforeText: page("a1"), afterText: page("b1") }], "main");
+  assert.match(f[0], /^model\/skills\/b\.md: .* \(then model\/skills\/a\.md\)/);
+});
+
+test("a rename that keeps its id, and a page that gains its first id, pass", () => {
+  assert.deepEqual(idChangesOf([
+    { before: "model/skills/a.md", after: "model/skills/b.md", beforeText: page("a1"), afterText: page("a1") },
+    { before: "model/skills/c.md", after: "model/skills/c.md", beforeText: "# C\n", afterText: page("c1") },
+  ], "main"), []);
 });

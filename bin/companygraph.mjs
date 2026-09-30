@@ -28,9 +28,10 @@ import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
+import { idChangesOf } from "../lib/checks.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
@@ -687,6 +688,15 @@ function ids(argv) {
     writePlan(root, writes);
     console.log(`✓ ${writes.size ? `wrote an id into ${writes.size === 1 ? "one page" : "each page listed"}` : "every page already carries an id"}`);
     for (const path of writes.keys()) console.log(`  ${path}`);
+    return 0;
+  }
+  if (given.range) {
+    const failures = idChangesOf(changedPagesOf(root, given.range), given.range.split("..")[0]);
+    if (failures.length) {
+      for (const f of failures) console.error(`✗ ${f}`);
+      return 1;
+    }
+    console.log("✓ no id on the default branch changed");
     return 0;
   }
   console.error("✗ ids needs --backfill or --range <a>..<b>");
