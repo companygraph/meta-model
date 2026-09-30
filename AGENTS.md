@@ -34,6 +34,8 @@ That is not only confidentiality — it is the design. A meta-model that carries
 
 When writing here, describe the *pattern*. "The multi-person instance keeps a thin file per person" is useful and portable. Naming the company, its file counts or its issue tracker is neither.
 
+New vocabulary, a type for core or a pack, starts with the skill `companygraph-vocabulary` in `.claude/skills/`: it keeps what a private source says in a report under the ignored `dist/`, and brings only its pattern into the spec it ends in.
+
 ## Decisions that are settled
 
 - **Schemas are Markdown, read by agents and by the checker alike.** Not a stage on the way

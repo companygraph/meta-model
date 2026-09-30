@@ -63,6 +63,12 @@ export declare const IDENTIFIER_PAGE: (page: {
     id: string;
     source: string;
 }) => string;
+/** @type {(page: { id: string; source: string; primary?: string }) => string} */
+export declare const LOCALIZATION_PAGE: (page: {
+    id: string;
+    source: string;
+    primary?: string;
+}) => string;
 /**
  * @param {{ agent: string; name: string; units: string }} ask
  * @returns {Map<string, string>}

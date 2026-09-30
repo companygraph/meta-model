@@ -26,6 +26,12 @@ export type Entity = {
     owner: string | null;
     path: string;
     stamp?: Stamp;
+    translations?: Record<string, Translation>;
+};
+export type Translation = {
+    name: string;
+    statement: string;
+    sections: Section[];
 };
 export type Edge = {
     from: string;
@@ -175,6 +181,14 @@ export type Constraints = {
  * @property {string | null} owner
  * @property {string} path
  * @property {Stamp} [stamp]
+ * @property {Record<string, Translation>} [translations]
+ */
+/**
+ * A page in one translated language (R19): its name, its statement, and its sections.
+ * @typedef {object} Translation
+ * @property {string} name
+ * @property {string} statement
+ * @property {Section[]} sections
  */
 /**
  * `via` is the field, `<Section>.<Column>` or `<Section>.<Heading>` that draws the edge; `attrs`

@@ -298,6 +298,33 @@ test("an upgrade writes the export's inputs the instance lacks, never one it has
   assert.equal(none.writes.size, 0, "no name, and nothing is given");
 });
 
+// Review fix 1: `upgrade` only ever wrote export files; a core that grows R19's localization
+// schema left an instance upgraded from before it with no model/localization.md at all, and
+// nothing later would write one. An upgrade now writes it, once, reading `source` from
+// model/identity.md the way `backfillPlan` does, and never touches a page the instance has.
+const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+
+test("an upgrade writes model/localization.md when the new core carries the schema and the instance has none, with source read from identity", () => {
+  const { manifest, held, workflow } = instance();
+  const withIdentity = new Map(held).set("model/identity.md", "---\nid: 0198\nsource: Acquired\n---\n\n# Acme\n");
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withIdentity, workflow });
+  const page = plan.writes.get("model/localization.md");
+  assert.ok(page, "model/localization.md is written");
+  const id = page.match(/^---\nid: (\S+)\nsource: Acquired\n---\n/)?.[1];
+  assert.ok(id && UUIDV7.test(id), `expected a fresh UUIDv7, got ${id}`);
+});
+
+test("an upgrade defaults localization.md's source to Local when identity names none, and never overwrites one the instance already has", () => {
+  const { manifest, held, workflow } = instance();
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  assert.match(plan.writes.get("model/localization.md"), /\nsource: Local\n/);
+
+  const already = "---\nid: existing\nsource: Local\n---\n\n# Languages\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n";
+  const withOwn = new Map(held).set("model/localization.md", already);
+  const kept = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withOwn, workflow });
+  assert.ok(!kept.writes.has("model/localization.md"), "an existing file is never overwritten");
+});
+
 test("a manifest naming a file outside its own core refuses the whole upgrade, hash and all", () => {
   const { manifest, held, workflow } = instance();
   const identity = "# Acme\n\n> One paragraph.\n";

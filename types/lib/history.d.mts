@@ -66,6 +66,33 @@ export declare function firstCommitMsOf(cwd: string, rel: string): number | null
  */
 export declare function changedPagesOf(cwd: string, range: string, model?: string): PageChange[];
 /**
+ * @param {string} cwd
+ * @param {string} rev
+ * @returns {boolean}
+ */
+export declare function isCommit(cwd: string, rev: string): boolean;
+/**
+ * @param {string} cwd
+ * @param {string} rev
+ * @param {string} path
+ * @returns {string | null}
+ */
+export declare function fileAt(cwd: string, rev: string, path: string): string | null;
+/**
+ * @param {string} cwd
+ * @param {string} a
+ * @param {string} b
+ * @returns {string}
+ */
+export declare function mergeBaseOf(cwd: string, a: string, b: string): string;
+/**
+ * @param {string} cwd
+ * @param {string} range
+ * @param {string} key
+ * @returns {string[]}
+ */
+export declare function trailerValuesOf(cwd: string, range: string, key: string): string[];
+/**
  * @param {string} top
  * @returns {Member[] | null}
  */

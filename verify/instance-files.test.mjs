@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor,
+  agentFilesFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -68,10 +68,10 @@ test("a type with a noun spells its folder README with it, and one without reads
 test("an instance starts with a source and its singular entities, naming the instance", () => {
   // Ids are handed out in order from a fixed list, so each page's id is known and the pages
   // are seen to take one each (R18), none shared.
-  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005"];
+  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005", "01a0f10b-0000-7000-8000-000000000006"];
   let next = 0;
   const files = startingEntities({ name: "Acme", id: () => ids[next++] });
-  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
+  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/localization.md", "model/sources/local.md", "model/vision.md"]);
   assert.equal(next, ids.length);
   assert.deepEqual(new Set([...files.values()].map((text) => text.match(/^---\nid: (\S+)\n/)[1])), new Set(ids));
   assert.match(files.get("model/identity.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
@@ -84,6 +84,21 @@ test("an instance starts with a source and its singular entities, naming the ins
   assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\| .+ \|\n\n## Typography\n/);
   assert.match(files.get("model/sources/local.md"), /^---\nid: \S+\n---\n\n# Local\n/);
   assert.match(files.get("model/identifier.md"), /^---\nid: \S+\nsource: Local\nformat: uuidv7\n---\n\n# /);
+});
+
+// Fix 3: the stub is a sentence saying who reads the model and in which language, not a
+// placeholder instruction to fill one in.
+test("the localization stub is a sentence naming the primary language", () => {
+  assert.equal(
+    LOCALIZATION_PAGE({ id: "x", source: "Local" }),
+    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
+      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
+  );
+  assert.equal(
+    LOCALIZATION_PAGE({ id: "x", source: "Local", primary: "de-CH" }),
+    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n\n" +
+      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n",
+  );
 });
 
 test("the workflow calls the reusable check at the release it is given", () => {

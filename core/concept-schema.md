@@ -65,3 +65,4 @@ A concept is one word the company means something exact by, and it answers "what
 - `As` is the name the target goes by in this relation, written as the company says it: `booker`, `primary guest`, `included services`.
 - An alias is never used as a reference anywhere in the model. It is there so a reader searching the wrong word finds the right page.
 - A deprecated alias stays until nothing outside the model uses the old name, and then it goes; it is not a history of the name.
+- An alias of kind `translation` is for a language the instance does not declare in `model/localization.md`; in a declared language the concept's name is the `### Name` of that language's section (R19).

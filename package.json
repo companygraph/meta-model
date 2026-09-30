@@ -1,6 +1,6 @@
 {
   "name": "companygraph-meta-model",
-  "version": "0.66.0",
+  "version": "0.67.0",
   "license": "Apache-2.0",
   "type": "module",
   "engines": { "node": ">=22" },
@@ -12,7 +12,8 @@
     "./checks": { "types": "./types/lib/checks.d.mts", "default": "./lib/checks.mjs" },
     "./plan": { "types": "./types/lib/plan.d.mts", "default": "./lib/plan.mjs" },
     "./write": { "types": "./types/lib/write.d.mts", "default": "./lib/write.mjs" },
-    "./obsidian": { "types": "./types/lib/obsidian.d.mts", "default": "./lib/obsidian.mjs" }
+    "./obsidian": { "types": "./types/lib/obsidian.d.mts", "default": "./lib/obsidian.mjs" },
+    "./localization": { "types": "./types/lib/localization.d.mts", "default": "./lib/localization.mjs" }
   },
   "scripts": {
     "build": "tsc",
@@ -20,9 +21,10 @@
     "typecheck": "tsc --noEmit",
     "verify": "node verify/check.mjs",
     "test:instance": "node --test verify/instance.test.mjs verify/constraints.test.mjs",
-    "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs verify/image.test.mjs verify/ref-by.test.mjs verify/kpi.test.mjs verify/brand.test.mjs verify/decision.test.mjs verify/question-kind.test.mjs verify/references.test.mjs verify/identifier.test.mjs",
+    "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs verify/image.test.mjs verify/ref-by.test.mjs verify/kpi.test.mjs verify/brand.test.mjs verify/decision.test.mjs verify/question-kind.test.mjs verify/references.test.mjs verify/identifier.test.mjs verify/localization-file.test.mjs",
     "test:instance-files": "node --test verify/instance-files.test.mjs",
     "test:ids": "node --test verify/ids.test.mjs",
+    "test:localization": "node --test verify/localization.test.mjs",
     "test:plan": "node --test verify/plan.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs",
     "test:cli": "node --test verify/cli.test.mjs",
