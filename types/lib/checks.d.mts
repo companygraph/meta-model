@@ -13,6 +13,14 @@ export type TypeEntry = {
         year: string;
         rest: string;
     };
+    /**
+     * Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+     */
+    labels?: {
+        section: string;
+        column?: string;
+        heading?: boolean;
+    };
 };
 export type PipeTable = {
     columns: string[];
@@ -47,6 +55,7 @@ export type Check = {
  * @property {string[]} [owns]
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
+ * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
  */
 /**
  * A pipe table as the checks read it: its header row's cells and every row after the separator.

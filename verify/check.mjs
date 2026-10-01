@@ -29,7 +29,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
-import { TYPES, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
+import { TYPES, PACKS, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
@@ -61,22 +61,44 @@ function filesUnder(...roots) {
 }
 
 
+// Every schema this repository ships, core's and each pack's, with the path it is read from.
+// The shape checks below hold them all alike: a pack schema is written to R9 as a core one is.
+const SCHEMAS = [
+  ...TYPES.map((t) => ({ ...t, path: `core/${t.type}-schema.md` })),
+  ...Object.entries(PACKS).flatMap(([name, types]) => types.map((t) => ({ ...t, path: `packs/${name}/${t.type}-schema.md` }))),
+];
+
 const CHECKS = [
+  {
+    // A pack is released under core's tag, so its manifest carries core's version and nothing else
+    // may tell them apart.
+    name: "a pack is released with core",
+    rule: "R20",
+    run() {
+      const core = JSON.parse(read("core/manifest.json") ?? "{}");
+      for (const name of Object.keys(PACKS)) {
+        const raw = read(`packs/${name}/manifest.json`);
+        if (raw === null) { fail(`packs/${name}/manifest.json is missing`); continue; }
+        const m = JSON.parse(raw);
+        if (m.name !== name) fail(`packs/${name}/manifest.json: name is ${JSON.stringify(m.name)}, and the folder says ${name}`);
+        if (m.version !== core.version) fail(`packs/${name}/manifest.json says ${m.version}, and core/manifest.json ${core.version}; a pack is released with core`);
+      }
+    },
+  },
   {
     name: "schemas exist",
     rule: "R9",
     run() {
-      for (const { type } of TYPES)
-        if (read(`core/${type}-schema.md`) === null)
-          fail(`core/${type}-schema.md is missing`);
+      for (const { path } of SCHEMAS)
+        if (read(path) === null)
+          fail(`${path} is missing`);
     },
   },
   {
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type, owner, folder, file, noun } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      for (const { type, owner, folder, file, noun, path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
 
@@ -338,8 +360,7 @@ const CHECKS = [
     rule: "R9",
     run() {
       const want = "What | Yes | string; URL | Yes | string";
-      for (const { type } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      for (const { path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
         const [sections, ...captioned] = blocksOf(sectionsOf(text).get("Sections") ?? "");
@@ -365,9 +386,8 @@ const CHECKS = [
     name: "type vocabulary",
     rule: "R9",
     run() {
-      const known = new Set(TYPES.map((t) => t.type));
-      for (const { type } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      const known = new Set(SCHEMAS.map((t) => t.type));
+      for (const { path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
         // Every typed table: the frontmatter fields, plus the column table of any section
@@ -451,9 +471,8 @@ const CHECKS = [
     name: "ownership declared",
     rule: "R10",
     run() {
-      const known = new Set(TYPES.map((t) => t.type));
-      for (const { type, owner, folder, file } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      const known = new Set(SCHEMAS.map((t) => t.type));
+      for (const { type, owner, folder, file, path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
         const stated = text.match(/^\*\*Owner:\*\*\s+(\S+)\s*$/m)?.[1];
@@ -473,7 +492,7 @@ const CHECKS = [
         // A singular type is a file in the container (R6, R13): no folder to nest, and
         // nothing can own it, so the two folder-shaped checks below have nothing to read.
         if (file) continue;
-        const ownerFolder = owner && TYPES.find((t) => t.type === owner)?.folder;
+        const ownerFolder = owner && SCHEMAS.find((t) => t.type === owner)?.folder;
         if (ownerFolder && !folder.startsWith(`${ownerFolder}/`))
           fail(
             `TYPES: the folder declared for ${type}, "${folder}", does not nest inside ${ownerFolder}/, which ${path} names as its owner`,
