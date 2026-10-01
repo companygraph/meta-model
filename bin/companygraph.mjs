@@ -430,12 +430,15 @@ async function upgrade(argv) {
   if (existsSync(localizationPath)) held.set("model/localization.md", read(localizationPath));
   const exportPaths = [...exportFilesFor({ name }).keys()];
   const tag = given.core ?? `v${PACKAGE.version}`;
-  const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   // --pack takes a pack the instance did not have, so a company that started before a pack
-  // shipped takes it without a second init. The packs it already lists move as before.
-  const added = packNamesOf(given.pack);
-  if (added.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
-  const packNames = [...new Set([...(manifest.packs ?? []), ...added])];
+  // shipped takes it without a second init. The packs it already lists move as before. A pack is
+  // released with its core, so any pack, listed or added, is refused beside --core, before
+  // anything is fetched.
+  const added = packNamesOf(given.pack).filter((name) => !(manifest.packs ?? []).includes(name));
+  const packNames = [...new Set([...(manifest.packs ?? []), ...packNamesOf(given.pack)])];
+  if (packNames.length && given.core)
+    throw new Error(`this instance takes the pack ${packNames.join(", ")}, and --core fetches another release's core without it; a pack is released with its core, so upgrade without --core`);
+  const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
   const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
   // A pack file the instance holds that the manifest never recorded is read too, so the plan can
   // tell the tooling's file from the instance's own under the same name.

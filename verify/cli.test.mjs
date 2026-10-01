@@ -1453,3 +1453,22 @@ test("a manifest that takes a pack this checker does not ship is refused by name
   assert.equal(result.status, 1);
   assert.match(result.stderr, /takes the pack cooking, and this checker ships software/);
 });
+
+test("an upgrade with --core is refused for an instance that lists a pack, and for --pack, before anything is fetched", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const listed = spawnSync(process.execPath, [cli, "upgrade", root, "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(listed.status, 1);
+  assert.match(listed.stderr, /takes the pack software, and --core fetches another release's core without it/);
+  const plain = temp();
+  run(["init", plain, "--name", "Acme", "--agent", "claude"]);
+  const added = spawnSync(process.execPath, [cli, "upgrade", plain, "--pack", "software", "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(added.status, 1);
+  assert.match(added.stderr, /takes the pack software, and --core fetches another release's core without it/);
+});
+
+test("upgrade --pack names only the packs the instance did not already list", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
+});
