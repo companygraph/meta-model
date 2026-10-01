@@ -93,7 +93,9 @@ const r20 = (files, packs) => checkInstance(files, { core: "meta/core", model: "
 
 test("a core schema that names a pack's type fails", () => {
   const files = withWidget();
-  files.set("meta/core/source-schema.md", read("source-schema.md").replace("| `url` |", "| `widget` | No | ref → widget | A widget |\n| `url` |"));
+  const text = read("source-schema.md").replace("| `url` |", "| `widget` | No | ref → widget | A widget |\n| `url` |");
+  assert.notEqual(text, read("source-schema.md"), "the replace changed the schema, or the test proves nothing");
+  files.set("meta/core/source-schema.md", text);
   assert.deepEqual(r20(files, TOY), [
     "meta/core/source-schema.md: names widget, a type of the toy pack; core names only its own types (R20)",
   ]);

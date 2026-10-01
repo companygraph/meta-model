@@ -58,9 +58,10 @@ New vocabulary, a type for core or a pack, starts with the skill `companygraph-v
   *absent*, not types that are optional.
 - **The repo is `meta-model`; `core` is a folder inside it.** The repo says what the
   project is, folders say how it is divided — and `core/` sits beside `packs/`, so a repo
-  named `core` would hold non-core things.
+  named `core` would hold non-core things. `packs/` holds one folder per pack, released with
+  core under one tag.
 - Resist scaffolding folders the spec has not settled — §10 still lists open questions, and
-  the roadmap adds types one slice at a time. `packs/` holds one folder per pack, released with core under one tag.
+  the roadmap adds types one slice at a time.
 
 ## Checks
 
