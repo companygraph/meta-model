@@ -1,3 +1,4 @@
+import type { TypeEntry } from "./checks.mjs";
 export type Manifest = {
     tooling: string;
     core: {
@@ -34,14 +35,17 @@ export declare const GITIGNORE = "dist/\n.obsidian/\n";
 export declare function manifestOf({ tooling, core, units, packs, files }: Omit<Manifest, "packs"> & {
     packs?: string[];
 }): string;
-/** @type {() => string[]} */
-export declare const rootFolders: () => string[];
+/** @type {(types?: TypeEntry[]) => string[]} */
+export declare const rootFolders: (types?: TypeEntry[]) => string[];
 /**
  * @param {string[]} folders
  * @param {string} [units]
+ * @param {(TypeEntry & { unit?: string })[]} [types] the vocabulary the folders are drawn from; core's unless a pack is taken
  * @returns {Map<string, string>}
  */
-export declare function readmesFor(folders: string[], units?: string): Map<string, string>;
+export declare function readmesFor(folders: string[], units?: string, types?: (TypeEntry & {
+    unit?: string;
+})[]): Map<string, string>;
 /**
  * @param {{ name: string; id?: () => string }} instance
  * @returns {Map<string, string>}

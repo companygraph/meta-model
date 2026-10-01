@@ -523,3 +523,39 @@ test("the backfill gives a page of a pack's type an id when it is handed the pac
   assert.ok(backfillPlan(files, { firstCommitMs: () => MS, types }).has("model/feature-designs/checkout.md"));
   assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).has("model/feature-designs/checkout.md"), false);
 });
+
+// A pack's root folders are folders of the instance that takes it: each gets the README every
+// folder gets, naming the schema in the pack's unit, and --folders can name them.
+test("init with a pack writes a README for each root folder the pack adds, naming the pack's schemas", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("model/feature-designs/README.md"), "# Feature designs\n\nOne file per feature design, written against `meta/software/feature-design-schema.md`.\n");
+  const contexts = writes.get("model/bounded-contexts/README.md");
+  assert.match(contexts, /^# Bounded contexts\n\nOne folder per bounded context, written against `meta\/software\/bounded-context-schema\.md`/);
+  assert.ok(contexts.includes("its concept designs in `concept-designs/` against `meta/software/concept-design-schema.md`"));
+  assert.ok(writes.get("model/skills/README.md").includes("`meta/core/skill-schema.md`"));
+});
+
+test("--folders can name a pack's root folder, and without a pack it is still refused as before", () => {
+  const packs = new Map([["software", new Map()]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs, folders: ["bounded-contexts"] });
+  assert.ok(writes.has("model/bounded-contexts/README.md") && !writes.has("model/feature-designs/README.md"));
+  const refused = initPlan({ ...INIT_ARGS, folders: ["bounded-contexts"] });
+  assert.match(refused.refused, /bounded-contexts is no folder of core; the folders are /);
+});
+
+test("an init without a pack writes no folder README of a pack", () => {
+  const { writes } = initPlan(INIT_ARGS);
+  assert.ok(![...writes.keys()].some((p) => p.includes("bounded-contexts") || p.includes("feature-designs")));
+});
+
+test("an upgrade that takes a pack writes its root folders' READMEs once, and names them as given", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, given } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.match(writes.get("model/feature-designs/README.md"), /meta\/software\/feature-design-schema\.md/);
+  assert.ok(given.includes("model/bounded-contexts/README.md"));
+  assert.ok(!writes.has("model/README.md"));
+  const listed = upgradePlan({ ...UPGRADE_ARGS, manifest: { ...manifest, packs: ["software"] }, packs, held: new Map() });
+  assert.ok(!listed.writes.has("model/bounded-contexts/README.md"));
+});
