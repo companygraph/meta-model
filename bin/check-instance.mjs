@@ -34,12 +34,18 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, isNewer, MODEL, IMAGE_FILE } from "../lib/checks.mjs";
 import { hashOf, unixLines } from "../lib/instance-files.mjs";
+/** @import { InstanceFiles } from "../lib/instance.mjs" */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8")).version;
 
+/**
+ * @param {string} path
+ * @returns {number}
+ */
 export function checkPath(path) {
   const root = resolve(path);
+  /** @type {(message: string) => never} */
   const die = (message) => {
     throw new Error(message);
   };
@@ -78,7 +84,9 @@ export function checkPath(path) {
   for (const rel of [MODEL, core])
     if (!existsSync(join(root, rel))) die(`${root} has no ${rel}/`);
 
+  /** @type {InstanceFiles} */
   const files = new Map();
+  /** @param {string} rel */
   const walk = (rel) => {
     for (const entry of readdirSync(join(root, rel))) {
       const child = `${rel}/${entry}`;
@@ -150,7 +158,7 @@ if (ranDirectly()) {
   try {
     process.exit(checkPath(process.argv[2] ?? ".") ? 1 : 0);
   } catch (error) {
-    console.error(`✗ ${error.message}`);
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
     process.exit(1);
   }
 }

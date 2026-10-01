@@ -1,8 +1,10 @@
-# GitHub Actions only, and that is the whole of it. package.json here declares no
-# dependencies of any kind — `verify/check.mjs` runs on the standard library, there is no
-# lockfile, and ci.yml deliberately skips `npm ci` because it would fail rather than pass
-# emptily. An npm block would be a permanent no-op that reads like coverage, so there
-# isn't one. Add it the day this repository grows a dependency, not before.
+# GitHub Actions, and the compiler. package.json declares no runtime dependency: what a consumer
+# installs is the committed JavaScript and declarations and nothing else. TypeScript and Node's
+# types are devDependencies, run in CI only to hold the committed declarations to the JSDoc, so a
+# bump arrives grouped, on its own, and is read before it is merged: a new compiler can write
+# different declarations from the same JSDoc, and then build:check fails until `npm run build` is
+# run and its output committed. Node's types stay on the major of `engines`, since the code runs
+# on Node 22.
 version: 2
 updates:
   - package-ecosystem: "github-actions"
@@ -13,3 +15,14 @@ updates:
       actions:
         patterns:
           - "*"
+  - package-ecosystem: "npm"
+    directory: "/"
+    schedule:
+      interval: "weekly"
+    groups:
+      compiler:
+        patterns:
+          - "*"
+    ignore:
+      - dependency-name: "@types/node"
+        update-types: ["version-update:semver-major"]
