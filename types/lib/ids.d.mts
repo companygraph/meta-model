@@ -8,7 +8,7 @@ export declare function uuidv7(ms?: number, random?: ArrayLike<number>): string;
 /** @param {string} id */
 export declare const msOf: (id: string) => number;
 export type IdFormat = {
-    format: string;
+    format: "uuidv7" | "pattern";
     test: (id: string) => boolean;
     error?: undefined;
 } | {
