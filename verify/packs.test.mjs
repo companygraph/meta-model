@@ -88,3 +88,36 @@ test("a pack type whose schema is absent is reported as skipped, as a core type 
   const { skipped } = checkInstance(files, { core: "meta/core", model: "model", packs: TOY });
   assert.ok(skipped.includes("widget"));
 });
+
+const r20 = (files, packs) => checkInstance(files, { core: "meta/core", model: "model", packs }).failures.filter((f) => f.endsWith("(R20)"));
+
+test("a core schema that names a pack's type fails", () => {
+  const files = withWidget();
+  files.set("meta/core/source-schema.md", read("source-schema.md").replace("| `url` |", "| `widget` | No | ref → widget | A widget |\n| `url` |"));
+  assert.deepEqual(r20(files, TOY), [
+    "meta/core/source-schema.md: names widget, a type of the toy pack; core names only its own types (R20)",
+  ]);
+});
+
+test("a pack type that takes a core type's name fails", () => {
+  const files = withWidget();
+  files.set("meta/toy/source-schema.md", read("source-schema.md"));
+  const packs = [{ name: "toy", dir: "meta/toy", types: [...WIDGET, { type: "source", folder: "sources" }] }];
+  assert.deepEqual(r20(files, packs), [
+    "meta/toy/source-schema.md: source is a core type's name, and a type's name is unique across every unit an instance takes (R20)",
+  ]);
+});
+
+test("a pack schema that names another pack's type fails", () => {
+  const files = withWidget();
+  files.set("meta/other/gadget-schema.md", WIDGET_SCHEMA.replaceAll("Widget", "Gadget").replaceAll("widgets", "gadgets"));
+  files.set("meta/toy/widget-schema.md", WIDGET_SCHEMA.replace("| `source` |", "| `gadget` | No | ref → gadget | A gadget |\n| `source` |"));
+  const packs = [...TOY, { name: "other", dir: "meta/other", types: [{ type: "gadget", folder: "gadgets" }] }];
+  assert.deepEqual(r20(files, packs), [
+    "meta/toy/widget-schema.md: names gadget, a type of the other pack; a pack names core's types and its own (R20)",
+  ]);
+});
+
+test("a pack schema that names core's types and its own passes", () => {
+  assert.deepEqual(r20(withWidget(), TOY), []);
+});

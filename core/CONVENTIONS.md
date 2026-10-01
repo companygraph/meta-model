@@ -56,7 +56,7 @@ Every entity lives under `model/`, and nothing else does. What sits beside it �
 
 The container is what makes the rule closed. Without it, whatever walks an instance needs a list of folders that are *not* content, and such a list is an enumeration: it goes stale the first time somebody adds a directory, and the walk starts reporting a folder nobody meant to describe. With it, "is this an entity?" is answered by where the file is.
 
-A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A file directly under `model/` is a singular type's entity (R6), or an image such an entity names (R9). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
+A folder directly under `model/` is a type's folder and is named by a schema — core's, or any pack the instance declares. A pack is vendored as a unit beside core, under the folder the manifest names, and R20 says what each unit may name. A file directly under `model/` is a singular type's entity (R6), or an image such an entity names (R9). Numbering follows the age of a rule, not its section: this one is newer than R8 and belongs here.
 
 ### R14 — Names are American English, and prose is in the primary locale
 
@@ -81,6 +81,10 @@ An id works like the key of a database row. A deleted row is gone, a consumer th
 ### R19 — A translation is a section of the page it translates
 
 A page carries one `## <locale>` section for every translated locale its instance declares, after every section its schema declares and in the order the locales are declared. The section repeats the page's shape one level down, under the schema's English keys: `### Name` for the H1, `### Statement` for the `>` line, and a `###` for every section the page has, headed as the schema heads it. A table is repeated whole, and every cell that is a reference, a URL, a date or an enum value is the same as the primary's; only free text is translated. A declared locale is complete: every page has its section, and the section has every element the page has. A name in a locale is unique within its type, and within its owner for an owned type, as R2 holds the primary name, and a reference in a locale's prose or grouped headings names the entity by its name in that locale and resolves there (R4). Frontmatter and the primary's tables name an entity by its primary name only.
+
+### R20 — A unit names only what it may
+
+Core names only its own types. A pack names core's types and its own, and no other pack's. A type's name is unique across every unit an instance takes.
 
 ## Schemas
 
