@@ -1472,3 +1472,28 @@ test("upgrade --pack names only the packs the instance did not already list", ()
   run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
   assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
 });
+
+// An instance that took a pack reads the pack's schemas wherever the history commands read the
+// model: a bounded context's page sits in a folder only the pack's schema declares, and without
+// them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
+test("commits and seats read an instance that took the software pack and wrote a bounded context", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q");
+  const page = path.join(root, "model/bounded-contexts/ordering/ordering.md");
+  fs.mkdirSync(path.dirname(page), { recursive: true });
+  fs.writeFileSync(
+    page,
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nclassification: core\n---\n\n# Ordering\n\n> Takes an order and leaves payment to Billing.\n\n## Responsibilities\n\n- Accept an order\n",
+  );
+  g("add", "-A");
+  g("commit", "-qm", "Add the ordering context", "--no-verify");
+  const message = path.join(root, "message.txt");
+  fs.writeFileSync(message, "Add a thing\n");
+  const commits = spawnSync(process.execPath, [cli, "commits", root, "--message", message], { encoding: "utf8", env });
+  assert.equal(commits.status, 0, commits.stdout + commits.stderr);
+  const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
+  assert.equal(seats.status, 0, seats.stdout + seats.stderr);
+});
