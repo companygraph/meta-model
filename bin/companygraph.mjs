@@ -36,6 +36,30 @@ import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../l
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf } from "../lib/checks.mjs";
 import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
+/** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
+/** @import { Governing } from "../lib/seats.mjs" */
+/** @import { UpgradeWrites } from "../lib/plan.mjs" */
+
+/**
+ * An upgrade's plan as this command reads it once a refusal has thrown: a refusal has none of
+ * the fields of a plan.
+ * @typedef {UpgradeWrites | {
+ *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
+ *   given?: undefined; from?: undefined; to?: undefined;
+ * }} UpgradeRead
+ */
+
+/**
+ * What `flags` reads off the command line: the positional arguments, every toggle as true, and
+ * every other flag as the value after it.
+ * @typedef {{
+ *   _: string[];
+ *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
+ *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean;
+ *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; release?: string;
+ *   from?: string; range?: string; message?: string; since?: string;
+ * }} Flags
+ */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"));
@@ -71,10 +95,17 @@ translations: --range <a>..<b>
 // a release ships. Three instances recorded two `.pyc` files in their manifests at 0.50.0 that
 // way, and the checks then failed on files the instance never held. What no release ships is
 // skipped by name, so a polluted install writes exactly what a clean one does.
+/** @param {string} name */
 const unshipped = (name) => name === "__pycache__" || name === ".DS_Store" || name.endsWith(".pyc");
+/**
+ * @param {string} folder
+ * @returns {Map<string, string>}
+ */
 function filesOfThisRelease(folder) {
   const from = join(HERE, "..", folder);
+  /** @type {Map<string, string>} */
   const files = new Map();
+  /** @param {string} rel */
   const walk = (rel) => {
     for (const entry of readdirSync(join(from, rel || "."), { withFileTypes: true })) {
       if (unshipped(entry.name)) continue;
@@ -92,6 +123,7 @@ const coreOfThisRelease = () => filesOfThisRelease("core");
 
 // The agent's skills always come from the release that runs, whatever core is vendored: they are
 // the tooling's, and they read the rules from the instance's own core rather than carrying them.
+/** @param {string} agent */
 const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 
 // Toggles carry no value; `upgrade` also reads --force and --dry-run, so both are named here
@@ -100,17 +132,22 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // eaten or handed to a prompt further down.
 const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill"]);
 
+/**
+ * @param {string[]} argv
+ * @returns {Flags}
+ */
 function flags(argv) {
+  /** @type {Flags} */
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (!arg.startsWith("--")) { out._.push(arg); continue; }
     const name = arg.slice(2);
-    if (TOGGLES.has(name)) { out[name] = true; continue; }
+    if (TOGGLES.has(name)) { /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (out))[name] = true; continue; }
     const value = argv[i + 1];
     if (value === undefined) throw new Error(`--${name} needs a value`);
     if (value.startsWith("--")) throw new Error(`--${name} needs a value, not ${value}`);
-    out[name] = value;
+    /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (out))[name] = value;
     i++;
   }
   return out;
@@ -119,8 +156,14 @@ function flags(argv) {
 // Everything the target folder holds, for the plan's pre-flight; nothing is read of what it says.
 // Keyed with `/` as the plan's paths are: on Windows `relative` answers with `\`, and a key that
 // never matched the plan's let `init --here` see nothing already there.
+/**
+ * @param {string} root
+ * @returns {Set<string>}
+ */
 function present(root) {
+  /** @type {Set<string>} */
   const found = new Set();
+  /** @param {string} base */
   const walk = (base) => {
     for (const entry of readdirSync(base, { withFileTypes: true })) {
       const full = join(base, entry.name);
@@ -136,7 +179,7 @@ function present(root) {
 // Color only for a person at a terminal who has not asked for none, or where FORCE_COLOR asks for it; a pipe, a CI log and a test
 // read the same words without it.
 const COLOR = (Boolean(process.stdout.isTTY) || Boolean(process.env.FORCE_COLOR)) && !process.env.NO_COLOR && process.env.TERM !== "dumb";
-const paint = (code) => (text) => (COLOR ? `\x1b[${code}m${text}\x1b[0m` : String(text));
+const paint = (/** @type {string} */ code) => (/** @type {unknown} */ text) => (COLOR ? `\x1b[${code}m${text}\x1b[0m` : String(text));
 const accent = paint("38;2;90;139;200");
 const bold = paint("1");
 const dim = paint("2");
@@ -144,6 +187,7 @@ const good = paint("32");
 const bad = paint("31");
 
 // A path as a person reads it, with their home as `~`.
+/** @param {string} path */
 const shown = (path) => {
   const full = resolve(path);
   return full === homedir() || full.startsWith(homedir() + sep) ? `~${full.slice(homedir().length)}` : full;
@@ -163,9 +207,12 @@ const banner = () => [
 // them: a reader opened per question drops what the one before it had already buffered, which is
 // every answer after the first when the answers are piped in. At the end of the input a question
 // is answered with nothing and `ended` is set, so a menu run from a pipe ends rather than waits.
+/** @type {ReturnType<typeof createInterface> | null} */
 let reader = null;
 let ended = false;
+/** @type {string[]} */
 const lines = [];
+/** @type {((line: string) => void)[]} */
 const waiting = [];
 // Inside a pick of the menu, a question is left with b or back, or with Ctrl+C, and the menu comes
 // back: `Back` is thrown out of the pick and caught where the menu called it, and what the pick
@@ -173,17 +220,21 @@ const waiting = [];
 // and Ctrl+C ends the run as it always did.
 class Back extends Error {}
 let inPick = false;
+/**
+ * @param {string} question
+ * @returns {Promise<string>}
+ */
 function ask(question) {
   if (!reader) {
     reader = createInterface({ input: process.stdin });
-    reader.on("line", (line) => (waiting.length ? waiting.shift()(line) : lines.push(line)));
+    reader.on("line", (line) => (waiting.length ? /** @type {(line: string) => void} */ (waiting.shift())(line) : lines.push(line)));
     reader.on("close", () => {
       ended = true;
-      while (waiting.length) waiting.shift()("");
+      while (waiting.length) /** @type {(line: string) => void} */ (waiting.shift())("");
     });
   }
   process.stdout.write(question);
-  const answered = lines.length ? Promise.resolve(lines.shift()) : reader.closed ? Promise.resolve("") : new Promise((done) => waiting.push(done));
+  const answered = lines.length ? Promise.resolve(/** @type {string} */ (lines.shift())) : /** @type {{ closed?: boolean }} */ (/** @type {unknown} */ (reader)).closed ? Promise.resolve("") : /** @type {Promise<string>} */ (new Promise((done) => waiting.push(done)));
   // The terminal echoes what is typed, so the menu's record of a pick keeps the answer itself.
   return answered.then((line) => {
     if (line === BACK) throw new Back();
@@ -199,7 +250,7 @@ const BACK = "\u0000back";
 process.on("SIGINT", () => {
   if (inPick && waiting.length) {
     process.stdout.write("\n");
-    waiting.shift()(BACK);
+    /** @type {(line: string) => void} */ (waiting.shift())(BACK);
   } else process.exit(130);
 });
 
@@ -207,9 +258,15 @@ process.on("SIGINT", () => {
 // and what that pick said, never the log of every one before it. `record` collects what a pick
 // writes while it runs, which the next screen draws again as one panel.
 const SCREEN = Boolean(process.stdout.isTTY);
+/** @type {string[] | null} */
 let record = null;
+/** @param {NodeJS.WriteStream} stream */
 function recorded(stream) {
-  const write = stream.write.bind(stream);
+  const write = /** @type {(...args: unknown[]) => boolean} */ (stream.write.bind(stream));
+  /**
+   * @param {string | Uint8Array} chunk
+   * @param {unknown[]} rest
+   */
   stream.write = (chunk, ...rest) => {
     record?.push(String(chunk));
     return write(chunk, ...rest);
@@ -218,6 +275,11 @@ function recorded(stream) {
 const clear = () => process.stdout.write("\x1b[H\x1b[2J\x1b[3J");
 
 // The latest pick and what it said, behind a bar in green when it went through and red when not.
+/**
+ * @param {string} label
+ * @param {boolean} ok
+ * @param {string} text
+ */
 function panel(label, ok, text) {
   const bar = ok ? good : bad;
   const said = text.replace(/^\s*\n/, "").trimEnd().split("\n");
@@ -229,6 +291,10 @@ function panel(label, ok, text) {
 }
 
 // `menu` is set when the menu calls it, which says what comes next itself.
+/**
+ * @param {string[]} argv
+ * @param {{ menu?: boolean }} [options]
+ */
 async function init(argv, { menu = false } = {}) {
   const given = flags(argv);
   const root = given._[0] ?? ".";
@@ -237,7 +303,7 @@ async function init(argv, { menu = false } = {}) {
   const found = present(root);
   if (!given.here && found.size > 0)
     throw new Error(`${root} is not empty; pass --here to add an instance to it.`);
-  const agent = given.agent ?? (AGENTS.length === 1 ? AGENTS[0] : await ask(`Which agent? (${AGENTS.join(", ")}) `));
+  const agent = given.agent ?? (AGENTS.length === 1 ? /** @type {string} */ (AGENTS[0]) : await ask(`Which agent? (${AGENTS.join(", ")}) `));
   const name = given.name ?? (await ask("What is this instance called? "));
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
@@ -258,14 +324,14 @@ async function init(argv, { menu = false } = {}) {
     hook: !given["no-hook"],
   });
   if (plan.refused) throw new Error(plan.refused);
-  const written = writePlan(root, plan.writes);
+  const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
   console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company and -consent skills; export and surface need Python 3`);
-  console.log(`  core ${JSON.parse(core.get("manifest.json")).version}, vendored under ${given.schemas ?? "meta"}/core/`);
-  const folders = [...plan.writes.keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
+  console.log(`  core ${JSON.parse(/** @type {string} */ (core.get("manifest.json"))).version}, vendored under ${given.schemas ?? "meta"}/core/`);
+  const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
-  if (plan.writes.has(".companygraph/hooks/commit-msg")) {
+  if (/** @type {Map<string, string>} */ (plan.writes).has(".companygraph/hooks/commit-msg")) {
     chmodSync(join(root, ".companygraph/hooks/commit-msg"), 0o755);
     // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
     // instance's position under the repository's own top, whatever that top resolves to on this
@@ -303,6 +369,7 @@ async function init(argv, { menu = false } = {}) {
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
 }
 
+/** @param {string[]} argv */
 async function upgrade(argv) {
   const given = flags(argv);
   const root = given._[0] ?? ".";
@@ -312,10 +379,12 @@ async function upgrade(argv) {
   try {
     manifest = JSON.parse(readFileSync(manifestPath, "utf8"));
   } catch (error) {
-    throw new Error(`${manifestPath} could not be read as JSON: ${error.message}`);
+    throw new Error(`${manifestPath} could not be read as JSON: ${/** @type {Error} */ (error).message}`);
   }
   // Read with `\n` line ends, as the hashes they are compared against were taken.
+  /** @param {string} path */
   const read = (path) => unixLines(readFileSync(path, "utf8"));
+  /** @type {Map<string, string>} */
   const held = new Map();
   for (const path of Object.keys(manifest.files ?? {}))
     if (existsSync(join(root, path))) held.set(path, read(join(root, path)));
@@ -344,6 +413,7 @@ async function upgrade(argv) {
   const exportPaths = [...exportFilesFor({ name }).keys()];
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
+  /** @type {UpgradeRead} */
   const plan = upgradePlan({
     core,
     skills,
@@ -358,40 +428,40 @@ async function upgrade(argv) {
     present: new Set(exportPaths.filter((path) => existsSync(join(root, path)))),
   });
   if (plan.refused) throw new Error(plan.refused);
-  if (plan.writes.size === 0 && plan.removes.length === 0) {
+  if (/** @type {Map<string, string>} */ (plan.writes).size === 0 && /** @type {string[]} */ (plan.removes).length === 0) {
     console.log(`already on core ${plan.to}; nothing to do.`);
     return "nothing";
   }
   if (given["dry-run"]) {
     console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
-    for (const path of plan.writes.keys()) console.log(`  write   ${path}`);
-    for (const path of plan.removes) console.log(`  remove  ${path}`);
+    for (const path of /** @type {Map<string, string>} */ (plan.writes).keys()) console.log(`  write   ${path}`);
+    for (const path of /** @type {string[]} */ (plan.removes)) console.log(`  remove  ${path}`);
     return "planned";
   }
   // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
   // core: a plan is data, a delete cannot be undone, and this is checked before a single file
   // moves rather than trusting that the refusal above can never have a gap of its own.
   const rootResolved = resolve(root);
-  for (const path of plan.removes) {
+  for (const path of /** @type {string[]} */ (plan.removes)) {
     const target = resolve(root, path);
     if (target !== rootResolved && !target.startsWith(rootResolved + sep))
       throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
   }
 
-  const written = writePlan(root, plan.writes);
-  for (const path of plan.removes) rmSync(join(root, path), { force: true });
-  console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${plan.removes.length} removed`);
-  if (plan.given.length) console.log(`  written, since the instance had none, and its own from now on: ${plan.given.join(", ")}`);
+  const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
+  for (const path of /** @type {string[]} */ (plan.removes)) rmSync(join(root, path), { force: true });
+  console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${/** @type {string[]} */ (plan.removes).length} removed`);
+  if (/** @type {string[]} */ (plan.given).length) console.log(`  written, since the instance had none, and its own from now on: ${/** @type {string[]} */ (plan.given).join(", ")}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
   // said of a file it does not fit.
-  if (plan.edited.length) console.log(`  overwritten, as --force asked: ${plan.edited.join(", ")}`);
+  if (/** @type {string[]} */ (plan.edited).length) console.log(`  overwritten, as --force asked: ${/** @type {string[]} */ (plan.edited).join(", ")}`);
   // A file the instance had deleted is written fresh only where the new core still ships it; one
   // the new core has dropped as well is not written at all, and saying so is the difference
   // between naming what happened and naming what was planned.
-  const rewritten = plan.missing.filter((path) => plan.writes.has(path));
-  const dropped = plan.missing.filter((path) => !plan.writes.has(path));
+  const rewritten = /** @type {string[]} */ (plan.missing).filter((path) => /** @type {Map<string, string>} */ (plan.writes).has(path));
+  const dropped = /** @type {string[]} */ (plan.missing).filter((path) => !/** @type {Map<string, string>} */ (plan.writes).has(path));
   if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
   // A release can make a valid instance invalid, so the instance is checked where it now stands
@@ -407,7 +477,7 @@ async function upgrade(argv) {
     if (owed > 0)
       console.log(`  the upgrade stands; ${owed} problem${owed === 1 ? "" : "s"} above ${owed === 1 ? "is" : "are"} the model's to fix`);
   } catch (error) {
-    console.error(`✗ ${error.message}`);
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
     console.log("  the upgrade stands; the check above could not be run");
   }
   return "done";
@@ -429,6 +499,7 @@ async function upgrade(argv) {
 // offers to quit it the way its menu does and reopen it with the vault, and on a no the way in is
 // Obsidian's own, Open folder as vault, and is said. A vault that is not an instance takes all of it too,
 // since the plugin's own `Make this vault an instance` is one way to make one.
+/** @param {string[]} argv */
 async function obsidian(argv) {
   const given = flags(argv);
   const vault = given._[0] ?? ".";
@@ -530,7 +601,7 @@ async function obsidian(argv) {
         opened = true;
         console.log(`${good("✓")} asked Obsidian to open ${shown(vault)}`);
       } catch (error) {
-        console.log(`${bad("✗")} ${error.message}`);
+        console.log(`${bad("✗")} ${/** @type {Error} */ (error).message}`);
       }
     }
   }
@@ -549,11 +620,20 @@ ${steps.map((step, i) => `  ${accent(String(i + 1))}  ${step}`).join("\n")}
 }
 
 // One plugin's install, said: installed, written again, or moved between releases.
+/**
+ * @param {ReturnType<typeof place>} done
+ * @param {CommunityPlugin} plugin
+ * @param {string} [vault]
+ */
 function said(done, plugin, vault) {
   const moved = done.from === null ? `${plugin.name} ${done.to} installed` : done.from === done.to ? `${plugin.name} ${done.to} written again` : `${plugin.name} ${done.from} → ${done.to}`;
   console.log(`${good("✓")} ${moved}${vault ? ` in ${shown(vault)}` : ""}${done.enabled ? ", and switched on" : ""}`);
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {Promise<number>}
+ */
 async function check(argv) {
   // A second door to the same code, so a guard failure must read exactly as it does through
   // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
@@ -561,19 +641,30 @@ async function check(argv) {
   try {
     return checkPath(argv[0] ?? ".") > 0 ? 1 : 0;
   } catch (error) {
-    console.error(`✗ ${error.message}`);
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
     return 1;
   }
 }
 
 // A path as a person types it at the prompt, where no shell expands `~` first.
+/** @param {string} answer */
 const typed = (answer) => (answer === "~" || answer.startsWith("~/") ? join(homedir(), answer.slice(1)) : answer);
+/** @param {string} answer */
 const yes = (answer) => /^y(es)?$/i.test(answer);
 
+/**
+ * @param {string} question
+ * @param {string} [hint]
+ */
 const prompt = (question, hint) => `${accent("›")} ${bold(question)}${hint ? ` ${dim(`(${hint})`)}` : ""} `;
 
 // A folder asked for, with `.` taken on Enter where there is a fallback and none asked for where a
 // folder must be named.
+/**
+ * @param {string} question
+ * @param {string} [fallback]
+ * @returns {Promise<string>}
+ */
 async function folder(question, fallback) {
   const answer = typed(await ask(prompt(question, fallback ? "Enter for this folder" : "a path; it is made if it is missing")));
   if (answer) return answer;
@@ -590,6 +681,7 @@ const REFUSED = 3;
 // leaves below the trailers when an editor opened it; "" when the message has none. A literal
 // "this commit" here would print twice over in the refusal below, once for the missing sha and
 // once for the subject.
+/** @param {string} messageFile */
 function subjectOf(messageFile) {
   for (const line of readFileSync(messageFile, "utf8").split("\n")) {
     const trimmed = line.trim();
@@ -598,6 +690,10 @@ function subjectOf(messageFile) {
   return "";
 }
 
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
 function commits(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -632,6 +728,10 @@ function commits(argv) {
 // clones: a member with no clone at its local path is named as not read.
 const NO_ORG_INSTANCE = "no instance of its organization on this disk";
 
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
 function seats(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -644,8 +744,9 @@ function seats(argv) {
   // identity the tally also accepts as the owner's, distinct from a member's own governing
   // instance in a family. A family read from a folder that is no instance itself has none.
   const reportingIdentity = isInstance(root) ? governingOf(readInstance(root)) : null;
+  /** @param {string} repo */
   const orgOf = (repo) => repo.split("/")[0];
-  let targets, unread;
+  let /** @type {{ repo: string; path: string; governing: Governing }[]} */ targets, /** @type {{ repo: string; path: string; reason?: string }[]} */ unread;
   if (members) {
     // A member's local path is on disk only when it is itself a checkout's own top: a plain
     // folder sitting inside another checkout (nested by accident, or a build's own copy) has a
@@ -654,13 +755,14 @@ function seats(argv) {
     // dir (macOS) or a short name (Windows) can render the same folder two ways.
     const onDisk = members.filter((m) => {
       const memberTop = gitTop(m.path);
-      return Boolean(memberTop) && realpathSync.native(memberTop) === realpathSync.native(m.path);
+      return Boolean(memberTop) && realpathSync.native(/** @type {string} */ (memberTop)) === realpathSync.native(m.path);
     });
     // A member is judged by the instance of its own organization, never by another's: the
     // member's own where it is one, else the first of its organization the table lists.
     const instances = onDisk.filter((m) => isInstance(m.path)).map((m) => ({ ...m, governing: governingOf(readInstance(m.path)) }));
+    /** @param {{ repo: string }} m */
     const governs = (m) => (instances.find((i) => i.repo === m.repo) ?? instances.find((i) => orgOf(i.repo) === orgOf(m.repo)))?.governing;
-    targets = onDisk.filter(governs).map((m) => ({ ...m, governing: governs(m) }));
+    targets = onDisk.filter(governs).map((m) => ({ ...m, governing: /** @type {Governing} */ (governs(m)) }));
     unread = members.flatMap((m) =>
       !onDisk.includes(m) ? [{ repo: m.repo, path: m.path }] : governs(m) ? [] : [{ repo: m.repo, path: m.path, reason: NO_ORG_INSTANCE }]);
   } else {
@@ -672,6 +774,7 @@ function seats(argv) {
   // read against its own repository's governing instance, since a family report can span more
   // than one.
   const judged = targets.flatMap((m) => logOf(m.path, { since }).map((c) => ({ repo: m.repo, email: c.email, name: c.name, ownerName: m.governing.name, judgement: judgeCommit(m.governing, c) })));
+  /** @type {Parameters<typeof renderReport>[0]} */
   const report = { scope: members ? "family" : "repository", since, read: targets.map((m) => m.repo), unread, ...tally(judged, reportingIdentity) };
   console.log(given.json ? JSON.stringify(report, null, 2) : renderReport(report));
   return 0;
@@ -687,6 +790,10 @@ function seats(argv) {
 // an id already on the default branch, or a `--backfill` that a declared `pattern` format or an
 // unreadable identifier file refuses — from a run that could not happen at all: not an instance,
 // neither flag, a malformed range, or a git failure, each of which is 1.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
 function ids(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -697,7 +804,9 @@ function ids(argv) {
   }
   const folder = onCore ? "core" : "model";
   if (given.backfill) {
+    /** @type {Map<string, string>} */
     const files = new Map();
+    /** @param {string} rel */
     const walk = (rel) => {
       for (const entry of readdirSync(join(root, rel), { withFileTypes: true })) {
         const child = `${rel}/${entry.name}`;
@@ -707,8 +816,9 @@ function ids(argv) {
     };
     walk(folder);
     const top = gitTop(root);
+    /** @param {string} rel */
     const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
-    const writes = onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs });
+    const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs }));
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
       return REFUSED;
@@ -747,6 +857,10 @@ function ids(argv) {
 // head's, read from the range's head revision, `<b>`. A refusal, a stale translation or a
 // localization file that cannot be read, exits 3, as `ids` and `commits` do; 1 means the command
 // could not run.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
 function translations(argv) {
   const given = flags(argv);
   const root = resolve(given._[0] ?? ".");
@@ -779,7 +893,7 @@ function translations(argv) {
   // elsewhere in history, and either way the languages that govern the range are the range's
   // head's. A file missing at the head is no declared language, the same as one missing on disk.
   const text = fileAt(root, ends[1], "model/localization.md");
-  const declared = text !== null ? localizationOf(text) : { translated: [] };
+  const declared = /** @type {{ error?: string; translated: string[] }} */ (text !== null ? localizationOf(text) : { translated: [] });
   if (declared.error) {
     console.error(`✗ model/localization.md: ${declared.error} (R19)`);
     return REFUSED;
@@ -804,7 +918,9 @@ function translations(argv) {
   return 0;
 }
 
+/** @returns {Promise<number>} */
 async function menu() {
+  /** @type {[string, string, () => Promise<number>][]} */
   const entries = [
     ["Make a model", "a new instance in a folder, or beside the files already in one", async () => {
       const root = await folder("Which folder?");
@@ -849,6 +965,7 @@ async function menu() {
   // on Ctrl+C, or at the end of piped input. Quit exits 0, since leaving is what was asked; the end
   // of piped input exits with the last pick's code, which is how a test reads what a pick did.
   let code = 0;
+  /** @type {[string, boolean, string] | null} */
   let latest = null;
   for (;;) {
     if (SCREEN) clear();
@@ -915,5 +1032,5 @@ try {
   console.error(error instanceof Error ? error.message : String(error));
   process.exitCode = 1;
 } finally {
-  reader?.close();
+  /** @type {ReturnType<typeof createInterface> | null} */ (reader)?.close();
 }
