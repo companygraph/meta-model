@@ -4,6 +4,8 @@ Core describes what every business has: a vision, strategies, decisions, and fro
 
 Status: decided by the owner on September 30, 2026: core is level 0 and a pack is level 1, an L1 edge to L0 is always optional and L0 never names L1, the bounded context owns what its language defines, a concept design is a term of that language whose kind is entity or value object, a top-level feature design that uses contexts and owns none, strategic classification on the context, relationships as rows on the downstream context, domain events as a type and commands as rows, architecture decisions as core decisions that the L1 side names, `refines` on the page and no type-level specialization, the pack inside meta-model under core's tag, and no change to core's reference grammar: a table that reaches into another context uses the `Type`, `Entity`, `Owner` shape core's `## Rests on` already has (see Reaching into another context).
 
+Amended by the owner on October 1, 2026, after beacon read the merged spec against its own domain model and before the pack was built: an invariant and a scenario carry a label unique within their page, so a test, a spec or a code comment can cite one; a consumed event's row says what the context does in response; an event's payload takes the form a concept design's attributes have; a page drawn from code names that code as its source; read models are named as left out; and an instance made before the pack takes it with `upgrade --pack` (see After beacon's reading).
+
 ## Where this comes from
 
 beacon took up the challenge from the AI Native workshop and asked the chat seven questions first; the pack was one of the five it could not answer. Their thread offers their DDD domain model, drawn from code and checked against it, in CompanyGraph's format. That model is the pack's first outside test, not its source.
@@ -59,7 +61,6 @@ flowchart TB
   AG -- root --> CD
   DE -- emitted-by --> AG
   AG -- members --> CD
-  DE -- payload --> CD
   CD -- relations --> CD
   FD -. refines .-> F
   CD -. refines .-> C
@@ -69,7 +70,7 @@ flowchart TB
   AG -. decisions .-> DEC
 ```
 
-A bounded context is a folder entity (R5, R6) and owns three types (R10); a feature design stands at the top. Every schema carries core's `id`, `source` and `source-id`, a `## References` table, and a Purpose and Writing rules pair, as every core schema does.
+A bounded context is a folder entity (R5, R6) and owns three types (R10); a feature design stands at the top. Every schema carries core's `id`, `source` and `source-id`, a `## References` table, and a Purpose and Writing rules pair, as every core schema does. A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written in the model that code then follows names the code in `## References` as `Implementation`. Each schema's writing rules say so, so an agent or a check knows where to compare the page with the code.
 
 ### bounded-context
 
@@ -81,7 +82,7 @@ The boundary within which one model and one language hold (Evans; Vernon). `# Na
 | `realizes` | No | array of ref → domain | The domains this context serves; many to many (Vernon) |
 | `decisions` | No | array of ref → decision | The decisions that shaped it |
 
-Sections: `## Responsibilities` (bulleted, required), `## Relationships` (table, optional), `## Consumes` (table, optional: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context), `## References`.
+Sections: `## Responsibilities` (bulleted, required), `## Relationships` (table, optional), `## Consumes` (table, optional: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context, `Reaction` as an optional string: what this context does in response, naming the handled command in words, since a command is a row and nothing can reference it), `## References`.
 
 `## Relationships` is written on the downstream context, the side that knows it depends, one row per upstream context; a symmetric pattern is written once, by either side. Its columns: `Context` (ref → bounded-context, the edge), `Pattern` (qualifier, an enum of the DDD Crew's nine: `partnership`, `shared kernel`, `customer/supplier`, `conformist`, `anticorruption layer`, `open host service`, `published language`, `separate ways`, `big ball of mud`). The context map is drawn from these rows and never stored. The events this context consumes are named in `## Consumes`.
 
@@ -108,7 +109,7 @@ A cluster of concept designs kept consistent as one unit, reached only through i
 | `members` | No | array of ref → concept-design | The other concept designs the aggregate holds, beside its root |
 | `decisions` | No | array of ref → decision | The decisions that shaped it |
 
-Sections: `## Invariants` (numbered, one rule each, required), `## Handled commands` (table: `Command`, `Description`), `## State transitions` (optional), `## References`. A command is a row and not a type, because nothing outside its aggregate names it. The members are a field and not a bulleted section, because a list draws no edge. The events an aggregate emits are not written on it: the edge is written once, on the event, as `emitted-by`, and the aggregate's references show it from the other end.
+Sections: `## Invariants` (table, required: `Label`, `Invariant`, one rule per row, the label unique within the aggregate; a table and not a numbered list, because invariants are a set and not a sequence, and a position is no key a test or a code comment can cite), `## Handled commands` (table: `Command`, `Description`), `## State transitions` (optional), `## References`. A command is a row and not a type, because nothing outside its aggregate names it. The members are a field and not a bulleted section, because a list draws no edge. The events an aggregate emits are not written on it: the edge is written once, on the event, as `emitted-by`, and the aggregate's references show it from the other end.
 
 ### domain-event
 
@@ -118,7 +119,7 @@ Something that happened in the domain that other parts of it care about, named i
 | --- | --- | --- | --- |
 | `emitted-by` | Yes | ref → aggregate | The aggregate whose change it records |
 
-Sections: `## Payload` (table: `Concept` as ref → concept-design, `Description`), `## References`. It is a type and not a row of its aggregate because other contexts and feature designs name it.
+Sections: `## Payload` (table: `Attribute`, `Type`, `Description`, in the form a concept design's `## Attributes` has: `Type` is a plain type such as `duration` or `timestamp`, or the name of a concept design in the same context, which a reader follows and which draws no edge), `## References`. It is a type and not a row of its aggregate because other contexts and feature designs name it.
 
 ### feature-design
 
@@ -130,7 +131,7 @@ How a feature is built across the contexts it touches: the solution side of what
 | `contexts` | Yes | array of ref → bounded-context | The contexts it takes part in, at least one |
 | `decisions` | No | array of ref → decision | The decisions that shaped it |
 
-Sections: `## Operational principle` (required: the one scenario that shows why it exists, after Jackson), `## Scenarios` (prose, one `###` per scenario, written Given, When, Then after Gherkin; not `Grouped.`, since a scenario is not an entity a heading could name), `## Uses` (table: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context, one row per concept design or domain event the design touches), `## References`.
+Sections: `## Operational principle` (required: the one scenario that shows why it exists, after Jackson), `## Scenarios` (prose, one `###` per scenario headed `### <Label>: <title>` with the label unique within the feature design, written Given, When, Then after Gherkin; not `Grouped.`, since a scenario is not an entity a heading could name), `## Uses` (table: `Type`, `Entity` as `ref → by Type in Context`, `Context` as ref → bounded-context, one row per concept design or domain event the design touches), `## References`.
 
 ## Architecture decisions
 
@@ -150,7 +151,7 @@ In `## Uses` the Type cell carries information, since a row names a concept desi
 
 The pack lives in `packs/software/` in meta-model: five schemas and a README that lists its sources and what it defers. It is released under core's tag, so a pack is never taken against a core it was not checked with. The first design spec's rule holds: packs start inside the repository until one needs its own release cycle.
 
-`init --pack software` vendors the pack to `meta/software/` in the instance and writes `"packs": ["software"]` to `.companygraph/manifest.json`, which the tooling spec reserved. `check` reads every unit the manifest lists.
+`init --pack software` vendors the pack to `meta/software/` in the instance and writes `"packs": ["software"]` to `.companygraph/manifest.json`, which the tooling spec reserved. `check` reads every unit the manifest lists. `upgrade --pack software` does the same for an instance made before it took the pack: it vendors the pack at the release the upgrade moves to and adds it to `packs`, so a company can start its instance before the pack ships and take it later without a second `init`.
 
 Three places assume core is the only unit and learn otherwise: `bin/check-instance.mjs`, which hard-codes `core` as the units folder; the `TYPES` constant in `lib/checks.mjs`, beside which a `PACKS` constant states each pack's types as `TYPES` states core's, because the folder, owner and filename form a check needs are stated there and never derived; and `parseSchemas` in `lib/instance.mjs`, whose `address` still reads `core/<type>` for whatever reads a type and will read `<unit>/<type>`. A schema's id is untouched: a pack schema carries one as core's do. The parser then receives core's and the pack's schemas as one map, as the typed-resolution spec already says.
 
@@ -158,19 +159,27 @@ Three checks are added, each holding one sentence of a new rule after R19: a sch
 
 > **R20 — A unit names only what it may.** Core names only its own types. A pack names core's types and its own, and no other pack's. A type's name is unique across every unit an instance takes.
 
+One check is the pack's own and not a rule of the vocabulary: a label in an aggregate's `## Invariants` and in a feature design's `## Scenarios` is a token of letters, digits and hyphens, and no two on one page are the same. It holds what a citation from outside needs and nothing more. A label that changes still breaks the citations that use it, as a renamed file breaks a link, and no check can see those from inside the model.
+
 The MCP server, the chat and the Obsidian plugin see the pack's types through the parser with no change of their own. That is proved with one `list_types` against the fixture instance, not assumed.
 
 Translations follow R19 unchanged: a pack schema's elements have paths as core's do, and a page of a pack type carries its locale sections like any other.
 
 ## How it is proved
 
-`verify/` gains a fixture instance that takes the pack: one bounded context with an entity and a value-object concept design, an aggregate rooted in the entity, an event it emits, a second context whose Relationships row names the first and whose Consumes row names that event, and one feature design that refines a core feature and names both contexts. Every new check is first shown to fail on a fixture broken for it, and then to pass on the fixed one.
+`verify/` gains a fixture instance that takes the pack: one bounded context with an entity and a value-object concept design, an aggregate rooted in the entity, an event it emits, a second context whose Relationships row names the first and whose Consumes row names that event, and one feature design that refines a core feature and names both contexts. The aggregate carries labelled invariants, the feature design labelled scenarios, the Consumes row a reaction and the event a payload with a plain type and a concept design. Every new check is first shown to fail on a fixture broken for it, and then to pass on the fixed one.
 
 The first real use is CompanyGraph's own. It builds software, so `companygraph/mental-model` takes the pack and describes one context, the parser's resolution, which "Run on what we publish" asks of anything shipped. beacon's model follows as a feature request that points at this spec and a pull request to their own instance, not to core.
 
 ## What was left out
 
-Services, repositories, factories and modules: nothing in the owner's instances or beacon's thread needs them yet. C4's system, container and component, which describe deployment rather than design; a C4 pack or a later version of this one can realize bounded contexts. A context-relationship type, since the row already draws the edge. Commands as a type. Subdomain as a type, since core's domain serves. A `level` field. Jackson's concept as a type, since its operational principle lives in the feature design. Supersession on decisions.
+Services, repositories, factories and modules: nothing in the owner's instances or beacon's thread needs them yet. C4's system, container and component, which describe deployment rather than design; a C4 pack or a later version of this one can realize bounded contexts. A context-relationship type, since the row already draws the edge. Commands as a type. Subdomain as a type, since core's domain serves. A `level` field. Jackson's concept as a type, since its operational principle lives in the feature design. Supersession on decisions. Read models and policies as types, from Event Modeling: a policy is the `Reaction` on a Consumes row, and a read model, the view built from events, waits for an instance that writes one, beacon's first context being the likely one.
+
+## After beacon's reading
+
+beacon read the merged spec against its own domain model and asked six questions before the build began. Four changed the spec. Its invariants carry labels such as `INV-T1` that specs, tests and code comments cite, and a numbered list breaks every one of them on a reorder; its acceptance criteria are Given, When, Then scenarios tied to the tests that prove them; its model is built on Event Modeling, so a context reacts to the events it consumes; and its events carry plain values beside the concepts they name. Each now has a place, above. The fifth, where a context's code is, needed one sentence on what `source` already means. The sixth asked whether `classification: core` was kept on purpose beside core the vocabulary: it was, because it is the DDD Crew's word and the one practitioners know, and the schema says why. An invariant as a #217 rule was weighed and left: a rule binds seats, processes and phases across the company, and an invariant binds one aggregate.
+
+The payload's change costs an edge. A `Concept` column drew one from the event to each concept design it carried; a `Type` column draws none, as a concept design's attributes draw none. Nobody had asked for the edge, and one form for attributes and payload is one thing to learn.
 
 ## Out of scope
 
