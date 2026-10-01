@@ -6,7 +6,7 @@
 
 **Architecture:** Removal first, then the new form. Task 1 takes R19 out of the code — the three checks, the parser's `translations`, the `translations` command and its workflow step, the git helpers only it used — leaving `lib/localization.mjs` with the old reader alone. Task 2 gives the singleton its `locale` field: the schema, the reader, the page `init` writes, the example, a migration function and one R14 check that the field is a language tag. Task 3 has `upgrade` apply the migration. Task 4 takes R19 out of the rules and the prose.
 
-**Tech Stack:** Node 22 ES modules with no dependencies, `node --test`, git.
+**Tech Stack:** Node 22 ES modules with no runtime dependencies, `node --test`, git. Types are JSDoc in `lib/` and `bin/`; `tsc`, a dev dependency, checks them and writes the declarations a consumer reads into `types/`, which is committed.
 
 **Spec:** `docs/superpowers/specs/2026-10-01-one-language-per-model-design.md`
 
@@ -15,16 +15,19 @@ This plan covers meta-model only. The conventions release that takes the model-G
 ## Global Constraints
 
 - R14's heading becomes `### R14 — Names are American English, and prose is in the model's language`, and its first paragraph, verbatim: ``Every name this vocabulary chooses is spelled in American English — a field, a type, a folder, a section heading a schema declares — and so is the prose of `core/`. An instance's content is written in the one language its `model/localization.md` names.`` Its later paragraphs stay.
-- R19 is removed whole, and its number is not given to another rule. No file under `lib/`, `bin/`, `core/`, `agents/`, `verify/` or `.github/` cites R19 when the plan is done; `npm run test:rules` fails a citation of a rule `core/CONVENTIONS.md` does not define, and is the guard.
+- R19 is removed whole, and its number is not given to another rule. No file under `lib/`, `bin/`, `core/`, `agents/`, `verify/`, `types/` or `.github/` cites R19 when the plan is done; `npm run test:rules` fails a citation of a rule `core/CONVENTIONS.md` does not define, and is the guard.
 - The singleton keeps type `localization`, schema `core/localization-schema.md`, file `model/localization.md`. Its frontmatter is `id`, `source` and `locale` (all required); its sections are the H1, the `>` statement and an optional `## References`. `## Locales` is gone.
 - `locale` is a language tag matching `/^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/` — `en`, `en-US`, `gsw-CH`, `sr-Latn-RS`. No list of known languages is held.
 - The page `init` writes, verbatim for `en-US`: `---\nid: <id>\nsource: <source>\nlocale: en-US\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n`
 - A core whose `localization-schema.md` declares no `locale` field is older than this release: the R14 check reads nothing, and `upgrade` does not rewrite toward it.
 - `upgrade` refuses, writing nothing, a localization page that declares a `translated` row.
 - The package export `./localization` stays, now serving `LANGUAGE_TAG`, `localizationOf` and `migratedLocalization`.
+- Every function or value added or changed under `lib/` or `bin/` carries JSDoc types, as the code around it does; `tsconfig.json` is strict, and `npm run typecheck` is the guard. After every change under `lib/` or `bin/`, `npm run build` rewrites `types/`, and its diff is committed with the change: CI's `npm run build:check` fails a commit whose `types/` is not what the JSDoc builds.
+- **The full run**, which every task ends with: `npm run typecheck && npm run build:check && npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:instance-files && npm run test:ids && npm run test:localization && npm run test:plan && npm run test:rules && npm run test:cli && npm run test:seats && npm run test:untar && npm run test:fetch-core && npm run test:obsidian`, expecting: `typecheck` prints nothing, `build:check` prints `✓ types/ is what the JSDoc in lib/ and bin/ declares`, `verify` prints `✓ … checks passed`, and every suite reports `fail 0`. It is CI's list, in CI's order.
+- Code is found by the text quoted in each step, not by line number; the line numbers an earlier draft gave moved when the types written as JSDoc (#197) landed.
 - No version bump in this plan. The release is breaking in `WORKING.md`'s terms, and its number and notes are the owner's.
 - Every commit is authored `Implementer <implementer@companygraph.io>`, prose in the git register, ending with a `Verified:` line naming the commands actually run, then `Process: Delivery`, `Phase: Implement`, `Track: Code` and the `Co-Authored-By` line.
-- Before any `node` or `gh` command: `export PATH="/opt/homebrew/bin:$PATH"`.
+- Before any `node`, `npm` or `gh` command: `export PATH="/opt/homebrew/bin:$PATH"`. Run `npm ci` once in a fresh worktree, so `tsc` is there.
 
 ## Review Focus
 
@@ -40,31 +43,33 @@ This plan covers meta-model only. The conventions release that takes the model-G
 
 **Files:**
 
-- Modify: `lib/checks.mjs` (import at line 26, `headingOfPath` at lines 326–328, the three checks whose `rule` is `"R19"` at lines 1861–2127, the comment at lines 97–98)
-- Modify: `lib/instance.mjs` (import at line 19, lines 222–226, lines 243–264)
-- Modify: `lib/localization.mjs` (everything below `localizationOf`)
-- Modify: `lib/history.mjs` (`isCommit`, `fileAt`, `mergeBaseOf`, `trailerValuesOf`, lines 117–165)
-- Modify: `bin/companygraph.mjs` (usage lines 15, 54, 62; imports at 34 and 38; `translations` at 745–804; dispatch at 907)
-- Modify: `.github/workflows/instance-check.yml` (lines 53–57)
-- Test: `verify/localization.test.mjs`, `verify/localization-file.test.mjs`, `verify/instance.test.mjs`, `verify/history.test.mjs`, `verify/cli.test.mjs`
+- Modify: `lib/checks.mjs` (the `./localization.mjs` import and its comment, `headingOfPath`, the three checks whose `rule` is `"R19"`, the comment on the `localization` singular entry)
+- Modify: `lib/instance.mjs` (the `./localization.mjs` import, the `Entity` typedef's `translations`, the `Translation` typedef, the parser's language-section block)
+- Modify: `lib/localization.mjs` (everything below `localizationOf`, the `@import`, the `LanguageSections` typedef)
+- Modify: `lib/history.mjs` (`isCommit`, `fileAt`, `mergeBaseOf`, `trailerValuesOf`)
+- Modify: `lib/plan.mjs` (one comment)
+- Modify: `bin/companygraph.mjs` (usage, help, imports, `translations`, its dispatch)
+- Modify: `.github/workflows/instance-check.yml` (the `translations` step)
+- Modify: `types/lib/history.d.mts`, `types/lib/instance.d.mts`, `types/lib/localization.d.mts` (written by `npm run build`)
+- Test: `verify/localization.test.mjs`, `verify/localization-file.test.mjs`, `verify/instance.test.mjs`, `verify/history.test.mjs`, `verify/cli.test.mjs`, `verify/plan.test.mjs`
 
 **Interfaces:**
 
-- Produces: `lib/localization.mjs` exporting `LANGUAGE_TAG` and `localizationOf(text) → { primary: string, translated: string[] } | { error: string }`, unchanged, and nothing else. Task 2 replaces `localizationOf`.
-
-Line numbers are as of `3a12e16`; delete bottom-up within a file so the earlier numbers hold, or find each block by the text quoted.
+- Produces: `lib/localization.mjs` exporting `LANGUAGE_TAG` and `localizationOf(text) → Localization`, the `{ primary, translated } | { error }` reader, unchanged, and nothing else. Task 2 replaces `localizationOf`.
 
 - [ ] **Step 1: Delete the tests of what goes**
 
-In `verify/cli.test.mjs`, delete from line 1206 (the blank line after the `ids --range on a folder that holds core` test's closing `});`) to the end of the file: every test named `translations --range …`.
+In `verify/cli.test.mjs`, delete from the blank line after the closing `});` of the test `ids --range on a folder that holds core refuses a commit that changed a schema's id` to the end of the file: every test named `translations --range …`.
 
-In `verify/history.test.mjs`, delete the two tests from the comment ``// Review fix 5: `translations` needs a revision's file`` (line 95) to the end of the file, and take `fileAt, isCommit` out of the import on line 7.
+In `verify/history.test.mjs`, delete the two tests from the comment ``// Review fix 5: `translations` needs a revision's file`` to the end of the file, and take `fileAt, isCommit` out of the import from `../lib/history.mjs`.
 
-In `verify/instance.test.mjs`, delete from `// The localization schema joins the fixture's` (line 1364) through the end of the test `a page's language section leaves its sections and arrives as its translation`, and delete the test `the same tag-shaped heading stays a section where localization.md declares only the primary`. Keep `an instance that declares no translated language parses exactly as before`, renamed `no entity carries translations`, and keep `a tag-shaped heading the instance never declares as translated stays a section, with no localization.md at all`.
+In `verify/instance.test.mjs`, delete from `// The localization schema joins the fixture's` through the end of the test `a page's language section leaves its sections and arrives as its translation`, and delete the test `the same tag-shaped heading stays a section where localization.md declares only the primary`. Keep `an instance that declares no translated language parses exactly as before`, renamed `no entity carries translations`, and keep `a tag-shaped heading the instance never declares as translated stays a section, with no localization.md at all`.
 
-In `verify/localization-file.test.mjs`, delete from `const LOC = (rows, extra = "") =>` (line 31) to the end of the file; the three tests above it stay.
+In `verify/localization-file.test.mjs`, delete from `const LOC = (rows, extra = "") =>` to the end of the file; the three tests above it stay.
 
-In `verify/localization.test.mjs`, change the import to `import { LANGUAGE_TAG, localizationOf } from "../lib/localization.mjs";`, keep the `LOCALIZATION` helper, the four tests from `a language tag is lowercase first` through ``a `## Locales` table without a separator row is refused``, and the test `companygraph-meta-model/localization resolves by the package's own name`, and delete every other test and helper.
+In `verify/localization.test.mjs`, change the import to `import { LANGUAGE_TAG, localizationOf } from "../lib/localization.mjs";`, keep the `LOCALIZATION` helper, the four tests from `a language tag is lowercase first` through ``a `## Locales` table without a separator row is refused``, and the test `companygraph-meta-model/localization resolves by the package's own name` with its `// Review fix 9` comment, and delete every other test and helper.
+
+Three comments outside the code that goes still name R19, and Task 1's own grep below finds them: in `verify/cli.test.mjs` change `an instance made before R19's schema landed` to `an instance made before the localization schema landed`, and `stands in for a release from before R19, which is` to `stands in for a release from before the localization schema, which is`; in `verify/plan.test.mjs` change `a core that grows R19's localization` to `a core that grows the localization`.
 
 - [ ] **Step 2: Run the trimmed suites**
 
@@ -72,7 +77,7 @@ Run `npm run test:localization && npm run test:seats`, expecting: PASS. This is 
 
 - [ ] **Step 3: Remove the R19 checks**
 
-In `lib/checks.mjs`, delete the three check objects from the `{` before `// R19's completeness: a page carries a section for every language` through the `},` that closes the check named `a language keeps the page's structure, and names its entities in its own words` — every object with `rule: "R19"`; the next object kept opens with ``// R9: `## Frontmatter` says whether a field may be absent``. Delete `headingOfPath` and its comment line. Replace lines 25–26 with nothing (the comment and the import). Change the comment on the `localization` singular entry to:
+In `lib/checks.mjs`, delete the three check objects from the `{` before `// R19's completeness: a page carries a section for every language` through the `},` that closes the check named `a language keeps the page's structure, and names its entities in its own words` — every object with `rule: "R19"`; the next object kept opens with ``// R9: `## Frontmatter` says whether a field may be absent``. Delete `headingOfPath` with its comment line and its `/** @param {string} path */` line. Delete the comment `// And the readers of a model's languages (R14, R19), which this file holds every page to.` and the `./localization.mjs` import below it. Change the comment on the `localization` singular entry to:
 
 ```js
   // An instance is written in one language (R14), so its declaration is one file in the
@@ -83,25 +88,27 @@ Run `grep -n "R19\|localization.mjs\|languageSectionsOf\|asPage" lib/checks.mjs`
 
 - [ ] **Step 4: The parser reads a page's body whole**
 
-In `lib/instance.mjs`, delete the import on line 19, the five lines from `// R19: the languages every page is translated into` through `const translatedTags = …`, and replace the block from `// A page's language sections are not sections its schema declares` through `if (Object.keys(translations).length) entity.translations = translations;` with:
+In `lib/instance.mjs`, delete the `./localization.mjs` import; in the `Entity` typedef delete the line ` * @property {Record<string, Translation>} [translations]`; delete the whole `Translation` typedef block, from `/**` before ` * A page in one translated language (R19)` through its ` */`; delete the five lines from `// R19: the languages every page is translated into` through `const translatedTags = …`; and replace the block from `// A page's language sections are not sections its schema declares` through `if (Object.keys(translations).length) entity.translations = translations;` with:
 
 ```js
     const { name, tagline, sections } = parseBody(body);
-    const entity = { id: self.id, address: self.id, type, name, tagline, fields, sections,
-                     owner: self.ownerId, path: sub + path };
+    const entity = /** @type {Entity} */ ({ id: self.id, address: self.id, type, name, tagline, fields, sections,
+                     owner: self.ownerId, path: sub + path });
 ```
 
-Run `grep -n "R19\|translat\|localization" lib/instance.mjs`, expecting: no output.
+Run `grep -n "R19\|translat\|localization" lib/instance.mjs`, expecting: two lines only, the comments on a period's kind that say a renderer `translates it` — nothing about a language.
 
 - [ ] **Step 5: The `translations` command and its step go**
 
-In `bin/companygraph.mjs`: delete the usage line `//   companygraph translations [<folder>] --range <a>..<b>`, the help lines `translations [<folder>]  refuse (exit 3) …` and `translations: --range <a>..<b>`, the whole `translations` function with its leading comment (`// R19's history half:` through its closing `}`), and the dispatch `else if (command === "translations") process.exitCode = translations(rest);`. Change the import on line 38 to nothing (delete it), and the import on line 34 to:
+In `bin/companygraph.mjs`: delete the usage line `//   companygraph translations [<folder>] --range <a>..<b>`, the help lines `translations [<folder>]  refuse (exit 3) …` and `translations: --range <a>..<b>`, the whole `translations` function with its leading comment and JSDoc (`// R19's history half:` through its closing `}` and the blank line after it), and the dispatch `else if (command === "translations") process.exitCode = translations(rest);`. Delete the import `import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";`, and change the import from `../lib/history.mjs` to:
 
 ```js
 import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
 ```
 
-In `lib/history.mjs`, delete `isCommit`, `fileAt`, `mergeBaseOf` and `trailerValuesOf` with their comments. Keep `TRAILER`, which `logOf` uses.
+In `lib/history.mjs`, delete `isCommit`, `fileAt`, `mergeBaseOf` and `trailerValuesOf` with their comments and JSDoc, from `// Whether a revision resolves to a commit, without throwing` to the JSDoc of `familyOf`. Keep `TRAILER`, which `logOf` uses, and the `unixLines` import, which `readInstance` uses.
+
+In `lib/plan.mjs`, in the comment above the localization block, change ``// R19's own page, `model/localization.md`, is not vendored`` to ``// The localization page, `model/localization.md`, is not vendored``.
 
 In `.github/workflows/instance-check.yml`, delete the five lines from `# R19: a change to the primary reaches every translation` through the `run:` of `every change to the primary reached its translations`.
 
@@ -117,24 +124,26 @@ Replace the file's header comment with:
 // checks and the upgrade share it, and it bundles for the Obsidian plugin.
 ```
 
-Delete everything after the closing `}` of `localizationOf`: `languageSectionsOf`, `normalizeRow`, `withoutGroupedHeadings`, `normalized`, `staleTranslationsOf`, `asPage`, `splitSections`, `primaryElementsOf`, `translationElementsOf` and their comments. Delete `FENCE` too. Keep `LANGUAGE_TAG`, `FRONTMATTER`, `withoutFrontmatter` (no longer exported: drop its `export`, since only `localizationOf` uses it) and `localizationOf`.
+Delete the line `/** @import { PageChange } from "./history.mjs" */`, the `LanguageSections` typedef block, and everything after the closing `}` of `localizationOf`: `languageSectionsOf`, `normalizeRow`, `withoutGroupedHeadings`, `normalized`, `staleTranslationsOf`, `asPage`, `splitSections`, `primaryElementsOf`, `translationElementsOf` and their comments and JSDoc. Delete `FENCE` too. Keep `LANGUAGE_TAG`, `FRONTMATTER`, `withoutFrontmatter` (no longer exported: drop its `export`, since only `localizationOf` uses it), the `Localization` typedef and `localizationOf`.
 
-- [ ] **Step 7: Run everything**
+- [ ] **Step 7: Build the declarations, and run everything**
 
-Run `npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:instance-files && npm run test:ids && npm run test:localization && npm run test:plan && npm run test:rules && npm run test:cli && npm run test:seats`, expecting: every suite passes; `verify` prints `✓ … checks passed`.
+Run `npm run build`, expecting: `git status --short types` lists `types/lib/history.d.mts`, `types/lib/instance.d.mts` and `types/lib/localization.d.mts`, and nothing else.
 
-Run `grep -rln "R19" lib bin agents .github verify/*.mjs`, expecting: no output from `lib`, `bin`, `.github` or `verify`; `agents/` is Task 4's.
+Run the full run (Global Constraints), expecting: it passes.
+
+Run `grep -rln "R19" lib bin agents .github types verify/*.mjs`, expecting: no output from `lib`, `bin`, `.github`, `types` or `verify`; `agents/` is Task 4's.
 
 - [ ] **Step 8: Commit**
 
 ```bash
-git add -A lib bin verify .github
+git add -A lib bin types verify .github
 git commit --author "Implementer <implementer@companygraph.io>" -F - <<'EOF'
 R19 leaves the checks, the parser and the CLI
 
-A model is written in one language, so nothing reads a page's language sections any more: the three R19 checks, the parser's translations, the translations command with the workflow step that ran it, and the git helpers only that command used are removed with their tests. lib/localization.mjs keeps the reader of model/localization.md alone, in its current form, until the next commit gives the file its locale field.
+A model is written in one language, so nothing reads a page's language sections any more: the three R19 checks, the parser's translations with their Translation type, the translations command with the workflow step that ran it, and the git helpers only that command used are removed with their tests, and the declarations in types/ are rebuilt to match. lib/localization.mjs keeps the reader of model/localization.md alone, in its current form, until the next commit gives the file its locale field.
 
-Verified: npm run verify, test:instance, test:instance-checks, test:instance-files, test:ids, test:localization, test:plan, test:rules, test:cli and test:seats pass; grep finds no R19 under lib, bin, .github or verify.
+Verified: npm run typecheck, build:check, verify and every test suite pass; grep finds no R19 under lib, bin, .github, types or verify.
 
 Process: Delivery
 Phase: Implement
@@ -142,6 +151,8 @@ Track: Code
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 ```
+
+Run `git log -1 --format='[%s]'`, expecting the subject alone between the brackets.
 
 ---
 
@@ -151,18 +162,19 @@ EOF
 
 - Modify: `core/localization-schema.md`
 - Modify: `lib/localization.mjs`
-- Modify: `lib/instance-files.mjs:182-187` (`LOCALIZATION_PAGE`)
+- Modify: `lib/instance-files.mjs` (`LOCALIZATION_PAGE`)
 - Modify: `lib/checks.mjs` (a new R14 check where the R19 checks stood; an import)
 - Modify: `example/model/localization.md`
-- Test: `verify/localization.test.mjs` (rewritten), `verify/localization-file.test.mjs`, `verify/instance-files.test.mjs:91-100`, `verify/cli.test.mjs` (the `upgrade writes model/localization.md the instance lacks` test)
+- Modify: `types/lib/localization.d.mts`, `types/lib/instance-files.d.mts` (written by `npm run build`)
+- Test: `verify/localization.test.mjs` (rewritten), `verify/localization-file.test.mjs`, `verify/instance-files.test.mjs`, `verify/cli.test.mjs`, `verify/plan.test.mjs`
 
 **Interfaces:**
 
 - Consumes: Task 1's `lib/localization.mjs`.
 - Produces:
   - `LANGUAGE_TAG: RegExp` (unchanged)
-  - `localizationOf(text: string) → { locale: string } | { error: string }`
-  - `migratedLocalization(text: string) → { text: string } | { error: string } | null` — null where the page already names its `locale`
+  - `localizationOf(text: string) → { locale: string } | { error: string }` (the `Localization` typedef)
+  - `migratedLocalization(text: string) → { text: string } | { error: string } | null` (the `Migrated` typedef, or null) — null where the page already names its `locale`
   - `LOCALIZATION_PAGE({ id, source, locale = "en-US" }) → string`
 
 - [ ] **Step 1: Write the failing reader tests**
@@ -256,9 +268,22 @@ export const LANGUAGE_TAG = /^[a-z]{2,3}(?:-[A-Za-z0-9]{2,8})*$/;
 
 const FRONTMATTER = /^---\n([\s\S]*?)\n---(?:\n|$)/;
 
+/**
+ * The language model/localization.md names, or why it cannot be read.
+ * @typedef {{ error: string; locale?: undefined } | { error?: undefined; locale: string }} Localization
+ */
+/**
+ * A localization page in the earlier form, rewritten, or why it cannot be.
+ * @typedef {{ error: string; text?: undefined } | { error?: undefined; text: string }} Migrated
+ */
+
 // The language model/localization.md names in its `locale` field, quotes taken off, or an error
 // naming why it cannot be read. A missing field is said plainly so a caller that already reports
 // a missing required field can leave it to that report.
+/**
+ * @param {string} text
+ * @returns {Localization}
+ */
 export function localizationOf(text) {
   const fm = text.match(FRONTMATTER)?.[1] ?? "";
   const locale = fm.match(/^locale:[ \t]*(\S.*?)[ \t]*$/m)?.[1].replace(/^(["'])(.*)\1$/, "$2");
@@ -273,6 +298,10 @@ export function localizationOf(text) {
 // already names its `locale`, so a second upgrade writes nothing. An error where there is no
 // table to read one from, or the table declares a `translated` language: dropping that row would
 // drop the translations the pages carry without a word, so the owner takes them out first.
+/**
+ * @param {string} text
+ * @returns {Migrated | null}
+ */
 export function migratedLocalization(text) {
   const fm = text.match(FRONTMATTER);
   if (!fm) return { error: "has no frontmatter to write `locale` into" };
@@ -300,11 +329,11 @@ export function migratedLocalization(text) {
 
 - [ ] **Step 4: Run them to see them pass**
 
-Run `npm run test:localization`, expecting: PASS, 9 tests.
+Run `npm run test:localization`, expecting: PASS, 9 tests. Run `npm run typecheck`, expecting: no output.
 
 - [ ] **Step 5: Write the failing schema, stub and check tests**
 
-In `verify/instance-files.test.mjs`, replace the test `the localization stub is a sentence naming the primary language` with:
+In `verify/instance-files.test.mjs`, replace the test `the localization stub is a sentence naming the primary language`, with the two-line `// Fix 3:` comment above it, with:
 
 ```js
 // One language per model: the stub names the model's language in `locale` and says who reads it.
@@ -368,9 +397,11 @@ The `older` schema is the real one with its `locale` row taken out, which is wha
 
 In `verify/cli.test.mjs`, in the test `upgrade writes model/localization.md the instance lacks, with source read from identity, and the instance still checks clean`, replace `assert.match(page, /\| en-US \| primary \|/);` with `assert.match(page, /\nlocale: en-US\n/);`.
 
+In `verify/plan.test.mjs`, the test `an upgrade writes model/localization.md when the new core carries the schema and the instance has none, with source read from identity` reads the fresh page's id with a regex that runs up to the closing `---`, and the stub now writes `locale` before it: change `/^---\nid: (\S+)\nsource: Acquired\n---\n/` to `/^---\nid: (\S+)\nsource: Acquired\nlocale: en-US\n---\n/`.
+
 - [ ] **Step 6: Run them to see them fail**
 
-Run `npm run test:instance-files && npm run test:instance-checks`, expecting: FAIL — the stub still writes `## Locales`, the schema declares no `locale`, and no R14 check exists.
+Run `npm run test:instance-files && npm run test:instance-checks && npm run test:plan`, expecting: FAIL — the stub still writes `## Locales`, the schema declares no `locale`, and no R14 check exists.
 
 - [ ] **Step 7: The schema, the stub, the example and the check**
 
@@ -425,11 +456,12 @@ The localization file says which language the model is written in, so that a rea
 - Names and prose are in the language `locale` names (R14).
 ```
 
-In `lib/instance-files.mjs`, replace `LOCALIZATION_PAGE` and its comment with:
+In `lib/instance-files.mjs`, replace `LOCALIZATION_PAGE` with its comment and its `@type` line with:
 
 ```js
 // The localization file init writes: the one language the model is written in. An instance
 // written in another language edits `locale` and the statement before its first page.
+/** @type {(page: { id: string; source: string; locale?: string }) => string} */
 export const LOCALIZATION_PAGE = ({ id, source, locale = "en-US" }) =>
   `---\nid: ${id}\nsource: ${source}\nlocale: ${locale}\n---\n\n# Language\n\n` +
   `> Everyone who reads this model, people and agents alike, reads it in ${locale === "en-US" ? "American English" : locale}.\n`;
@@ -449,7 +481,14 @@ locale: en-US
 > Beacon Systems writes its model in American English for everyone who reads it, people and agents alike.
 ```
 
-In `lib/checks.mjs`, add `import { localizationOf } from "./localization.mjs";` beside the other `./` imports, and add this check where the three R19 checks stood (directly before the object opening with ``// R9: `## Frontmatter` says whether a field may be absent``):
+In `lib/checks.mjs`, directly after the `./ids.mjs` import, add:
+
+```js
+// And the reader of the language a model is written in (R14), pure as the others are.
+import { localizationOf } from "./localization.mjs";
+```
+
+and add this check where the three R19 checks stood (directly before the object opening with ``// R9: `## Frontmatter` says whether a field may be absent``):
 
 ```js
   {
@@ -471,20 +510,22 @@ In `lib/checks.mjs`, add `import { localizationOf } from "./localization.mjs";` 
   },
 ```
 
-- [ ] **Step 8: Run everything**
+- [ ] **Step 8: Build the declarations, and run everything**
 
-Run `npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:instance-files && npm run test:ids && npm run test:localization && npm run test:plan && npm run test:rules && npm run test:cli && npm run test:seats`, expecting: every suite passes.
+Run `npm run build`, expecting: `git status --short types` lists `types/lib/localization.d.mts` and `types/lib/instance-files.d.mts`, and nothing else.
+
+Run the full run (Global Constraints), expecting: it passes.
 
 - [ ] **Step 9: Commit**
 
 ```bash
-git add -A core lib example verify
+git add -A core lib types example verify
 git commit --author "Implementer <implementer@companygraph.io>" -F - <<'EOF'
 The localization page names the model's one language in locale
 
 A model is written in one language, so model/localization.md holds a value, not a table: the schema declares a required locale field and drops ## Locales, init writes locale: en-US under the H1 Language, and the example follows. localizationOf returns { locale }, and migratedLocalization rewrites a page in the earlier form, its primary row becoming the field, refusing a page that declares a translated language. One R14 check holds the field to the shape of a language tag where the vendored schema declares it, so an instance on an older core checks as it did.
 
-Verified: npm run verify, test:instance, test:instance-checks, test:instance-files, test:ids, test:localization, test:plan, test:rules, test:cli and test:seats pass.
+Verified: npm run typecheck, build:check, verify and every test suite pass.
 
 Process: Delivery
 Phase: Implement
@@ -493,15 +534,18 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 ```
 
+Run `git log -1 --format='[%s]'`, expecting the subject alone between the brackets.
+
 ---
 
 ### Task 3: `upgrade` rewrites the earlier form
 
 **Files:**
 
-- Modify: `lib/plan.mjs` (imports at lines 5–9; the localization block at lines 245–257; the return)
-- Modify: `bin/companygraph.mjs:384` (report the rewrite)
-- Test: `verify/plan.test.mjs` (after the two localization tests at lines 301–326), `verify/cli.test.mjs`
+- Modify: `lib/plan.mjs` (an import; the `UpgradeWrites` typedef; a comment, a block and the return of `upgradePlan`)
+- Modify: `bin/companygraph.mjs` (the `UpgradeRead` typedef; report the rewrite)
+- Modify: `types/lib/plan.d.mts`, `types/bin/companygraph.d.mts` (written by `npm run build`)
+- Test: `verify/plan.test.mjs`, `verify/cli.test.mjs`
 
 **Interfaces:**
 
@@ -510,7 +554,7 @@ EOF
 
 - [ ] **Step 1: Write the failing tests**
 
-In `verify/plan.test.mjs`, change `withLocalizationSchema` to carry the field the migration looks for, and add three tests after `an upgrade defaults localization.md's source to Local …`:
+In `verify/plan.test.mjs`, change `withLocalizationSchema` to carry the field the migration looks for, and add the helper and four tests below directly after the test `an upgrade defaults localization.md's source to Local …`:
 
 ```js
 const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Localization Schema\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `locale` | Yes | string | The language |\n"]]);
@@ -549,6 +593,12 @@ test("an upgrade toward a core whose schema declares no locale leaves the earlie
 });
 ```
 
+The first line replaces the existing `const withLocalizationSchema = …` where it stands; the rest goes after the test named above. In that test, `an upgrade defaults localization.md's source to Local …`, the page the instance already holds is in the earlier form, which the migration would now rewrite; give it its locale so the test still holds what it says, that a page the instance has is never overwritten — replace its `const already = …` with:
+
+```js
+  const already = "---\nid: existing\nsource: Local\nlocale: de-CH\n---\n\n# Language\n";
+```
+
 In `verify/cli.test.mjs`, add after the test `upgrade writes model/localization.md the instance lacks, …`:
 
 ```js
@@ -573,16 +623,7 @@ Run `npm run test:plan`, expecting: FAIL — `plan.rewritten` is undefined, and 
 
 - [ ] **Step 3: Apply the migration in the plan**
 
-In `lib/plan.mjs`, add `migratedLocalization` to the imports: `import { migratedLocalization } from "./localization.mjs";`. Replace the comment above the localization block, which begins `// R19's own page`, with:
-
-```js
-  // The localization page, `model/localization.md`, is not vendored and carries no hash: it is
-  // the instance's own from the moment it exists, exactly as the export inputs above are. A core
-  // that has grown `localization-schema.md` since the instance last upgraded left it with no
-  // such page and nothing to write one until now; an instance that already has one — written by
-  // `init`, or by hand — is never replaced. `source` is read from `model/identity.md` the same
-  // way `backfillPlan` reads it, because this page is the same kind of write: a fresh id, once.
-```
+In `lib/plan.mjs`, add `import { migratedLocalization } from "./localization.mjs";` directly after the `./ids.mjs` import. In the `UpgradeWrites` typedef, add ` * @property {string[]} rewritten` directly after ` * @property {string[]} given`. In the comment above the localization block (which Task 1 opened with `The localization page`), change `` `init`, or by hand — is never touched`` to `` `init`, or by hand — is never replaced``, since the block below now rewrites one in place.
 
 After that block, before the `return`, add:
 
@@ -591,11 +632,11 @@ After that block, before the `return`, add:
   // still in the earlier form, a `## Locales` table, into the field, keeping its id, its H1, its
   // statement and every other section. A page that already names its locale is left as it is,
   // and one that declares a translated language refuses the whole upgrade rather than drop it.
-  const rewritten = [];
+  const rewritten = /** @type {string[]} */ ([]);
   const own = held.get("model/localization.md");
   if (own !== undefined && /^\| `locale` \|/m.test(core.get("localization-schema.md") ?? "")) {
     const migrated = migratedLocalization(own);
-    if (migrated?.error) return { refused: `model/localization.md ${migrated.error}; nothing was written.` };
+    if (migrated?.error !== undefined) return { refused: `model/localization.md ${migrated.error}; nothing was written.` };
     if (migrated) {
       writes.set("model/localization.md", migrated.text);
       rewritten.push("model/localization.md");
@@ -603,32 +644,34 @@ After that block, before the `return`, add:
   }
 ```
 
-and change the return to `return { writes, removes, edited: [...edited, ...foreign].sort(), missing, given, rewritten, from, to };`.
+and change the return to `return { writes, removes, edited: [...edited, ...foreign].sort(), missing, given, rewritten, from, to };`. The test is `!== undefined`, not truthiness: it is what narrows `migrated` to the `text` branch for the type checker below it.
 
-In `bin/companygraph.mjs`, directly after the line printing `written, since the instance had none`, add:
+In `bin/companygraph.mjs`, in the `UpgradeRead` typedef's refusal branch, change `given?: undefined; from?: undefined;` to `given?: undefined; rewritten?: undefined; from?: undefined;`, and directly after the line printing `written, since the instance had none`, add, in that line's own form:
 
 ```js
-  if (plan.rewritten?.length) console.log(`  rewritten in this core's form: ${plan.rewritten.join(", ")}`);
+  if (/** @type {string[]} */ (plan.rewritten).length) console.log(`  rewritten in this core's form: ${/** @type {string[]} */ (plan.rewritten).join(", ")}`);
 ```
 
 - [ ] **Step 4: Run them to see them pass**
 
-Run `npm run test:plan && npm run test:cli`, expecting: PASS.
+Run `npm run typecheck && npm run test:plan && npm run test:cli`, expecting: no type error, and PASS.
 
-- [ ] **Step 5: Run everything**
+- [ ] **Step 5: Build the declarations, and run everything**
 
-Run `npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:instance-files && npm run test:ids && npm run test:localization && npm run test:plan && npm run test:rules && npm run test:cli && npm run test:seats`, expecting: every suite passes.
+Run `npm run build`, expecting: `git status --short types` lists `types/lib/plan.d.mts` and `types/bin/companygraph.d.mts`, and nothing else.
+
+Run the full run (Global Constraints), expecting: it passes.
 
 - [ ] **Step 6: Commit**
 
 ```bash
-git add -A lib bin verify
+git add -A lib bin types verify
 git commit --author "Implementer <implementer@companygraph.io>" -F - <<'EOF'
 upgrade rewrites a localization page into its locale field
 
 Every instance on core 0.50.0 holds model/localization.md as a ## Locales table, and the new schema asks for a locale field, so upgrade rewrites the page once, keeping its id, H1, statement and every other section, and says so beside the files it gives. A page that already names its locale is left alone, a page declaring a translated language refuses the upgrade before anything is written, and an upgrade toward a core without the field leaves the earlier form as it is.
 
-Verified: npm run verify, test:instance, test:instance-checks, test:instance-files, test:ids, test:localization, test:plan, test:rules, test:cli and test:seats pass.
+Verified: npm run typecheck, build:check, verify and every test suite pass.
 
 Process: Delivery
 Phase: Implement
@@ -637,16 +680,18 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 ```
 
+Run `git log -1 --format='[%s]'`, expecting the subject alone between the brackets.
+
 ---
 
 ### Task 4: R19 leaves the rules and the prose
 
 **Files:**
 
-- Modify: `core/CONVENTIONS.md` (R2 line 21, R3 line 29, R4 line 33, R14 lines 61–63, R19 lines 81–84, R0 line 232)
-- Modify: `core/concept-schema.md:68`
-- Modify: `README.md` (lines 40, 46, 112, 122)
-- Modify: `agents/claude/skills/companygraph-company/SKILL.md:35`, `agents/claude/skills/companygraph-profile/SKILL.md:37`, `agents/claude/skills/companygraph-validate/SKILL.md:40`
+- Modify: `core/CONVENTIONS.md` (R2, R3, R4, R14, R19, R0)
+- Modify: `core/concept-schema.md` (one writing rule)
+- Modify: `README.md` (four paragraphs)
+- Modify: `agents/claude/skills/companygraph-company/SKILL.md`, `agents/claude/skills/companygraph-profile/SKILL.md`, `agents/claude/skills/companygraph-validate/SKILL.md`
 
 **Interfaces:** none; prose only.
 
@@ -657,7 +702,7 @@ In `core/CONVENTIONS.md`:
 - R2: delete the sentence, with the space before it, `A name in a translated locale is held the same way, within that locale (R19).`
 - R3: delete the sentence, with the space before it, `In a locale's prose and its grouped headings, the canonical name is the entity's name in that locale (R19).`
 - R4: delete the sentence, with the space before it, `A reference in a locale's prose or grouped headings resolves among that locale's names; a repeated table's references stay the primary's (R19).`
-- R14: replace the heading with `### R14 — Names are American English, and prose is in the model's language`, and replace its first paragraph (line 63) whole with this one line:
+- R14: replace the heading with `### R14 — Names are American English, and prose is in the model's language`, and replace its first paragraph, the one beginning `Every name this vocabulary chooses`, whole with this one line:
 
   ```markdown
   Every name this vocabulary chooses is spelled in American English — a field, a type, a folder, a section heading a schema declares — and so is the prose of `core/`. An instance's content is written in the one language its `model/localization.md` names. `organization`, `modeling`, `license`, `recognize`.
@@ -678,20 +723,20 @@ Run `grep -n "R19\|translated locale\|primary locale" core/*.md`, expecting: no 
 
 In `README.md`:
 
-- Line 40: delete the two sentences from ``Where the instance's `localization.md` declares a translated language`` through ``rather than reading `undefined`.``
-- Line 46: replace the paragraph with: ``A consumer that only needs the language a model is written in, without parsing the whole graph, reads model/localization.md with `localizationOf` from `companygraph-meta-model/localization`, which returns `{ locale }` or an `error` naming why the file cannot be read — the same reader the checks and `upgrade` use.``
-- Line 112: after the sentence ending `and never where the instance already has one.`, insert: ``Where the core's localization schema declares `locale` and the instance's page is still the earlier `## Locales` table, it rewrites the page into the field — the primary row's tag, the table gone, the id, the H1, the statement and every other section kept — and refuses, writing nothing, a page that declares a translated language.``
-- Line 122: delete the paragraph beginning ``` `companygraph translations [<folder>] --range <a>..<b>` is R19's other half```.
+- In the paragraph beginning ``A site reads an instance with``, delete the two sentences from ``Where the instance's `localization.md` declares a translated language`` through ``rather than reading `undefined`.``
+- Replace the paragraph beginning `A consumer that only needs an instance's declared languages` with: ``A consumer that only needs the language a model is written in, without parsing the whole graph, reads model/localization.md with `localizationOf` from `companygraph-meta-model/localization`, which returns `{ locale }` or an `error` naming why the file cannot be read — the same reader the checks and `upgrade` use.``
+- In the paragraph beginning ``` `upgrade [<folder>]` moves the vendored core```, after the sentence ending `and never where the instance already has one.`, insert: ``Where the core's localization schema declares `locale` and the instance's page is still the earlier `## Locales` table, it rewrites the page into the field — the primary row's tag, the table gone, the id, the H1, the statement and every other section kept — and refuses, writing nothing, a page that declares a translated language.``
+- Delete the paragraph beginning ``` `companygraph translations [<folder>] --range <a>..<b>` is R19's other half```.
 
 In each of the three skills, delete the paragraph beginning ``Where `model/localization.md` declares a translated language``, with the blank line before it.
 
-Run `grep -rn "R19\|translated language\|Translation-unchanged\|translations" README.md agents core`, expecting: no output.
+Run `grep -rn "R19\|Translation-unchanged\|translations" README.md agents core`, expecting: no output. (`translated language` stays in the README, in the sentence on `upgrade`'s refusal inserted above.)
 
 - [ ] **Step 3: Run everything, and the family's checks**
 
-Run `npm run verify && npm run test:instance && npm run test:instance-checks && npm run test:instance-files && npm run test:ids && npm run test:localization && npm run test:plan && npm run test:rules && npm run test:cli && npm run test:seats && sh conventions/conventions-check && npx -y markdownlint-cli2 "core/*.md" README.md "agents/**/*.md"`, expecting: every suite passes; `conventions-check` prints `✓ every Markdown file follows WRITING.md`; markdownlint reports `0 issues`.
+Run the full run (Global Constraints), then `sh conventions/conventions-check && npx -y markdownlint-cli2 "core/*.md" README.md "agents/**/*.md"`, expecting: the full run passes; `conventions-check` prints `✓ every Markdown file follows WRITING.md`; markdownlint reports `0 issues`.
 
-Run `grep -rln "R19" lib bin core agents verify/*.mjs .github README.md`, expecting: no output.
+Run `grep -rln "R19" lib bin core agents types verify/*.mjs .github README.md`, expecting: no output.
 
 - [ ] **Step 4: Commit**
 
@@ -702,7 +747,7 @@ R19 leaves the rules, the README and the skills
 
 R14 now says an instance's content is written in the one language model/localization.md names, R19 is removed with the pointers to it in R2, R3 and R4 and its place in R0's lists, and a concept's translation alias is again simply a name in another language. The README describes localizationOf's { locale } and the upgrade's rewrite, and loses the translations command; the company, profile and validate skills lose their paragraph on language sections.
 
-Verified: npm run verify and every test suite pass, conventions-check and markdownlint-cli2 pass, and grep finds no R19 anywhere outside docs/.
+Verified: npm run typecheck, build:check, verify and every test suite pass, conventions-check and markdownlint-cli2 pass, and grep finds no R19 anywhere outside docs/.
 
 Process: Delivery
 Phase: Implement
@@ -710,3 +755,5 @@ Track: Code
 Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 ```
+
+Run `git log -1 --format='[%s]'`, expecting the subject alone between the brackets.
