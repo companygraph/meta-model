@@ -4,9 +4,9 @@
 // exit 3 to refuse, so a caller such as a hook can tell a refusal from a run that could not
 // happen, and 1 for anything else:
 //
-//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>]
+//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
 //   companygraph check [<folder>]
-//   companygraph upgrade [<folder>] [--core <tag>] [--force] [--dry-run]
+//   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
 //   companygraph seats [<folder>] [--since <date>] [--json]
@@ -34,7 +34,7 @@ import { spawnSync } from "node:child_process";
 import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf, fileAt, isCommit } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
-import { idChangesOf } from "../lib/checks.mjs";
+import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
 import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
@@ -56,7 +56,7 @@ import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
  *   _: string[];
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
  *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean;
- *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; release?: string;
+ *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string;
  *   from?: string; range?: string; message?: string; since?: string;
  * }} Flags
  */
@@ -77,8 +77,8 @@ const USAGE = `companygraph [<command>]
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
   translations [<folder>]  refuse (exit 3) a change to the primary its translations did not follow
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --no-hook
-upgrade: --core <tag>  --force  --dry-run
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook
+upgrade: --core <tag>  --pack <a,b>  --force  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
@@ -120,6 +120,17 @@ function filesOfThisRelease(folder) {
 
 // The core inside this release, which is what `init` vendors unless a tag says otherwise.
 const coreOfThisRelease = () => filesOfThisRelease("core");
+
+// A pack this release ships, as a map of file to text, read the way core's is.
+/** @param {string} name */
+function packOfThisRelease(name) {
+  if (!Object.hasOwn(PACKS, name)) throw new Error(`this release ships no pack named ${name}; it ships ${Object.keys(PACKS).join(", ") || "none"}`);
+  return filesOfThisRelease(`packs/${name}`);
+}
+
+// `--pack a,b` as a list of names.
+/** @param {string | undefined} value */
+const packNamesOf = (value) => (value ? value.split(",").map((p) => p.trim()).filter(Boolean) : []);
 
 // The agent's skills always come from the release that runs, whatever core is vendored: they are
 // the tooling's, and they read the rules from the instance's own core rather than carrying them.
@@ -307,8 +318,14 @@ async function init(argv, { menu = false } = {}) {
   const name = given.name ?? (await ask("What is this instance called? "));
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
+  // --pack takes the packs this release ships, comma-separated. With --core, a fetched core is
+  // not paired with this release's packs, since a pack is released with its core.
+  const packNames = packNamesOf(given.pack);
+  if (packNames.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
+  const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
   const plan = initPlan({
     core,
+    packs,
     // An agent this release does not write for has no skills folder to read; the plan refuses it
     // by name, so the refusal is its sentence and not a missing folder's.
     skills: AGENTS.includes(agent) ? skillsFor(agent) : undefined,
@@ -328,6 +345,7 @@ async function init(argv, { menu = false } = {}) {
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
   console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company and -consent skills; export and surface need Python 3`);
   console.log(`  core ${JSON.parse(/** @type {string} */ (core.get("manifest.json"))).version}, vendored under ${given.schemas ?? "meta"}/core/`);
+  if (packNames.length) console.log(`  packs: ${packNames.join(", ")}, vendored beside it`);
   const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
@@ -413,10 +431,24 @@ async function upgrade(argv) {
   const exportPaths = [...exportFilesFor({ name }).keys()];
   const tag = given.core ?? `v${PACKAGE.version}`;
   const core = given.core ? await fetchCore(given.core) : coreOfThisRelease();
+  // --pack takes a pack the instance did not have, so a company that started before a pack
+  // shipped takes it without a second init. The packs it already lists move as before.
+  const added = packNamesOf(given.pack);
+  if (added.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
+  const packNames = [...new Set([...(manifest.packs ?? []), ...added])];
+  const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
+  // A pack file the instance holds that the manifest never recorded is read too, so the plan can
+  // tell the tooling's file from the instance's own under the same name.
+  for (const [name, packFiles] of packs)
+    for (const path of packFiles.keys()) {
+      const at = `${manifest.units ?? "meta"}/${name}/${path}`;
+      if (!held.has(at) && existsSync(join(root, at))) held.set(at, read(join(root, at)));
+    }
   /** @type {UpgradeRead} */
   const plan = upgradePlan({
     core,
     skills,
+    packs,
     tooling: PACKAGE.version,
     tag,
     manifest,
@@ -451,6 +483,7 @@ async function upgrade(argv) {
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   for (const path of /** @type {string[]} */ (plan.removes)) rmSync(join(root, path), { force: true });
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${/** @type {string[]} */ (plan.removes).length} removed`);
+  if (added.length) console.log(`  packs: ${added.join(", ")}, vendored beside core`);
   if (/** @type {string[]} */ (plan.given).length) console.log(`  written, since the instance had none, and its own from now on: ${/** @type {string[]} */ (plan.given).join(", ")}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
@@ -818,7 +851,11 @@ function ids(argv) {
     const top = gitTop(root);
     /** @param {string} rel */
     const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
-    const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs }));
+    // The packs the instance took, so a page of a pack's type is given its id as a core page is.
+    const manifestPath = join(root, ".companygraph/manifest.json");
+    const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+    const { types } = vocabularyOf({ packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${manifest.units ?? "meta"}/${name}` })) });
+    const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs, types }));
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
       return REFUSED;

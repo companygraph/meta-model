@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
+import { vocabularyOf } from "../lib/checks.mjs";
 
 const core = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
@@ -479,4 +480,46 @@ test("run twice, the schema backfill writes nothing the second time", () => {
   const files = coreTree();
   for (const [path, text] of schemaBackfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
   assert.equal(schemaBackfillPlan(files, { firstCommitMs: () => MS }).size, 0);
+});
+
+// R20: a pack is a unit beside core, vendored, hashed and moved the way core is.
+const INIT_ARGS = ask;
+const UPGRADE_ARGS = (() => {
+  const { workflow } = instance();
+  return { core: newer, tooling: "0.32.0", tag: "v0.32.0", workflow };
+})();
+
+test("init with a pack vendors it beside core and lists it in the manifest", () => {
+  const packs = new Map([["software", new Map([["manifest.json", '{ "name": "software", "version": "0.0.1" }'], ["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "# Bounded Context Schema\n");
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  assert.deepEqual(manifest.packs, ["software"]);
+  assert.ok("meta/software/bounded-context-schema.md" in manifest.files);
+});
+
+test("an upgrade moves a pack's files with core's, and an edited pack schema stops it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: ["software"], files: { "meta/software/bounded-context-schema.md": hashOf("old\n") } };
+  const moved = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "old\n"]]) });
+  assert.equal(moved.writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  const stopped = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "edited\n"]]) });
+  assert.match(stopped.refused, /meta\/software\/bounded-context-schema\.md/);
+});
+
+test("an upgrade given a pack the instance did not take vendors it and lists it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, refused } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.equal(refused, undefined);
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")).packs, ["software"]);
+});
+
+test("the backfill gives a page of a pack's type an id when it is handed the pack's rows, and leaves it alone without them", () => {
+  const files = tree();
+  files.set("model/feature-designs/checkout.md", "---\nsource: Local\n---\n\n# Checkout\n");
+  const { types } = vocabularyOf({ packs: [{ name: "software", dir: "meta/software" }] });
+  assert.ok(backfillPlan(files, { firstCommitMs: () => MS, types }).has("model/feature-designs/checkout.md"));
+  assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).has("model/feature-designs/checkout.md"), false);
 });

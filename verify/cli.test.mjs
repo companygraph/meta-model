@@ -1441,3 +1441,15 @@ test("translations --range exits 1 when the start revision does not resolve, eve
   assert.match(said.stderr, /✗/);
   assert.doesNotMatch(said.stdout, /no translated language is declared/);
 });
+
+// R20: the manifest names the packs an instance took, and check refuses one it does not ship.
+test("a manifest that takes a pack this checker does not ship is refused by name", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, packs: ["cooking"] }));
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /takes the pack cooking, and this checker ships software/);
+});

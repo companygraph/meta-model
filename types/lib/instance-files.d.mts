@@ -28,10 +28,12 @@ export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
 /**
- * @param {Omit<Manifest, "packs">} manifest
+ * @param {Omit<Manifest, "packs"> & { packs?: string[] }} manifest
  * @returns {string}
  */
-export declare function manifestOf({ tooling, core, units, files }: Omit<Manifest, "packs">): string;
+export declare function manifestOf({ tooling, core, units, packs, files }: Omit<Manifest, "packs"> & {
+    packs?: string[];
+}): string;
 /** @type {() => string[]} */
 export declare const rootFolders: () => string[];
 /**
