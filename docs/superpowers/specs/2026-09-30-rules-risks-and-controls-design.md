@@ -4,6 +4,8 @@ Much of what a company knows is rules: what always needs a person, what is never
 
 Status: decided by the owner on September 30, 2026: the three types in core, not a pack; one `rule` type for policy-like and checkable rules alike; no `incident` and no `measure` type; a page's own "never" stays where only that page refuses it, and a rule is for what reaches across; each relation written once, on the more specific side; no risk ratings on the page; a control is the entity and says how it is carried out, and neither a gate criterion nor a check becomes a type; a risk is a downside only; legal documents in a spec of their own; and the type keeps the name `rule`.
 
+Brought up to date on October 2, 2026, after the software pack with R20, one language per model and the machinery outside the family shipped. None of the owner's decisions changed; what the spec now says because of them is under What changed since September 30.
+
 ## Where this comes from
 
 The run followed `companygraph-vocabulary`. Its sources:
@@ -12,6 +14,7 @@ The run followed `companygraph-vocabulary`. Its sources:
 - **The family's working conventions**, `robertblust/conventions`, whose `WORKING.md` states the cross-process rules of a real company, each with its reason, and names the hook or check that holds the ones a machine holds.
 - **The family's three public instances**, where the same rules live as prose on the pages that refuse them, some restated on several.
 - **A multi-person company** that keeps its cross-process rules as files of their own, each with an owner, the seats it binds and, where one exists, the automation that checks it, and keeps its risks and controls in a tracker outside its model.
+- **The machinery outside the family**, meta-model v0.70.0: the form check, the pin report and the seat check that any instance runs, so a company outside the family has automated controls of its own to point at.
 - **Public practice**, read for each type: the OMG Business Motivation Model and SBVR for rules, ISO 31000 and COSO for risk and control, ISO/IEC 27002 and NIST for control attributes, ArchiMate's motivation elements and its Risk and Security Overlay, and policy-as-code.
 
 The count. Two companies keep rules in their models today, one as prose and one as files, and beacon describes a third; all three build software. No model keeps risks or controls as pages: one company keeps them in a tracker, and the family's controls are hooks, checks and gates with no type. The sources are one kind of company. What makes these types core rather than a pack is public practice: the Business Motivation Model, SBVR, COSO and ISO 31000 are written for every organization, and the design spec already placed `rule` in core. The next evidence this piece asks for is a company of another kind.
@@ -25,7 +28,7 @@ model/
   controls/<control>.md
 ```
 
-None is owned: each reaches across processes and seats, so a name is unique within its type (R2). They join the Operation group, where the design spec placed `rule`. Every schema carries core's `id`, `source` and `source-id` and a `## References` table.
+None is owned: each reaches across processes and seats, so a name is unique within its type (R2). They join the Operation group, where the design spec placed `rule`. Every schema carries core's `id`, `source` and `source-id` and a `## References` table. They are core's, so R20 holds them to naming core's types only, which every field above and below does; a pack may name them, and none of them names a pack's type.
 
 ```mermaid
 flowchart LR
@@ -95,7 +98,7 @@ What the company does, or has a machine do, so that a risk is less likely or les
 
 Sections: `## How it is carried out` (required), `## Applies to` (table, optional, the same shape as a rule's), `## References` (optional: the hook, the workflow, the checklist, where its test results are kept).
 
-Writing rules. A control names at least one risk it mitigates or one rule it enforces; the grammar declares each field on its own, so this is the agent pass's to hold. `## How it is carried out` says what does the work and when, as a reader could check: "the commit-msg hook and the conventions job refuse a commit whose seat the named phase does not list". A gate is a control where the phase's gate is one: the control names the phase in `## Applies to`, and the gate's criteria stay the phase's bullets.
+Writing rules. A control names at least one risk it mitigates or one rule it enforces; the grammar declares each field on its own, so this is the agent pass's to hold. `## How it is carried out` says what does the work and when, as a reader could check: "the seat check, run by the commit hook and again by the instance check on every pull request, refuses a commit whose seat the named phase does not list", or "`companygraph pins` reports every pin that is behind and moves none". The hook, the workflow or the command it names goes in `## References`. A gate is a control where the phase's gate is one: the control names the phase in `## Applies to`, and the gate's criteria stay the phase's bullets.
 
 ## The decisions, and why
 
@@ -113,6 +116,8 @@ Writing rules. A control names at least one risk it mitigates or one rule it enf
 
 **The control is the entity.** The family's controls are hooks, checks and gates, none of them an entity. A control says in prose how it is carried out and points at the file that does it; a gate's criteria and a check's code stay where they are, and no `check` type describes the company's tooling in its model.
 
+**An aggregate's invariant is not a rule.** The software pack's amendment weighed it and left it: a rule binds seats, processes and phases across the company, and an invariant binds one aggregate, so it stays a labelled row of its aggregate, which a test cites by its label.
+
 **A risk is a downside.** [ISO 31000](https://www.iso.org/standard/65694.html) defines risk as the "effect of uncertainty on objectives", and [COSO's enterprise risk management](https://www.coso.org/enterprise-risk-management) likewise counts an opportunity as a risk; the [Business Motivation Model](https://www.omg.org/spec/BMM/1.3/PDF) keeps risk for "the possibility of loss, injury, disadvantage, or destruction" and calls the upside a potential reward. Controls only make sense against a downside, and an opportunity is what an objective or a strategy already pursues.
 
 ## Where this departs from its sources
@@ -129,11 +134,15 @@ Writing rules. A control names at least one risk it mitigates or one rule it enf
 
 ## Out of scope
 
-Adopting the types in the family's instances, which moves restated "never" bullets into rules page by page, each on the owner's word. beacon's own rules, which the spec invites as the second company's evidence. Renaming the MCP server's `list_rules` and `describe_rule`, which describe the conventions.
+Adopting the types in the family's instances, which moves restated "never" bullets into rules page by page, each on the owner's word. beacon's own rules, which the spec invites as the second company's evidence. Renaming the MCP server's `list_rules` and `describe_rule`, which describe the conventions. Phase 2 of the machinery, whose prose check will read a company's word lists from files a control names: this spec gives that control its type and nothing more.
 
 ## What it costs
 
-Three schemas in `core/`, three rows in the checker's `TYPES`, and one rule, one risk and one control in the example instance so the checks and the parser meet them. A core release that adds types, which every instance takes on its own re-pin and may leave empty. The name "rule" is shared: the conventions' R0 and onwards and each schema's `## Writing rules` are rules of the vocabulary, and the MCP server's `list_rules` and `describe_rule` describe them, so those two tools say "convention" in their descriptions, and a company's rules are listed with `list_entities` and type `rule`. In German the types are «Regel», «Risiko» and «Kontrolle», never «Massnahme».
+Three schemas in `core/`, three rows in the checker's `TYPES`, and one rule, one risk and one control in the example instance so the checks and the parser meet them. A core release that adds types, which every instance takes on its own re-pin and may leave empty. The name "rule" is shared: the conventions' R0 and onwards and each schema's `## Writing rules` are rules of the vocabulary, and the MCP server's `list_rules` and `describe_rule` describe them, so those two tools say "convention" in their descriptions, and a company's rules are listed with `list_entities` and type `rule`. The vocabulary is English and a model is written in one language, so the types carry no German names of their own; where the family writes about them in German, its glossary calls them «Regel», «Risiko» and «Kontrolle», never «Massnahme», and that row is the glossary's to add.
+
+## What changed since September 30
+
+Three releases landed between the spec and its review. The software pack (v0.68.0) added R20: core names only its own types, and these three name only core's, so nothing in their design moves; the sentence under The three types says so, and the pack's own decision to keep an invariant on its aggregate is recorded under the decisions. One language per model (v0.69.0) retired translated sections, so the spec no longer gives the types German names and leaves those to the family's glossary. The machinery outside the family (v0.70.0) gave every instance a form check, a pin report and a seat check, so the control's example and sources now name checks any company runs rather than the family's conventions job.
 
 ## References
 
