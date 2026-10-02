@@ -3,6 +3,7 @@ import assert from "node:assert/strict";
 import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
+import { vocabularyOf } from "../lib/checks.mjs";
 
 const core = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
@@ -479,4 +480,82 @@ test("run twice, the schema backfill writes nothing the second time", () => {
   const files = coreTree();
   for (const [path, text] of schemaBackfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
   assert.equal(schemaBackfillPlan(files, { firstCommitMs: () => MS }).size, 0);
+});
+
+// R20: a pack is a unit beside core, vendored, hashed and moved the way core is.
+const INIT_ARGS = ask;
+const UPGRADE_ARGS = (() => {
+  const { workflow } = instance();
+  return { core: newer, tooling: "0.32.0", tag: "v0.32.0", workflow };
+})();
+
+test("init with a pack vendors it beside core and lists it in the manifest", () => {
+  const packs = new Map([["software", new Map([["manifest.json", '{ "name": "software", "version": "0.0.1" }'], ["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "# Bounded Context Schema\n");
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  assert.deepEqual(manifest.packs, ["software"]);
+  assert.ok("meta/software/bounded-context-schema.md" in manifest.files);
+});
+
+test("an upgrade moves a pack's files with core's, and an edited pack schema stops it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: ["software"], files: { "meta/software/bounded-context-schema.md": hashOf("old\n") } };
+  const moved = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "old\n"]]) });
+  assert.equal(moved.writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  const stopped = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "edited\n"]]) });
+  assert.match(stopped.refused, /meta\/software\/bounded-context-schema\.md/);
+});
+
+test("an upgrade given a pack the instance did not take vendors it and lists it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, refused } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.equal(refused, undefined);
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")).packs, ["software"]);
+});
+
+test("the backfill gives a page of a pack's type an id when it is handed the pack's rows, and leaves it alone without them", () => {
+  const files = tree();
+  files.set("model/feature-designs/checkout.md", "---\nsource: Local\n---\n\n# Checkout\n");
+  const { types } = vocabularyOf({ packs: [{ name: "software", dir: "meta/software" }] });
+  assert.ok(backfillPlan(files, { firstCommitMs: () => MS, types }).has("model/feature-designs/checkout.md"));
+  assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).has("model/feature-designs/checkout.md"), false);
+});
+
+// A pack's root folders are folders of the instance that takes it: each gets the README every
+// folder gets, naming the schema in the pack's unit, and --folders can name them.
+test("init with a pack writes a README for each root folder the pack adds, naming the pack's schemas", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("model/feature-designs/README.md"), "# Feature designs\n\nOne file per feature design, written against `meta/software/feature-design-schema.md`.\n");
+  const contexts = writes.get("model/bounded-contexts/README.md");
+  assert.match(contexts, /^# Bounded contexts\n\nOne folder per bounded context, written against `meta\/software\/bounded-context-schema\.md`/);
+  assert.ok(contexts.includes("its concept designs in `concept-designs/` against `meta/software/concept-design-schema.md`"));
+  assert.ok(writes.get("model/skills/README.md").includes("`meta/core/skill-schema.md`"));
+});
+
+test("--folders can name a pack's root folder, and without a pack it is still refused as before", () => {
+  const packs = new Map([["software", new Map()]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs, folders: ["bounded-contexts"] });
+  assert.ok(writes.has("model/bounded-contexts/README.md") && !writes.has("model/feature-designs/README.md"));
+  const refused = initPlan({ ...INIT_ARGS, folders: ["bounded-contexts"] });
+  assert.match(refused.refused, /bounded-contexts is no folder of core; the folders are /);
+});
+
+test("an init without a pack writes no folder README of a pack", () => {
+  const { writes } = initPlan(INIT_ARGS);
+  assert.ok(![...writes.keys()].some((p) => p.includes("bounded-contexts") || p.includes("feature-designs")));
+});
+
+test("an upgrade that takes a pack writes its root folders' READMEs once, and names them as given", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, given } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.match(writes.get("model/feature-designs/README.md"), /meta\/software\/feature-design-schema\.md/);
+  assert.ok(given.includes("model/bounded-contexts/README.md"));
+  assert.ok(!writes.has("model/README.md"));
+  const listed = upgradePlan({ ...UPGRADE_ARGS, manifest: { ...manifest, packs: ["software"] }, packs, held: new Map() });
+  assert.ok(!listed.writes.has("model/bounded-contexts/README.md"));
 });

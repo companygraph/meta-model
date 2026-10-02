@@ -1,3 +1,4 @@
+import type { TypeEntry } from "./checks.mjs";
 export type Manifest = {
     tooling: string;
     core: {
@@ -28,18 +29,23 @@ export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
 /**
- * @param {Omit<Manifest, "packs">} manifest
+ * @param {Omit<Manifest, "packs"> & { packs?: string[] }} manifest
  * @returns {string}
  */
-export declare function manifestOf({ tooling, core, units, files }: Omit<Manifest, "packs">): string;
-/** @type {() => string[]} */
-export declare const rootFolders: () => string[];
+export declare function manifestOf({ tooling, core, units, packs, files }: Omit<Manifest, "packs"> & {
+    packs?: string[];
+}): string;
+/** @type {(types?: TypeEntry[]) => string[]} */
+export declare const rootFolders: (types?: TypeEntry[]) => string[];
 /**
  * @param {string[]} folders
  * @param {string} [units]
+ * @param {(TypeEntry & { unit?: string })[]} [types] the vocabulary the folders are drawn from; core's unless a pack is taken
  * @returns {Map<string, string>}
  */
-export declare function readmesFor(folders: string[], units?: string): Map<string, string>;
+export declare function readmesFor(folders: string[], units?: string, types?: (TypeEntry & {
+    unit?: string;
+})[]): Map<string, string>;
 /**
  * @param {{ name: string; id?: () => string }} instance
  * @returns {Map<string, string>}
