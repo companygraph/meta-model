@@ -79,3 +79,35 @@ test("a file name with brackets is read as the file, not as a pattern", () => {
   const root = tree(temp(), { "notes [draft].md": WRAPPED });
   assert.ok(formCheck(root).hits.some((h) => h.startsWith("notes [draft].md:3:")));
 });
+
+// The form is fixed, so no configuration file of the repository's own is read, at its root or in
+// a folder below. The family's root .markdownlint-cli2.jsonc names custom rules by a path that
+// means nothing beside the package's form, which is how the defect was first seen.
+const FAMILY_ROOT_CONFIG = '{ "customRules": ["./conventions/markdown-rules.cjs"] }\n';
+
+test("a repository's own root configuration is not read: clean Markdown passes and a wrapped paragraph fails", () => {
+  const clean = tree(temp(), { ".markdownlint-cli2.jsonc": FAMILY_ROOT_CONFIG, "README.md": CLEAN });
+  assert.deepEqual(formCheck(clean), { files: 1, hits: [] });
+  const wrapped = tree(temp(), { ".markdownlint-cli2.jsonc": FAMILY_ROOT_CONFIG, "README.md": WRAPPED });
+  const { hits, error } = formCheck(wrapped);
+  assert.equal(error, undefined);
+  assert.ok(hits.includes("README.md:3: paragraph-on-one-line"), hits.join("\n"));
+});
+
+test("a nested configuration cannot turn a rule of the form off", () => {
+  const root = tree(temp(), { "README.md": CLEAN, "docs/.markdownlint.json": '{ "MD004": false }\n', "docs/a.md": "# Title\n\n* one\n* two\n" });
+  const { hits, error } = formCheck(root);
+  assert.equal(error, undefined);
+  assert.ok(hits.some((h) => /^docs\/a\.md:3: MD004/.test(h)), hits.join("\n"));
+});
+
+test("a root configuration cannot turn on a rule the form leaves off", () => {
+  const root = tree(temp(), { ".markdownlint-cli2.jsonc": '{ "config": { "MD001": true } }\n', "README.md": "# Title\n\n### Skipped a level\n" });
+  assert.deepEqual(formCheck(root), { files: 1, hits: [] });
+});
+
+test("fix rewrites a wrapped paragraph in a repository with its own root configuration", () => {
+  const root = tree(temp(), { ".markdownlint-cli2.jsonc": FAMILY_ROOT_CONFIG, "README.md": WRAPPED });
+  assert.deepEqual(formCheck(root, { fix: true }), { files: 1, hits: [] });
+  assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Title\n\nOne paragraph that wraps.\n");
+});
