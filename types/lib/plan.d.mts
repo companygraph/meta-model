@@ -41,6 +41,9 @@ export type UpgradeAsk = {
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
+    /**
+     * The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
+     */
     present?: Set<string> | undefined;
 };
 export type UpgradeWrites = {
@@ -101,7 +104,7 @@ export type BackfillAsk = {
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
- * @property {Set<string> | undefined} [present]
+ * @property {Set<string> | undefined} [present] The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
  */
 /**
  * What an upgrade writes and removes, what it overwrote or rewrote under `--force`, the export
@@ -137,7 +140,7 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said }: UpgradeAsk): UpgradePlan;
 /**
  * @param {{ tooling: string; present: Set<string> }} ask
  * @returns {InitPlan}
