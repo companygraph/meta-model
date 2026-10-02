@@ -37,8 +37,6 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
    holds reports no gap: what that seat requires is answered by its rulebook, not by a row the
    agent wrote about itself.
 
-   Where `model/localization.md` declares a translated language, the agent pass also reads each page's language sections: that a name in a language's prose is that language's name of the entity, and that the translation says what the primary says, which no script reads (R19).
-
 5. Read what only reading judges: whether each Evidence row's `What it shows` is a concrete
    fact rather than a restatement of the level, whether `## In practice` prose says what
    following and breaking the value looks like, and every other line a schema asks a reader to

@@ -47,12 +47,13 @@ export declare function readmesFor(folders: string[], units?: string, types?: (T
     unit?: string;
 })[]): Map<string, string>;
 /**
- * @param {{ name: string; id?: () => string }} instance
+ * @param {{ name: string; id?: () => string; localizationSchema?: string | undefined }} instance
  * @returns {Map<string, string>}
  */
-export declare function startingEntities({ name, id }: {
+export declare function startingEntities({ name, id, localizationSchema }: {
     name: string;
     id?: () => string;
+    localizationSchema?: string | undefined;
 }): Map<string, string>;
 /**
  * @param {{ name: string }} instance
@@ -69,11 +70,16 @@ export declare const IDENTIFIER_PAGE: (page: {
     id: string;
     source: string;
 }) => string;
-/** @type {(page: { id: string; source: string; primary?: string }) => string} */
+/** @type {(page: { id: string; source: string; locale?: string }) => string} */
 export declare const LOCALIZATION_PAGE: (page: {
     id: string;
     source: string;
-    primary?: string;
+    locale?: string;
+}) => string;
+/** @type {(schema: string | undefined, page: { id: string; source: string }) => string} */
+export declare const localizationPageFor: (schema: string | undefined, page: {
+    id: string;
+    source: string;
 }) => string;
 /**
  * @param {{ agent: string; name: string; units: string }} ask

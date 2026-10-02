@@ -1,222 +1,109 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import {
-  LANGUAGE_TAG, localizationOf, languageSectionsOf, asPage, primaryElementsOf, translationElementsOf, withoutFrontmatter, staleTranslationsOf,
-} from "../lib/localization.mjs";
+import { LANGUAGE_TAG, localizationOf, migratedLocalization } from "../lib/localization.mjs";
 
 const repoRoot = new URL("..", import.meta.url);
 
-const LOCALIZATION = (rows) =>
-  `---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads this model.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n`;
+const PAGE = (fm, body = "") => `---\nid: x\nsource: Local\n${fm}---\n\n# Language\n\n> Who reads this model.\n${body}`;
+const OLD = (rows, after = "") =>
+  `---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n${after}`;
 
 test("a language tag is lowercase first, and a declared heading never is", () => {
-  for (const tag of ["de-CH", "en-US", "pl-PL", "fr", "sr-Latn-RS"]) assert.ok(LANGUAGE_TAG.test(tag), tag);
-  for (const heading of ["References", "Also at", "Name", "DE-CH", "de_CH"]) assert.ok(!LANGUAGE_TAG.test(heading), heading);
+  for (const tag of ["de-CH", "en-US", "pl-PL", "fr", "gsw-CH", "sr-Latn-RS"]) assert.ok(LANGUAGE_TAG.test(tag), tag);
+  for (const word of ["References", "German", "DE-CH", "de_CH", "en US"]) assert.ok(!LANGUAGE_TAG.test(word), word);
 });
 
-test("the localization file gives one primary and the translated languages in order", () => {
-  assert.deepEqual(localizationOf(LOCALIZATION("| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |")),
-    { primary: "en-US", translated: ["de-CH", "pl-PL"] });
-  assert.deepEqual(localizationOf(LOCALIZATION("| de-CH | primary |")), { primary: "de-CH", translated: [] });
+test("the localization page names its locale", () => {
+  assert.deepEqual(localizationOf(PAGE("locale: de-CH\n")), { locale: "de-CH" });
+  assert.deepEqual(localizationOf(PAGE('locale: "de-CH"\n')), { locale: "de-CH" });
+  assert.deepEqual(localizationOf(PAGE("locale: 'en-US'\n")), { locale: "en-US" });
 });
 
-test("a localization file that cannot be read says why", () => {
-  assert.match(localizationOf(LOCALIZATION("| en-US | translated |")).error, /no language is `primary`/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| de-CH | primary |")).error, /more than one language is `primary`/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| en-US | translated |")).error, /en-US is written twice/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| German | translated |")).error, /"German" is no language tag/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | main |")).error, /the role "main"/);
-  assert.match(localizationOf("---\nid: x\n---\n\n# Languages\n").error, /no `## Locales` table/);
+test("a page with no locale, or a locale that is no tag, says why", () => {
+  assert.equal(localizationOf(PAGE("")).error, "no `locale` field");
+  assert.match(localizationOf(PAGE("locale: German\n")).error, /`locale` is "German", which is no language tag/);
+  assert.equal(localizationOf("# Language\n").error, "no `locale` field");
 });
 
-// Fix 8: `localizationOf` assumed row 2 of `## Locales` is the separator row and destructured it
-// away unread; a table missing one silently read its first data row as if it were the separator
-// and dropped it.
-test("a `## Locales` table without a separator row is refused", () => {
-  const text = "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| en-US | primary |\n";
-  assert.match(localizationOf(text).error, /`## Locales` is not a table with the columns Locale \| Role/);
+test("an earlier page's primary row becomes its locale, and the table goes", () => {
+  assert.deepEqual(migratedLocalization(OLD("| en-US | primary |")), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
 });
 
-const PAGE = [
-  "# Invoice lines explained",
-  "",
-  "> Whoever receives an invoice sees what each line is made of.",
-  "",
-  "## Description",
-  "",
-  "The feature.",
-  "",
-  "```markdown",
-  "## de-CH",
-  "```",
-  "",
-  "## de-CH",
-  "",
-  "### Name",
-  "",
-  "Rechnungszeilen erklärt",
-  "",
-  "### Statement",
-  "",
-  "> Wer eine Rechnung erhält, sieht, woraus jede Zeile besteht.",
-  "",
-  "### Description",
-  "",
-  "Die Funktion.",
-  "",
-].join("\n");
-
-test("a page is cut where its first language section begins, and a fenced heading cuts nothing", () => {
-  const { primary, sections, order, after } = languageSectionsOf(PAGE);
-  assert.deepEqual(order, ["de-CH"]);
-  assert.deepEqual(after, []);
-  assert.ok(primary.includes("```markdown\n## de-CH\n```"), "the fenced heading stays in the primary");
-  assert.ok(sections.get("de-CH").includes("### Name"));
+test("a section below the table survives the migration", () => {
+  const { text } = migratedLocalization(OLD("| de-CH | primary |", "\n## References\n\n| What | URL |\n| --- | --- |\n| BCP 47 | https://www.rfc-editor.org/info/bcp47 |\n"));
+  assert.equal(text,
+    "---\nid: x\nsource: Local\nlocale: de-CH\n---\n\n# Languages\n\n> Who reads it.\n\n## References\n\n| What | URL |\n| --- | --- |\n| BCP 47 | https://www.rfc-editor.org/info/bcp47 |\n");
+  assert.deepEqual(localizationOf(text), { locale: "de-CH" });
 });
 
-test("a schema section standing below a language section is named in after", () => {
-  const { after } = languageSectionsOf(`${PAGE}\n## References\n\n| What | URL |\n| --- | --- |\n`);
-  assert.deepEqual(after, ["References"]);
+test("a page that already names its locale is not migrated", () => {
+  assert.equal(migratedLocalization(PAGE("locale: en-US\n")), null);
 });
 
-test("a language section reads as a page one level up", () => {
-  assert.equal(asPage("### Name\n\nX\n\n#### Delivery\n\n- y\n\n```\n### kept\n```"), "## Name\n\nX\n\n### Delivery\n\n- y\n\n```\n### kept\n```");
+test("a page declaring a translated language is refused, naming it", () => {
+  assert.match(migratedLocalization(OLD("| en-US | primary |\n| de-CH | translated |")).error, /declares de-CH translated; a model is written in one language/);
 });
 
-test("the primary and a translation are read into the same element paths", () => {
-  const { primary, sections } = languageSectionsOf(PAGE);
-  assert.deepEqual([...primaryElementsOf(primary).keys()], ["name", "statement", "section/Description"]);
-  assert.equal(primaryElementsOf(primary).get("name"), "Invoice lines explained");
-  const de = translationElementsOf(sections.get("de-CH"));
-  assert.deepEqual([...de.keys()], ["name", "statement", "section/Description"]);
-  assert.equal(de.get("name"), "Rechnungszeilen erklärt");
-  assert.equal(de.get("statement"), "> Wer eine Rechnung erhält, sieht, woraus jede Zeile besteht.");
+// Final review: only a translated language refuses an upgrade. A page the migration cannot read
+// is left as it is, so the upgrade lands and the check afterward names what the page owes.
+test("a page with neither a locale nor a table it can read is left as it is", () => {
+  assert.equal(migratedLocalization("---\nid: x\n---\n\n# Languages\n"), null);
+  assert.equal(migratedLocalization(OLD("| en-US | translated-ish |")), null);
+  assert.equal(migratedLocalization("# Languages\n"), null);
 });
 
-test("a page without a statement has no statement element", () => {
-  assert.deepEqual([...primaryElementsOf("# Local\n\n## Description\n\nHere.\n").keys()], ["name", "section/Description"]);
+// Final review: a vault edited on Windows holds CRLF line ends, and the Obsidian plugin hands
+// the text over as it reads it. Both forms are read as their LF selves.
+test("a page with CRLF line ends is read and migrated as its LF self", () => {
+  const crlf = (text) => text.replace(/\n/g, "\r\n");
+  assert.deepEqual(localizationOf(crlf(PAGE("locale: de-CH\n"))), { locale: "de-CH" });
+  assert.equal(migratedLocalization(crlf(PAGE("locale: en-US\n"))), null);
+  assert.deepEqual(migratedLocalization(crlf(OLD("| en-US | primary |"))), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
 });
 
-test("every heading below a language section is named in after, even after another", () => {
-  const { after } = languageSectionsOf(`${PAGE}\n## References\n\n| What | URL |\n| --- | --- |\n\n## Also at\n\nHere.\n`);
-  assert.deepEqual(after, ["References", "Also at"]);
+// Final review, minors: a blank `locale:` is no locale, so the table still gives one, written in
+// the blank line's place rather than beside it.
+test("a blank locale beside the earlier table is filled from the table, once", () => {
+  const blank = OLD("| en-US | primary |").replace("source: Local\n", "source: Local\nlocale:\n");
+  assert.deepEqual(migratedLocalization(blank), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
 });
 
-test("frontmatter is taken off before a body is read", () => {
-  assert.equal(withoutFrontmatter("---\nid: x\n---\n\n# A\n"), "\n# A\n");
-  assert.equal(withoutFrontmatter("# A\n"), "# A\n");
+test("a page naming its locale beside a leftover table is refused if the table declares a translated language", () => {
+  const leftover = (rows) => OLD(rows).replace("source: Local\n", "source: Local\nlocale: en-US\n");
+  assert.match(migratedLocalization(leftover("| en-US | primary |\n| de-CH | translated |")).error, /declares de-CH translated/);
+  assert.equal(migratedLocalization(leftover("| en-US | primary |")), null);
 });
 
-const page = (en, de, extra = "") =>
-  `---\nid: x\n---\n\n# Billing\n\n> ${en}\n${extra}\n## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> ${de}\n`;
-const change = (before, after) => [{ before: "model/features/billing.md", after: "model/features/billing.md", beforeText: before, afterText: after }];
-
-test("a changed primary element whose translation stayed fails, naming the element", () => {
-  const out = staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Alt.")), ["de-CH"], new Set());
-  assert.equal(out.length, 1);
-  assert.match(out[0], /^model\/features\/billing\.md#statement changed, and its de-CH translation did not/);
+test("the rewrite closes the gap only where the table was, and keeps blank lines elsewhere", () => {
+  const { text } = migratedLocalization(OLD("| en-US | primary |", "\n## References\n\n```\na\n\n\n\nb\n```\n"));
+  assert.equal(text, "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n\n## References\n\n```\na\n\n\n\nb\n```\n");
 });
 
-test("a changed primary element whose translation changed with it passes", () => {
-  assert.deepEqual(staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Neu.")), ["de-CH"], new Set()), []);
+test("a table section holding more than the table is left as it is, so nothing it says is dropped", () => {
+  const prose = OLD("| en-US | primary |").replace("## Locales\n\n", "## Locales\n\nWe also answer in French.\n\n");
+  assert.equal(migratedLocalization(prose), null);
 });
 
-test("a trailer naming the element releases it", () => {
-  assert.deepEqual(staleTranslationsOf(change(page("Old.", "Alt."), page("New.", "Alt.")), ["de-CH"], new Set(["model/features/billing.md#statement"])), []);
+test("a missing or blank locale is said to be missing, and an invalid one is not", () => {
+  assert.equal(localizationOf(PAGE("")).missing, true);
+  assert.equal(localizationOf(PAGE("locale:\n")).missing, true);
+  assert.equal(localizationOf(PAGE("locale: German\n")).missing, undefined);
 });
 
-test("a new section added with its translation passes", () => {
-  const before = page("Same.", "Gleich.");
-  const after = `---\nid: x\n---\n\n# Billing\n\n> Same.\n\n## Description\n\nNew.\n\n## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> Gleich.\n\n### Description\n\nNeu.\n`;
-  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
-});
-
-test("a frontmatter change asks nothing of a translation", () => {
-  const before = page("Same.", "Gleich.");
-  assert.deepEqual(staleTranslationsOf(change(before, before.replace("id: x", "id: x\nsource: Local")), ["de-CH"], new Set()), []);
-});
-
-// Review fix 7: a table re-padded and a paragraph re-wrapped change no word, but the comparison
-// was raw text equality, so either read as the primary having changed and asked the unchanged
-// translation to follow it — a formatting pass alone would have failed every translated instance
-// it touched. Whitespace, including a soft line break inside a paragraph, is collapsed to one
-// space before comparing; a table cell is trimmed the same way, so tight and wide padding around
-// `|` read the same.
-const tablePage = (notes, table, deNotes, deTable) =>
-  `---\nid: x\n---\n\n# Billing\n\n> Same.\n\n## Notes\n\n${notes}\n\n## References\n\n${table}\n\n` +
-  `## de-CH\n\n### Name\n\nAbrechnung\n\n### Statement\n\n> Same.\n\n### Notes\n\n${deNotes}\n\n### References\n\n${deTable}\n`;
-
-test("a re-padded table and a re-wrapped paragraph in the primary, with the translation untouched, is not stale", () => {
-  const before = tablePage(
-    "Billed monthly,\nin advance.",
-    "| What | URL |\n| --- | --- |\n| Terms | https://a.example |",
-    "Monatlich abgerechnet,\nim Voraus.",
-    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
-  );
-  const after = tablePage(
-    "Billed monthly, in\nadvance.",
-    "| What  |URL|\n|---|---|\n|Terms   |https://a.example|",
-    "Monatlich abgerechnet,\nim Voraus.",
-    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
-  );
-  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
-});
-
-// Review fix 9: a consumer outside this repository — the MCP server, refusing a question asked
-// in a locale the instance does not declare — reads `localizationOf` from
-// `companygraph-meta-model/localization`, the same way `companygraph-meta-model/ids` already
-// resolves by the package's own name.
 test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
   const script = `
     import { localizationOf } from "companygraph-meta-model/localization";
-    const declared = localizationOf("---\\nid: x\\n---\\n\\n# Languages\\n\\n## Locales\\n\\n| Locale | Role |\\n| --- | --- |\\n| en-US | primary |\\n");
-    if (declared.primary !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
+    const read = localizationOf("---\\nid: x\\nlocale: en-US\\n---\\n\\n# Language\\n");
+    if (read.locale !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
     process.stdout.write("ok");
   `;
   const out = execFileSync(process.execPath, ["--input-type=module", "-e", script], { cwd: repoRoot, encoding: "utf8" });
   assert.equal(out, "ok");
-});
-
-// A grouped section's `###` heading names another entity — an experience's `## Achievements`
-// carries `### Context`, naming an achievement kind — and renaming that entity rewrites the
-// heading on every page listing it, while each translation's own heading (the language's own
-// name of the entity, read through `asPage` as `###` too) rightly stays as it is. R19
-// (lib/checks.mjs) already holds a translated grouped heading to the primary's; staleness must
-// not also compare the heading lines, or such a rename fails every page as a stale translation
-// though nothing the page says changed.
-const experiencePage = (heading, bullets, deHeading, deBullets) =>
-  `---\nid: x\n---\n\n# Some Experience\n\n> Statement.\n\n## Achievements\n\n### ${heading}\n\n${bullets}\n\n` +
-  `## de-CH\n\n### Name\n\nSome Experience DE\n\n### Statement\n\n> Statement DE.\n\n### Achievements\n\n#### ${deHeading}\n\n${deBullets}\n`;
-
-test("a renamed grouped heading, with the bullets and the translation unchanged, is not stale", () => {
-  const before = experiencePage("Context", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
-  const after = experiencePage("Background", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
-  assert.deepEqual(staleTranslationsOf(change(before, after), ["de-CH"], new Set()), []);
-});
-
-test("a renamed grouped heading beside a real bullet change still fails", () => {
-  const before = experiencePage("Context", "- Did X.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
-  const after = experiencePage("Background", "- Did Z.\n- Did Y.", "Kontext", "- Machte X.\n- Machte Y.");
-  const out = staleTranslationsOf(change(before, after), ["de-CH"], new Set());
-  assert.equal(out.length, 1);
-  assert.match(out[0], /^model\/features\/billing\.md#section\/Achievements changed, and its de-CH translation did not/);
-});
-
-test("a real word change beside the same kind of re-padding and re-wrapping still fails", () => {
-  const before = tablePage(
-    "Billed monthly,\nin advance.",
-    "| What | URL |\n| --- | --- |\n| Terms | https://a.example |",
-    "Monatlich abgerechnet,\nim Voraus.",
-    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
-  );
-  const after = tablePage(
-    "Billed monthly, in\nadvance.",
-    "| What  |URL|\n|---|---|\n|Terms   |https://b.example|",
-    "Monatlich abgerechnet,\nim Voraus.",
-    "| Was | URL |\n| --- | --- |\n| Bedingungen | https://a.example |",
-  );
-  const out = staleTranslationsOf(change(before, after), ["de-CH"], new Set());
-  assert.equal(out.length, 1);
-  assert.match(out[0], /^model\/features\/billing\.md#section\/References changed, and its de-CH translation did not/);
 });

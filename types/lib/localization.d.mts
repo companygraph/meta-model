@@ -1,35 +1,27 @@
-import type { PageChange } from "./history.mjs";
-/** @import { PageChange } from "./history.mjs" */
 export declare const LANGUAGE_TAG: RegExp;
-/** @param {string} text */
-export declare const withoutFrontmatter: (text: string) => string;
 export type Localization = {
     error: string;
-    primary?: undefined;
-    translated?: undefined;
+    missing?: true;
+    locale?: undefined;
 } | {
     error?: undefined;
-    primary: string;
-    translated: string[];
+    missing?: undefined;
+    locale: string;
 };
-export type LanguageSections = {
-    primary: string;
-    sections: Map<string, string>;
-    order: string[];
-    after: string[];
+export type Migrated = {
+    error: string;
+    text?: undefined;
+} | {
+    error?: undefined;
+    text: string;
 };
 /**
- * What model/localization.md declares, or why it cannot be read.
- * @typedef {{ error: string; primary?: undefined; translated?: undefined }
- *   | { error?: undefined; primary: string; translated: string[] }} Localization
+ * The language model/localization.md names, or why it cannot be read.
+ * @typedef {{ error: string; missing?: true; locale?: undefined } | { error?: undefined; missing?: undefined; locale: string }} Localization
  */
 /**
- * A page's body cut at its language sections: see languageSectionsOf.
- * @typedef {object} LanguageSections
- * @property {string} primary
- * @property {Map<string, string>} sections
- * @property {string[]} order
- * @property {string[]} after
+ * A localization page in the earlier form, rewritten, or why it cannot be.
+ * @typedef {{ error: string; text?: undefined } | { error?: undefined; text: string }} Migrated
  */
 /**
  * @param {string} text
@@ -37,32 +29,7 @@ export type LanguageSections = {
  */
 export declare function localizationOf(text: string): Localization;
 /**
- * @param {string} body
- * @param {{ tags?: string[] }} [options]
- * @returns {LanguageSections}
+ * @param {string} text
+ * @returns {Migrated | null}
  */
-export declare function languageSectionsOf(body: string, { tags }?: {
-    tags?: string[];
-}): LanguageSections;
-/**
- * @param {PageChange[]} changes
- * @param {string[]} translated
- * @param {Set<string>} released
- * @returns {string[]}
- */
-export declare function staleTranslationsOf(changes: PageChange[], translated: string[], released: Set<string>): string[];
-/**
- * @param {string} section
- * @returns {string}
- */
-export declare function asPage(section: string): string;
-/**
- * @param {string} primary
- * @returns {Map<string, string>}
- */
-export declare function primaryElementsOf(primary: string): Map<string, string>;
-/**
- * @param {string} section
- * @returns {Map<string, string>}
- */
-export declare function translationElementsOf(section: string): Map<string, string>;
+export declare function migratedLocalization(text: string): Migrated | null;

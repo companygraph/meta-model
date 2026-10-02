@@ -1361,38 +1361,14 @@ test("a qualifier resolves into its row's attrs as the stable id of what it name
   assert.equal(rootId, rootStableId);
 });
 
-// The localization schema joins the fixture's, since the parser places a page only by a schema.
-const schemasWithLocalization = new Map(schemas).set(
-  "localization-schema.md",
-  fs.readFileSync(path.join(path.dirname(fileURLToPath(import.meta.url)), "../core/localization-schema.md"), "utf8"),
-);
-const LOCALIZED = (() => {
-  const files = new Map(valid);
-  // The localization schema's `source` field is a required `ref → source`, so the fixture needs
-  // an entity for it to resolve to — the same `sources/local.md` the scalar-vs-list fixture
-  // above already uses for the same name.
-  files.set("sources/local.md", "# Local\n\n> Kept in this repository.\n");
-  files.set("localization.md", "---\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n| de-CH | translated |\n");
-  const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));
-  files.set(path, `${text.trimEnd()}\n\n## de-CH\n\n### Name\n\nJava-Programmierung\n\n### Statement\n\n> Auf Deutsch.\n`);
-  return { files, path };
-})();
-
-test("a page's language section leaves its sections and arrives as its translation", () => {
-  const { entities } = parseInstance(LOCALIZED.files, { schemas: schemasWithLocalization });
-  const skill = entities.find((e) => e.path === LOCALIZED.path);
-  assert.deepEqual(skill.translations["de-CH"], { name: "Java-Programmierung", statement: "Auf Deutsch.", sections: [] });
-  assert.ok(!skill.sections.some((s) => s.heading === "de-CH"));
-});
-
-test("an instance that declares no translated language parses exactly as before", () => {
+test("no entity carries translations", () => {
   const { entities } = parseInstance(valid, { schemas });
   assert.ok(entities.every((e) => !("translations" in e)));
 });
 
-// `## api`, `## faq`, `## how-to` all match the language-tag shape `languageSectionsOf` cuts on.
-// An instance with no declared translated language must not lose such a heading to that cut —
-// the parser, and everyone downstream of it, is meant to see it exactly as an editor does.
+// `## api`, `## faq`, `## how-to` are shaped like a language tag, and a parser that once cut a
+// page's language sections took such a heading for one. Nothing cuts them now; this holds that
+// the parser, and everyone downstream of it, sees such a heading exactly as an editor does.
 test("a tag-shaped heading the instance never declares as translated stays a section, with no localization.md at all", () => {
   const files = new Map(valid);
   const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));
@@ -1403,14 +1379,3 @@ test("a tag-shaped heading the instance never declares as translated stays a sec
   assert.ok(!("translations" in skill));
 });
 
-test("the same tag-shaped heading stays a section where localization.md declares only the primary", () => {
-  const files = new Map(valid);
-  files.set("sources/local.md", "# Local\n\n> Kept in this repository.\n");
-  files.set("localization.md", "---\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n");
-  const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));
-  files.set(path, `${text.trimEnd()}\n\n## api\n\nHow it is called.\n`);
-  const { entities } = parseInstance(files, { schemas: schemasWithLocalization });
-  const skill = entities.find((e) => e.path === path);
-  assert.ok(skill.sections.some((s) => s.heading === "api"), skill.sections.map((s) => s.heading).join(", "));
-  assert.ok(!("translations" in skill));
-});
