@@ -572,15 +572,29 @@ const CHECKS = [
     name: "the form is the family's form",
     rule: null,
     run() {
-      const jsonc = (rel) => JSON.parse((read(rel) ?? "{}").split("\n").filter((line) => !line.trim().startsWith("//")).join("\n"));
+      // A configuration that is not there is said as missing, not as rules that differ from {}.
+      const jsonc = (rel) => {
+        const text = read(rel);
+        if (text === null) {
+          fail(`${rel} is missing`);
+          return null;
+        }
+        return JSON.parse(text.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n"));
+      };
       if (read("form/markdown-rules.cjs") !== read("conventions/markdown-rules.cjs"))
         fail("form/markdown-rules.cjs is not conventions/markdown-rules.cjs; the form is the family's, rule for rule");
-      if (JSON.stringify(jsonc("form/.markdownlint-cli2.jsonc").config) !== JSON.stringify(jsonc(".markdownlint-cli2.jsonc").config))
+      const [ours, family] = [jsonc("form/.markdownlint-cli2.jsonc"), jsonc(".markdownlint-cli2.jsonc")];
+      if (ours && family && JSON.stringify(ours.config) !== JSON.stringify(family.config))
         fail("form/.markdownlint-cli2.jsonc turns on other rules than .markdownlint-cli2.jsonc; the form is the family's, rule for rule");
       const pkg = JSON.parse(read("package.json") ?? "{}");
       const version = /export const FORM_VERSION = "([^"]+)"/.exec(read("lib/form.mjs") ?? "")?.[1];
       if (pkg.devDependencies?.["markdownlint-cli2"] !== version)
         fail(`package.json takes markdownlint-cli2 ${pkg.devDependencies?.["markdownlint-cli2"]}, and lib/form.mjs pins ${version}; the tests run the version a release runs`);
+      // The family's own form runs the version conventions-format pins, so the two agree only
+      // while that is the version lib/form.mjs pins too.
+      const familyVersion = /^VERSION=(\S+)$/m.exec(read("conventions/conventions-format") ?? "")?.[1];
+      if (familyVersion !== version)
+        fail(`conventions/conventions-format runs markdownlint-cli2 ${familyVersion ?? "at no VERSION"}, and lib/form.mjs pins ${version}; the form is the family's, version for version`);
     },
   },
   {

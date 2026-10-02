@@ -75,9 +75,10 @@ export declare function pinReport({ declared, texts, remote }: {
     failed: boolean;
 };
 /**
- * What an upstream on GitHub offers now: its tags and its HEAD, through `git ls-remote` without
- * cloning, or null where it cannot be reached. Git is told never to ask for credentials, since a
- * private or mistyped repository would otherwise wait at a prompt nobody sees.
+ * What an upstream on GitHub offers now: its tags and its HEAD, through one `git ls-remote`
+ * without cloning, or null where it cannot be reached. Git is told never to ask for credentials,
+ * since a private or mistyped repository would otherwise wait at a prompt nobody sees. An
+ * annotated tag is listed twice, once peeled with `^{}`, and is counted once.
  * @param {string} repo
  * @returns {Remote}
  */

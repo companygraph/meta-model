@@ -3,8 +3,9 @@
 #
 #   jobs:
 #     companygraph:
-#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.47.0
+#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@vX.Y.Z
 #
+# where vX.Y.Z is the release the manifest's `tooling` names, so the two move together.
 # and holds one file and one pin. The checker has no dependencies but the Markdown form's,
 # markdownlint-cli2, which npx fetches at the version the release pins; the release is checked out
 # beside the caller and run from there. A maintainer with no Node still gets the gate, because
