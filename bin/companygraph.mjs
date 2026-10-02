@@ -43,7 +43,7 @@ import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
  * the fields of a plan.
  * @typedef {UpgradeWrites | {
  *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
- *   given?: undefined; from?: undefined; to?: undefined;
+ *   given?: undefined; rewritten?: undefined; from?: undefined; to?: undefined;
  * }} UpgradeRead
  */
 
@@ -484,6 +484,7 @@ async function upgrade(argv) {
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${/** @type {string[]} */ (plan.removes).length} removed`);
   if (added.length) console.log(`  packs: ${added.join(", ")}, vendored beside core`);
   if (/** @type {string[]} */ (plan.given).length) console.log(`  written, since the instance had none, and its own from now on: ${/** @type {string[]} */ (plan.given).join(", ")}`);
+  if (/** @type {string[]} */ (plan.rewritten).length) console.log(`  rewritten in this core's form: ${/** @type {string[]} */ (plan.rewritten).join(", ")}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is

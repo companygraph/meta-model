@@ -559,6 +559,20 @@ test("upgrade writes model/localization.md the instance lacks, with source read 
   assert.doesNotThrow(() => run(["check", root]));
 });
 
+test("upgrade rewrites a localization page in the earlier form, says so, and a second upgrade leaves it be", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  const id = fs.readFileSync(loc, "utf8").match(/^id: (\S+)$/m)[1];
+  fs.writeFileSync(loc, `---\nid: ${id}\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /rewritten in this core's form: model\/localization\.md/);
+  assert.equal(fs.readFileSync(loc, "utf8"), `---\nid: ${id}\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n`);
+  assert.doesNotThrow(() => run(["check", root]));
+  // The page now names its locale, so the plan writes nothing and upgrade says it has nothing to do.
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested

@@ -303,7 +303,7 @@ test("an upgrade writes the export's inputs the instance lacks, never one it has
 // schema left an instance upgraded from before it with no model/localization.md at all, and
 // nothing later would write one. An upgrade now writes it, once, reading `source` from
 // model/identity.md the way `backfillPlan` does, and never touches a page the instance has.
-const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Localization Schema\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `locale` | Yes | string | The language |\n"]]);
 
 test("an upgrade writes model/localization.md when the new core carries the schema and the instance has none, with source read from identity", () => {
   const { manifest, held, workflow } = instance();
@@ -320,10 +320,44 @@ test("an upgrade defaults localization.md's source to Local when identity names 
   const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
   assert.match(plan.writes.get("model/localization.md"), /\nsource: Local\n/);
 
-  const already = "---\nid: existing\nsource: Local\n---\n\n# Languages\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n";
+  const already = "---\nid: existing\nsource: Local\nlocale: de-CH\n---\n\n# Language\n";
   const withOwn = new Map(held).set("model/localization.md", already);
   const kept = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withOwn, workflow });
   assert.ok(!kept.writes.has("model/localization.md"), "an existing file is never overwritten");
+});
+
+const OLD_LOCALIZATION = (rows) =>
+  `---\nid: existing\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n`;
+
+test("an upgrade rewrites a localization page in the earlier form into its locale field", () => {
+  const { manifest, held, workflow } = instance();
+  const withOld = new Map(held).set("model/localization.md", OLD_LOCALIZATION("| de-CH | primary |"));
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withOld, workflow });
+  assert.equal(plan.writes.get("model/localization.md"), "---\nid: existing\nsource: Local\nlocale: de-CH\n---\n\n# Languages\n\n> Who reads it.\n");
+  assert.deepEqual(plan.rewritten, ["model/localization.md"]);
+});
+
+test("an upgrade leaves a localization page that already names its locale alone", () => {
+  const { manifest, held, workflow } = instance();
+  const current = "---\nid: existing\nsource: Local\nlocale: en-US\n---\n\n# Language\n\n> Who reads it.\n";
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", current), workflow });
+  assert.ok(!plan.writes.has("model/localization.md"));
+  assert.deepEqual(plan.rewritten, []);
+});
+
+test("an upgrade refuses a localization page that declares a translated language, writing nothing", () => {
+  const { manifest, held, workflow } = instance();
+  const withTranslated = new Map(held).set("model/localization.md", OLD_LOCALIZATION("| en-US | primary |\n| de-CH | translated |"));
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withTranslated, workflow });
+  assert.match(plan.refused, /^model\/localization\.md declares de-CH translated; a model is written in one language/);
+  assert.equal(plan.writes, undefined);
+});
+
+test("an upgrade toward a core whose schema declares no locale leaves the earlier form alone", () => {
+  const { manifest, held, workflow } = instance();
+  const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+  const plan = upgradePlan({ core: olderSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", OLD_LOCALIZATION("| en-US | primary |")), workflow });
+  assert.ok(!plan.writes.has("model/localization.md"));
 });
 
 test("a manifest naming a file outside its own core refuses the whole upgrade, hash and all", () => {

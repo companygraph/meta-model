@@ -49,6 +49,7 @@ export type UpgradeWrites = {
     edited: string[];
     missing: string[];
     given: string[];
+    rewritten: string[];
     from: string;
     to: string;
 };
@@ -111,6 +112,7 @@ export type BackfillAsk = {
  * @property {string[]} edited
  * @property {string[]} missing
  * @property {string[]} given
+ * @property {string[]} rewritten
  * @property {string} from
  * @property {string} to
  */
