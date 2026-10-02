@@ -64,7 +64,17 @@ test("a rule with no Applies to rows applies everywhere and passes", () => {
 
 test("a modality outside must, must not and may fails naming the permitted values", () => {
   const rule = RULE_FM.map((l) => l.replace("modality: must", "modality: must-not"));
-  assert.equal(failuresOf({ rule }, "must-not").length, 1);
+  assert.equal(failuresOf({ rule }, "must-not", "must not").length, 1);
+});
+
+test("a modality of `must not`, with the space, passes", () => {
+  const rule = RULE_FM.map((l) => l.replace("modality: must", "modality: must not"));
+  assert.deepEqual(failuresOf({ rule }), []);
+});
+
+test("an Applies to row naming a value passes mechanically; the writing rule is the agent pass's to hold", () => {
+  assert.deepEqual(failuresOf({ ruleSections: [["Why", ["Prose."]], appliesTo([["value", "Craftsmanship", ""]])] }), []);
+  assert.deepEqual(failuresOf({ controlSections: [["How it is carried out", ["Prose."]], appliesTo([["value", "Craftsmanship", ""]])] }), []);
 });
 
 test("a missing modality fails", () => {

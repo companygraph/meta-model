@@ -60,4 +60,5 @@ A rule is a statement under the company's own authority that obliges, forbids or
 - A refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. A rule is for what binds more than one of them, or what a control checks, and where a rule replaces a refusal restated on several pages, those restatements are removed.
 - A value's "We never …" is the value's own boundary and stays; a rule may protect it.
 - `motivated-by` names a risk only where the rule exists because of it.
+- An `## Applies to` row names a role, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
 - Names and prose are American English (R14).
