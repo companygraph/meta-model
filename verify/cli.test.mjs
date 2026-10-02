@@ -555,7 +555,7 @@ test("upgrade writes model/localization.md the instance lacks, with source read 
   assert.match(said, /written, since the instance had none.*model\/localization\.md/);
   const page = fs.readFileSync(path.join(root, "model/localization.md"), "utf8");
   assert.match(page, /\nsource: Local\n/);
-  assert.match(page, /\| en-US \| primary \|/);
+  assert.match(page, /\nlocale: en-US\n/);
   assert.doesNotThrow(() => run(["check", root]));
 });
 

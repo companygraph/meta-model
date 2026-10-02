@@ -86,18 +86,15 @@ test("an instance starts with a source and its singular entities, naming the ins
   assert.match(files.get("model/identifier.md"), /^---\nid: \S+\nsource: Local\nformat: uuidv7\n---\n\n# /);
 });
 
-// Fix 3: the stub is a sentence saying who reads the model and in which language, not a
-// placeholder instruction to fill one in.
-test("the localization stub is a sentence naming the primary language", () => {
+// One language per model: the stub names the model's language in `locale` and says who reads it.
+test("the localization stub names its locale and says who reads the model in it", () => {
   assert.equal(
     LOCALIZATION_PAGE({ id: "x", source: "Local" }),
-    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
-      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
+    "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n",
   );
   assert.equal(
-    LOCALIZATION_PAGE({ id: "x", source: "Local", primary: "de-CH" }),
-    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n\n" +
-      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n",
+    LOCALIZATION_PAGE({ id: "x", source: "Local", locale: "de-CH" }),
+    "---\nid: x\nsource: Local\nlocale: de-CH\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n",
   );
 });
 

@@ -1,50 +1,63 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
-import { LANGUAGE_TAG, localizationOf } from "../lib/localization.mjs";
+import { LANGUAGE_TAG, localizationOf, migratedLocalization } from "../lib/localization.mjs";
 
 const repoRoot = new URL("..", import.meta.url);
 
-const LOCALIZATION = (rows) =>
-  `---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads this model.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n`;
+const PAGE = (fm, body = "") => `---\nid: x\nsource: Local\n${fm}---\n\n# Language\n\n> Who reads this model.\n${body}`;
+const OLD = (rows, after = "") =>
+  `---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n${after}`;
 
 test("a language tag is lowercase first, and a declared heading never is", () => {
-  for (const tag of ["de-CH", "en-US", "pl-PL", "fr", "sr-Latn-RS"]) assert.ok(LANGUAGE_TAG.test(tag), tag);
-  for (const heading of ["References", "Also at", "Name", "DE-CH", "de_CH"]) assert.ok(!LANGUAGE_TAG.test(heading), heading);
+  for (const tag of ["de-CH", "en-US", "pl-PL", "fr", "gsw-CH", "sr-Latn-RS"]) assert.ok(LANGUAGE_TAG.test(tag), tag);
+  for (const word of ["References", "German", "DE-CH", "de_CH", "en US"]) assert.ok(!LANGUAGE_TAG.test(word), word);
 });
 
-test("the localization file gives one primary and the translated languages in order", () => {
-  assert.deepEqual(localizationOf(LOCALIZATION("| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |")),
-    { primary: "en-US", translated: ["de-CH", "pl-PL"] });
-  assert.deepEqual(localizationOf(LOCALIZATION("| de-CH | primary |")), { primary: "de-CH", translated: [] });
+test("the localization page names its locale", () => {
+  assert.deepEqual(localizationOf(PAGE("locale: de-CH\n")), { locale: "de-CH" });
+  assert.deepEqual(localizationOf(PAGE('locale: "de-CH"\n')), { locale: "de-CH" });
+  assert.deepEqual(localizationOf(PAGE("locale: 'en-US'\n")), { locale: "en-US" });
 });
 
-test("a localization file that cannot be read says why", () => {
-  assert.match(localizationOf(LOCALIZATION("| en-US | translated |")).error, /no language is `primary`/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| de-CH | primary |")).error, /more than one language is `primary`/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| en-US | translated |")).error, /en-US is written twice/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | primary |\n| German | translated |")).error, /"German" is no language tag/);
-  assert.match(localizationOf(LOCALIZATION("| en-US | main |")).error, /the role "main"/);
-  assert.match(localizationOf("---\nid: x\n---\n\n# Languages\n").error, /no `## Locales` table/);
+test("a page with no locale, or a locale that is no tag, says why", () => {
+  assert.equal(localizationOf(PAGE("")).error, "no `locale` field");
+  assert.match(localizationOf(PAGE("locale: German\n")).error, /`locale` is "German", which is no language tag/);
+  assert.equal(localizationOf("# Language\n").error, "no `locale` field");
 });
 
-// Fix 8: `localizationOf` assumed row 2 of `## Locales` is the separator row and destructured it
-// away unread; a table missing one silently read its first data row as if it were the separator
-// and dropped it.
-test("a `## Locales` table without a separator row is refused", () => {
-  const text = "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| en-US | primary |\n";
-  assert.match(localizationOf(text).error, /`## Locales` is not a table with the columns Locale \| Role/);
+test("an earlier page's primary row becomes its locale, and the table goes", () => {
+  assert.deepEqual(migratedLocalization(OLD("| en-US | primary |")), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
 });
 
-// Review fix 9: a consumer outside this repository — the MCP server, refusing a question asked
-// in a locale the instance does not declare — reads `localizationOf` from
-// `companygraph-meta-model/localization`, the same way `companygraph-meta-model/ids` already
-// resolves by the package's own name.
+test("a section below the table survives the migration", () => {
+  const { text } = migratedLocalization(OLD("| de-CH | primary |", "\n## References\n\n| What | URL |\n| --- | --- |\n| BCP 47 | https://www.rfc-editor.org/info/bcp47 |\n"));
+  assert.equal(text,
+    "---\nid: x\nsource: Local\nlocale: de-CH\n---\n\n# Languages\n\n> Who reads it.\n\n## References\n\n| What | URL |\n| --- | --- |\n| BCP 47 | https://www.rfc-editor.org/info/bcp47 |\n");
+  assert.deepEqual(localizationOf(text), { locale: "de-CH" });
+});
+
+test("a page that already names its locale is not migrated", () => {
+  assert.equal(migratedLocalization(PAGE("locale: en-US\n")), null);
+});
+
+test("a page declaring a translated language is refused, naming it", () => {
+  assert.match(migratedLocalization(OLD("| en-US | primary |\n| de-CH | translated |")).error, /declares de-CH translated; a model is written in one language/);
+});
+
+test("a page with neither a locale nor a table it can read is refused", () => {
+  assert.match(migratedLocalization("---\nid: x\n---\n\n# Languages\n").error, /no `## Locales` table/);
+  assert.match(migratedLocalization(OLD("| en-US | translated-ish |")).error, /no one `primary` language tag/);
+  assert.match(migratedLocalization("# Languages\n").error, /no frontmatter/);
+});
+
 test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
   const script = `
     import { localizationOf } from "companygraph-meta-model/localization";
-    const declared = localizationOf("---\\nid: x\\n---\\n\\n# Languages\\n\\n## Locales\\n\\n| Locale | Role |\\n| --- | --- |\\n| en-US | primary |\\n");
-    if (declared.primary !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
+    const read = localizationOf("---\\nid: x\\nlocale: en-US\\n---\\n\\n# Language\\n");
+    if (read.locale !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
     process.stdout.write("ok");
   `;
   const out = execFileSync(process.execPath, ["--input-type=module", "-e", script], { cwd: repoRoot, encoding: "utf8" });

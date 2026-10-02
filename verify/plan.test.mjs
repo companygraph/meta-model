@@ -311,7 +311,7 @@ test("an upgrade writes model/localization.md when the new core carries the sche
   const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withIdentity, workflow });
   const page = plan.writes.get("model/localization.md");
   assert.ok(page, "model/localization.md is written");
-  const id = page.match(/^---\nid: (\S+)\nsource: Acquired\n---\n/)?.[1];
+  const id = page.match(/^---\nid: (\S+)\nsource: Acquired\nlocale: en-US\n---\n/)?.[1];
   assert.ok(id && UUIDV7.test(id), `expected a fresh UUIDv7, got ${id}`);
 });
 
