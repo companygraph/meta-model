@@ -22,6 +22,7 @@ export type Flags = {
     json?: boolean;
     "no-hook"?: boolean;
     backfill?: boolean;
+    fix?: boolean;
     agent?: string;
     name?: string;
     core?: string;

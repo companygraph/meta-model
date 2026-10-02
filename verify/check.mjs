@@ -549,18 +549,52 @@ const CHECKS = [
       // the caller spelled the tag. A release whose file still names the one before runs the
       // older checker, which refuses every instance that took the new pin: v0.45.0 and v0.46.0
       // shipped that way. So the ref is the package's version, held here before a tag is cut.
-      const workflow = read(".github/workflows/instance-check.yml");
-      if (workflow === null) fail(".github/workflows/instance-check.yml is missing");
-      else {
+      for (const file of [".github/workflows/instance-check.yml", ".github/workflows/repository-check.yml"]) {
+        const workflow = read(file);
+        if (workflow === null) { fail(`${file} is missing`); continue; }
         const refs = [...workflow.matchAll(/^\s+ref:\s*(\S+)\s*$/gm)].map((r) => r[1]);
         if (refs.length !== 1 || refs[0] !== `v${pkg.version}`)
-          fail(`.github/workflows/instance-check.yml checks the checker out at ${refs.join(", ") || "no ref"}, and package.json says ${pkg.version}; the ref is v${pkg.version}, or every instance on this release runs the one before`);
+          fail(`${file} checks the checker out at ${refs.join(", ") || "no ref"}, and package.json says ${pkg.version}; the ref is v${pkg.version}, or every repository on this release runs the one before`);
       }
       const tags = execFileSync("git", ["tag", "--points-at", "HEAD", "v*"], { cwd: ROOT, encoding: "utf8" })
         .split("\n").filter(Boolean);
       for (const tag of tags)
         if (tag !== `v${pkg.version}`)
           fail(`tag ${tag} sits on HEAD but package.json says ${pkg.version}`);
+    },
+  },
+  {
+    // Until the family takes the machinery from meta-model, the form has two copies here: the one
+    // conventions-sync vendors for this repository's own Markdown, and form/, which every
+    // repository that takes the tooling is held to. Both run in phase 1, and they agree only while
+    // they read the same rules at the same version, so a difference fails here rather than as two
+    // checks that disagree about one file.
+    name: "the form is the family's form",
+    rule: null,
+    run() {
+      // A configuration that is not there is said as missing, not as rules that differ from {}.
+      const jsonc = (rel) => {
+        const text = read(rel);
+        if (text === null) {
+          fail(`${rel} is missing`);
+          return null;
+        }
+        return JSON.parse(text.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n"));
+      };
+      if (read("form/markdown-rules.cjs") !== read("conventions/markdown-rules.cjs"))
+        fail("form/markdown-rules.cjs is not conventions/markdown-rules.cjs; the form is the family's, rule for rule");
+      const [ours, family] = [jsonc("form/.markdownlint-cli2.jsonc"), jsonc(".markdownlint-cli2.jsonc")];
+      if (ours && family && JSON.stringify(ours.config) !== JSON.stringify(family.config))
+        fail("form/.markdownlint-cli2.jsonc turns on other rules than .markdownlint-cli2.jsonc; the form is the family's, rule for rule");
+      const pkg = JSON.parse(read("package.json") ?? "{}");
+      const version = /export const FORM_VERSION = "([^"]+)"/.exec(read("lib/form.mjs") ?? "")?.[1];
+      if (pkg.devDependencies?.["markdownlint-cli2"] !== version)
+        fail(`package.json takes markdownlint-cli2 ${pkg.devDependencies?.["markdownlint-cli2"]}, and lib/form.mjs pins ${version}; the tests run the version a release runs`);
+      // The family's own form runs the version conventions-format pins, so the two agree only
+      // while that is the version lib/form.mjs pins too.
+      const familyVersion = /^VERSION=(\S+)$/m.exec(read("conventions/conventions-format") ?? "")?.[1];
+      if (familyVersion !== version)
+        fail(`conventions/conventions-format runs markdownlint-cli2 ${familyVersion ?? "at no VERSION"}, and lib/form.mjs pins ${version}; the form is the family's, version for version`);
     },
   },
   {

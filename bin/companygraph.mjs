@@ -6,6 +6,9 @@
 //
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
 //   companygraph check [<folder>]
+//   companygraph form [<folder>] [--fix]
+//   companygraph pins [<folder>]
+//   companygraph adopt [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
@@ -13,8 +16,8 @@
 //   companygraph id
 //   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
 //
-// Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
-// seats, which asks what the flags would say and calls the same code, and stays open until Quit
+// Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian,
+// seats, adopt and pins, which asks what the flags would say and calls the same code, and stays open until Quit
 // or Ctrl+C.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
@@ -24,9 +27,11 @@ import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chm
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
-import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
+import { AGENTS, SKILLS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
-import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { formCheck } from "../lib/form.mjs";
+import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
@@ -53,7 +58,7 @@ import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
  * @typedef {{
  *   _: string[];
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
- *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean;
+ *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean; fix?: boolean;
  *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string;
  *   from?: string; range?: string; message?: string; since?: string;
  * }} Flags
@@ -64,9 +69,12 @@ const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"
 
 const USAGE = `companygraph [<command>]
 
-  (none)              at a terminal, a menu over init, check, upgrade, obsidian and seats, open until Quit or Ctrl+C
+  (none)              at a terminal, a menu over init, check, upgrade, obsidian, seats, adopt and pins, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
+  form [<folder>]     the one Markdown form over a repository, or --fix to write it
+  pins [<folder>]     which pins a repository's pins.json declares are behind; moves nothing
+  adopt [<folder>]    give a repository that is not an instance the form check, its workflow, the seat hook and a pins.json declaring its tooling pin
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
@@ -80,6 +88,7 @@ obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --ope
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
 ids: --backfill  --range <a>..<b>
+form: --fix
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -137,7 +146,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill", "fix"]);
 
 /**
  * @param {string[]} argv
@@ -297,6 +306,43 @@ function panel(label, ok, text) {
   ].join("\n");
 }
 
+// The seat hook made executable and, where git and the repository let it, put in use; what was
+// done or why not is said, as init always said it.
+/** @param {string} root */
+function useHook(root) {
+  chmodSync(join(root, ".companygraph/hooks/commit-msg"), 0o755);
+  // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
+  // instance's position under the repository's own top, whatever that top resolves to on this
+  // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
+  // a relative core.hooksPath against that same top when a hook runs, from any cwd under it.
+  const top = gitTop(root);
+  const prefix = top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+  const hooks = prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
+  const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+  // A repository that already keeps real hook files under its default hooks folder — placed
+  // there directly, without ever setting core.hooksPath, as some tools still do — must not have
+  // them silently switched off by a core.hooksPath this command sets. `git rev-parse --git-path
+  // hooks` names that folder however git resolves it (relative to root, wherever `.git` really
+  // is), asked only where core.hooksPath is not already set to something else, since that case
+  // is already the husky one below. A file git itself ships as a template ends `.sample` and is
+  // never in the way.
+  // `--git-path` answers absolute in a worktree — its hooks live under the main checkout's own
+  // `.git/`, nowhere near `root` — and relative otherwise; `resolve` takes either, where `join`
+  // would concatenate an absolute answer onto `root` into a path nothing ever wrote.
+  const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
+  const hooksDirAbs = hooksDir ? resolve(root, hooksDir) : "";
+  const already = hooksDirAbs && existsSync(hooksDirAbs)
+    ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
+    : [];
+  if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
+  else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
+  else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
+  else {
+    spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
+    console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
+  }
+}
+
 // `menu` is set when the menu calls it, which says what comes next itself.
 /**
  * @param {string[]} argv
@@ -345,39 +391,7 @@ async function init(argv, { menu = false } = {}) {
   const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
-  if (/** @type {Map<string, string>} */ (plan.writes).has(".companygraph/hooks/commit-msg")) {
-    chmodSync(join(root, ".companygraph/hooks/commit-msg"), 0o755);
-    // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
-    // instance's position under the repository's own top, whatever that top resolves to on this
-    // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
-    // a relative core.hooksPath against that same top when a hook runs, from any cwd under it.
-    const top = gitTop(root);
-    const prefix = top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-    const hooks = prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
-    const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-    // A repository that already keeps real hook files under its default hooks folder — placed
-    // there directly, without ever setting core.hooksPath, as some tools still do — must not have
-    // them silently switched off by a core.hooksPath this command sets. `git rev-parse --git-path
-    // hooks` names that folder however git resolves it (relative to root, wherever `.git` really
-    // is), asked only where core.hooksPath is not already set to something else, since that case
-    // is already the husky one below. A file git itself ships as a template ends `.sample` and is
-    // never in the way.
-    // `--git-path` answers absolute in a worktree — its hooks live under the main checkout's own
-    // `.git/`, nowhere near `root` — and relative otherwise; `resolve` takes either, where `join`
-    // would concatenate an absolute answer onto `root` into a path nothing ever wrote.
-    const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-    const hooksDirAbs = hooksDir ? resolve(root, hooksDir) : "";
-    const already = hooksDirAbs && existsSync(hooksDirAbs)
-      ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
-      : [];
-    if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
-    else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
-    else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
-    else {
-      spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
-      console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
-    }
-  }
+  if (/** @type {Map<string, string>} */ (plan.writes).has(".companygraph/hooks/commit-msg")) useHook(root);
   if (menu) return;
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
@@ -398,6 +412,40 @@ async function upgrade(argv) {
   // Read with `\n` line ends, as the hashes they are compared against were taken.
   /** @param {string} path */
   const read = (path) => unixLines(readFileSync(path, "utf8"));
+  // The form of the release this moves to, asked before anything moves: an instance made outside
+  // the family before this release was never held to it, and an upgrade that left it failing its
+  // own next check would hand the owner a red build for work the upgrade did. --force moves anyway.
+  const formed = formCheck(root, { exclude: manifest.exclude ?? excludeFor(manifest.units ?? "meta") });
+  const unformed = [...formed.hits, ...(formed.error ? [formed.error] : [])];
+  if (unformed.length && !given.force)
+    throw new Error(
+      `The Markdown is not in the form ${PACKAGE.version} holds, so nothing was moved:\n${unformed.map((line) => `  ${line}`).join("\n")}\n` +
+        `"companygraph form ${root} --fix" writes what it can into the form; pass --force to move anyway.`,
+    );
+  // A manifest with no core is a repository that took the machinery and holds no model; its
+  // upgrade moves the release it runs and its workflow, and vendors nothing into it.
+  if (!manifest.core) {
+    const workflowPath = join(root, ".github/workflows/companygraph.yml");
+    const adopted = adoptedUpgradePlan({
+      tooling: PACKAGE.version,
+      manifest,
+      workflow: existsSync(workflowPath) ? read(workflowPath) : null,
+      present: new Set(["pins.json"].filter((path) => existsSync(join(root, path)))),
+    });
+    if (!adopted.writes.size) {
+      console.log(`already on ${adopted.to}; nothing to do.`);
+      return "nothing";
+    }
+    if (given["dry-run"]) {
+      console.log(`tooling ${adopted.from} → ${adopted.to}, if this runs:`);
+      for (const path of adopted.writes.keys()) console.log(`  write   ${path}`);
+      return "planned";
+    }
+    const written = writePlan(root, adopted.writes);
+    console.log(`tooling ${adopted.from} → ${adopted.to}: ${written.length} written`);
+    if (adopted.given.length) console.log(`  written, since the repository had none, and its own from now on: ${adopted.given.join(", ")}`);
+    return "done";
+  }
   /** @type {Map<string, string>} */
   const held = new Map();
   for (const path of Object.keys(manifest.files ?? {}))
@@ -456,7 +504,7 @@ async function upgrade(argv) {
     fetched: Boolean(given.core),
     force: Boolean(given.force),
     name,
-    present: new Set(exportPaths.filter((path) => existsSync(join(root, path)))),
+    present: new Set([...exportPaths, "pins.json"].filter((path) => existsSync(join(root, path)))),
   });
   if (plan.refused) throw new Error(plan.refused);
   if (/** @type {Map<string, string>} */ (plan.writes).size === 0 && /** @type {string[]} */ (plan.removes).length === 0) {
@@ -663,20 +711,160 @@ function said(done, plugin, vault) {
   console.log(`${good("✓")} ${moved}${vault ? ` in ${shown(vault)}` : ""}${done.enabled ? ", and switched on" : ""}`);
 }
 
+// The manifest at a folder, or null where it has none. A manifest that is not JSON is said by name.
+/** @param {string} root */
+function manifestAt(root) {
+  const at = join(root, ".companygraph/manifest.json");
+  if (!existsSync(at)) return null;
+  try {
+    return JSON.parse(readFileSync(at, "utf8"));
+  } catch (error) {
+    throw new Error(`${at} could not be read as JSON: ${/** @type {Error} */ (error).message}`);
+  }
+}
+
+// What the form leaves out of a folder: its manifest's own list, else an instance's default, else
+// nothing, for a folder that took no tooling and is held whole.
+/** @param {{ exclude?: string[]; units?: string; core?: unknown } | null} manifest */
+const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFor(manifest.units ?? "meta") : []);
+
+// The machinery for a repository that is not an instance: the form, its workflow, the seat hook
+// and a pins.json that declares its tooling pin. A folder that is not there yet is made, as init makes one.
+/** @param {string[]} argv */
+function adopt(argv) {
+  const root = flags(argv)._[0] ?? ".";
+  const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root) });
+  if (plan.refused) throw new Error(`${root}: ${plan.refused}`);
+  const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
+  console.log(`${good("✓")} ${shown(root)} adopted at ${PACKAGE.version}: ${written.join(", ")}`);
+  console.log(`  its Markdown is held to the one form, leaving out dist/; list more paths under "exclude" in .companygraph/manifest.json`);
+  console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
+  useHook(root);
+  console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
+}
+
+// The manifest at a folder for a command that answers with an exit code, where one that is not
+// JSON is said as every other refusal of the check is, with "✗ " before it.
+/**
+ * @param {string} root
+ * @returns {{ manifest: any } | null}
+ */
+function manifestSaid(root) {
+  try {
+    return { manifest: manifestAt(root) };
+  } catch (error) {
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
+    return null;
+  }
+}
+
+// The form over a folder, said: one line per hit and the command that writes them, or one line
+// that it passed. The check refuses a manifest naming another release, as the checker's own guard
+// does, because the form is the release's too and a workflow pinned to one release runs this.
+// --fix does not refuse it: it is a local rewrite no workflow runs, and the remedy upgrade names
+// for an instance on an older release, which is what the manifest of one waiting to move says.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
+function form(argv) {
+  const given = flags(argv);
+  const root = given._[0] ?? ".";
+  const read = manifestSaid(root);
+  if (!read) return 1;
+  const { manifest } = read;
+  if (!given.fix && manifest?.tooling && manifest.tooling !== PACKAGE.version) {
+    console.error(`✗ this checker is ${PACKAGE.version} and .companygraph/manifest.json names ${manifest.tooling} — move the pin and the workflow together, or call the release the manifest names`);
+    return 1;
+  }
+  const { files, hits, error } = formCheck(root, { exclude: excludeOf(manifest), fix: Boolean(given.fix) });
+  if (error) {
+    console.error(`✗ ${error}`);
+    return 1;
+  }
+  if (hits.length) {
+    for (const hit of hits) console.error(`✗ ${hit}`);
+    console.error(given.fix ? "✗ the hits above have no automatic fix; edit them by hand" : `✗ "companygraph form ${root} --fix" rewrites these into the form`);
+    return 1;
+  }
+  if (!files) console.log("✓ no Markdown file to hold to the form");
+  else console.log(`✓ ${files} Markdown file${files === 1 ? "" : "s"} in the one form${given.fix ? ", fixed where they were not" : ""}`);
+  return 0;
+}
+
+// What each upstream offers, from git ls-remote, or from the file COMPANYGRAPH_REMOTES names, which
+// is how the tests answer for the network: an object of repository → { tags, head }, and a
+// repository it does not name cannot be reached.
+/** @returns {(repo: string) => import("../lib/pins.mjs").Remote} */
+function remotes() {
+  const fixed = process.env.COMPANYGRAPH_REMOTES;
+  if (!fixed) return lsRemote;
+  const answers = JSON.parse(readFileSync(fixed, "utf8"));
+  return (repo) => answers[repo] ?? null;
+}
+
+// The pins one repository declares, each against its upstream now. A pin behind is intent until
+// its owner says it is drift, so the report exits 0 when one is, and 1 only when pins.json cannot
+// be read or an entry names no line in the file it names. It moves nothing.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
+function pins(argv) {
+  const root = flags(argv)._[0] ?? ".";
+  const at = join(root, "pins.json");
+  if (!existsSync(at)) {
+    console.error(`✗ ${shown(root)} has no pins.json; "companygraph upgrade" writes one into an instance, and "companygraph adopt" into any other repository`);
+    return 1;
+  }
+  let declared;
+  try {
+    declared = validatePins(JSON.parse(readFileSync(at, "utf8")));
+  } catch (error) {
+    console.error(`✗ ${at}: ${/** @type {Error} */ (error).message}`);
+    return 1;
+  }
+  /** @type {Record<string, string>} */
+  const texts = {};
+  for (const file of new Set([...SCANNED, ...declared.pins.map((p) => p.file)]))
+    if (existsSync(join(root, file))) texts[file] = readFileSync(join(root, file), "utf8");
+  const { lines, failed } = pinReport({ declared, texts, remote: remotes() });
+  const width = Math.max(0, ...lines.map((l) => l.status.length));
+  /** @type {Record<string, (text: string) => string>} */
+  const tone = { current: good, behind: accent, missing: bad };
+  console.log(`Pins of ${shown(resolve(root))}`);
+  for (const l of lines) {
+    const status = (tone[l.status] ?? dim)(l.status.padEnd(width));
+    const value = l.status === "family" ? "the family's own; its resync reads it" : `${l.pinned.join(", ") || "no line"}${l.newest && l.status === "behind" ? ` → ${l.newest}` : ""}`;
+    console.log(`  ${status}  ${l.kind} ${l.repo} in ${l.file}: ${value}`);
+  }
+  if (!lines.length) console.log("  no pin is declared or found");
+  return failed ? 1 : 0;
+}
+
 /**
  * @param {string[]} argv
  * @returns {Promise<number>}
  */
 async function check(argv) {
+  const root = flags(argv)._[0] ?? ".";
+  // A repository that took the machinery and holds no model is held to the form alone.
+  const read = manifestSaid(root);
+  if (!read) return 1;
+  if (read.manifest && !read.manifest.core) return form([root]);
   // A second door to the same code, so a guard failure must read exactly as it does through
   // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
   const { checkPath } = await import("./check-instance.mjs");
+  let model;
   try {
-    return checkPath(argv[0] ?? ".") > 0 ? 1 : 0;
+    model = checkPath(root) > 0 ? 1 : 0;
   } catch (error) {
     console.error(`✗ ${/** @type {Error} */ (error).message}`);
     return 1;
   }
+  // checkPath's guard has refused by here if it was going to, so the form, which holds the same
+  // guard, runs only on a manifest that passed it and never says the same refusal twice.
+  return Math.max(model, form([root]));
 }
 
 // A path as a person types it at the prompt, where no shell expands `~` first.
@@ -926,6 +1114,11 @@ async function menu() {
       const root = await folder("Which model?", ".");
       return seats([root]);
     }],
+    ["Hold a repository", "a site or service with no model: the form check, its workflow and the seat hook", async () => {
+      adopt([await folder("Which folder?", ".")]);
+      return 0;
+    }],
+    ["Report pins", "which of a repository's pins are behind; nothing moves", async () => pins([await folder("Which folder?", ".")])],
   ];
   const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);
   if (SCREEN) {
@@ -986,8 +1179,11 @@ const [command, ...rest] = process.argv.slice(2);
 try {
   if (command === "init") await init(rest);
   else if (command === "upgrade") await upgrade(rest);
+  else if (command === "adopt") adopt(rest);
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
+  else if (command === "form") process.exitCode = form(rest);
+  else if (command === "pins") process.exitCode = pins(rest);
   else if (command === "commits") process.exitCode = commits(rest);
   else if (command === "seats") process.exitCode = seats(rest);
   else if (command === "id") console.log(uuidv7());

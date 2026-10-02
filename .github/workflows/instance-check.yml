@@ -3,11 +3,13 @@
 #
 #   jobs:
 #     companygraph:
-#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@v0.47.0
+#       uses: companygraph/meta-model/.github/workflows/instance-check.yml@vX.Y.Z
 #
-# and holds one file and one pin. Nothing is installed: the checker has no dependencies, so the
-# release is checked out beside the caller and run from there. A maintainer with no Node still
-# gets the gate, because nothing here runs locally.
+# where vX.Y.Z is the release the manifest's `tooling` names, so the two move together.
+# and holds one file and one pin. The checker has no dependencies but the Markdown form's,
+# markdownlint-cli2, which npx fetches at the version the release pins; the release is checked out
+# beside the caller and run from there. A maintainer with no Node still gets the gate, because
+# nothing here runs locally.
 #
 # The ref below is this file's own release, and it is what makes the guard possible: the runner
 # exposes nothing about the called workflow to its steps, so it cannot see how the caller
@@ -40,6 +42,13 @@ jobs:
           path: .companygraph-checker
       - name: the instance is held to the core it vendored
         run: node .companygraph-checker/bin/check-instance.mjs .
+      # The one Markdown form, with the rules and the markdownlint version this release pins. npx
+      # fetches the tool, the one thing this workflow installs, because a form held by one tool in
+      # CI and another in the editor is two forms. It runs whether or not the model's check
+      # passed, so one failure does not hide the form's hits until the next push.
+      - name: every Markdown file is in the one form
+        if: ${{ !cancelled() }}
+        run: node .companygraph-checker/bin/companygraph.mjs form .
       # A pull request's commits, each judged against the seats this instance declares. Only on a
       # pull request: a push to main carries the owner's merge, which is the owner's.
       - name: every commit names a seat its phase lists

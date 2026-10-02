@@ -9,6 +9,8 @@
     "npm run test:rules",
     "npm run test:plan",
     "npm run test:instance-files",
+    "npm run test:form",
+    "npm run test:pins",
     "npm run test:cli",
     "npm run test:untar",
     "npm run test:fetch-core",
@@ -16,6 +18,6 @@
   ],
   "release": [
     "npm version {version} --no-git-tag-version",
-    "node -e \"const fs=require('fs');const f='.github/workflows/instance-check.yml';fs.writeFileSync(f, fs.readFileSync(f,'utf8').replace(/ref: v[0-9.]+/, 'ref: v{version}'))\""
+    "node -e \"const fs=require('fs');for(const f of ['.github/workflows/instance-check.yml','.github/workflows/repository-check.yml'])fs.writeFileSync(f, fs.readFileSync(f,'utf8').replace(/ref: v[0-9.]+/, 'ref: v{version}'))\""
   ]
 }

@@ -682,7 +682,7 @@ test("upgrade refuses a manifest whose units escapes the instance, and writes no
 
 function tempPackage() {
   const dir = temp();
-  for (const part of ["bin", "lib", "core", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  for (const part of ["bin", "lib", "core", "form", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
   fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
   return dir;
 }
@@ -1053,6 +1053,17 @@ test("the menu offers the report", () => {
   assert.match(out.stdout, /Commits by seat in /);
 });
 
+test("the menu offers adopt and the pin report after the report by seat, and keeps the first five where they were", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /1\S*\s+Make a model/);
+  assert.match(listed, /5\S*\s+Report by seat/);
+  assert.match(listed, /6\S*\s+Hold a repository/);
+  assert.match(listed, /7\S*\s+Report pins/);
+  const root = temp();
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `6\n${root}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /adopted/);
+});
+
 test("id prints one fresh UUID version 7", () => {
   assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
@@ -1272,4 +1283,213 @@ test("commits and seats read an instance that took the software pack and wrote a
   assert.equal(commits.status, 0, commits.stdout + commits.stderr);
   const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
   assert.equal(seats.status, 0, seats.stdout + seats.stderr);
+});
+
+test("an instance init writes is in the one form, and check says so", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.match(run(["form", root]), /in the one form/);
+  assert.match(run(["check", root]), /in the one form/);
+});
+
+test("check fails on Markdown out of the form, names the line, and form --fix puts it right", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const failed = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failed.status, 1);
+  assert.match(failed.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(failed.stderr, /form .* --fix/);
+  run(["form", root, "--fix"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+});
+
+test("the form check leaves out what the manifest excludes", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/out.md"), "# Out\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" }).status, 0);
+});
+
+test("form refuses where the manifest names another release, as the checker does", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names 0\.0\.1/);
+});
+
+test("form --fix writes the form where the manifest names another release, which is the remedy upgrade names", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /form .* --fix/);
+  const fixed = spawnSync(process.execPath, [cli, "form", root, "--fix"], { encoding: "utf8" });
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  assert.equal(fs.readFileSync(path.join(root, "NOTES.md"), "utf8"), "# Notes\n\nOne paragraph that wraps.\n");
+  const moved = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stdout + moved.stderr);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+});
+
+test("check says a manifest naming another release once, and does not run the form after it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.equal(said.stderr.match(/names 0\.0\.1/g)?.length, 1, said.stderr);
+});
+
+test("form and check say a manifest that is not JSON with the ✗ prefix, and exit 1", () => {
+  for (const make of [(root) => run(["init", root, "--name", "Acme", "--agent", "claude"]), (root) => run(["adopt", root])]) {
+    const root = temp();
+    make(root);
+    fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+    for (const command of ["form", "check"]) {
+      const said = spawnSync(process.execPath, [cli, command, root], { encoding: "utf8" });
+      assert.equal(said.status, 1, command);
+      assert.match(said.stderr, /^✗ .*manifest\.json could not be read as JSON/, `${command}: ${said.stderr}`);
+    }
+  }
+});
+
+test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  // A failing model check does not hide the form's hits.
+  assert.match(yml, /if: \$\{\{ !cancelled\(\) \}\}\n\s+run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+});
+
+test("upgrade stops on Markdown out of the form, naming it and moving nothing, and --force moves anyway", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  // An instance a release before this one made: an older tooling, no exclude, no pins.json.
+  const older = { ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" };
+  delete older.exclude;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(older, null, 2)}\n`);
+  fs.rmSync(path.join(root, "pins.json"));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(stopped.stderr, /--force/);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.equal(fs.existsSync(path.join(root, "pins.json")), false);
+  run(["upgrade", root, "--force"]);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.ok(fs.existsSync(path.join(root, "pins.json")));
+});
+
+test("upgrade leaves a family instance's own pins.json as it is", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const own = `${JSON.stringify({ pins: [{ kind: "conventions", file: "conventions.json", repo: "robertblust/conventions" }], verify: ["npm test"] }, null, 2)}\n`;
+  fs.writeFileSync(path.join(root, "pins.json"), own);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  run(["upgrade", root]);
+  assert.equal(fs.readFileSync(path.join(root, "pins.json"), "utf8"), own);
+});
+
+// The report asks each upstream with git ls-remote; COMPANYGRAPH_REMOTES names a file of fixed
+// answers instead, so no test reaches the network.
+test("pins reports each pin of a repository and exits 0 when one is behind", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`, "v999.0.0"], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /behind\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json: .* → v999\.0\.0/);
+});
+
+test("pins on an adopted repository reports its own tooling pin as current and nothing as unmanaged", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /current\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json/);
+  assert.doesNotMatch(said.stdout, /unmanaged/);
+});
+
+test("pins exits 1 when pins.json cannot be read or an entry names no line, and moves nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, "{}");
+  const env = { ...process.env, COMPANYGRAPH_REMOTES: remotes };
+  fs.writeFileSync(path.join(root, "pins.json"), JSON.stringify({ pins: [{ kind: "npm-tag", file: "package.json", repo: "acme/design" }] }));
+  const missing = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /missing\s+npm-tag acme\/design in package\.json/);
+  fs.writeFileSync(path.join(root, "pins.json"), "{ not json");
+  assert.equal(spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env }).status, 1);
+  fs.rmSync(path.join(root, "pins.json"));
+  const none = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(none.status, 1);
+  assert.match(none.stderr, /no pins\.json/);
+});
+
+test("adopt into an empty folder writes the machinery, and check holds it to the form alone", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  const said = run(["adopt", root]);
+  assert.match(said, /adopted/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph on one line.\n");
+  assert.match(run(["check", root]), /in the one form/);
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 1);
+});
+
+test("adopt into a folder that does not exist yet makes it and writes the machinery", () => {
+  const root = path.join(temp(), "a", "site");
+  assert.match(run(["adopt", root]), /adopted/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/commit-msg", ".github/workflows/companygraph.yml", "pins.json"])
+    assert.ok(fs.existsSync(path.join(root, rel)), rel);
+  assert.match(run(["check", root]), /no Markdown file to hold to the form/);
+});
+
+test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const before = [...filesOf(root).keys()].sort();
+  const refused = spawnSync(process.execPath, [cli, "adopt", root], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /upgrade/);
+  assert.deepEqual([...filesOf(root).keys()].sort(), before);
+});
+
+test("upgrade moves an adopted repository's tooling and workflow, and vendors no core into it", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ tooling: "0.0.1", exclude: ["dist"] }));
+  const workflowPath = path.join(root, ".github/workflows/companygraph.yml");
+  fs.writeFileSync(workflowPath, fs.readFileSync(workflowPath, "utf8").replace(/@v[\d.]+/, "@v0.0.1"));
+  run(["upgrade", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, version);
+  assert.match(fs.readFileSync(workflowPath, "utf8"), new RegExp(`repository-check\\.yml@v${version}`));
+  assert.equal(fs.existsSync(path.join(root, "meta")), false);
+});
+
+test("the repository workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/repository-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  assert.doesNotMatch(yml, /check-instance/);
 });

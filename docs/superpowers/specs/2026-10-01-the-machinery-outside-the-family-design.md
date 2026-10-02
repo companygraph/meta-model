@@ -40,7 +40,7 @@ Four parts, all in meta-model, all moved by `tooling`.
 { "pins": [{ "kind": "core-release", "file": ".companygraph/manifest.json", "repo": "companygraph/meta-model" }] }
 ```
 
-A repository that is not an instance, a site or a service that draws a model at a commit, takes it with `companygraph adopt [<folder>]`. It writes a manifest with `tooling` and `exclude` and no `core` and no `files`, the workflow, the seat hook and `{ "pins": [] }`. In a folder that is already an instance it refuses by name and points at `upgrade`. The menu gains `adopt` and `pins` beside `check` and `upgrade`.
+A repository that is not an instance, a site or a service that draws a model at a commit, takes it with `companygraph adopt [<folder>]`. It writes a manifest with `tooling` and `exclude` and no `core` and no `files`, the workflow, the seat hook and the same `pins.json` an instance gets, declaring its `core-release` pin, since its manifest names `tooling` as an instance's does. In a folder that is already an instance it refuses by name and points at `upgrade`. The menu gains `adopt` and `pins` beside `check` and `upgrade`.
 
 ## Files and failures
 

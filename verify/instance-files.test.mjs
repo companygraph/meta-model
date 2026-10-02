@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
+  agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -122,6 +122,14 @@ test("the export's inputs name the instance and count nothing themselves, so the
   // A digit in the guide is a count nobody substitutes; only the build's tokens state numbers.
   assert.ok(!/\d/.test(guide), "the guide states no number of its own");
   assert.ok(!/\{\{count:/.test(guide), "the guide names no source a model may not have");
+});
+
+test("the manifest carries what the form check leaves out, and an instance leaves out dist and its units", () => {
+  assert.deepEqual(excludeFor("meta"), ["dist", "meta"]);
+  assert.deepEqual(excludeFor("schemas"), ["dist", "schemas"]);
+  const read = JSON.parse(manifestOf({ tooling: "0.1.0", core: { version: "0.1.0", shape: 3, source: "bundled" }, units: "meta", exclude: ["dist", "meta"], files: {} }));
+  assert.deepEqual(read.exclude, ["dist", "meta"]);
+  assert.deepEqual(Object.keys(read), ["tooling", "core", "units", "packs", "exclude", "files"]);
 });
 
 // Final review, minors: an older core's schema declares a `## Locales` table and no `locale`, so a
