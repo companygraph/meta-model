@@ -26,6 +26,7 @@ export type Flags = {
     core?: string;
     schemas?: string;
     folders?: string;
+    pack?: string;
     release?: string;
     from?: string;
     range?: string;

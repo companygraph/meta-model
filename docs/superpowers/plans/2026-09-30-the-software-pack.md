@@ -2,13 +2,13 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** An instance can take the `software` pack with `init --pack software`, write bounded contexts, concept designs, aggregates, domain events and feature designs against five schemas vendored beside core, and be held to them by the same checks and parser that hold core, with a rule R20 keeping each unit to the types it may name.
+**Goal:** An instance can take the `software` pack with `init --pack software`, or later with `upgrade --pack software`, write bounded contexts, concept designs, aggregates, domain events and feature designs against five schemas vendored beside core, and be held to them by the same checks and parser that hold core, with a rule R20 keeping each unit to the types it may name.
 
-**Architecture:** The checker learns that core is one unit of several. `lib/checks.mjs` gains a `PACKS` constant beside `TYPES` and a `vocabularyOf` helper that returns every type an instance takes with the path its schema is read from; `instanceChecks` reads schemas through it instead of `${core}/<type>-schema.md`. R20 is one new check. The five schemas live in `packs/software/`, the repository's own check holds their shape as it holds core's, and a fixture test runs a small instance through them. The parser labels a pack schema `<unit>/<type>`. The CLI vendors a pack, records it in the manifest, walks it in `check` and moves it in `upgrade`.
+**Architecture:** The checker learns that core is one unit of several. `lib/checks.mjs` gains a `PACKS` constant beside `TYPES` and a `vocabularyOf` helper that returns every type an instance takes with the path its schema is read from; `instanceChecks` reads schemas through it instead of `${core}/<type>-schema.md`. R20 is one new check; a second, citing R16, holds the labels an aggregate's invariants and a feature design's scenarios carry, on the rows `PACKS` states. The five schemas live in `packs/software/`, the repository's own check holds their shape as it holds core's, and a fixture test runs a small instance through them. The parser labels a pack schema `<unit>/<type>`. The CLI vendors a pack with `init` or with `upgrade`, records it in the manifest, walks it in `check` and moves it in `upgrade`.
 
 **Tech Stack:** Node 22 ES modules with no dependencies, `node --test`, git.
 
-**Spec:** `docs/superpowers/specs/2026-09-30-the-software-pack-design.md`
+**Spec:** `docs/superpowers/specs/2026-09-30-the-software-pack-design.md`, as amended on October 1, 2026 after beacon's reading (#224)
 
 This plan covers meta-model only. `companygraph/mental-model` taking the pack, the MCP server's and the Obsidian plugin's reading of `<unit>/<type>` addresses, and beacon's instance each follow the release in work of their own.
 
@@ -21,17 +21,20 @@ This plan covers meta-model only. `companygraph/mental-model` taking the pack, t
 - Core's reference grammar does not change. A table reaching into another context has the columns `Type`, `Entity`, `Context`, and `Entity` is `ref → by Type in Context`.
 - No core schema changes. Core's `TYPES` array is not edited.
 - Every enum token and every borrowed section names its source in its description (Evans, Vernon, DDD Crew, Jackson, Gherkin), and each schema's `## References` lists those sources with an https address.
+- A label is letters, digits and hyphens, matching `/^[A-Za-z0-9-]+$/`, and unique within its page. It sits in the `Label` column of an aggregate's `## Invariants` table and opens each `###` heading of a feature design's `## Scenarios` as `### <Label>: <title>`. The same label on two pages is allowed.
+- Every pack schema's `## Writing rules` ends with the bullet on where a page drawn from code names that code, word for word as Task 3 gives it in each of the five schemas.
 - No version bump in this plan. The release, its number and its notes are the owner's.
 - Every commit is authored `Implementer <implementer@companygraph.io>`, prose in the git register, ending with a `Verified:` line naming the commands actually run, then `Process: Delivery`, `Phase: Implement`, `Track: Code` and the `Co-Authored-By` line. After each commit, `git log -1 --format='[%s]'` shows the subject alone.
+- Since #197, `lib/` and `bin/` carry their types as JSDoc and `types/` holds the declarations built from it, committed. A row shape or a signature this plan changes changes its JSDoc too (`TypeEntry` in `lib/checks.mjs` is the row the plan calls `TypeRow`), and before each commit `npm run typecheck` passes and `npm run build` has rewritten `types/`, which `npm run build:check` confirms.
 - Before any `node`, `npm` or `gh` command: `export PATH="/opt/homebrew/bin:$PATH"`.
 - Nothing pushed names the owner's multi-person instance or its organization.
 
 ## Review Focus
 
 - A concept design named in a feature design's `## Uses` with the wrong context, a name that exists only in the other context, must fail as unresolvable rather than resolve to the first match anywhere. Pinned in Task 4.
-- A concept design filed at the container root, `model/concept-designs/x.md`, outside any bounded context, must fail as a folder no type claims. Pinned in Task 4.
+- A label repeated on one page, or a scenario heading with no label, must fail naming the page and the label, while the same label on two pages passes. Pinned in Task 4.
 - An instance whose manifest lists a pack this checker does not ship must be refused by name before anything is read, not reported as a pile of unknown folders. Pinned in Task 6.
-- An upgrade of an instance that took the pack must move the pack's files with core's, and an edited pack schema must stop it as an edited core schema does. Pinned in Task 6.
+- An upgrade of an instance that took the pack must move the pack's files with core's, and an edited pack schema must stop it as an edited core schema does; `upgrade --pack software` on an instance made without it must vendor the pack and list it. Pinned in Task 6.
 - An instance that takes no pack must pass exactly as before: no new failure, no new line in the report beyond what it printed. Pinned in Task 1.
 
 ---
@@ -399,7 +402,7 @@ EOF
 **Interfaces:**
 
 - Consumes: `PACKS` from Task 1.
-- Produces: `PACKS.software` with the five rows in Global Constraints; the five schema files at the paths above.
+- Produces: `PACKS.software` with the five rows in Global Constraints, where the aggregate's row carries `labels: { section: "Invariants", column: "Label" }` and the feature design's `labels: { section: "Scenarios", heading: true }`; the five schema files at the paths above.
 
 - [ ] **Step 1: State the pack's types**
 
@@ -409,12 +412,14 @@ Replace `export const PACKS = {};` with:
 export const PACKS = {
   software: [
     // A feature design uses the contexts it touches and owns none, so it sits in the container.
-    { type: "feature-design", folder: "feature-designs" },
+    // `labels` names where a page carries labels a test or a code comment cites from outside the
+    // model; Task 4's check holds them. Stated here, as the folder is, and never read from prose.
+    { type: "feature-design", folder: "feature-designs", labels: { section: "Scenarios", heading: true } },
     // R5, R6: a bounded context owns the terms of its language, its aggregates and its events,
     // and none of them means anything outside it, so it is a folder, as a process is.
     { type: "bounded-context", folder: "bounded-contexts/<bounded-context>", owns: ["concept-design", "aggregate", "domain-event"] },
     { type: "concept-design", folder: "bounded-contexts/<bounded-context>/concept-designs", owner: "bounded-context" },
-    { type: "aggregate", folder: "bounded-contexts/<bounded-context>/aggregates", owner: "bounded-context" },
+    { type: "aggregate", folder: "bounded-contexts/<bounded-context>/aggregates", owner: "bounded-context", labels: { section: "Invariants", column: "Label" } },
     { type: "domain-event", folder: "bounded-contexts/<bounded-context>/domain-events", owner: "bounded-context" },
   ],
 };
@@ -505,7 +510,7 @@ An instance takes it with `companygraph init --pack software`. Every edge from t
 
 ## Left for later
 
-Services, repositories, factories and modules; C4's system, container and component; a type for a relationship between contexts; commands as a type; a subdomain type; a `level` field.
+Services, repositories, factories and modules; C4's system, container and component; a type for a relationship between contexts; commands as a type; a subdomain type; a `level` field. Read models and policies as types, from Event Modeling: a policy is the `Reaction` on a Consumes row, and a read model waits for an instance that writes one.
 ```
 
 - [ ] **Step 5: Write the five schemas**
@@ -565,6 +570,7 @@ A bounded context owns the terms of its language, its aggregates and its events,
 | `Type` | Yes | string | The type of what is consumed, as its schema is named: `domain-event` |
 | `Entity` | Yes | ref → by Type in Context | What is consumed, by its canonical name |
 | `Context` | Yes | string | The context that owns it, by its canonical name |
+| `Reaction` | No | string | What this context does in response, naming the handled command in words; a command is a row on its aggregate, and nothing can reference it (Event Modeling, policy) |
 
 `## References` is a table with these columns:
 
@@ -584,6 +590,8 @@ A bounded context answers "within which boundary does one model, and one meaning
 - A relationship is written on the downstream context, the side that knows it depends. A symmetric pattern, a partnership or a shared kernel, is written once, on either side.
 - The context map is drawn from the Relationships rows and never written as a page.
 - An event is consumed where the Consumes table names it, and the Relationships table names the context it comes from.
+- A reaction says what happens here, not in the context that emitted the event.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
 ```
 
 `packs/software/concept-design-schema.md`:
@@ -658,6 +666,7 @@ A concept design answers "what does this word mean here?" It is one term of a bo
 - The kind follows Evans's test: if every attribute changed, would it still be the same one? Then it is an entity.
 - A relation is written on one side only, as core's concept relations are.
 - An attribute whose type is a value object names that value object's concept design exactly.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
 ```
 
 `packs/software/aggregate-schema.md`:
@@ -694,10 +703,17 @@ id: <an id from `node bin/companygraph.mjs id`>
 | --- | --- | --- |
 | `# [Aggregate]` | Yes | The aggregate's name, usually its root's |
 | `> [Consistency]` | Yes | What the aggregate keeps consistent, in one sentence |
-| `## Invariants` | Yes | Numbered. One rule each that holds after every change (DDD Crew, Aggregate Design Canvas) |
+| `## Invariants` | Yes | Table. One rule per row that holds after every change, under a label a test or a code comment cites it by (DDD Crew, Aggregate Design Canvas); its columns are declared below. |
 | `## Handled commands` | No | Table. What the aggregate is asked to do; its columns are declared below. |
 | `## State transitions` | No | The states the aggregate moves through and what moves it (DDD Crew, Aggregate Design Canvas) |
 | `## References` | No | Table. What a reader can open to learn more about the aggregate; its columns are declared below. |
+
+`## Invariants` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Label` | Yes | string | What the invariant is cited by: letters, digits and hyphens, unique within the aggregate, such as `INV-T1` |
+| `Invariant` | Yes | string | The rule, stated so a test could check it |
 
 `## Handled commands` is a table with these columns:
 
@@ -715,13 +731,15 @@ id: <an id from `node bin/companygraph.mjs id`>
 
 ## Purpose
 
-An aggregate answers "what has to stay consistent together, and through what is it changed?" It is Evans's aggregate: a cluster of concept designs changed only through its root. A command is a row here and not a type, because nothing outside the aggregate names it. The events it emits are not written here: each event names its aggregate as `emitted-by`, and the edge is read from that end.
+An aggregate answers "what has to stay consistent together, and through what is it changed?" It is Evans's aggregate: a cluster of concept designs changed only through its root. The invariants are a table and not a numbered list, because they are a set and not a sequence, and a position is no key anything outside can cite. A command is a row here and not a type, because nothing outside the aggregate names it. The events it emits are not written here: each event names its aggregate as `emitted-by`, and the edge is read from that end.
 
 ## Writing rules
 
 - The root is an entity. A value object cannot be a root, since it has no identity to reach the rest through.
 - An invariant is a rule that holds after every command, stated so a test could check it.
 - A command is named in the imperative and an event in the past tense, so the two are never confused.
+- A label stays when its invariant is reworded. A new rule takes a new label, and a removed rule's label is not used again.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
 ```
 
 `packs/software/domain-event-schema.md`:
@@ -763,8 +781,9 @@ id: <an id from `node bin/companygraph.mjs id`>
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Concept` | Yes | ref → concept-design | A term of the same context the event carries |
-| `Description` | No | string | What of it the event carries |
+| `Attribute` | Yes | string | The value's name, as the context's people say it |
+| `Type` | Yes | string | A plain type such as `duration` or `timestamp`, or the name of a concept design in the same context |
+| `Description` | No | string | What the value says |
 
 `## References` is a table with these columns:
 
@@ -780,7 +799,8 @@ A domain event answers "what happened that other parts of the domain care about?
 ## Writing rules
 
 - The name is in the past tense and says what happened, not what should happen next.
-- The payload names terms of the event's own context; a consumer translates them into its own language.
+- A payload type that names a term names one of the event's own context; a consumer translates it into its own language.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
 ```
 
 `packs/software/feature-design-schema.md`:
@@ -818,7 +838,7 @@ A feature design uses the contexts it touches and owns none, because a context o
 | `# [Feature Design]` | Yes | The design's name |
 | `> [What it delivers]` | Yes | What the design delivers, in one sentence |
 | `## Operational principle` | Yes | The one scenario that shows why the design exists (Jackson, The Essence of Software) |
-| `## Scenarios` | No | One `###` per scenario, each written Given, When, Then (Gherkin) |
+| `## Scenarios` | No | One `###` per scenario, headed `<Label>: <title>` with the label unique within the design, each written Given, When, Then (Gherkin) |
 | `## Uses` | No | Table. The terms and events of its contexts the design works with; its columns are declared below. |
 | `## References` | No | Table. What a reader can open to learn more about the design; its columns are declared below. |
 
@@ -846,6 +866,8 @@ A feature design answers "how is this feature built, and across which contexts?"
 - The operational principle is one scenario, told as what happens, not a list of capabilities.
 - A scenario says Given, When and Then, and each step is something a person or the system does or sees.
 - Every term and event the scenarios mention has a row in `## Uses`, and no row names one they do not.
+- A scenario's label is what the test that proves it cites. It stays when the title is reworded.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
 ```
 
 - [ ] **Step 6: Run the repository check**
@@ -874,16 +896,19 @@ Co-Authored-By: Claude Opus 5.5 (1M context) <noreply@anthropic.com>
 EOF
 ```
 
-### Task 4: A small instance passes through the real schemas, and its breakages fail
+### Task 4: A small instance passes through the real schemas, its breakages fail, and its labels are held
 
 **Files:**
 
 - Create: `verify/software.test.mjs`
+- Modify: `lib/checks.mjs` (`TypeEntry` gains `labels`; a `LABEL` pattern; one check in `instanceChecks`)
+- Modify: `types/lib/checks.d.mts` (rewritten by `npm run build`)
 - Modify: `package.json` (`test:instance-checks` gains `verify/software.test.mjs`)
 
 **Interfaces:**
 
-- Consumes: `checkInstance(files, { core, model, packs })`, `PACKS.software` and the schemas from Tasks 1–3.
+- Consumes: `checkInstance(files, { core, model, packs })`, `PACKS.software` and its `labels` rows, and the schemas from Tasks 1–3.
+- Produces: `TypeEntry.labels?: { section: string, column?: string, heading?: boolean }`; the check "a label is a token, and no two on one page are the same", citing R16.
 
 - [ ] **Step 1: Write the tests**
 
@@ -902,6 +927,8 @@ const pack = (n) => fs.readFileSync(new URL(`../packs/software/${n}-schema.md`, 
 const page = (fm, body) => `---\nid: ${uuidv7()}\nsource: Local\n${fm}---\n\n${body}`;
 const PACKS = [{ name: "software", dir: "meta/software" }];
 const BC = "model/bounded-contexts";
+const AGG = `${BC}/billing/aggregates/invoice.md`;
+const FD = "model/feature-designs/issue-an-invoice.md";
 
 const tree = (change = (m) => m) => change(new Map([
   ...["source", "identifier", "domain", "concept", "product", "feature"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
@@ -915,20 +942,19 @@ const tree = (change = (m) => m) => change(new Map([
   [`${BC}/billing/billing.md`, page("classification: core\nrealizes:\n  - Invoicing\n", "# Billing\n\n> Issues invoices. Telling the customer is left to Notification.\n\n## Responsibilities\n\n- Issue an invoice for a closed period\n")],
   [`${BC}/billing/concept-designs/invoice.md`, page("kind: entity\nrefines: Invoice\n", "# Invoice\n\n> The document a customer is asked to pay, once issued.\n\n## Attributes\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n| Total | Amount | What is owed |\n\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n| Amount | one | |\n")],
   [`${BC}/billing/concept-designs/amount.md`, page("kind: value object\n", "# Amount\n\n> A sum in one currency.\n")],
-  [`${BC}/billing/aggregates/invoice.md`, page("root: Invoice\nmembers:\n  - Amount\n", "# Invoice\n\n> An invoice and its total change together.\n\n## Invariants\n\n1. An issued invoice's total never changes.\n")],
-  [`${BC}/billing/domain-events/invoice-issued.md`, page("emitted-by: Invoice\n", "# Invoice issued\n\n> An invoice was issued to a customer.\n\n## Payload\n\n| Concept | Description |\n| --- | --- |\n| Invoice | The issued invoice |\n")],
-  [`${BC}/notification/notification.md`, page("classification: generic\n", "# Notification\n\n> Tells customers. Issuing is left to Billing.\n\n## Responsibilities\n\n- Tell a customer an invoice is ready\n\n## Relationships\n\n| Context | Pattern |\n| --- | --- |\n| Billing | customer/supplier |\n\n## Consumes\n\n| Type | Entity | Context |\n| --- | --- | --- |\n| domain-event | Invoice issued | Billing |\n")],
-  ["model/feature-designs/issue-an-invoice.md", page("refines: Billing run\ncontexts:\n  - Billing\n  - Notification\n", "# Issue an invoice\n\n> A closed period becomes invoices customers are told about.\n\n## Operational principle\n\nWhen finance closes a period, each customer's invoice is issued and the customer is told.\n\n## Uses\n\n| Type | Entity | Context |\n| --- | --- | --- |\n| concept-design | Invoice | Billing |\n| domain-event | Invoice issued | Billing |\n")],
+  [AGG, page("root: Invoice\nmembers:\n  - Amount\n", "# Invoice\n\n> An invoice and its total change together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-B1 | An issued invoice's total never changes. |\n| INV-B2 | An invoice names one customer. |\n")],
+  [`${BC}/billing/domain-events/invoice-issued.md`, page("emitted-by: Invoice\n", "# Invoice issued\n\n> An invoice was issued to a customer.\n\n## Payload\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n| Invoice | Invoice | The issued invoice |\n| Issued at | timestamp | When it was issued |\n")],
+  [`${BC}/notification/notification.md`, page("classification: generic\n", "# Notification\n\n> Tells customers. Issuing is left to Billing.\n\n## Responsibilities\n\n- Tell a customer an invoice is ready\n\n## Relationships\n\n| Context | Pattern |\n| --- | --- |\n| Billing | customer/supplier |\n\n## Consumes\n\n| Type | Entity | Context | Reaction |\n| --- | --- | --- | --- |\n| domain-event | Invoice issued | Billing | Tells the customer the invoice is ready |\n")],
+  [FD, page("refines: Billing run\ncontexts:\n  - Billing\n  - Notification\n", "# Issue an invoice\n\n> A closed period becomes invoices customers are told about.\n\n## Operational principle\n\nWhen finance closes a period, each customer's invoice is issued and the customer is told.\n\n## Scenarios\n\n### SC-B1: A period is closed\n\nGiven a customer with one billable order,\nWhen finance closes the period,\nThen one invoice is issued and the customer is told.\n\n### INV-B1: A label another page uses\n\nGiven the same label on an aggregate,\nWhen this page is checked,\nThen it passes, since a label is unique within its page.\n\n## Uses\n\n| Type | Entity | Context |\n| --- | --- | --- |\n| concept-design | Invoice | Billing |\n| domain-event | Invoice issued | Billing |\n")],
 ]));
 const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
 
-test("a small instance written in the pack passes", () => {
+test("a small instance written in the pack passes, the same label on two pages included", () => {
   assert.deepEqual(failures(tree()), []);
 });
 
 test("a Uses row naming a term in the wrong context fails, and does not resolve elsewhere", () => {
-  const f = failures(tree((m) => m.set("model/feature-designs/issue-an-invoice.md",
-    m.get("model/feature-designs/issue-an-invoice.md").replace("| concept-design | Invoice | Billing |", "| concept-design | Invoice | Notification |"))));
+  const f = failures(tree((m) => m.set(FD, m.get(FD).replace("| concept-design | Invoice | Billing |", "| concept-design | Invoice | Notification |"))));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /issue-an-invoice\.md: .*"Invoice".*Notification.*\(R4\)/);
 });
@@ -956,34 +982,125 @@ test("a Relationships row naming no context fails", () => {
   assert.ok(f.some((x) => x.includes("notification.md") && x.includes("Invoicing")), f.join("\n"));
 });
 
-test("an event's payload naming a term of another context fails", () => {
-  const files = tree((m) => {
-    m.set(`${BC}/notification/concept-designs/message.md`, page("kind: entity\n", "# Message\n\n> What a customer is sent.\n"));
-    m.set(`${BC}/billing/domain-events/invoice-issued.md`,
-      m.get(`${BC}/billing/domain-events/invoice-issued.md`).replace("| Invoice | The issued invoice |", "| Message | A message |"));
-    return m;
-  });
-  const f = failures(files);
-  assert.ok(f.some((x) => x.includes("invoice-issued.md") && x.includes("Message")), f.join("\n"));
+test("an invariant label repeated on one page fails, naming the page and the label", () => {
+  const f = failures(tree((m) => m.set(AGG, m.get(AGG).replace("| INV-B2 |", "| INV-B1 |"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /aggregates\/invoice\.md: "INV-B1" labels two items under ## Invariants.*\(R16\)$/);
+});
+
+test("a scenario label repeated on one page fails", () => {
+  const f = failures(tree((m) => m.set(FD, m.get(FD).replace("### INV-B1:", "### SC-B1:"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /issue-an-invoice\.md: "SC-B1" labels two items under ## Scenarios/);
+});
+
+test("a scenario heading with no label fails", () => {
+  const f = failures(tree((m) => m.set(FD, m.get(FD).replace("### SC-B1: A period is closed", "### A period is closed"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /issue-an-invoice\.md: "A period is closed" under ## Scenarios opens with no label.*\(R16\)$/);
+});
+
+test("a label that is not letters, digits and hyphens fails", () => {
+  const f = failures(tree((m) => m.set(AGG, m.get(AGG).replace("| INV-B2 |", "| INV B2 |"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /aggregates\/invoice\.md: "INV B2" under ## Invariants is no label/);
 });
 ```
 
-- [ ] **Step 2: Run them**
+- [ ] **Step 2: Run them to see the label tests fail**
 
-Run: `node --test verify/software.test.mjs`. Expected: PASS. A failure of the first test names what a schema requires that the fixture lacks, or a check that cannot read a pack type; fix the fixture where the schema is right, and the schema or Task 1's plumbing where it is not. The breakage tests assert the file and the offending value rather than a check's whole sentence, since those sentences are core's and not this plan's.
+Run: `node --test verify/software.test.mjs`. Expected: the four label tests FAIL with an empty list of failures, because nothing holds a label yet; every other test PASSES. A failure of the first test names what a schema requires that the fixture lacks, or a check that cannot read a pack type; fix the fixture where the schema is right, and the schema or Task 1's plumbing where it is not. The breakage tests assert the file and the offending value rather than a check's whole sentence, since those sentences are core's and not this plan's; the label tests assert this task's own sentences.
 
-- [ ] **Step 3: Add the file to its script and commit**
+- [ ] **Step 3: State the rows and the pattern**
+
+In `lib/checks.mjs`, the `TypeEntry` typedef gains, after `filename`:
+
+```js
+ * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page of
+ *   this type carries labels cited from outside the model: a table column, or the `###` headings
+ *   of a section, each `<Label>: <title>`
+```
+
+and beside the other module-level patterns:
+
+```js
+// A label is what a test, a specification or a code comment cites an item by from outside the
+// model, so it is one token: letters, digits and hyphens, as `INV-T1` and `SC-T1` are.
+const LABEL = /^[A-Za-z0-9-]+$/;
+```
+
+- [ ] **Step 4: Add the check**
+
+In `instanceChecks`, in the array it returns, directly after the check "two entities of a ranked type do not share a rank":
+
+```js
+  {
+    // A label on an invariant or a scenario is what a test, a specification or a code comment
+    // cites from outside the model, so it is a token, and no two on one page are the same. Where
+    // a page carries labels is stated on the type's row, as its folder is, and never read from a
+    // schema's prose. A label that changes still breaks whatever cites it, and nothing inside the
+    // model can see that; a label is unique within its page and not across pages.
+    name: "a label is a token, and no two on one page are the same",
+    rule: "R16",
+    run() {
+      for (const { type, labels } of TYPES) {
+        if (!labels) continue;
+        walkMd(EX, (child, text) => {
+          if (typeOfFile(child) !== type) return;
+          const body = sectionsOf(text).get(labels.section);
+          if (body === undefined) return;
+          /** @type {string[]} */
+          const found = [];
+          if (labels.column) {
+            const table = tableOf(body);
+            const at = table ? table.columns.indexOf(labels.column) : -1;
+            if (!table || at === -1) return;
+            for (const row of table.rows) found.push(row[at] ?? "");
+          } else {
+            for (const line of body.split("\n")) {
+              if (!line.startsWith("### ")) continue;
+              const heading = line.slice(4).trim();
+              const label = heading.match(/^([^:]+):\s+\S/)?.[1];
+              if (label === undefined) {
+                fail(`${child}: "${heading}" under ## ${labels.section} opens with no label; a heading there is "<Label>: <title>" (R16)`);
+                continue;
+              }
+              found.push(label);
+            }
+          }
+          /** @type {Set<string>} */
+          const seen = new Set();
+          for (const label of found) {
+            if (!LABEL.test(label)) fail(`${child}: "${label}" under ## ${labels.section} is no label; a label is letters, digits and hyphens (R16)`);
+            else if (seen.has(label)) fail(`${child}: "${label}" labels two items under ## ${labels.section}; a label names one, so what cites it finds it (R16)`);
+            seen.add(label);
+          }
+        });
+      }
+    },
+  },
+```
+
+A required `Label` column that is missing is already the column checks' to report, so this check passes over a table without one rather than saying it twice.
+
+- [ ] **Step 5: Run everything**
+
+Run: `node --test verify/software.test.mjs && npm run test:instance-checks && npm run test:rules && npm run typecheck && npm run build && npm run build:check`. Expected: PASS. `test:rules` holds the check's `R16` to a section of `core/CONVENTIONS.md`; `npm run build` rewrites `types/lib/checks.d.mts` with `labels`.
+
+- [ ] **Step 6: Add the file to its script and commit**
 
 Append ` verify/software.test.mjs` to `test:instance-checks` in `package.json`.
 
 ```bash
-git add verify/software.test.mjs package.json
+git add verify/software.test.mjs lib/checks.mjs types/lib/checks.d.mts package.json
 git commit --author "Implementer <implementer@companygraph.io>" -F - <<'EOF'
-A small instance in the software pack passes, and its breakages fail
+A small instance in the software pack passes, its breakages fail, and its labels are held
 
-Two contexts, an entity and a value object, an aggregate, an event consumed across the boundary and a feature design that refines a core feature pass through the real schemas read from disk. A term named in the wrong context, a concept design filed outside any context, an unknown kind, an event with no aggregate, a relationship to no context and a payload reaching into another context each fail on the file that carries them.
+Two contexts, an entity and a value object, an aggregate with labelled invariants, an event whose payload carries a term and a timestamp, a consumed event with its reaction and a feature design with labelled scenarios pass through the real schemas read from disk. A term named in the wrong context, a concept design filed outside any context, an unknown kind, an event with no aggregate and a relationship to no context each fail on the file that carries them.
 
-Verified: node --test verify/software.test.mjs and npm run test:instance-checks pass.
+An invariant or a scenario is cited from outside the model by its label, so a label is now one token, unique within its page: the rows that carry labels are stated on the aggregate's and the feature design's PACKS entries, and one check holds them, citing R16. The same label on two pages passes.
+
+Verified: node --test verify/software.test.mjs, npm run test:instance-checks, test:rules, typecheck and build:check pass, and the four label tests failed before the check was written.
 
 Process: Delivery
 Phase: Implement
@@ -1112,7 +1229,7 @@ EOF
 
 - Modify: `lib/instance-files.mjs` (`manifestOf` takes `packs`)
 - Modify: `lib/plan.mjs` (`initPlan` and `upgradePlan` take `packs`)
-- Modify: `bin/companygraph.mjs` (`init` reads `--pack`; `upgrade` passes the manifest's packs; a `packOfThisRelease(name)` beside `coreOfThisRelease`)
+- Modify: `bin/companygraph.mjs` (`init` and `upgrade` read `--pack`; `upgrade` passes the manifest's packs and the new ones; a `packOfThisRelease(name)` beside `coreOfThisRelease`)
 - Modify: `bin/check-instance.mjs` (walk each pack, refuse an unknown one)
 - Modify: `lib/untar.mjs` (`extractCore` also returns `packs/<name>/` files) — only if `--core` with a pack is supported; see Step 5
 - Modify: `verify/plan.test.mjs`, `verify/check-script.test.mjs`
@@ -1144,13 +1261,22 @@ test("an upgrade moves a pack's files with core's, and an edited pack schema sto
   const stopped = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "edited\n"]]) });
   assert.match(stopped.refused, /meta\/software\/bounded-context-schema\.md/);
 });
+
+test("an upgrade given a pack the instance did not take vendors it and lists it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, refused } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.equal(refused, undefined);
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")).packs, ["software"]);
+});
 ```
 
 Define `INIT_ARGS` and `UPGRADE_ARGS` at the top of the new block from the arguments the file's existing `initPlan` and `upgradePlan` tests already pass, so the two new tests differ from them only in `packs`, `manifest` and `held`.
 
 - [ ] **Step 2: Run to see them fail**
 
-Run: `node --test verify/plan.test.mjs`. Expected: the two new tests FAIL; nothing is written under `meta/software/`.
+Run: `node --test verify/plan.test.mjs`. Expected: the three new tests FAIL; nothing is written under `meta/software/`. If `upgradePlan` names its refusal something other than `refused`, use the file's own name in all three.
 
 - [ ] **Step 3: Carry packs through the manifest and the plans**
 
@@ -1214,7 +1340,17 @@ In `init`, after `const core = …`:
   const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
 ```
 
-pass `packs` to `initPlan`, and after the `core …, vendored under` line print `  packs: ${packNames.join(", ")}, vendored beside it` when there are any. In `upgrade`, pass `packs: new Map((manifest.packs ?? []).map((name) => [name, packOfThisRelease(name)]))` to `upgradePlan`. Import `PACKS` from `../lib/checks.mjs` and add `--pack <names>` to the `init` usage line.
+pass `packs` to `initPlan`, and after the `core …, vendored under` line print `  packs: ${packNames.join(", ")}, vendored beside it` when there are any. In `upgrade`, after the manifest is read:
+
+```js
+  // --pack takes a pack the instance did not have, so a company that started before a pack
+  // shipped takes it without a second init. The packs it already lists move as before.
+  const added = given.pack ? given.pack.split(",").map((p) => p.trim()).filter(Boolean) : [];
+  if (added.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
+  const packNames = [...new Set([...(manifest.packs ?? []), ...added])];
+```
+
+and pass `packs: new Map(packNames.map((name) => [name, packOfThisRelease(name)]))` to `upgradePlan`; print `  packs: ${added.join(", ")}, vendored beside core` when `added` is not empty. Import `PACKS` from `../lib/checks.mjs` and add `--pack <names>` to both the `init` and the `upgrade` usage lines.
 
 `lib/untar.mjs` is not changed: `--pack` with `--core` is refused above, so a fetched release never has to yield packs.
 
@@ -1260,7 +1396,17 @@ ls scratch-software/meta/software
 node <path to this worktree>/bin/check-instance.mjs scratch-software
 ```
 
-Expected: the five schemas, the manifest and the README are listed, and the check passes with the report naming `meta/core, meta/software/`. Delete the scratch folder.
+Expected: the five schemas, the manifest and the README are listed, and the check passes with the report naming `meta/core, meta/software/`.
+
+Then an instance made before the pack, as beacon's will be:
+
+```bash
+node <path to this worktree>/bin/companygraph.mjs init scratch-later --agent claude --name "Later"
+node <path to this worktree>/bin/companygraph.mjs upgrade scratch-later --pack software
+node <path to this worktree>/bin/check-instance.mjs scratch-later
+```
+
+Expected: the upgrade prints `packs: software, vendored beside core`, the manifest lists `"packs": ["software"]`, and the check passes naming `meta/core, meta/software/`. Delete both scratch folders.
 
 - [ ] **Step 8: Commit**
 
@@ -1269,11 +1415,11 @@ git add lib/instance-files.mjs lib/plan.mjs bin/companygraph.mjs bin/check-insta
 git commit --author "Implementer <implementer@companygraph.io>" -F - <<'EOF'
 The CLI vendors a pack, checks it and moves it
 
-init --pack software vendors the pack beside core under the units folder, hashes its files into the manifest and lists it in packs, which the manifest has carried empty since the tooling spec reserved it. check walks every pack the manifest lists and refuses one this checker does not ship by name, before reading anything. upgrade moves a pack's files with core's, and an edited pack schema stops it as an edited core schema does.
+init --pack software vendors the pack beside core under the units folder, hashes its files into the manifest and lists it in packs, which the manifest has carried empty since the tooling spec reserved it. check walks every pack the manifest lists and refuses one this checker does not ship by name, before reading anything. upgrade moves a pack's files with core's, and an edited pack schema stops it as an edited core schema does. upgrade --pack software takes the pack into an instance made without it, so a company can start before the pack ships.
 
 A pack is released with its core, so --pack takes this release's packs and is refused beside --core.
 
-Verified: npm run test:plan, test:cli, node --test verify/check-script.test.mjs and npm run verify pass, and init --pack software in a scratch folder produced an instance that check passed.
+Verified: npm run test:plan, test:cli, node --test verify/check-script.test.mjs and npm run verify pass, and init --pack software in one scratch folder, and init followed by upgrade --pack software in another, produced instances that check passed.
 
 Process: Delivery
 Phase: Implement
@@ -1294,7 +1440,7 @@ EOF
 Replace the section's "No pack ships yet. The mechanism arrives when a second kind of company asks for it." with:
 
 ```markdown
-One pack ships: `software`, for a company that builds software, with five types from domain-driven design. Its schemas are in `packs/software/`, and its README lists the sources each type draws on and where the pack departs from them. An instance takes it with `companygraph init --pack software`; it is vendored beside core under the units folder, listed in the manifest's `packs`, checked by `check` and moved by `upgrade`. Core is level 0 and a pack level 1: every edge from a pack to core is optional, and no core type names a pack's (R20).
+One pack ships: `software`, for a company that builds software, with five types from domain-driven design. Its schemas are in `packs/software/`, and its README lists the sources each type draws on and where the pack departs from them. An instance takes it with `companygraph init --pack software`, or later with `companygraph upgrade --pack software`; it is vendored beside core under the units folder, listed in the manifest's `packs`, checked by `check` and moved by `upgrade`. Core is level 0 and a pack level 1: every edge from a pack to core is optional, and no core type names a pack's (R20).
 ```
 
 In `AGENTS.md`, the sentence saying `packs/` does not exist until a pack does becomes: `\`packs/\` holds one folder per pack, released with core under one tag.`
@@ -1321,4 +1467,4 @@ EOF
 
 ## After the owner's merge
 
-The release is the owner's: its number, its tag and its notes, which name R20, the `software` pack and `init --pack`. Then, each in work of its own: `companygraph/mental-model` takes the pack and describes the parser's resolution as its first bounded context; the MCP server and the Obsidian plugin pass pack schemas under `<unit>/<type>-schema.md` and read addresses through `typeOfAddress`, and the spec's proof that they need nothing more is one `list_types` against Task 4's fixture, which lists the five pack types; beacon files its feature request and brings its model to its own instance.
+The release is the owner's: its number, its tag and its notes, which name R20, the `software` pack, `init --pack` and `upgrade --pack`. Then, each in work of its own: `companygraph/mental-model` takes the pack and describes the parser's resolution as its first bounded context; the MCP server and the Obsidian plugin pass pack schemas under `<unit>/<type>-schema.md` and read addresses through `typeOfAddress`, and the spec's proof that they need nothing more is one `list_types` against Task 4's fixture, which lists the five pack types; beacon files its feature request and brings its model to its own instance.

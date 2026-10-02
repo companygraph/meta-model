@@ -1,0 +1,68 @@
+---
+id: 01a0f94d-fa63-7c7e-8af5-b2d7e5b870cf
+---
+
+# Aggregate Schema
+
+> Required structure for aggregate files.
+
+**Owner:** bounded-context
+
+## File Location
+
+`model/bounded-contexts/<bounded-context>/aggregates/*.md`
+
+## Frontmatter
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
+| `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
+| `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
+| `root` | Yes | ref → concept-design | The entity through which the aggregate is reached, a concept design of kind `entity` in the same context (Evans) |
+| `members` | No | array of ref → concept-design | The other concept designs the aggregate holds, beside its root |
+| `decisions` | No | array of ref → decision | The decisions that shaped this aggregate, the H1s of files in `decisions/` |
+
+## Sections
+
+| Section | Required | Description |
+| --- | --- | --- |
+| `# [Aggregate]` | Yes | The aggregate's name, usually its root's |
+| `> [Consistency]` | Yes | What the aggregate keeps consistent, in one sentence |
+| `## Invariants` | Yes | Table. One rule per row that holds after every change, under a label a test or a code comment cites it by (DDD Crew, Aggregate Design Canvas); its columns are declared below. |
+| `## Handled commands` | No | Table. What the aggregate is asked to do; its columns are declared below. |
+| `## State transitions` | No | The states the aggregate moves through and what moves it (DDD Crew, Aggregate Design Canvas) |
+| `## References` | No | Table. What a reader can open to learn more about the aggregate; its columns are declared below. |
+
+`## Invariants` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Label` | Yes | string | What the invariant is cited by: letters, digits and hyphens, unique within the aggregate, such as `INV-T1` |
+| `Invariant` | Yes | string | The rule, stated so a test could check it |
+
+`## Handled commands` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Command` | Yes | string | The command, in the imperative: "Issue invoice" |
+| `Description` | No | string | What it asks for, and what it refuses |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — an aggregate canvas, a design note |
+| `URL` | Yes | string | Where it is |
+
+## Purpose
+
+An aggregate answers "what has to stay consistent together, and through what is it changed?" It is Evans's aggregate: a cluster of concept designs changed only through its root. The invariants are a table and not a numbered list, because they are a set and not a sequence, and a position is no key anything outside can cite. A command is a row here and not a type, because nothing outside the aggregate names it. The events it emits are not written here: each event names its aggregate as `emitted-by`, and the edge is read from that end.
+
+## Writing rules
+
+- The root is an entity. A value object cannot be a root, since it has no identity to reach the rest through.
+- An invariant is a rule that holds after every command, stated so a test could check it.
+- A command is named in the imperative and an event in the past tense, so the two are never confused.
+- A label stays when its invariant is reworded. A new rule takes a new label, and a removed rule's label is not used again.
+- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
