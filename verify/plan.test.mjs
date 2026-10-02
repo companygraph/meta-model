@@ -1,8 +1,9 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
-import { hashOf } from "../lib/instance-files.mjs";
+import { AGENTS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
+import { hashOf, INSTANCE_PINS } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
+import { vocabularyOf } from "../lib/checks.mjs";
 
 const core = new Map([
   ["CONVENTIONS.md", "# Conventions\n"],
@@ -233,7 +234,7 @@ test("a vendored file the instance deleted that the new core still ships is writ
 
 test("an instance already on that core is said so, and nothing is written", () => {
   const { manifest, held, workflow } = instance();
-  const same = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  const same = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, present: new Set(["pins.json"]) });
   assert.equal(same.writes.size, 0);
   assert.deepEqual(same.removes, []);
   assert.equal(same.from, "0.31.1");
@@ -291,18 +292,18 @@ test("init writes the export's inputs, unhashed, and --here leaves one already t
 
 test("an upgrade writes the export's inputs the instance lacks, never one it has, and leaves the manifest alone for them", () => {
   const { manifest, held, workflow } = instance();
-  const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, name: "Acme", present: new Set(["export/README.md"]) });
+  const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, name: "Acme", present: new Set(["export/README.md", "pins.json"]) });
   assert.deepEqual(plan.given, ["export/gemini-notebook-AGENTS.md"]);
   assert.deepEqual([...plan.writes.keys()], ["export/gemini-notebook-AGENTS.md"]);
-  const none = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  const none = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, present: new Set(["pins.json"]) });
   assert.equal(none.writes.size, 0, "no name, and nothing is given");
 });
 
-// Review fix 1: `upgrade` only ever wrote export files; a core that grows R19's localization
+// Review fix 1: `upgrade` only ever wrote export files; a core that grows the localization
 // schema left an instance upgraded from before it with no model/localization.md at all, and
 // nothing later would write one. An upgrade now writes it, once, reading `source` from
 // model/identity.md the way `backfillPlan` does, and never touches a page the instance has.
-const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+const withLocalizationSchema = new Map([...older, ["localization-schema.md", "# Localization Schema\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `locale` | Yes | string | The language |\n"]]);
 
 test("an upgrade writes model/localization.md when the new core carries the schema and the instance has none, with source read from identity", () => {
   const { manifest, held, workflow } = instance();
@@ -310,7 +311,7 @@ test("an upgrade writes model/localization.md when the new core carries the sche
   const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withIdentity, workflow });
   const page = plan.writes.get("model/localization.md");
   assert.ok(page, "model/localization.md is written");
-  const id = page.match(/^---\nid: (\S+)\nsource: Acquired\n---\n/)?.[1];
+  const id = page.match(/^---\nid: (\S+)\nsource: Acquired\nlocale: en-US\n---\n/)?.[1];
   assert.ok(id && UUIDV7.test(id), `expected a fresh UUIDv7, got ${id}`);
 });
 
@@ -319,10 +320,70 @@ test("an upgrade defaults localization.md's source to Local when identity names 
   const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
   assert.match(plan.writes.get("model/localization.md"), /\nsource: Local\n/);
 
-  const already = "---\nid: existing\nsource: Local\n---\n\n# Languages\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n";
+  const already = "---\nid: existing\nsource: Local\nlocale: de-CH\n---\n\n# Language\n";
   const withOwn = new Map(held).set("model/localization.md", already);
   const kept = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withOwn, workflow });
   assert.ok(!kept.writes.has("model/localization.md"), "an existing file is never overwritten");
+});
+
+const OLD_LOCALIZATION = (rows) =>
+  `---\nid: existing\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n${rows}\n`;
+
+test("an upgrade rewrites a localization page in the earlier form into its locale field", () => {
+  const { manifest, held, workflow } = instance();
+  const withOld = new Map(held).set("model/localization.md", OLD_LOCALIZATION("| de-CH | primary |"));
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withOld, workflow });
+  assert.equal(plan.writes.get("model/localization.md"), "---\nid: existing\nsource: Local\nlocale: de-CH\n---\n\n# Languages\n\n> Who reads it.\n");
+  assert.deepEqual(plan.rewritten, ["model/localization.md"]);
+});
+
+test("an upgrade leaves a localization page that already names its locale alone", () => {
+  const { manifest, held, workflow } = instance();
+  const current = "---\nid: existing\nsource: Local\nlocale: en-US\n---\n\n# Language\n\n> Who reads it.\n";
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", current), workflow });
+  assert.ok(!plan.writes.has("model/localization.md"));
+  assert.deepEqual(plan.rewritten, []);
+});
+
+test("an upgrade refuses a localization page that declares a translated language, writing nothing", () => {
+  const { manifest, held, workflow } = instance();
+  const withTranslated = new Map(held).set("model/localization.md", OLD_LOCALIZATION("| en-US | primary |\n| de-CH | translated |"));
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: withTranslated, workflow });
+  assert.match(plan.refused, /^model\/localization\.md declares de-CH translated; a model is written in one language/);
+  assert.equal(plan.writes, undefined);
+});
+
+// Final review: a page the migration cannot read does not stop the core from moving; the
+// upgrade leaves it as it is, and the check afterward names what it owes.
+test("an upgrade leaves a localization page it cannot read alone, and lands", () => {
+  const { manifest, held, workflow } = instance();
+  const unreadable = "---\nid: existing\nsource: Local\n---\n\n# Language\n\n> Who reads it.\n";
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", unreadable), workflow });
+  assert.equal(plan.refused, undefined);
+  assert.ok(!plan.writes.has("model/localization.md"));
+  assert.deepEqual(plan.rewritten, []);
+});
+
+// Final review, minors: `--core <old>` vendors a schema with the `## Locales` table, and the page
+// written beside it is the one that schema reads.
+test("init and upgrade write the localization page in the form the vendored core's schema declares", () => {
+  const oldCore = new Map([...core, ["localization-schema.md", "# Locales schema\n"]]);
+  const made = initPlan({ ...ask, core: oldCore }).writes.get("model/localization.md");
+  assert.match(made, /## Locales\n\n\| Locale \| Role \|/);
+  assert.doesNotMatch(made, /\nlocale:/);
+  assert.match(initPlan(ask).writes.get("model/localization.md"), /\nlocale: en-US\n/);
+  const { manifest, held, workflow } = instance();
+  const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+  const given = upgradePlan({ core: olderSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow }).writes.get("model/localization.md");
+  assert.match(given, /## Locales\n/);
+  assert.doesNotMatch(given, /\nlocale:/);
+});
+
+test("an upgrade toward a core whose schema declares no locale leaves the earlier form alone", () => {
+  const { manifest, held, workflow } = instance();
+  const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+  const plan = upgradePlan({ core: olderSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", OLD_LOCALIZATION("| en-US | primary |")), workflow });
+  assert.ok(!plan.writes.has("model/localization.md"));
 });
 
 test("a manifest naming a file outside its own core refuses the whole upgrade, hash and all", () => {
@@ -479,4 +540,148 @@ test("run twice, the schema backfill writes nothing the second time", () => {
   const files = coreTree();
   for (const [path, text] of schemaBackfillPlan(files, { firstCommitMs: () => MS })) files.set(path, text);
   assert.equal(schemaBackfillPlan(files, { firstCommitMs: () => MS }).size, 0);
+});
+
+// R20: a pack is a unit beside core, vendored, hashed and moved the way core is.
+const INIT_ARGS = ask;
+const UPGRADE_ARGS = (() => {
+  const { workflow } = instance();
+  return { core: newer, tooling: "0.32.0", tag: "v0.32.0", workflow };
+})();
+
+test("init with a pack vendors it beside core and lists it in the manifest", () => {
+  const packs = new Map([["software", new Map([["manifest.json", '{ "name": "software", "version": "0.0.1" }'], ["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "# Bounded Context Schema\n");
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  assert.deepEqual(manifest.packs, ["software"]);
+  assert.ok("meta/software/bounded-context-schema.md" in manifest.files);
+});
+
+test("an upgrade moves a pack's files with core's, and an edited pack schema stops it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: ["software"], files: { "meta/software/bounded-context-schema.md": hashOf("old\n") } };
+  const moved = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "old\n"]]) });
+  assert.equal(moved.writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  const stopped = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map([["meta/software/bounded-context-schema.md", "edited\n"]]) });
+  assert.match(stopped.refused, /meta\/software\/bounded-context-schema\.md/);
+});
+
+test("an upgrade given a pack the instance did not take vendors it and lists it", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, refused } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.equal(refused, undefined);
+  assert.equal(writes.get("meta/software/bounded-context-schema.md"), "new\n");
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")).packs, ["software"]);
+});
+
+test("the backfill gives a page of a pack's type an id when it is handed the pack's rows, and leaves it alone without them", () => {
+  const files = tree();
+  files.set("model/feature-designs/checkout.md", "---\nsource: Local\n---\n\n# Checkout\n");
+  const { types } = vocabularyOf({ packs: [{ name: "software", dir: "meta/software" }] });
+  assert.ok(backfillPlan(files, { firstCommitMs: () => MS, types }).has("model/feature-designs/checkout.md"));
+  assert.equal(backfillPlan(files, { firstCommitMs: () => MS }).has("model/feature-designs/checkout.md"), false);
+});
+
+// A pack's root folders are folders of the instance that takes it: each gets the README every
+// folder gets, naming the schema in the pack's unit, and --folders can name them.
+test("init with a pack writes a README for each root folder the pack adds, naming the pack's schemas", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "# Bounded Context Schema\n"]])]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs });
+  assert.equal(writes.get("model/feature-designs/README.md"), "# Feature designs\n\nOne file per feature design, written against `meta/software/feature-design-schema.md`.\n");
+  const contexts = writes.get("model/bounded-contexts/README.md");
+  assert.match(contexts, /^# Bounded contexts\n\nOne folder per bounded context, written against `meta\/software\/bounded-context-schema\.md`/);
+  assert.ok(contexts.includes("its concept designs in `concept-designs/` against `meta/software/concept-design-schema.md`"));
+  assert.ok(writes.get("model/skills/README.md").includes("`meta/core/skill-schema.md`"));
+});
+
+test("--folders can name a pack's root folder, and without a pack it is still refused as before", () => {
+  const packs = new Map([["software", new Map()]]);
+  const { writes } = initPlan({ ...INIT_ARGS, packs, folders: ["bounded-contexts"] });
+  assert.ok(writes.has("model/bounded-contexts/README.md") && !writes.has("model/feature-designs/README.md"));
+  const refused = initPlan({ ...INIT_ARGS, folders: ["bounded-contexts"] });
+  assert.match(refused.refused, /bounded-contexts is no folder of core; the folders are /);
+});
+
+test("an init without a pack writes no folder README of a pack", () => {
+  const { writes } = initPlan(INIT_ARGS);
+  assert.ok(![...writes.keys()].some((p) => p.includes("bounded-contexts") || p.includes("feature-designs")));
+});
+
+test("an upgrade that takes a pack writes its root folders' READMEs once, and names them as given", () => {
+  const packs = new Map([["software", new Map([["bounded-context-schema.md", "new\n"]])]]);
+  const manifest = { tooling: "0.0.1", core: { version: "0.0.1" }, units: "meta", packs: [], files: {} };
+  const { writes, given } = upgradePlan({ ...UPGRADE_ARGS, manifest, packs, held: new Map() });
+  assert.match(writes.get("model/feature-designs/README.md"), /meta\/software\/feature-design-schema\.md/);
+  assert.ok(given.includes("model/bounded-contexts/README.md"));
+  assert.ok(!writes.has("model/README.md"));
+  const listed = upgradePlan({ ...UPGRADE_ARGS, manifest: { ...manifest, packs: ["software"] }, packs, held: new Map() });
+  assert.ok(!listed.writes.has("model/bounded-contexts/README.md"));
+});
+
+test("init writes into the manifest that the form check leaves out dist and the units folder", () => {
+  assert.deepEqual(JSON.parse(initPlan(ask).writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
+  assert.deepEqual(JSON.parse(initPlan({ ...ask, units: "schemas" }).writes.get(".companygraph/manifest.json")).exclude, ["dist", "schemas"]);
+});
+
+test("init writes a pins.json that declares the instance's own core-release pin, with its move", () => {
+  const pins = JSON.parse(initPlan(ask).writes.get("pins.json"));
+  assert.deepEqual(pins, { pins: [{ kind: "core-release", file: ".companygraph/manifest.json", repo: "companygraph/meta-model", move: "npx --yes 'github:companygraph/meta-model#v{version}' upgrade" }] });
+});
+
+test("--here leaves a pins.json already there alone, since a repository's pins are its own", () => {
+  const { writes } = initPlan({ ...ask, present: new Set(["pins.json"]) });
+  assert.equal(writes.has("pins.json"), false);
+});
+
+test("an upgrade writes pins.json where the instance has none, and never touches one it has", () => {
+  const manifest = { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} };
+  const base = { core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: null };
+  const given = upgradePlan(base);
+  assert.ok(given.writes.has("pins.json"));
+  assert.ok(given.given.includes("pins.json"));
+  const kept = upgradePlan({ ...base, present: new Set(["pins.json"]) });
+  assert.equal(kept.writes.has("pins.json"), false);
+});
+
+test("an upgrade keeps the instance's own exclude list and gives an older instance the default", () => {
+  const base = { core, tooling: "0.31.2", tag: "v0.31.2", held: new Map(), workflow: null };
+  const older = upgradePlan({ ...base, manifest: { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} } });
+  assert.deepEqual(JSON.parse(older.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
+  const own = upgradePlan({ ...base, manifest: { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {}, exclude: ["dist", "meta", "archive"] } });
+  assert.deepEqual(JSON.parse(own.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta", "archive"]);
+});
+
+test("adopt writes a manifest with tooling and exclude and no core, the workflow, the hook and the instance pins.json", () => {
+  const { writes } = adoptPlan({ tooling: "0.69.0", present: new Set() });
+  assert.deepEqual([...writes.keys()].sort(), [".companygraph/hooks/commit-msg", ".companygraph/manifest.json", ".github/workflows/companygraph.yml", "pins.json"]);
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")), { tooling: "0.69.0", exclude: ["dist"] });
+  assert.match(writes.get(".github/workflows/companygraph.yml"), /repository-check\.yml@v0\.69\.0/);
+  assert.deepEqual(JSON.parse(writes.get("pins.json")), JSON.parse(INSTANCE_PINS));
+});
+
+test("adopt refuses an instance, and a repository that took the machinery already, by name, pointing at upgrade", () => {
+  const refused = adoptPlan({ tooling: "0.69.0", present: new Set([".companygraph/manifest.json", "model/README.md"]) });
+  assert.match(refused.refused, /upgrade/);
+});
+
+test("adopt keeps a pins.json already there, and refuses a workflow of the same name, naming it", () => {
+  assert.equal(adoptPlan({ tooling: "0.69.0", present: new Set(["pins.json"]) }).writes.has("pins.json"), false);
+  assert.match(adoptPlan({ tooling: "0.69.0", present: new Set([".github/workflows/companygraph.yml"]) }).refused, /companygraph\.yml/);
+});
+
+test("an upgrade of an adopted repository moves tooling and its workflow's ref, keeps its exclude, and vendors no core", () => {
+  const workflow = "jobs:\n  companygraph:\n    uses: companygraph/meta-model/.github/workflows/repository-check.yml@v0.68.0\n";
+  const plan = adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.68.0", exclude: ["dist", "public"] }, workflow, present: new Set(["pins.json"]) });
+  assert.deepEqual([...plan.writes.keys()].sort(), [".companygraph/manifest.json", ".github/workflows/companygraph.yml"]);
+  assert.deepEqual(JSON.parse(plan.writes.get(".companygraph/manifest.json")), { tooling: "0.69.0", exclude: ["dist", "public"] });
+  assert.match(plan.writes.get(".github/workflows/companygraph.yml"), /repository-check\.yml@v0\.69\.0/);
+  assert.deepEqual(adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.69.0", exclude: ["dist"] }, workflow: null, present: new Set(["pins.json"]) }).writes.size, 0);
+});
+
+test("an upgrade of an adopted repository with no pins.json writes the instance pins and says it gave them", () => {
+  const plan = adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.69.0", exclude: ["dist"] }, workflow: null, present: new Set() });
+  assert.deepEqual(JSON.parse(plan.writes.get("pins.json")), JSON.parse(INSTANCE_PINS));
+  assert.deepEqual(plan.given, ["pins.json"]);
 });

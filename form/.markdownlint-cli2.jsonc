@@ -1,0 +1,55 @@
+// The one Markdown form, as rules: the form robertblust/conventions holds the family to, shipped
+// here so that any repository that takes CompanyGraph's tooling is held to it too. `companygraph
+// form` runs markdownlint-cli2 at the version lib/form.mjs pins with this file as its
+// configuration, and the two rules markdownlint does not ship are in markdown-rules.cjs beside it.
+//
+// The form is fixed: a repository excludes paths in its manifest's `exclude` and turns no rule on
+// or off. Until the family takes this machinery from meta-model, robertblust/conventions keeps
+// its own copy, and `npm run verify` fails when the two rule sets differ.
+{
+  "config": {
+    "default": false,
+
+    // A paragraph is one line, and the three blocks whose breaks are content keep theirs.
+    "paragraph-on-one-line": true,
+
+    // Tables, emphasis, list markers and whitespace: the Markdown paragraph of WRITING.md.
+    "MD004": { "style": "dash" },
+    "MD009": true,
+    "MD010": { "code_blocks": false },
+    "MD012": true,
+    "MD047": true,
+    "MD049": { "style": "asterisk" },
+    "MD050": { "style": "asterisk" },
+    "MD055": { "style": "leading_and_trailing" },
+    "MD060": { "style": "compact" },
+    "table-delimiter-row": true,
+
+    // A heading, a list, a fence and a table stand clear of the text around them by a blank
+    // line, because a list crowded against its lead-in is a list some readers never see as one.
+    "MD022": true,
+    "MD031": true,
+    "MD032": true,
+    "MD058": true,
+
+    // The shapes the family already writes, held so they stay that way. Each was measured over
+    // every member's Markdown with nothing to fix, so it costs no rewrite anywhere and catches
+    // the first file that drifts.
+    "MD003": { "style": "atx" },
+    "MD005": true,
+    "MD007": true,
+    "MD011": true,
+    "MD018": true,
+    "MD019": true,
+    "MD020": true,
+    "MD021": true,
+    "MD023": true,
+    "MD027": true,
+    "MD030": true,
+    "MD035": true,
+    "MD037": true,
+    "MD039": true,
+    "MD048": { "style": "backtick" }
+  },
+  "customRules": ["./markdown-rules.cjs"]
+}

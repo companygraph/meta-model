@@ -4,6 +4,8 @@ R14 makes the names and prose of every instance American English, and the model 
 
 Status: decided by the owner on September 30, 2026, and amended the same day to name the singleton `localization`, since R12 names a singular type's file for the type: a translation decorates the one page and is never a second one, a primary locale per instance, references that resolve in the language they are written in, complete and current locales, the layout of a locale section, what the tools do with a locale, a required `localization` singleton, and the Translator writing into the model while the adoption is left to each instance.
 
+Superseded on October 1, 2026, before any instance declared a translated language: the owner decided that a model is written in one language and is never translated inside itself. `2026-10-01-one-language-per-model-design.md` removes R19 and the locale sections, and keeps `model/localization.md` to name that one language. This spec stays as the record of what v0.66.0 shipped.
+
 ## Where this comes from
 
 meta-model #195 asks for one entity with its name and prose in several languages, each checked, and a reference that resolves in whichever language it was written. It leans on #194, which gave every entity an id no name carries, and the owner split it in two: `2026-09-30-a-schema-keeps-its-id-design.md` gave every element of a schema a path, and this spec keys translations by those paths.

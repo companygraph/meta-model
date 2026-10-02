@@ -544,7 +544,7 @@ test("upgrade writes a reading guide the instance lacks, names it, and keeps the
   assert.match(run(["upgrade", root]), /already on core/i);
 });
 
-// Review fix 1: an instance made before R19's schema landed has no model/localization.md at
+// Review fix 1: an instance made before the localization schema landed has no model/localization.md at
 // all, and `init` alone never revisits an existing instance. `upgrade` now writes it once,
 // reading `source` off model/identity.md, and the instance it lands on still passes `check`.
 test("upgrade writes model/localization.md the instance lacks, with source read from identity, and the instance still checks clean", () => {
@@ -555,8 +555,22 @@ test("upgrade writes model/localization.md the instance lacks, with source read 
   assert.match(said, /written, since the instance had none.*model\/localization\.md/);
   const page = fs.readFileSync(path.join(root, "model/localization.md"), "utf8");
   assert.match(page, /\nsource: Local\n/);
-  assert.match(page, /\| en-US \| primary \|/);
+  assert.match(page, /\nlocale: en-US\n/);
   assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade rewrites a localization page in the earlier form, says so, and a second upgrade leaves it be", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  const id = fs.readFileSync(loc, "utf8").match(/^id: (\S+)$/m)[1];
+  fs.writeFileSync(loc, `---\nid: ${id}\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /rewritten in this core's form: model\/localization\.md/);
+  assert.equal(fs.readFileSync(loc, "utf8"), `---\nid: ${id}\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n`);
+  assert.doesNotThrow(() => run(["check", root]));
+  // The page now names its locale, so the plan writes nothing and upgrade says it has nothing to do.
+  assert.match(run(["upgrade", root]), /already on core/i);
 });
 
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
@@ -668,7 +682,7 @@ test("upgrade refuses a manifest whose units escapes the instance, and writes no
 
 function tempPackage() {
   const dir = temp();
-  for (const part of ["bin", "lib", "core", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  for (const part of ["bin", "lib", "core", "form", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
   fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
   return dir;
 }
@@ -700,7 +714,7 @@ test("upgrade refuses a core newer than itself, and writes nothing", () => {
 // core carries `localization-schema.md`, which every bundled core does from here on — so
 // deleting model/ before an upgrade against this package's own core no longer leaves it empty
 // afterward, and checkPath's "has no model/" guard would never fire. A private copy of the
-// package with that one schema file removed stands in for a release from before R19, which is
+// package with that one schema file removed stands in for a release from before the localization schema, which is
 // what this defect actually needs: a target core that does not heal the folder back.
 test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
   const root = temp();
@@ -1039,6 +1053,17 @@ test("the menu offers the report", () => {
   assert.match(out.stdout, /Commits by seat in /);
 });
 
+test("the menu offers adopt and the pin report after the report by seat, and keeps the first five where they were", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /1\S*\s+Make a model/);
+  assert.match(listed, /5\S*\s+Report by seat/);
+  assert.match(listed, /6\S*\s+Hold a repository/);
+  assert.match(listed, /7\S*\s+Report pins/);
+  const root = temp();
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `6\n${root}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /adopted/);
+});
+
 test("id prints one fresh UUID version 7", () => {
   assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
@@ -1204,240 +1229,267 @@ test("ids --range on a folder that holds core refuses a commit that changed a sc
   assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
 });
 
-test("translations --range refuses a change to the primary its translation did not follow, and a trailer releases it", () => {
+// R20: the manifest names the packs an instance took, and check refuses one it does not ship.
+test("a manifest that takes a pack this checker does not ship is refused by name", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
-  g("commit", "-qam", "second", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 3);
-  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
-  g("commit", "-q", "--allow-empty", "-m", "third", "-m", "Translation-unchanged: model/vision.md#section/What it means", "--no-verify");
-  const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(released.status, 0, released.stderr);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, packs: ["cooking"] }));
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /takes the pack cooking, and this checker ships software/);
 });
 
-// `translations --range` compared `base..head` trees directly. A PR behind main sees main's own
-// later, unrelated primary-only edit as part of that diff too, reversed — main has the new text
-// and the PR still has the old, so the diff reads as though the PR's own head had just reverted
-// it — and the `Translation-unchanged` trailer that released it lives on main's commit, which is
-// never inside `base..head` (base is that very commit, so it is excluded as every range's own end
-// is). The PR fails for an edit it never made. Comparing from `git merge-base base head` instead
-// leaves that page out of the diff entirely, since the PR branch never touched it.
-test("translations --range compares from the merge base, not the base tip, so a PR behind main is not held to main's own later edit", () => {
+test("an upgrade with --core is refused for an instance that lists a pack, and for --pack, before anything is fetched", () => {
   const root = temp();
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const trunk = g("branch", "--show-current");
-  // The PR forks here and never touches vision.md again.
-  g("checkout", "-qb", "pr");
-  const readme = path.join(root, "model/README.md");
-  fs.writeFileSync(readme, `${fs.readFileSync(readme, "utf8").trimEnd()}\nUnrelated PR work.\n`);
-  g("commit", "-qam", "pr work", "--no-verify");
-  const prHead = g("rev-parse", "HEAD");
-  // Main moves on without the PR: a primary-only edit, released by its own trailer.
-  g("checkout", "-q", trunk);
-  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
-  g("commit", "-qam", "second", "-m", "Translation-unchanged: model/vision.md#section/What it means", "--no-verify");
-  const mainTip = g("rev-parse", "HEAD");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${mainTip}..${prHead}`], { encoding: "utf8" });
-  assert.equal(said.status, 0, said.stderr);
-  assert.match(said.stdout, /✓ every change to the primary reached its translations/);
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const listed = spawnSync(process.execPath, [cli, "upgrade", root, "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(listed.status, 1);
+  assert.match(listed.stderr, /takes the pack software, and --core fetches another release's core without it/);
+  const plain = temp();
+  run(["init", plain, "--name", "Acme", "--agent", "claude"]);
+  const added = spawnSync(process.execPath, [cli, "upgrade", plain, "--pack", "software", "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(added.status, 1);
+  assert.match(added.stderr, /takes the pack software, and --core fetches another release's core without it/);
 });
 
-// Fix 11 (test only): `changedPagesOf` pairs a renamed page with its old path (git's own rename
-// detection, `-M`), so a page that moved and changed in the same range is read as one entity
-// changing, not as one deleted and another appearing from nowhere; the trailer that releases it
-// names the entity's new path, since that is where R19 finds it from here on.
-test("translations --range follows a rename, and a trailer naming the new path releases it", () => {
+test("upgrade --pack names only the packs the instance did not already list", () => {
   const root = temp();
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  const renamed = path.join(root, "model/vision2.md");
-  fs.renameSync(vision, renamed);
-  fs.writeFileSync(renamed, fs.readFileSync(renamed, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
-  g("add", "-A"); g("commit", "-qm", "rename and reword", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 3);
-  assert.match(said.stderr, /model\/vision2\.md#section\/What it means changed, and its de-CH translation did not/);
-  g("commit", "-q", "--allow-empty", "-m", "release", "-m", "Translation-unchanged: model/vision2.md#section/What it means", "--no-verify");
-  const released = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(released.status, 0, released.stderr);
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
 });
 
-test("translations --range reads Translation-unchanged trailers spread across two commits, releasing two elements", () => {
+// An instance that took a pack reads the pack's schemas wherever the history commands read the
+// model: a bounded context's page sits in a folder only the pack's schema declares, and without
+// them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
+test("commits and seats read an instance that took the software pack and wrote a bounded context", () => {
   const root = temp();
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const identity = path.join(root, "model/identity.md");
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(identity, `${fs.readFileSync(identity, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nAcme\n\n### Statement\n\n> Ein Satz.\n\n### What it is\n\nWas es ist.\n`);
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  let text = fs.readFileSync(identity, "utf8");
-  text = text.replace("One paragraph saying what this company is.", "One paragraph now saying more.");
-  text = text.replace("What the company does, and for whom.", "What the company does now, and for whom.");
-  fs.writeFileSync(identity, text);
-  g("commit", "-qam", "second", "--no-verify");
-  g("commit", "-q", "--allow-empty", "-m", "release one", "-m", "Translation-unchanged: model/identity.md#statement", "--no-verify");
-  g("commit", "-q", "--allow-empty", "-m", "release two", "-m", "Translation-unchanged: model/identity.md#section/What it is", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 0, said.stderr);
-  assert.match(said.stdout, /✓ every change to the primary reached its translations/);
-});
-
-test("translations --range names only the stale language when one of two declared languages follows the change", () => {
-  const root = temp();
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n| pl-PL | translated |\n"));
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q");
+  const page = path.join(root, "model/bounded-contexts/ordering/ordering.md");
+  fs.mkdirSync(path.dirname(page), { recursive: true });
   fs.writeFileSync(
-    vision,
-    `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n\n` +
-      "## pl-PL\n\n### Name\n\nWizja\n\n### Statement\n\n> Jeden akapit.\n\n### What it means\n\nCo obowiazuje.\n",
+    page,
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nclassification: core\n---\n\n# Ordering\n\n> Takes an order and leaves payment to Billing.\n\n## Responsibilities\n\n- Accept an order\n",
   );
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  let text = fs.readFileSync(vision, "utf8");
-  text = text.replace("What is true when it holds, and what it excludes.", "What is true when it holds.");
-  text = text.replace("Co obowiazuje.", "Co teraz obowiazuje.");
-  fs.writeFileSync(vision, text);
-  g("commit", "-qam", "second", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 3);
-  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
-  assert.doesNotMatch(said.stderr, /pl-PL/);
+  g("add", "-A");
+  g("commit", "-qm", "Add the ordering context", "--no-verify");
+  const message = path.join(root, "message.txt");
+  fs.writeFileSync(message, "Add a thing\n");
+  const commits = spawnSync(process.execPath, [cli, "commits", root, "--message", message], { encoding: "utf8", env });
+  assert.equal(commits.status, 0, commits.stdout + commits.stderr);
+  const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
+  assert.equal(seats.status, 0, seats.stdout + seats.stderr);
 });
 
-// Review fix 5: `translations` read model/localization.md from the working tree, but the
-// languages that govern a range are the range's head's, per the function's own header comment.
-// A range whose head declares a language the checkout on disk does not judged by whatever
-// happened to be checked out, not by the head — reachable in CI, which checks out a PR's merge
-// commit, and locally, whenever a reviewer moves around history without re-running
-// `git checkout <b>` first. Here de-CH is written at base already, undeclared, so the page has
-// the section without yet being held to it; the head commit declares de-CH translated and
-// changes the primary without touching the translation, which is R19's actual staleness. The
-// working tree is then moved to base, which declares no language at all, so reading the file
-// from disk would say "no translated language is declared" and let the stale translation
-// through — the read from the head is what has to catch it.
-test("translations --range judges by the head's declared languages, not whatever the working tree has checked out", () => {
+test("an instance init writes is in the one form, and check says so", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(
-    vision,
-    `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`,
-  );
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
-  g("commit", "-qam", "second", "--no-verify");
-  const head = g("rev-parse", "HEAD");
-  g("checkout", "-q", base);
-  assert.doesNotMatch(fs.readFileSync(loc, "utf8"), /de-CH/, "the working tree is at base, which declares no de-CH");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${head}`], { encoding: "utf8" });
-  assert.equal(said.status, 3, said.stdout + said.stderr);
-  assert.match(said.stderr, /model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
+  assert.match(run(["form", root]), /in the one form/);
+  assert.match(run(["check", root]), /in the one form/);
 });
 
-// Re-review, Important: `fileAt` ran `git show <rev>:<path>` with `<path>` relative to the
-// instance's own root, but git resolves a bare `rev:path` relative to the repository's top, not
-// cwd — unlike a `--` pathspec, which git diff and git log resolve relative to cwd. An instance
-// committed below its repository's top (here under `inst/`) had its own model/localization.md
-// read as though it lived at the container's top, found nothing there, and declared no
-// translated language whatever the instance's own file said — passing silently instead of
-// catching the primary-only edit below.
-test("translations --range reads localization.md from an instance nested below its repository's top", () => {
-  const container = temp();
-  const root = path.join(container, "inst");
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const vision = path.join(root, "model/vision.md");
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: container, env, encoding: "utf8" }).trim();
-  fs.writeFileSync(vision, `${fs.readFileSync(vision, "utf8").trimEnd()}\n\n## de-CH\n\n### Name\n\nDie Vision\n\n### Statement\n\n> Ein Absatz.\n\n### What it means\n\nWas gilt.\n`);
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const base = g("rev-parse", "HEAD");
-  fs.writeFileSync(vision, fs.readFileSync(vision, "utf8").replace("What is true when it holds, and what it excludes.", "What is true when it holds."));
-  g("commit", "-qam", "second", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  assert.equal(said.status, 3, said.stdout + said.stderr);
-  assert.match(said.stderr, /inst\/model\/vision\.md#section\/What it means changed, and its de-CH translation did not/);
-});
-
-// Re-review, Important: `fileAt` caught every git error and returned null, which
-// `translations` read the same as "no such file at the head" — no declared language, exit 0 —
-// when the real story for a `<b>` that does not resolve at all (a typo, a rebased-away commit)
-// is that the command could not run. README says translations "stays 1 where it could not run";
-// this was silently exiting 0 instead. The head is confirmed to resolve before anything is read
-// from it.
-test("translations --range exits 1 when the head does not resolve, rather than reading no declared language", () => {
+test("check fails on Markdown out of the form, names the line, and form --fix puts it right", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const loc = path.join(root, "model/localization.md");
-  fs.writeFileSync(loc, fs.readFileSync(loc, "utf8").replace("| en-US | primary |\n", "| en-US | primary |\n| de-CH | translated |\n"));
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  g("commit", "-q", "--allow-empty", "-m", "second", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "HEAD~1..nosuchrev"], { encoding: "utf8" });
-  assert.equal(said.status, 1, said.stdout + said.stderr);
-  assert.match(said.stderr, /✗/);
-  assert.doesNotMatch(said.stdout, /no translated language is declared/);
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const failed = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failed.status, 1);
+  assert.match(failed.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(failed.stderr, /form .* --fix/);
+  run(["form", root, "--fix"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
 });
 
-test("translations --range exits 1 in a folder that is not a git repository", () => {
+test("the form check leaves out what the manifest excludes", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "HEAD~1..HEAD"], { encoding: "utf8" });
-  assert.equal(said.status, 1, said.stdout + said.stderr);
-  assert.match(said.stderr, /✗/);
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/out.md"), "# Out\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" }).status, 0);
 });
 
-// Re-review, one more edge: only `<b>` was confirmed to resolve; `<a>` was left to mergeBaseOf,
-// called after the "no translated language" short circuit. An instance with no translated
-// language declared and a `<a>` that does not resolve never reached mergeBaseOf at all — it
-// exited 0 on "no translated language is declared" before the bad start revision was ever
-// noticed. `<a>` is now confirmed to resolve alongside `<b>`, before either is read.
-test("translations --range exits 1 when the start revision does not resolve, even with no translated language declared", () => {
+test("form refuses where the manifest names another release, as the checker does", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
-  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
-  const said = spawnSync(process.execPath, [cli, "translations", root, "--range", "nosuchrev..HEAD"], { encoding: "utf8" });
-  assert.equal(said.status, 1, said.stdout + said.stderr);
-  assert.match(said.stderr, /✗/);
-  assert.doesNotMatch(said.stdout, /no translated language is declared/);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names 0\.0\.1/);
+});
+
+test("form --fix writes the form where the manifest names another release, which is the remedy upgrade names", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /form .* --fix/);
+  const fixed = spawnSync(process.execPath, [cli, "form", root, "--fix"], { encoding: "utf8" });
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  assert.equal(fs.readFileSync(path.join(root, "NOTES.md"), "utf8"), "# Notes\n\nOne paragraph that wraps.\n");
+  const moved = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stdout + moved.stderr);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+});
+
+test("check says a manifest naming another release once, and does not run the form after it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.equal(said.stderr.match(/names 0\.0\.1/g)?.length, 1, said.stderr);
+});
+
+test("form and check say a manifest that is not JSON with the ✗ prefix, and exit 1", () => {
+  for (const make of [(root) => run(["init", root, "--name", "Acme", "--agent", "claude"]), (root) => run(["adopt", root])]) {
+    const root = temp();
+    make(root);
+    fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+    for (const command of ["form", "check"]) {
+      const said = spawnSync(process.execPath, [cli, command, root], { encoding: "utf8" });
+      assert.equal(said.status, 1, command);
+      assert.match(said.stderr, /^✗ .*manifest\.json could not be read as JSON/, `${command}: ${said.stderr}`);
+    }
+  }
+});
+
+test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  // A failing model check does not hide the form's hits.
+  assert.match(yml, /if: \$\{\{ !cancelled\(\) \}\}\n\s+run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+});
+
+test("upgrade stops on Markdown out of the form, naming it and moving nothing, and --force moves anyway", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  // An instance a release before this one made: an older tooling, no exclude, no pins.json.
+  const older = { ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" };
+  delete older.exclude;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(older, null, 2)}\n`);
+  fs.rmSync(path.join(root, "pins.json"));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(stopped.stderr, /--force/);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.equal(fs.existsSync(path.join(root, "pins.json")), false);
+  run(["upgrade", root, "--force"]);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.ok(fs.existsSync(path.join(root, "pins.json")));
+});
+
+test("upgrade leaves a family instance's own pins.json as it is", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const own = `${JSON.stringify({ pins: [{ kind: "conventions", file: "conventions.json", repo: "robertblust/conventions" }], verify: ["npm test"] }, null, 2)}\n`;
+  fs.writeFileSync(path.join(root, "pins.json"), own);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  run(["upgrade", root]);
+  assert.equal(fs.readFileSync(path.join(root, "pins.json"), "utf8"), own);
+});
+
+// The report asks each upstream with git ls-remote; COMPANYGRAPH_REMOTES names a file of fixed
+// answers instead, so no test reaches the network.
+test("pins reports each pin of a repository and exits 0 when one is behind", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`, "v999.0.0"], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /behind\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json: .* → v999\.0\.0/);
+});
+
+test("pins on an adopted repository reports its own tooling pin as current and nothing as unmanaged", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /current\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json/);
+  assert.doesNotMatch(said.stdout, /unmanaged/);
+});
+
+test("pins exits 1 when pins.json cannot be read or an entry names no line, and moves nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, "{}");
+  const env = { ...process.env, COMPANYGRAPH_REMOTES: remotes };
+  fs.writeFileSync(path.join(root, "pins.json"), JSON.stringify({ pins: [{ kind: "npm-tag", file: "package.json", repo: "acme/design" }] }));
+  const missing = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /missing\s+npm-tag acme\/design in package\.json/);
+  fs.writeFileSync(path.join(root, "pins.json"), "{ not json");
+  assert.equal(spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env }).status, 1);
+  fs.rmSync(path.join(root, "pins.json"));
+  const none = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(none.status, 1);
+  assert.match(none.stderr, /no pins\.json/);
+});
+
+test("adopt into an empty folder writes the machinery, and check holds it to the form alone", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  const said = run(["adopt", root]);
+  assert.match(said, /adopted/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph on one line.\n");
+  assert.match(run(["check", root]), /in the one form/);
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 1);
+});
+
+test("adopt into a folder that does not exist yet makes it and writes the machinery", () => {
+  const root = path.join(temp(), "a", "site");
+  assert.match(run(["adopt", root]), /adopted/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/commit-msg", ".github/workflows/companygraph.yml", "pins.json"])
+    assert.ok(fs.existsSync(path.join(root, rel)), rel);
+  assert.match(run(["check", root]), /no Markdown file to hold to the form/);
+});
+
+test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const before = [...filesOf(root).keys()].sort();
+  const refused = spawnSync(process.execPath, [cli, "adopt", root], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /upgrade/);
+  assert.deepEqual([...filesOf(root).keys()].sort(), before);
+});
+
+test("upgrade moves an adopted repository's tooling and workflow, and vendors no core into it", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ tooling: "0.0.1", exclude: ["dist"] }));
+  const workflowPath = path.join(root, ".github/workflows/companygraph.yml");
+  fs.writeFileSync(workflowPath, fs.readFileSync(workflowPath, "utf8").replace(/@v[\d.]+/, "@v0.0.1"));
+  run(["upgrade", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, version);
+  assert.match(fs.readFileSync(workflowPath, "utf8"), new RegExp(`repository-check\\.yml@v${version}`));
+  assert.equal(fs.existsSync(path.join(root, "meta")), false);
+});
+
+test("the repository workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/repository-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  assert.doesNotMatch(yml, /check-instance/);
 });
