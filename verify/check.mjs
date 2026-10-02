@@ -564,6 +564,26 @@ const CHECKS = [
     },
   },
   {
+    // Until the family takes the machinery from meta-model, the form has two copies here: the one
+    // conventions-sync vendors for this repository's own Markdown, and form/, which every
+    // repository that takes the tooling is held to. Both run in phase 1, and they agree only while
+    // they read the same rules at the same version, so a difference fails here rather than as two
+    // checks that disagree about one file.
+    name: "the form is the family's form",
+    rule: null,
+    run() {
+      const jsonc = (rel) => JSON.parse((read(rel) ?? "{}").split("\n").filter((line) => !line.trim().startsWith("//")).join("\n"));
+      if (read("form/markdown-rules.cjs") !== read("conventions/markdown-rules.cjs"))
+        fail("form/markdown-rules.cjs is not conventions/markdown-rules.cjs; the form is the family's, rule for rule");
+      if (JSON.stringify(jsonc("form/.markdownlint-cli2.jsonc").config) !== JSON.stringify(jsonc(".markdownlint-cli2.jsonc").config))
+        fail("form/.markdownlint-cli2.jsonc turns on other rules than .markdownlint-cli2.jsonc; the form is the family's, rule for rule");
+      const pkg = JSON.parse(read("package.json") ?? "{}");
+      const version = /export const FORM_VERSION = "([^"]+)"/.exec(read("lib/form.mjs") ?? "")?.[1];
+      if (pkg.devDependencies?.["markdownlint-cli2"] !== version)
+        fail(`package.json takes markdownlint-cli2 ${pkg.devDependencies?.["markdownlint-cli2"]}, and lib/form.mjs pins ${version}; the tests run the version a release runs`);
+    },
+  },
+  {
     // Every other check in this file reads `TYPES`, where each folder is a literal string, and
     // the parser derives a folder's type from the schemas instead. The two halves can disagree
     // with nothing able to see it: `processes` came back from the parser as `processe` while
