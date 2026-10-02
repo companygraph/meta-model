@@ -638,11 +638,18 @@ test("--here leaves a pins.json already there alone, since a repository's pins a
 test("an upgrade writes pins.json where the instance has none, and never touches one it has", () => {
   const manifest = { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} };
   const base = { core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: null };
-  const given = upgradePlan(base);
+  const given = upgradePlan({ ...base, present: new Set() });
   assert.ok(given.writes.has("pins.json"));
   assert.ok(given.given.includes("pins.json"));
   const kept = upgradePlan({ ...base, present: new Set(["pins.json"]) });
   assert.equal(kept.writes.has("pins.json"), false);
+});
+
+test("an upgrade asked without `present` writes no pins.json, for it has not said what the repository holds", () => {
+  const manifest = { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} };
+  const plan = upgradePlan({ core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: null });
+  assert.equal(plan.writes.has("pins.json"), false);
+  assert.equal(plan.given.includes("pins.json"), false);
 });
 
 test("an upgrade keeps the instance's own exclude list and gives an older instance the default", () => {
