@@ -32,7 +32,7 @@
 import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance, isNewer, MODEL, IMAGE_FILE } from "../lib/checks.mjs";
+import { checkInstance, isNewer, MODEL, IMAGE_FILE, PACKS } from "../lib/checks.mjs";
 import { hashOf, unixLines } from "../lib/instance-files.mjs";
 /** @import { InstanceFiles } from "../lib/instance.mjs" */
 
@@ -81,7 +81,13 @@ export function checkPath(path) {
   // R13: one container, and the manifest names where the vendored units sit beside it.
   const units = manifest.units ?? "meta";
   const core = `${units}/core`;
-  for (const rel of [MODEL, core])
+  // R20: each pack the instance took is a unit beside core. One this checker does not ship has
+  // no types it could hold the instance to, so it is refused by name before anything is read.
+  const packs = (manifest.packs ?? []).map((/** @type {string} */ name) => {
+    if (!Object.hasOwn(PACKS, name)) die(`.companygraph/manifest.json takes the pack ${name}, and this checker ships ${Object.keys(PACKS).join(", ") || "none"}`);
+    return { name, dir: `${units}/${name}` };
+  });
+  for (const rel of [MODEL, core, ...packs.map((/** @type {{ dir: string }} */ p) => p.dir)])
     if (!existsSync(join(root, rel))) die(`${root} has no ${rel}/`);
 
   /** @type {InstanceFiles} */
@@ -98,8 +104,9 @@ export function checkPath(path) {
   };
   walk(MODEL);
   walk(core);
+  for (const p of packs) walk(p.dir);
 
-  const { failures, skipped } = checkInstance(files, { core, model: MODEL });
+  const { failures, skipped } = checkInstance(files, { core, model: MODEL, packs });
 
   // The manifest's per-file hashes, read on the one command every commit runs. What the tooling
   // wrote — the vendored core, and the skills where it installed them — is not the instance's to
@@ -121,7 +128,7 @@ export function checkPath(path) {
     else if (hashOf(text) !== recorded)
       failures.push(`${path}: not as the tooling wrote it, and it is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
   }
-  const against = `${MODEL}/ against ${core}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
+  const against = `${MODEL}/ against ${[core, ...packs.map((/** @type {{ dir: string }} */ p) => p.dir)].join(", ")}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
 
   if (failures.length) {
     console.error(`\n✗ ${failures.length} problem${failures.length > 1 ? "s" : ""} in ${against}\n`);
