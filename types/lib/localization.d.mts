@@ -1,9 +1,11 @@
 export declare const LANGUAGE_TAG: RegExp;
 export type Localization = {
     error: string;
+    missing?: true;
     locale?: undefined;
 } | {
     error?: undefined;
+    missing?: undefined;
     locale: string;
 };
 export type Migrated = {
@@ -15,7 +17,7 @@ export type Migrated = {
 };
 /**
  * The language model/localization.md names, or why it cannot be read.
- * @typedef {{ error: string; locale?: undefined } | { error?: undefined; locale: string }} Localization
+ * @typedef {{ error: string; missing?: true; locale?: undefined } | { error?: undefined; missing?: undefined; locale: string }} Localization
  */
 /**
  * A localization page in the earlier form, rewritten, or why it cannot be.

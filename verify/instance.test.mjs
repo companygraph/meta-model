@@ -1366,9 +1366,9 @@ test("no entity carries translations", () => {
   assert.ok(entities.every((e) => !("translations" in e)));
 });
 
-// `## api`, `## faq`, `## how-to` all match the language-tag shape `languageSectionsOf` cuts on.
-// An instance with no declared translated language must not lose such a heading to that cut —
-// the parser, and everyone downstream of it, is meant to see it exactly as an editor does.
+// `## api`, `## faq`, `## how-to` are shaped like a language tag, and a parser that once cut a
+// page's language sections took such a heading for one. Nothing cuts them now; this holds that
+// the parser, and everyone downstream of it, sees such a heading exactly as an editor does.
 test("a tag-shaped heading the instance never declares as translated stays a section, with no localization.md at all", () => {
   const files = new Map(valid);
   const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));

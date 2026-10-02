@@ -66,6 +66,37 @@ test("a page with CRLF line ends is read and migrated as its LF self", () => {
   });
 });
 
+// Final review, minors: a blank `locale:` is no locale, so the table still gives one, written in
+// the blank line's place rather than beside it.
+test("a blank locale beside the earlier table is filled from the table, once", () => {
+  const blank = OLD("| en-US | primary |").replace("source: Local\n", "source: Local\nlocale:\n");
+  assert.deepEqual(migratedLocalization(blank), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
+});
+
+test("a page naming its locale beside a leftover table is refused if the table declares a translated language", () => {
+  const leftover = (rows) => OLD(rows).replace("source: Local\n", "source: Local\nlocale: en-US\n");
+  assert.match(migratedLocalization(leftover("| en-US | primary |\n| de-CH | translated |")).error, /declares de-CH translated/);
+  assert.equal(migratedLocalization(leftover("| en-US | primary |")), null);
+});
+
+test("the rewrite closes the gap only where the table was, and keeps blank lines elsewhere", () => {
+  const { text } = migratedLocalization(OLD("| en-US | primary |", "\n## References\n\n```\na\n\n\n\nb\n```\n"));
+  assert.equal(text, "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n\n## References\n\n```\na\n\n\n\nb\n```\n");
+});
+
+test("a table section holding more than the table is left as it is, so nothing it says is dropped", () => {
+  const prose = OLD("| en-US | primary |").replace("## Locales\n\n", "## Locales\n\nWe also answer in French.\n\n");
+  assert.equal(migratedLocalization(prose), null);
+});
+
+test("a missing or blank locale is said to be missing, and an invalid one is not", () => {
+  assert.equal(localizationOf(PAGE("")).missing, true);
+  assert.equal(localizationOf(PAGE("locale:\n")).missing, true);
+  assert.equal(localizationOf(PAGE("locale: German\n")).missing, undefined);
+});
+
 test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
   const script = `
     import { localizationOf } from "companygraph-meta-model/localization";

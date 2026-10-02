@@ -364,6 +364,21 @@ test("an upgrade leaves a localization page it cannot read alone, and lands", ()
   assert.deepEqual(plan.rewritten, []);
 });
 
+// Final review, minors: `--core <old>` vendors a schema with the `## Locales` table, and the page
+// written beside it is the one that schema reads.
+test("init and upgrade write the localization page in the form the vendored core's schema declares", () => {
+  const oldCore = new Map([...core, ["localization-schema.md", "# Locales schema\n"]]);
+  const made = initPlan({ ...ask, core: oldCore }).writes.get("model/localization.md");
+  assert.match(made, /## Locales\n\n\| Locale \| Role \|/);
+  assert.doesNotMatch(made, /\nlocale:/);
+  assert.match(initPlan(ask).writes.get("model/localization.md"), /\nlocale: en-US\n/);
+  const { manifest, held, workflow } = instance();
+  const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
+  const given = upgradePlan({ core: olderSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow }).writes.get("model/localization.md");
+  assert.match(given, /## Locales\n/);
+  assert.doesNotMatch(given, /\nlocale:/);
+});
+
 test("an upgrade toward a core whose schema declares no locale leaves the earlier form alone", () => {
   const { manifest, held, workflow } = instance();
   const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
