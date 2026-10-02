@@ -1571,3 +1571,34 @@ test("upgrade leaves a family instance's own pins.json as it is", () => {
   run(["upgrade", root]);
   assert.equal(fs.readFileSync(path.join(root, "pins.json"), "utf8"), own);
 });
+
+// The report asks each upstream with git ls-remote; COMPANYGRAPH_REMOTES names a file of fixed
+// answers instead, so no test reaches the network.
+test("pins reports each pin of a repository and exits 0 when one is behind", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`, "v999.0.0"], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /behind\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json: .* → v999\.0\.0/);
+});
+
+test("pins exits 1 when pins.json cannot be read or an entry names no line, and moves nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, "{}");
+  const env = { ...process.env, COMPANYGRAPH_REMOTES: remotes };
+  fs.writeFileSync(path.join(root, "pins.json"), JSON.stringify({ pins: [{ kind: "npm-tag", file: "package.json", repo: "acme/design" }] }));
+  const missing = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /missing\s+npm-tag acme\/design in package\.json/);
+  fs.writeFileSync(path.join(root, "pins.json"), "{ not json");
+  assert.equal(spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env }).status, 1);
+  fs.rmSync(path.join(root, "pins.json"));
+  const none = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(none.status, 1);
+  assert.match(none.stderr, /no pins\.json/);
+});

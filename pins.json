@@ -10,6 +10,7 @@
     "npm run test:plan",
     "npm run test:instance-files",
     "npm run test:form",
+    "npm run test:pins",
     "npm run test:cli",
     "npm run test:untar",
     "npm run test:fetch-core",

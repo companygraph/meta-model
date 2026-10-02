@@ -7,6 +7,7 @@
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
 //   companygraph check [<folder>]
 //   companygraph form [<folder>] [--fix]
+//   companygraph pins [<folder>]
 //   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
@@ -30,6 +31,7 @@ import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan
 import { writePlan } from "../lib/write.mjs";
 import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { formCheck } from "../lib/form.mjs";
+import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
@@ -72,6 +74,7 @@ const USAGE = `companygraph [<command>]
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   form [<folder>]     the one Markdown form over a repository, or --fix to write it
+  pins [<folder>]     which pins a repository's pins.json declares are behind; moves nothing
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
@@ -727,6 +730,56 @@ function form(argv) {
   return 0;
 }
 
+// What each upstream offers, from git ls-remote, or from the file COMPANYGRAPH_REMOTES names, which
+// is how the tests answer for the network: an object of repository → { tags, head }, and a
+// repository it does not name cannot be reached.
+/** @returns {(repo: string) => import("../lib/pins.mjs").Remote} */
+function remotes() {
+  const fixed = process.env.COMPANYGRAPH_REMOTES;
+  if (!fixed) return lsRemote;
+  const answers = JSON.parse(readFileSync(fixed, "utf8"));
+  return (repo) => answers[repo] ?? null;
+}
+
+// The pins one repository declares, each against its upstream now. A pin behind is intent until
+// its owner says it is drift, so the report exits 0 when one is, and 1 only when pins.json cannot
+// be read or an entry names no line in the file it names. It moves nothing.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
+function pins(argv) {
+  const root = flags(argv)._[0] ?? ".";
+  const at = join(root, "pins.json");
+  if (!existsSync(at)) {
+    console.error(`✗ ${shown(root)} has no pins.json; "companygraph upgrade" writes one into an instance, and "companygraph adopt" into any other repository`);
+    return 1;
+  }
+  let declared;
+  try {
+    declared = validatePins(JSON.parse(readFileSync(at, "utf8")));
+  } catch (error) {
+    console.error(`✗ ${at}: ${/** @type {Error} */ (error).message}`);
+    return 1;
+  }
+  /** @type {Record<string, string>} */
+  const texts = {};
+  for (const file of new Set([...SCANNED, ...declared.pins.map((p) => p.file)]))
+    if (existsSync(join(root, file))) texts[file] = readFileSync(join(root, file), "utf8");
+  const { lines, failed } = pinReport({ declared, texts, remote: remotes() });
+  const width = Math.max(0, ...lines.map((l) => l.status.length));
+  /** @type {Record<string, (text: string) => string>} */
+  const tone = { current: good, behind: accent, missing: bad };
+  console.log(`Pins of ${shown(resolve(root))}`);
+  for (const l of lines) {
+    const status = (tone[l.status] ?? dim)(l.status.padEnd(width));
+    const value = l.status === "family" ? "the family's own; its resync reads it" : `${l.pinned.join(", ") || "no line"}${l.newest && l.status === "behind" ? ` → ${l.newest}` : ""}`;
+    console.log(`  ${status}  ${l.kind} ${l.repo} in ${l.file}: ${value}`);
+  }
+  if (!lines.length) console.log("  no pin is declared or found");
+  return failed ? 1 : 0;
+}
+
 /**
  * @param {string[]} argv
  * @returns {Promise<number>}
@@ -1122,6 +1175,7 @@ try {
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
   else if (command === "form") process.exitCode = form(rest);
+  else if (command === "pins") process.exitCode = pins(rest);
   else if (command === "commits") process.exitCode = commits(rest);
   else if (command === "seats") process.exitCode = seats(rest);
   else if (command === "id") console.log(uuidv7());
