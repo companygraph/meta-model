@@ -1,4 +1,4 @@
-import test from "node:test";
+import test, { afterEach } from "node:test";
 import assert from "node:assert/strict";
 import { execFileSync } from "node:child_process";
 import fs from "node:fs";
@@ -6,7 +6,18 @@ import os from "node:os";
 import path from "node:path";
 import { FORM_VERSION, markdownFilesOf, formCheck } from "../lib/form.mjs";
 
-const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-form-"));
+// Each test's trees have a prefix of their own, apart from the copies formCheck makes, and are
+// removed when the test ends, so a run leaves nothing in the temporary folder.
+/** @type {string[]} */
+const made = [];
+const temp = () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-form-test-"));
+  made.push(root);
+  return root;
+};
+afterEach(() => {
+  for (const root of made.splice(0)) fs.rmSync(root, { recursive: true, force: true });
+});
 /** @param {string} root @param {Record<string, string>} files */
 function tree(root, files) {
   for (const [rel, text] of Object.entries(files)) {
@@ -73,6 +84,22 @@ test("fix rewrites a hit into the form, and the check then passes", () => {
 test("a repository with no Markdown holds nothing to the form, and that is no failure", () => {
   const root = tree(temp(), { "index.js": "export {};\n" });
   assert.deepEqual(formCheck(root), { files: 0, hits: [] });
+});
+
+test("a file in a dot-folder is held to the form, so .github/ is read", () => {
+  const root = tree(temp(), { "README.md": CLEAN, ".github/x.md": WRAPPED });
+  const { files, hits, error } = formCheck(root);
+  assert.equal(error, undefined);
+  assert.equal(files, 2);
+  assert.ok(hits.includes(".github/x.md:3: paragraph-on-one-line"), hits.join("\n"));
+});
+
+test("fix writes back the file it changed and leaves the others as they were", () => {
+  const root = tree(temp(), { "README.md": CLEAN, ".github/x.md": WRAPPED });
+  const before = fs.statSync(path.join(root, "README.md")).mtimeMs;
+  assert.deepEqual(formCheck(root, { fix: true }), { files: 2, hits: [] });
+  assert.equal(fs.readFileSync(path.join(root, ".github/x.md"), "utf8"), "# Title\n\nOne paragraph that wraps.\n");
+  assert.equal(fs.statSync(path.join(root, "README.md")).mtimeMs, before);
 });
 
 test("a file name with brackets is read as the file, not as a pattern", () => {

@@ -43,8 +43,10 @@ jobs:
         run: node .companygraph-checker/bin/check-instance.mjs .
       # The one Markdown form, with the rules and the markdownlint version this release pins. npx
       # fetches the tool, the one thing this workflow installs, because a form held by one tool in
-      # CI and another in the editor is two forms.
+      # CI and another in the editor is two forms. It runs whether or not the model's check
+      # passed, so one failure does not hide the form's hits until the next push.
       - name: every Markdown file is in the one form
+        if: ${{ !cancelled() }}
         run: node .companygraph-checker/bin/companygraph.mjs form .
       # A pull request's commits, each judged against the seats this instance declares. Only on a
       # pull request: a push to main carries the owner's merge, which is the owner's.

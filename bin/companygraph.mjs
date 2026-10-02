@@ -746,9 +746,26 @@ function adopt(argv) {
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
 }
 
+// The manifest at a folder for a command that answers with an exit code, where one that is not
+// JSON is said as every other refusal of the check is, with "✗ " before it.
+/**
+ * @param {string} root
+ * @returns {{ manifest: any } | null}
+ */
+function manifestSaid(root) {
+  try {
+    return { manifest: manifestAt(root) };
+  } catch (error) {
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
+    return null;
+  }
+}
+
 // The form over a folder, said: one line per hit and the command that writes them, or one line
-// that it passed. It refuses a manifest naming another release, as the checker's own guard does,
-// because the form is the release's too and a workflow pinned to one release runs this.
+// that it passed. The check refuses a manifest naming another release, as the checker's own guard
+// does, because the form is the release's too and a workflow pinned to one release runs this.
+// --fix does not refuse it: it is a local rewrite no workflow runs, and the remedy upgrade names
+// for an instance on an older release, which is what the manifest of one waiting to move says.
 /**
  * @param {string[]} argv
  * @returns {number}
@@ -756,8 +773,10 @@ function adopt(argv) {
 function form(argv) {
   const given = flags(argv);
   const root = given._[0] ?? ".";
-  const manifest = manifestAt(root);
-  if (manifest?.tooling && manifest.tooling !== PACKAGE.version) {
+  const read = manifestSaid(root);
+  if (!read) return 1;
+  const { manifest } = read;
+  if (!given.fix && manifest?.tooling && manifest.tooling !== PACKAGE.version) {
     console.error(`✗ this checker is ${PACKAGE.version} and .companygraph/manifest.json names ${manifest.tooling} — move the pin and the workflow together, or call the release the manifest names`);
     return 1;
   }
@@ -833,8 +852,9 @@ function pins(argv) {
 async function check(argv) {
   const root = flags(argv)._[0] ?? ".";
   // A repository that took the machinery and holds no model is held to the form alone.
-  const manifest = manifestAt(root);
-  if (manifest && !manifest.core) return form([root]);
+  const read = manifestSaid(root);
+  if (!read) return 1;
+  if (read.manifest && !read.manifest.core) return form([root]);
   // A second door to the same code, so a guard failure must read exactly as it does through
   // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
   const { checkPath } = await import("./check-instance.mjs");
@@ -845,6 +865,8 @@ async function check(argv) {
     console.error(`✗ ${/** @type {Error} */ (error).message}`);
     return 1;
   }
+  // checkPath's guard has refused by here if it was going to, so the form, which holds the same
+  // guard, runs only on a manifest that passed it and never says the same refusal twice.
   return Math.max(model, form([root]));
 }
 

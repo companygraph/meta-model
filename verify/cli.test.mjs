@@ -1546,9 +1546,51 @@ test("form refuses where the manifest names another release, as the checker does
   assert.match(said.stderr, /names 0\.0\.1/);
 });
 
+test("form --fix writes the form where the manifest names another release, which is the remedy upgrade names", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /form .* --fix/);
+  const fixed = spawnSync(process.execPath, [cli, "form", root, "--fix"], { encoding: "utf8" });
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  assert.equal(fs.readFileSync(path.join(root, "NOTES.md"), "utf8"), "# Notes\n\nOne paragraph that wraps.\n");
+  const moved = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stdout + moved.stderr);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+});
+
+test("check says a manifest naming another release once, and does not run the form after it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.equal(said.stderr.match(/names 0\.0\.1/g)?.length, 1, said.stderr);
+});
+
+test("form and check say a manifest that is not JSON with the ✗ prefix, and exit 1", () => {
+  for (const make of [(root) => run(["init", root, "--name", "Acme", "--agent", "claude"]), (root) => run(["adopt", root])]) {
+    const root = temp();
+    make(root);
+    fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+    for (const command of ["form", "check"]) {
+      const said = spawnSync(process.execPath, [cli, command, root], { encoding: "utf8" });
+      assert.equal(said.status, 1, command);
+      assert.match(said.stderr, /^✗ .*manifest\.json could not be read as JSON/, `${command}: ${said.stderr}`);
+    }
+  }
+});
+
 test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
   const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
   assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  // A failing model check does not hide the form's hits.
+  assert.match(yml, /if: \$\{\{ !cancelled\(\) \}\}\n\s+run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
 });
 
 test("upgrade stops on Markdown out of the form, naming it and moving nothing, and --force moves anyway", () => {
@@ -1624,6 +1666,14 @@ test("adopt into an empty folder writes the machinery, and check holds it to the
   assert.match(run(["check", root]), /in the one form/);
   fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph\nthat wraps.\n");
   assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 1);
+});
+
+test("adopt into a folder that does not exist yet makes it and writes the machinery", () => {
+  const root = path.join(temp(), "a", "site");
+  assert.match(run(["adopt", root]), /adopted/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/commit-msg", ".github/workflows/companygraph.yml", "pins.json"])
+    assert.ok(fs.existsSync(path.join(root, rel)), rel);
+  assert.match(run(["check", root]), /no Markdown file to hold to the form/);
 });
 
 test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
