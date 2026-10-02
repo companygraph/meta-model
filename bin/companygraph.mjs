@@ -403,6 +403,16 @@ async function upgrade(argv) {
   } catch (error) {
     throw new Error(`${manifestPath} could not be read as JSON: ${/** @type {Error} */ (error).message}`);
   }
+  // The form of the release this moves to, asked before anything moves: an instance made outside
+  // the family before this release was never held to it, and an upgrade that left it failing its
+  // own next check would hand the owner a red build for work the upgrade did. --force moves anyway.
+  const formed = formCheck(root, { exclude: manifest.exclude ?? excludeFor(manifest.units ?? "meta") });
+  const unformed = [...formed.hits, ...(formed.error ? [formed.error] : [])];
+  if (unformed.length && !given.force)
+    throw new Error(
+      `The Markdown is not in the form ${PACKAGE.version} holds, so nothing was moved:\n${unformed.map((line) => `  ${line}`).join("\n")}\n` +
+        `"companygraph form ${root} --fix" writes what it can into the form; pass --force to move anyway.`,
+    );
   // Read with `\n` line ends, as the hashes they are compared against were taken.
   /** @param {string} path */
   const read = (path) => unixLines(readFileSync(path, "utf8"));
@@ -464,7 +474,7 @@ async function upgrade(argv) {
     fetched: Boolean(given.core),
     force: Boolean(given.force),
     name,
-    present: new Set(exportPaths.filter((path) => existsSync(join(root, path)))),
+    present: new Set([...exportPaths, "pins.json"].filter((path) => existsSync(join(root, path)))),
   });
   if (plan.refused) throw new Error(plan.refused);
   if (/** @type {Map<string, string>} */ (plan.writes).size === 0 && /** @type {string[]} */ (plan.removes).length === 0) {

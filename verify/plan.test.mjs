@@ -234,7 +234,7 @@ test("a vendored file the instance deleted that the new core still ships is writ
 
 test("an instance already on that core is said so, and nothing is written", () => {
   const { manifest, held, workflow } = instance();
-  const same = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  const same = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, present: new Set(["pins.json"]) });
   assert.equal(same.writes.size, 0);
   assert.deepEqual(same.removes, []);
   assert.equal(same.from, "0.31.1");
@@ -292,10 +292,10 @@ test("init writes the export's inputs, unhashed, and --here leaves one already t
 
 test("an upgrade writes the export's inputs the instance lacks, never one it has, and leaves the manifest alone for them", () => {
   const { manifest, held, workflow } = instance();
-  const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, name: "Acme", present: new Set(["export/README.md"]) });
+  const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, name: "Acme", present: new Set(["export/README.md", "pins.json"]) });
   assert.deepEqual(plan.given, ["export/gemini-notebook-AGENTS.md"]);
   assert.deepEqual([...plan.writes.keys()], ["export/gemini-notebook-AGENTS.md"]);
-  const none = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow });
+  const none = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, present: new Set(["pins.json"]) });
   assert.equal(none.writes.size, 0, "no name, and nothing is given");
 });
 
@@ -563,4 +563,32 @@ test("an upgrade that takes a pack writes its root folders' READMEs once, and na
 test("init writes into the manifest that the form check leaves out dist and the units folder", () => {
   assert.deepEqual(JSON.parse(initPlan(ask).writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
   assert.deepEqual(JSON.parse(initPlan({ ...ask, units: "schemas" }).writes.get(".companygraph/manifest.json")).exclude, ["dist", "schemas"]);
+});
+
+test("init writes a pins.json that declares the instance's own core-release pin, with its move", () => {
+  const pins = JSON.parse(initPlan(ask).writes.get("pins.json"));
+  assert.deepEqual(pins, { pins: [{ kind: "core-release", file: ".companygraph/manifest.json", repo: "companygraph/meta-model", move: "npx --yes 'github:companygraph/meta-model#v{version}' upgrade" }] });
+});
+
+test("--here leaves a pins.json already there alone, since a repository's pins are its own", () => {
+  const { writes } = initPlan({ ...ask, present: new Set(["pins.json"]) });
+  assert.equal(writes.has("pins.json"), false);
+});
+
+test("an upgrade writes pins.json where the instance has none, and never touches one it has", () => {
+  const manifest = { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} };
+  const base = { core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: null };
+  const given = upgradePlan(base);
+  assert.ok(given.writes.has("pins.json"));
+  assert.ok(given.given.includes("pins.json"));
+  const kept = upgradePlan({ ...base, present: new Set(["pins.json"]) });
+  assert.equal(kept.writes.has("pins.json"), false);
+});
+
+test("an upgrade keeps the instance's own exclude list and gives an older instance the default", () => {
+  const base = { core, tooling: "0.31.2", tag: "v0.31.2", held: new Map(), workflow: null };
+  const older = upgradePlan({ ...base, manifest: { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {} } });
+  assert.deepEqual(JSON.parse(older.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
+  const own = upgradePlan({ ...base, manifest: { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {}, exclude: ["dist", "meta", "archive"] } });
+  assert.deepEqual(JSON.parse(own.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta", "archive"]);
 });

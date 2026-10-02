@@ -668,7 +668,7 @@ test("upgrade refuses a manifest whose units escapes the instance, and writes no
 
 function tempPackage() {
   const dir = temp();
-  for (const part of ["bin", "lib", "core", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  for (const part of ["bin", "lib", "core", "form", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
   fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
   return dir;
 }
@@ -1538,4 +1538,36 @@ test("form refuses where the manifest names another release, as the checker does
 test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
   const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
   assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+});
+
+test("upgrade stops on Markdown out of the form, naming it and moving nothing, and --force moves anyway", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  // An instance a release before this one made: an older tooling, no exclude, no pins.json.
+  const older = { ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" };
+  delete older.exclude;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(older, null, 2)}\n`);
+  fs.rmSync(path.join(root, "pins.json"));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(stopped.stderr, /--force/);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.equal(fs.existsSync(path.join(root, "pins.json")), false);
+  run(["upgrade", root, "--force"]);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.ok(fs.existsSync(path.join(root, "pins.json")));
+});
+
+test("upgrade leaves a family instance's own pins.json as it is", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const own = `${JSON.stringify({ pins: [{ kind: "conventions", file: "conventions.json", repo: "robertblust/conventions" }], verify: ["npm test"] }, null, 2)}\n`;
+  fs.writeFileSync(path.join(root, "pins.json"), own);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  run(["upgrade", root]);
+  assert.equal(fs.readFileSync(path.join(root, "pins.json"), "utf8"), own);
 });

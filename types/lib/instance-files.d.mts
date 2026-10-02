@@ -30,6 +30,7 @@ export declare const hashOf: (text: string | Uint8Array) => string;
 export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
+export declare const INSTANCE_PINS: string;
 /** @type {(units: string) => string[]} */
 export declare const excludeFor: (units: string) => string[];
 /**
