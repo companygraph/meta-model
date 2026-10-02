@@ -76,7 +76,7 @@ const USAGE = `companygraph [<command>]
   check [<folder>]    the mechanical checks over an instance
   form [<folder>]     the one Markdown form over a repository, or --fix to write it
   pins [<folder>]     which pins a repository's pins.json declares are behind; moves nothing
-  adopt [<folder>]    give a repository that is not an instance the form check, its workflow, the seat hook and a pins.json
+  adopt [<folder>]    give a repository that is not an instance the form check, its workflow, the seat hook and a pins.json declaring its tooling pin
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
@@ -732,7 +732,7 @@ function manifestAt(root) {
 const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFor(manifest.units ?? "meta") : []);
 
 // The machinery for a repository that is not an instance: the form, its workflow, the seat hook
-// and a pins.json. A folder that is not there yet is made, as init makes one.
+// and a pins.json that declares its tooling pin. A folder that is not there yet is made, as init makes one.
 /** @param {string[]} argv */
 function adopt(argv) {
   const root = flags(argv)._[0] ?? ".";

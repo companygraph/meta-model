@@ -1638,6 +1638,18 @@ test("pins reports each pin of a repository and exits 0 when one is behind", () 
   assert.match(said.stdout, /behind\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json: .* → v999\.0\.0/);
 });
 
+test("pins on an adopted repository reports its own tooling pin as current and nothing as unmanaged", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /current\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json/);
+  assert.doesNotMatch(said.stdout, /unmanaged/);
+});
+
 test("pins exits 1 when pins.json cannot be read or an entry names no line, and moves nothing", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

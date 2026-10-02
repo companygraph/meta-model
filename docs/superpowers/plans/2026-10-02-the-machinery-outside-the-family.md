@@ -18,7 +18,7 @@
 - `pins` exits 0 when a pin is behind; it exits 1 only when `pins.json` cannot be read or an entry names no line in the file it names. It moves nothing.
 - `pins` reads every kind `conventions/PINS.md` names except `conventions` and `service-conventions`; a file that declares one of those is reported as such and not refused.
 - `init` and `upgrade` write `exclude: ["dist", "<units>"]` into an instance's manifest (`["dist", "meta"]` with the default units); `adopt` writes `["dist"]`.
-- `adopt` writes a manifest with `tooling` and `exclude` and no `core` and no `files`, the workflow, the seat hook and `{ "pins": [] }`, and in a folder that is already an instance it refuses by name and points at `upgrade`.
+- `adopt` writes a manifest with `tooling` and `exclude` and no `core` and no `files`, the workflow, the seat hook and the same `pins.json` an instance gets, declaring its `core-release` pin, since its manifest names `tooling` as an instance's does, and in a folder that is already an instance it refuses by name and points at `upgrade`.
 - `upgrade` runs the form check of the release it is moving to before it moves anything; when the Markdown fails it lists the failures and stops, and `--force` moves anyway.
 - Core does not change: `core/manifest.json` stays where it is. The release is a minor release of the package, and it is cut on the owner's word, not by this plan.
 - No test reaches the network.
