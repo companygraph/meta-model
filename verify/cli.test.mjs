@@ -302,6 +302,66 @@ test("the hook hands npx no repository of git's, in a worktree and on commit -a,
     for (const call of calls) assert.match(call, /companygraph commits .* --message /);
   });
 
+// Found on 2026-10-02 in the three MCP hosts, which take meta-model as a git dependency: git had
+// the bin at 100644, npm sets a bin's mode only when it links one, and a release put back under a
+// link already in node_modules kept 0644. npx in that repository runs the project's own copy, sh
+// cannot (126), and the hook let every commit through as one the check did not run. This builds
+// that layout — the package in the instance's node_modules, its bin not executable — and a fake
+// npx that runs commands the way npm exec does there, the project's .bin first on PATH, through
+// sh. A commit going through proves nothing, since a hook that cannot start lets it through too;
+// the refusal of a seat only the real checker knows is what proves the checker ran.
+test("the hook runs the checker in a git-dependency layout whose bin lost its execute bit, and refuses a bad seat",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; and Windows has no execute bit to lose" },
+  () => {
+    const dir = temp();
+    execFileSync("git", ["init", "-q"], { cwd: dir });
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const identityPath = path.join(dir, "model/identity.md");
+    fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
+
+    const repo = path.join(here, "..");
+    const pkg = path.join(dir, "node_modules/companygraph-meta-model");
+    fs.mkdirSync(path.join(pkg, "bin"), { recursive: true });
+    for (const entry of ["package.json", "lib", "core", "form", "packs", "agents"])
+      fs.symlinkSync(path.join(repo, entry), path.join(pkg, entry));
+    for (const file of fs.readdirSync(path.join(repo, "bin"))) {
+      fs.copyFileSync(path.join(repo, "bin", file), path.join(pkg, "bin", file));
+      fs.chmodSync(path.join(pkg, "bin", file), 0o644);
+    }
+    fs.mkdirSync(path.join(dir, "node_modules/.bin"));
+    fs.symlinkSync("../companygraph-meta-model/bin/companygraph.mjs", path.join(dir, "node_modules/.bin/companygraph"));
+    assert.equal(fs.statSync(path.join(dir, "node_modules/.bin/companygraph")).mode & 0o111, 0, "the layout's bin is not executable");
+
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> "${record}"`,
+      `PATH="$PWD/node_modules/.bin:${path.dirname(process.execPath)}:/usr/bin:/bin"; export PATH`,
+      "while :; do",
+      '  case $1 in --yes|--prefer-offline) shift ;; --package) shift 2 ;; -c) exec sh -c "$2" ;; *) break ;; esac',
+      "done",
+      'exec sh -c \'"$@"\' sh "$@"',
+      "",
+    ].join("\n"));
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const commit = (extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
+      { cwd: dir, encoding: "utf8", env });
+
+    const refused = commit(["--author", "Ghost <ghost@acme.example>"]);
+    assert.notEqual(refused.status, 0, refused.stderr);
+    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+    const through = commit();
+    assert.equal(through.status, 0, through.stderr);
+    assert.doesNotMatch(through.stderr, /seat check did not run/);
+    const calls = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.equal(calls.length, 4, "each commit asked npx for the bin, then for node on it");
+    assert.match(calls[1], / -c /);
+  });
+
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
   assert.match(run(["--help"]), /init/);
