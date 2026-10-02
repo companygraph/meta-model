@@ -34,8 +34,6 @@ Every type's schema is the contract and nothing here restates it. Read `<units>/
 
 7. **Write the vocabularies first**, because everything else names them, each against its own schema. Every page opens its frontmatter with `id`, a fresh one per page from `companygraph id` where the instance's `model/identifier.md` declares `uuidv7`, and made as the instance's agent file says where it declares a `pattern`; an id is never copied from another page, and a page that has one keeps it (R18):
 
-   Where `model/localization.md` declares a translated language, every page this makes carries a `## <tag>` section for each one, after the page's own sections, repeating its elements under their English headings as R19 describes; the page is written in the primary first, and each translation is written from it, since the check fails a page without one.
-
    - **Proficiency levels.** One ladder serves every claim. Where the model has none, propose one and let the operator settle it before any claim is written against it.
    - **Experience kinds.** One per sort of period the documents hold, each saying what `organization` means under it.
    - **Skills.** Person-neutral: no name, employer, date or number, so a second person can claim the file without a word changing. Where the instance's agent file has its own rules for a skill file, they hold too.

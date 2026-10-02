@@ -15,7 +15,6 @@
 //   companygraph seats [<folder>] [--since <date>] [--json]
 //   companygraph id
 //   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
-//   companygraph translations [<folder>] --range <a>..<b>
 //
 // Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian,
 // seats, adopt and pins, which asks what the flags would say and calls the same code, and stays open until Quit
@@ -36,11 +35,10 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, trailerValuesOf, mergeBaseOf, fileAt, isCommit } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
-import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
 /** @import { UpgradeWrites } from "../lib/plan.mjs" */
@@ -50,7 +48,7 @@ import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
  * the fields of a plan.
  * @typedef {UpgradeWrites | {
  *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
- *   given?: undefined; from?: undefined; to?: undefined;
+ *   given?: undefined; rewritten?: undefined; from?: undefined; to?: undefined;
  * }} UpgradeRead
  */
 
@@ -83,7 +81,6 @@ const USAGE = `companygraph [<command>]
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
-  translations [<folder>]  refuse (exit 3) a change to the primary its translations did not follow
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook
 upgrade: --core <tag>  --pack <a,b>  --force  --dry-run
@@ -91,7 +88,6 @@ obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --ope
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
 ids: --backfill  --range <a>..<b>
-translations: --range <a>..<b>
 form: --fix
 `;
 
@@ -536,6 +532,7 @@ async function upgrade(argv) {
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${/** @type {string[]} */ (plan.removes).length} removed`);
   if (added.length) console.log(`  packs: ${added.join(", ")}, vendored beside core`);
   if (/** @type {string[]} */ (plan.given).length) console.log(`  written, since the instance had none, and its own from now on: ${/** @type {string[]} */ (plan.given).join(", ")}`);
+  if (/** @type {string[]} */ (plan.rewritten).length) console.log(`  rewritten in this core's form: ${/** @type {string[]} */ (plan.rewritten).join(", ")}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
@@ -1080,72 +1077,6 @@ function ids(argv) {
   return 1;
 }
 
-// R19's history half: a pull request that changes an element of the primary changes it in every
-// translated language, or names it in a `Translation-unchanged` trailer. The languages are the
-// head's, read from the range's head revision, `<b>`. A refusal, a stale translation or a
-// localization file that cannot be read, exits 3, as `ids` and `commits` do; 1 means the command
-// could not run.
-/**
- * @param {string[]} argv
- * @returns {number}
- */
-function translations(argv) {
-  const given = flags(argv);
-  const root = resolve(given._[0] ?? ".");
-  if (!isInstance(root)) {
-    console.error(`✗ ${root} is not an instance: it has no .companygraph/manifest.json beside a model/ folder`);
-    return 1;
-  }
-  const ends = (given.range ?? "").split("..");
-  if (!given.range || given.range.includes("...") || ends.length !== 2 || !ends[0] || !ends[1]) {
-    console.error(`✗ translations takes --range <a>..<b>, two dots between two commits`);
-    return 1;
-  }
-  // Both ends confirmed before anything is read (Re-review, Important, and one more edge):
-  // `fileAt` used to catch every git error and return null the same way for "no such file at a
-  // valid head" and "no such head at all", and a range naming a head this repository does not
-  // have then read as the instance declaring no translated language — a silent 0, where README
-  // already promised 1. `<a>` had the same gap from the other side: it is only ever read later,
-  // by `mergeBaseOf`, and an instance with no translated language declared exits on that check
-  // before `<a>` is ever touched, so a bad start revision went unnoticed the same way.
-  if (!isCommit(root, ends[0])) {
-    console.error(`✗ ${ends[0]} does not resolve to a commit ${root} has`);
-    return 1;
-  }
-  if (!isCommit(root, ends[1])) {
-    console.error(`✗ ${ends[1]} does not resolve to a commit ${root} has`);
-    return 1;
-  }
-  // The head's own file, not whatever the working tree has checked out (Review fix 5): a caller
-  // may run this against a merge commit CI checked out, or against a worktree a reviewer moved
-  // elsewhere in history, and either way the languages that govern the range are the range's
-  // head's. A file missing at the head is no declared language, the same as one missing on disk.
-  const text = fileAt(root, ends[1], "model/localization.md");
-  const declared = /** @type {{ error?: string; translated: string[] }} */ (text !== null ? localizationOf(text) : { translated: [] });
-  if (declared.error) {
-    console.error(`✗ model/localization.md: ${declared.error} (R19)`);
-    return REFUSED;
-  }
-  if (!declared.translated.length) {
-    console.log("✓ no translated language is declared");
-    return 0;
-  }
-  const released = new Set(trailerValuesOf(root, given.range, "Translation-unchanged"));
-  // A page's change is read from the merge base, not from `a` itself: a PR behind `a` has not
-  // merged a later, unrelated edit `a` made since they forked, and diffing straight from `a`
-  // would show that edit too, reversed, as though the PR's own head had just undone it — failing
-  // the PR for a change it never made, and never released by a trailer the PR's own range could
-  // ever hold (`a`'s trailer sits on `a`, and every range excludes its own base).
-  const base = mergeBaseOf(root, ends[0], ends[1]);
-  const failures = staleTranslationsOf(changedPagesOf(root, `${base}..${ends[1]}`), declared.translated, released);
-  if (failures.length) {
-    for (const f of failures) console.error(`✗ ${f}`);
-    return REFUSED;
-  }
-  console.log("✓ every change to the primary reached its translations");
-  return 0;
-}
-
 /** @returns {Promise<number>} */
 async function menu() {
   /** @type {[string, string, () => Promise<number>][]} */
@@ -1257,7 +1188,6 @@ try {
   else if (command === "seats") process.exitCode = seats(rest);
   else if (command === "id") console.log(uuidv7());
   else if (command === "ids") process.exitCode = ids(rest);
-  else if (command === "translations") process.exitCode = translations(rest);
   // The menu is for a person at a terminal; a bare run anywhere else, a pipe or a CI step, prints
   // what the tooling can do, as it always did. `menu` asks for it by name, which is how the menu
   // is tested with its answers piped in.

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE,
+  agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -86,18 +86,15 @@ test("an instance starts with a source and its singular entities, naming the ins
   assert.match(files.get("model/identifier.md"), /^---\nid: \S+\nsource: Local\nformat: uuidv7\n---\n\n# /);
 });
 
-// Fix 3: the stub is a sentence saying who reads the model and in which language, not a
-// placeholder instruction to fill one in.
-test("the localization stub is a sentence naming the primary language", () => {
+// One language per model: the stub names the model's language in `locale` and says who reads it.
+test("the localization stub names its locale and says who reads the model in it", () => {
   assert.equal(
     LOCALIZATION_PAGE({ id: "x", source: "Local" }),
-    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
-      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
+    "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n",
   );
   assert.equal(
-    LOCALIZATION_PAGE({ id: "x", source: "Local", primary: "de-CH" }),
-    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n\n" +
-      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| de-CH | primary |\n",
+    LOCALIZATION_PAGE({ id: "x", source: "Local", locale: "de-CH" }),
+    "---\nid: x\nsource: Local\nlocale: de-CH\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n",
   );
 });
 
@@ -133,4 +130,17 @@ test("the manifest carries what the form check leaves out, and an instance leave
   const read = JSON.parse(manifestOf({ tooling: "0.1.0", core: { version: "0.1.0", shape: 3, source: "bundled" }, units: "meta", exclude: ["dist", "meta"], files: {} }));
   assert.deepEqual(read.exclude, ["dist", "meta"]);
   assert.deepEqual(Object.keys(read), ["tooling", "core", "units", "packs", "exclude", "files"]);
+});
+
+// Final review, minors: an older core's schema declares a `## Locales` table and no `locale`, so a
+// page written against it takes the form that schema reads.
+test("the localization page takes the form its core's schema declares", () => {
+  const withLocale = "| `locale` | Yes | string | The language |\n";
+  assert.equal(localizationPageFor(withLocale, { id: "x", source: "Local" }), LOCALIZATION_PAGE({ id: "x", source: "Local" }));
+  assert.equal(localizationPageFor(undefined, { id: "x", source: "Local" }), LOCALIZATION_PAGE({ id: "x", source: "Local" }));
+  assert.equal(
+    localizationPageFor("# Localization Schema\n\n## Locales\n", { id: "x", source: "Local" }),
+    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
+      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
+  );
 });
