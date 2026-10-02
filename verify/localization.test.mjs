@@ -47,10 +47,23 @@ test("a page declaring a translated language is refused, naming it", () => {
   assert.match(migratedLocalization(OLD("| en-US | primary |\n| de-CH | translated |")).error, /declares de-CH translated; a model is written in one language/);
 });
 
-test("a page with neither a locale nor a table it can read is refused", () => {
-  assert.match(migratedLocalization("---\nid: x\n---\n\n# Languages\n").error, /no `## Locales` table/);
-  assert.match(migratedLocalization(OLD("| en-US | translated-ish |")).error, /no one `primary` language tag/);
-  assert.match(migratedLocalization("# Languages\n").error, /no frontmatter/);
+// Final review: only a translated language refuses an upgrade. A page the migration cannot read
+// is left as it is, so the upgrade lands and the check afterward names what the page owes.
+test("a page with neither a locale nor a table it can read is left as it is", () => {
+  assert.equal(migratedLocalization("---\nid: x\n---\n\n# Languages\n"), null);
+  assert.equal(migratedLocalization(OLD("| en-US | translated-ish |")), null);
+  assert.equal(migratedLocalization("# Languages\n"), null);
+});
+
+// Final review: a vault edited on Windows holds CRLF line ends, and the Obsidian plugin hands
+// the text over as it reads it. Both forms are read as their LF selves.
+test("a page with CRLF line ends is read and migrated as its LF self", () => {
+  const crlf = (text) => text.replace(/\n/g, "\r\n");
+  assert.deepEqual(localizationOf(crlf(PAGE("locale: de-CH\n"))), { locale: "de-CH" });
+  assert.equal(migratedLocalization(crlf(PAGE("locale: en-US\n"))), null);
+  assert.deepEqual(migratedLocalization(crlf(OLD("| en-US | primary |"))), {
+    text: "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n",
+  });
 });
 
 test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {

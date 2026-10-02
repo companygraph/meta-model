@@ -353,6 +353,17 @@ test("an upgrade refuses a localization page that declares a translated language
   assert.equal(plan.writes, undefined);
 });
 
+// Final review: a page the migration cannot read does not stop the core from moving; the
+// upgrade leaves it as it is, and the check afterward names what it owes.
+test("an upgrade leaves a localization page it cannot read alone, and lands", () => {
+  const { manifest, held, workflow } = instance();
+  const unreadable = "---\nid: existing\nsource: Local\n---\n\n# Language\n\n> Who reads it.\n";
+  const plan = upgradePlan({ core: withLocalizationSchema, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(held).set("model/localization.md", unreadable), workflow });
+  assert.equal(plan.refused, undefined);
+  assert.ok(!plan.writes.has("model/localization.md"));
+  assert.deepEqual(plan.rewritten, []);
+});
+
 test("an upgrade toward a core whose schema declares no locale leaves the earlier form alone", () => {
   const { manifest, held, workflow } = instance();
   const olderSchema = new Map([...older, ["localization-schema.md", "# Locales schema\n"]]);
