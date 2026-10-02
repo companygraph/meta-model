@@ -17,8 +17,8 @@
 //   companygraph ids [<folder>] (--backfill | --range <a>..<b>)   — an instance's pages, or core's schemas
 //   companygraph translations [<folder>] --range <a>..<b>
 //
-// Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian and
-// seats, which asks what the flags would say and calls the same code, and stays open until Quit
+// Run with no command at a terminal, it opens a menu over init, check, upgrade, obsidian,
+// seats, adopt and pins, which asks what the flags would say and calls the same code, and stays open until Quit
 // or Ctrl+C.
 //
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
@@ -71,7 +71,7 @@ const PACKAGE = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8"
 
 const USAGE = `companygraph [<command>]
 
-  (none)              at a terminal, a menu over init, check, upgrade, obsidian and seats, open until Quit or Ctrl+C
+  (none)              at a terminal, a menu over init, check, upgrade, obsidian, seats, adopt and pins, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
   form [<folder>]     the one Markdown form over a repository, or --fix to write it
@@ -1161,6 +1161,11 @@ async function menu() {
       const root = await folder("Which model?", ".");
       return seats([root]);
     }],
+    ["Hold a repository", "a site or service with no model: the form check, its workflow and the seat hook", async () => {
+      adopt([await folder("Which folder?", ".")]);
+      return 0;
+    }],
+    ["Report pins", "which of a repository's pins are behind; nothing moves", async () => pins([await folder("Which folder?", ".")])],
   ];
   const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);
   if (SCREEN) {

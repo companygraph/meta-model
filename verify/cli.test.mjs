@@ -1039,6 +1039,17 @@ test("the menu offers the report", () => {
   assert.match(out.stdout, /Commits by seat in /);
 });
 
+test("the menu offers adopt and the pin report after the report by seat, and keeps the first five where they were", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /1\S*\s+Make a model/);
+  assert.match(listed, /5\S*\s+Report by seat/);
+  assert.match(listed, /6\S*\s+Hold a repository/);
+  assert.match(listed, /7\S*\s+Report pins/);
+  const root = temp();
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `6\n${root}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /adopted/);
+});
+
 test("id prints one fresh UUID version 7", () => {
   assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
 });
