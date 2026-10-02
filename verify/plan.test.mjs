@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AGENTS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
+import { AGENTS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { hashOf } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
 import { vocabularyOf } from "../lib/checks.mjs";
@@ -591,4 +591,31 @@ test("an upgrade keeps the instance's own exclude list and gives an older instan
   assert.deepEqual(JSON.parse(older.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
   const own = upgradePlan({ ...base, manifest: { tooling: "0.31.1", units: "meta", core: { version: "0.31.0" }, files: {}, exclude: ["dist", "meta", "archive"] } });
   assert.deepEqual(JSON.parse(own.writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta", "archive"]);
+});
+
+test("adopt writes a manifest with tooling and exclude and no core, the workflow, the hook and an empty pins.json", () => {
+  const { writes } = adoptPlan({ tooling: "0.69.0", present: new Set() });
+  assert.deepEqual([...writes.keys()].sort(), [".companygraph/hooks/commit-msg", ".companygraph/manifest.json", ".github/workflows/companygraph.yml", "pins.json"]);
+  assert.deepEqual(JSON.parse(writes.get(".companygraph/manifest.json")), { tooling: "0.69.0", exclude: ["dist"] });
+  assert.match(writes.get(".github/workflows/companygraph.yml"), /repository-check\.yml@v0\.69\.0/);
+  assert.deepEqual(JSON.parse(writes.get("pins.json")), { pins: [] });
+});
+
+test("adopt refuses an instance, and a repository that took the machinery already, by name, pointing at upgrade", () => {
+  const refused = adoptPlan({ tooling: "0.69.0", present: new Set([".companygraph/manifest.json", "model/README.md"]) });
+  assert.match(refused.refused, /upgrade/);
+});
+
+test("adopt keeps a pins.json already there, and refuses a workflow of the same name, naming it", () => {
+  assert.equal(adoptPlan({ tooling: "0.69.0", present: new Set(["pins.json"]) }).writes.has("pins.json"), false);
+  assert.match(adoptPlan({ tooling: "0.69.0", present: new Set([".github/workflows/companygraph.yml"]) }).refused, /companygraph\.yml/);
+});
+
+test("an upgrade of an adopted repository moves tooling and its workflow's ref, keeps its exclude, and vendors no core", () => {
+  const workflow = "jobs:\n  companygraph:\n    uses: companygraph/meta-model/.github/workflows/repository-check.yml@v0.68.0\n";
+  const plan = adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.68.0", exclude: ["dist", "public"] }, workflow, present: new Set(["pins.json"]) });
+  assert.deepEqual([...plan.writes.keys()].sort(), [".companygraph/manifest.json", ".github/workflows/companygraph.yml"]);
+  assert.deepEqual(JSON.parse(plan.writes.get(".companygraph/manifest.json")), { tooling: "0.69.0", exclude: ["dist", "public"] });
+  assert.match(plan.writes.get(".github/workflows/companygraph.yml"), /repository-check\.yml@v0\.69\.0/);
+  assert.deepEqual(adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.69.0", exclude: ["dist"] }, workflow: null, present: new Set(["pins.json"]) }).writes.size, 0);
 });

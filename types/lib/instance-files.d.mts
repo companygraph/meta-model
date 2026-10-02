@@ -31,6 +31,14 @@ export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
 export declare const INSTANCE_PINS: string;
+export declare const NO_PINS: string;
+/** @type {(manifest: { tooling: string; exclude: string[] }) => string} */
+export declare const adoptedManifestOf: (manifest: {
+    tooling: string;
+    exclude: string[];
+}) => string;
+/** @type {(tag: string) => string} */
+export declare const repositoryWorkflowFor: (tag: string) => string;
 /** @type {(units: string) => string[]} */
 export declare const excludeFor: (units: string) => string[];
 /**

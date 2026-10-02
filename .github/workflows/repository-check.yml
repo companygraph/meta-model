@@ -1,0 +1,36 @@
+# The Markdown form, for a repository that took CompanyGraph's tooling with `companygraph adopt`
+# and holds no model of its own: a site, or a service that draws a model at a commit. It calls
+# this at the release its `.companygraph/manifest.json` names:
+#
+#   jobs:
+#     companygraph:
+#       uses: companygraph/meta-model/.github/workflows/repository-check.yml@v0.68.0
+#
+# An instance calls instance-check.yml instead, which runs the same form after the model's checks.
+# The ref below is this file's own release, for the reason instance-check.yml gives: the runner
+# cannot see how the caller spelled the tag, so the form command compares its own version against
+# the manifest's and refuses when they differ. Before tagging a release, set this ref, the one in
+# instance-check.yml and `version` in package.json to that tag together.
+name: companygraph
+on:
+  workflow_call:
+jobs:
+  companygraph:
+    name: companygraph
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    permissions:
+      contents: read
+    steps:
+      - uses: actions/checkout@v7
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+      - name: the checker, at the release this workflow is
+        uses: actions/checkout@v7
+        with:
+          repository: companygraph/meta-model
+          ref: v0.68.0
+          path: .companygraph-checker
+      - name: every Markdown file is in the one form
+        run: node .companygraph-checker/bin/companygraph.mjs form .

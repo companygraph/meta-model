@@ -1602,3 +1602,45 @@ test("pins exits 1 when pins.json cannot be read or an entry names no line, and 
   assert.equal(none.status, 1);
   assert.match(none.stderr, /no pins\.json/);
 });
+
+test("adopt into an empty folder writes the machinery, and check holds it to the form alone", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  const said = run(["adopt", root]);
+  assert.match(said, /adopted/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph on one line.\n");
+  assert.match(run(["check", root]), /in the one form/);
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 1);
+});
+
+test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const before = [...filesOf(root).keys()].sort();
+  const refused = spawnSync(process.execPath, [cli, "adopt", root], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /upgrade/);
+  assert.deepEqual([...filesOf(root).keys()].sort(), before);
+});
+
+test("upgrade moves an adopted repository's tooling and workflow, and vendors no core into it", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ tooling: "0.0.1", exclude: ["dist"] }));
+  const workflowPath = path.join(root, ".github/workflows/companygraph.yml");
+  fs.writeFileSync(workflowPath, fs.readFileSync(workflowPath, "utf8").replace(/@v[\d.]+/, "@v0.0.1"));
+  run(["upgrade", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, version);
+  assert.match(fs.readFileSync(workflowPath, "utf8"), new RegExp(`repository-check\\.yml@v${version}`));
+  assert.equal(fs.existsSync(path.join(root, "meta")), false);
+});
+
+test("the repository workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/repository-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  assert.doesNotMatch(yml, /check-instance/);
+});

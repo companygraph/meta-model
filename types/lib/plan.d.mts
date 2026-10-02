@@ -137,6 +137,32 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
  */
 export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present }: UpgradeAsk): UpgradePlan;
 /**
+ * @param {{ tooling: string; present: Set<string> }} ask
+ * @returns {InitPlan}
+ */
+export declare function adoptPlan({ tooling, present }: {
+    tooling: string;
+    present: Set<string>;
+}): InitPlan;
+/**
+ * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[] }; workflow: string | null; present: Set<string> }} ask
+ * @returns {{ writes: Map<string, string>; given: string[]; from: string; to: string }}
+ */
+export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present }: {
+    tooling: string;
+    manifest: {
+        tooling?: string;
+        exclude?: string[];
+    };
+    workflow: string | null;
+    present: Set<string>;
+}): {
+    writes: Map<string, string>;
+    given: string[];
+    from: string;
+    to: string;
+};
+/**
  * @param {Map<string, string | Uint8Array>} files
  * @param {BackfillAsk & { model?: string; types?: import("./checks.mjs").TypeEntry[] }} ask
  * @returns {Map<string, string> | { refused: string }}
