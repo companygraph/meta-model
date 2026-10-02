@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status` — and declares no packs. That is what core ships, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control` — and declares no packs. That is what core ships, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -28,6 +28,9 @@ question-kinds/                  product.md, company.md
 decision-kinds/                  architecture.md, product.md
 decision-statuses/               standing.md, revised.md
 decisions/                       2022-billing-leaves-the-monolith.md
+rules/                           a-change-is-reviewed-before-it-ships.md
+risks/                           an-unreviewed-change-reaches-customers.md
+controls/                        main-requires-a-review.md
 processes/delivery/              delivery.md
   phases/                        specify.md, build.md, release.md
   tracks/                        code.md, docs.md

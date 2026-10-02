@@ -106,7 +106,7 @@ Writing rules. A control names at least one risk it mitigates or one rule it enf
 
 **One type for rules.** BMM separates a business policy, which cannot be enforced directly, from a business rule, which can. Neither source company draws the line, and asking every company to classify each statement would buy little: a policy-like rule is one no control enforces, which the graph shows without a second type. A principle already has a home in `value`.
 
-**No incident, no measure.** An incident is a dated record of what happened and a measurement is a value over time; both are the state of the thing made, which R17 keeps outside the model. A risk or a control names where they are kept, in `## References`, and a control's effectiveness is a `kpi` whose `measures` names it. "Measure" is also the German «Massnahme», which is ISO's word for a control.
+**No incident, no measure.** An incident is a dated record of what happened and a measurement is a value over time; both are the state of the thing made, which R17 keeps outside the model. A risk or a control names where they are kept, in `## References`, and a control's effectiveness is measured by a KPI. Pointing a KPI's `measures` at a control is a change to the `kpi` type, which this spec does not make. "Measure" is also the German «Massnahme», which is ISO's word for a control.
 
 **A page's own "never" stays.** Core's roles, phases and processes already refuse things in `## What it never does`, and values name how they get broken. A rule does not replace them; it takes what reaches across them and is restated on several, which is the duplication #196 names.
 
