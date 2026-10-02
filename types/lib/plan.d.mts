@@ -2,6 +2,7 @@ import type { Files } from "./instance.mjs";
 export type InitAsk = {
     core: Files;
     skills?: Files | undefined;
+    packs?: Map<string, Files> | undefined;
     tooling: string;
     tag: string;
     name?: string | undefined;
@@ -22,6 +23,7 @@ export type InitPlan = {
 export type UpgradeAsk = {
     core: Files;
     skills?: Files | undefined;
+    packs?: Map<string, Files> | undefined;
     tooling: string;
     tag: string;
     manifest: {
@@ -31,6 +33,7 @@ export type UpgradeAsk = {
             version?: string;
         };
         tooling?: string;
+        packs?: string[];
     };
     held: Map<string, string | undefined>;
     workflow: string | null;
@@ -66,6 +69,7 @@ export type BackfillAsk = {
  * @typedef {object} InitAsk
  * @property {Files} core
  * @property {Files | undefined} [skills]
+ * @property {Map<string, Files> | undefined} [packs]
  * @property {string} tooling
  * @property {string} tag
  * @property {string | undefined} [name]
@@ -86,9 +90,10 @@ export type BackfillAsk = {
  * @typedef {object} UpgradeAsk
  * @property {Files} core
  * @property {Files | undefined} [skills]
+ * @property {Map<string, Files> | undefined} [packs]
  * @property {string} tooling
  * @property {string} tag
- * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string }} manifest
+ * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[] }} manifest
  * @property {Map<string, string | undefined>} held
  * @property {string | null} workflow
  * @property {boolean | undefined} [fetched]
@@ -124,19 +129,20 @@ export declare const SKILLS = ".claude/skills/";
  * @param {InitAsk} ask
  * @returns {InitPlan}
  */
-export declare function initPlan({ core, skills, tooling, tag, name, agent, units, folders, present, fetched, hook }: InitAsk): InitPlan;
+export declare function initPlan({ core, skills, packs, tooling, tag, name, agent, units, folders, present, fetched, hook }: InitAsk): InitPlan;
 /**
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, tooling, tag, manifest, held, workflow, fetched, force, name, present }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present }: UpgradeAsk): UpgradePlan;
 /**
  * @param {Map<string, string | Uint8Array>} files
- * @param {BackfillAsk & { model?: string }} ask
+ * @param {BackfillAsk & { model?: string; types?: import("./checks.mjs").TypeEntry[] }} ask
  * @returns {Map<string, string> | { refused: string }}
  */
-export declare function backfillPlan(files: Map<string, string | Uint8Array>, { model, firstCommitMs, now, random }: BackfillAsk & {
+export declare function backfillPlan(files: Map<string, string | Uint8Array>, { model, firstCommitMs, now, random, types }: BackfillAsk & {
     model?: string;
+    types?: import("./checks.mjs").TypeEntry[];
 }): Map<string, string> | {
     refused: string;
 };

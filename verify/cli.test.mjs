@@ -1441,3 +1441,59 @@ test("translations --range exits 1 when the start revision does not resolve, eve
   assert.match(said.stderr, /✗/);
   assert.doesNotMatch(said.stdout, /no translated language is declared/);
 });
+
+// R20: the manifest names the packs an instance took, and check refuses one it does not ship.
+test("a manifest that takes a pack this checker does not ship is refused by name", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, packs: ["cooking"] }));
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /takes the pack cooking, and this checker ships software/);
+});
+
+test("an upgrade with --core is refused for an instance that lists a pack, and for --pack, before anything is fetched", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const listed = spawnSync(process.execPath, [cli, "upgrade", root, "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(listed.status, 1);
+  assert.match(listed.stderr, /takes the pack software, and --core fetches another release's core without it/);
+  const plain = temp();
+  run(["init", plain, "--name", "Acme", "--agent", "claude"]);
+  const added = spawnSync(process.execPath, [cli, "upgrade", plain, "--pack", "software", "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(added.status, 1);
+  assert.match(added.stderr, /takes the pack software, and --core fetches another release's core without it/);
+});
+
+test("upgrade --pack names only the packs the instance did not already list", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
+});
+
+// An instance that took a pack reads the pack's schemas wherever the history commands read the
+// model: a bounded context's page sits in a folder only the pack's schema declares, and without
+// them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
+test("commits and seats read an instance that took the software pack and wrote a bounded context", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q");
+  const page = path.join(root, "model/bounded-contexts/ordering/ordering.md");
+  fs.mkdirSync(path.dirname(page), { recursive: true });
+  fs.writeFileSync(
+    page,
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nclassification: core\n---\n\n# Ordering\n\n> Takes an order and leaves payment to Billing.\n\n## Responsibilities\n\n- Accept an order\n",
+  );
+  g("add", "-A");
+  g("commit", "-qm", "Add the ordering context", "--no-verify");
+  const message = path.join(root, "message.txt");
+  fs.writeFileSync(message, "Add a thing\n");
+  const commits = spawnSync(process.execPath, [cli, "commits", root, "--message", message], { encoding: "utf8", env });
+  assert.equal(commits.status, 0, commits.stdout + commits.stderr);
+  const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
+  assert.equal(seats.status, 0, seats.stdout + seats.stderr);
+});

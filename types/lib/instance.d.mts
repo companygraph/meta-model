@@ -297,6 +297,13 @@ export declare function parseInstance(files: InstanceFiles, options: {
  */
 export declare function declarationOf(cell: string | undefined): Declaration | null;
 /**
+ * A schema's address is its unit and its type, `core/feature` or `software/bounded-context`.
+ * Everything that wants the type reads it here, rather than slicing a prefix only core carries.
+ * @param {string} address
+ * @returns {string}
+ */
+export declare const typeOfAddress: (address: string) => string;
+/**
  * @param {Files} files
  * @param {{ sub?: string }} [options]
  * @returns {Graph}

@@ -13,6 +13,14 @@ export type TypeEntry = {
         year: string;
         rest: string;
     };
+    /**
+     * Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+     */
+    labels?: {
+        section: string;
+        column?: string;
+        heading?: boolean;
+    };
 };
 export type PipeTable = {
     columns: string[];
@@ -47,6 +55,7 @@ export type Check = {
  * @property {string[]} [owns]
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
+ * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
  */
 /**
  * A pipe table as the checks read it: its header row's cells and every row after the separator.
@@ -84,6 +93,44 @@ export declare const SINGULAR: (TypeEntry & {
 export declare const PLURAL: (TypeEntry & {
     folder: string;
 })[];
+/** @type {{ [name: string]: TypeEntry[] }} */
+export declare const PACKS: {
+    [name: string]: TypeEntry[];
+};
+export type VocabularyEntry = TypeEntry & {
+    unit: string;
+    dir: string;
+};
+export type PackRef = {
+    name: string;
+    dir: string;
+    types?: TypeEntry[];
+};
+/**
+ * A type of the vocabulary an instance takes, with the unit it belongs to and the folder its
+ * schema is read from.
+ * @typedef {TypeEntry & { unit: string, dir: string }} VocabularyEntry
+ */
+/**
+ * A pack an instance takes: its name, the folder its schemas are vendored in, and optionally the
+ * types it declares, which override `PACKS` for a test that brings a pack this release does not
+ * ship.
+ * @typedef {object} PackRef
+ * @property {string} name
+ * @property {string} dir
+ * @property {TypeEntry[]} [types]
+ */
+/**
+ * @param {{ core?: string, packs?: PackRef[] }} [options]
+ * @returns {{ types: VocabularyEntry[], schemaOf: (type: string) => string }}
+ */
+export declare function vocabularyOf({ core, packs }?: {
+    core?: string;
+    packs?: PackRef[];
+}): {
+    types: VocabularyEntry[];
+    schemaOf: (type: string) => string;
+};
 export declare const MODEL = "model";
 /** @param {string} s @returns {string} */
 export declare const slug: (s: string) => string;
@@ -123,28 +170,31 @@ export declare const tablesOf: (body: string) => (PipeTable | null)[];
 /**
  * @param {string} rel
  * @param {string} model
+ * @param {TypeEntry[]} [types] the vocabulary to match against; core's by default
  * @returns {string | null}
  */
-export declare function typeOfPath(rel: string, model: string): string | null;
+export declare function typeOfPath(rel: string, model: string, types?: TypeEntry[]): string | null;
 /**
- * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void, requireSchemaIds?: boolean }} options
+ * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void, requireSchemaIds?: boolean, packs?: PackRef[] }} options
  * @returns {Check[]}
  */
-export declare function instanceChecks({ files, core, model, fail, requireSchemaIds }: {
+export declare function instanceChecks({ files, core, model, fail, requireSchemaIds, packs }: {
     files: InstanceFiles;
     core?: string;
     model?: string;
     fail: (message: string) => void;
     requireSchemaIds?: boolean;
+    packs?: PackRef[];
 }): Check[];
 /**
  * @param {InstanceFiles} files
- * @param {{ core?: string, model?: string }} [options]
+ * @param {{ core?: string, model?: string, packs?: PackRef[] }} [options]
  * @returns {{ failures: string[], skipped: string[] }}
  */
-export declare function checkInstance(files: InstanceFiles, { core, model }?: {
+export declare function checkInstance(files: InstanceFiles, { core, model, packs }?: {
     core?: string;
     model?: string;
+    packs?: PackRef[];
 }): {
     failures: string[];
     skipped: string[];
