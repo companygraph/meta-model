@@ -299,7 +299,7 @@ test("an upgrade writes the export's inputs the instance lacks, never one it has
   assert.equal(none.writes.size, 0, "no name, and nothing is given");
 });
 
-// Review fix 1: `upgrade` only ever wrote export files; a core that grows R19's localization
+// Review fix 1: `upgrade` only ever wrote export files; a core that grows the localization
 // schema left an instance upgraded from before it with no model/localization.md at all, and
 // nothing later would write one. An upgrade now writes it, once, reading `source` from
 // model/identity.md the way `backfillPlan` does, and never touches a page the instance has.

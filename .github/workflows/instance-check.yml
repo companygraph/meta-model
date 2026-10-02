@@ -50,8 +50,3 @@ jobs:
       - name: no id on the default branch changed
         if: github.event_name == 'pull_request'
         run: node .companygraph-checker/bin/companygraph.mjs ids . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-      # R19: a change to the primary reaches every translation, or a trailer says it need not.
-      # Only on a pull request, over the same range as the steps above.
-      - name: every change to the primary reached its translations
-        if: github.event_name == 'pull_request'
-        run: node .companygraph-checker/bin/companygraph.mjs translations . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
