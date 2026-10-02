@@ -564,6 +564,32 @@ const CHECKS = [
     },
   },
   {
+    // npm sets a bin's execute bit when it links it, and a release put back under a link already
+    // in node_modules keeps the mode the git dependency's tarball carries, which is git's. Up to
+    // 0.71.0 git had the bins at 100644, so sh could not run them there and the seat hook
+    // skipped its check on every commit in the MCP hosts. Every file under bin/ is recorded 100755.
+    name: "the bins are executable in git",
+    rule: null,
+    run() {
+      // A copy of the tree a test runs this script in has no package.json and no git; the
+      // release check already says the first.
+      const raw = read("package.json");
+      if (raw === null) return;
+      const pkg = JSON.parse(raw);
+      let listed;
+      try {
+        listed = execFileSync("git", ["ls-files", "-s", "--", "bin"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      } catch (e) {
+        return fail(`git could not list bin/: ${e.message.split("\n")[0]}`);
+      }
+      const modes = new Map(listed.split("\n").filter(Boolean).map((line) => [line.split("\t")[1], line.split(" ")[0]]));
+      const declared = Object.values(pkg.bin ?? {}).map((file) => file.replace(/^\.\//, ""));
+      for (const file of new Set([...declared, ...modes.keys()]))
+        if (modes.get(file) !== "100755")
+          fail(`${file} is ${modes.get(file) ?? "not"} in git's index; record it 100755 (git update-index --chmod=+x ${file}), or npm can leave it a bin sh cannot run`);
+    },
+  },
+  {
     // Until the family takes the machinery from meta-model, the form has two copies here: the one
     // conventions-sync vendors for this repository's own Markdown, and form/, which every
     // repository that takes the tooling is held to. Both run in phase 1, and they agree only while
