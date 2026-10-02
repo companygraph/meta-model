@@ -305,8 +305,9 @@ test("the hook hands npx no repository of git's, in a worktree and on commit -a,
 // Found on 2026-10-02 in the three MCP hosts, which take meta-model as a git dependency: git had
 // the bin at 100644, npm sets a bin's mode only when it links one, and a release put back under a
 // link already in node_modules kept 0644. npx in that repository runs the project's own copy, sh
-// cannot (126), and the hook let every commit through as one the check did not run. This builds
-// that layout — the package in the instance's node_modules, its bin not executable — and a fake
+// cannot (bash exits 126, Debian's dash 127), and the hook let every commit through as one the
+// check did not run. This builds that layout — the package in the instance's node_modules, its
+// bin not executable — and a fake
 // npx that runs commands the way npm exec does there, the project's .bin first on PATH, through
 // sh. A commit going through proves nothing, since a hook that cannot start lets it through too;
 // the refusal of a seat only the real checker knows is what proves the checker ran.
