@@ -1497,3 +1497,45 @@ test("commits and seats read an instance that took the software pack and wrote a
   const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
   assert.equal(seats.status, 0, seats.stdout + seats.stderr);
 });
+
+test("an instance init writes is in the one form, and check says so", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.match(run(["form", root]), /in the one form/);
+  assert.match(run(["check", root]), /in the one form/);
+});
+
+test("check fails on Markdown out of the form, names the line, and form --fix puts it right", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const failed = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failed.status, 1);
+  assert.match(failed.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(failed.stderr, /form .* --fix/);
+  run(["form", root, "--fix"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+});
+
+test("the form check leaves out what the manifest excludes", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/out.md"), "# Out\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" }).status, 0);
+});
+
+test("form refuses where the manifest names another release, as the checker does", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names 0\.0\.1/);
+});
+
+test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+});

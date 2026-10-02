@@ -559,3 +559,8 @@ test("an upgrade that takes a pack writes its root folders' READMEs once, and na
   const listed = upgradePlan({ ...UPGRADE_ARGS, manifest: { ...manifest, packs: ["software"] }, packs, held: new Map() });
   assert.ok(!listed.writes.has("model/bounded-contexts/README.md"));
 });
+
+test("init writes into the manifest that the form check leaves out dist and the units folder", () => {
+  assert.deepEqual(JSON.parse(initPlan(ask).writes.get(".companygraph/manifest.json")).exclude, ["dist", "meta"]);
+  assert.deepEqual(JSON.parse(initPlan({ ...ask, units: "schemas" }).writes.get(".companygraph/manifest.json")).exclude, ["dist", "schemas"]);
+});

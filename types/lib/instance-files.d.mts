@@ -8,6 +8,7 @@ export type Manifest = {
     };
     units: string;
     packs: string[];
+    exclude?: string[];
     files: Record<string, string>;
 };
 /** @import { TypeEntry } from "./checks.mjs" */
@@ -20,6 +21,7 @@ export type Manifest = {
  * @property {{ version: string; shape: number; source: string }} core
  * @property {string} units
  * @property {string[]} packs
+ * @property {string[]} [exclude]
  * @property {Record<string, string>} files
  */
 /** @type {(text: string | Uint8Array) => string} */
@@ -28,12 +30,15 @@ export declare const hashOf: (text: string | Uint8Array) => string;
 export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
+/** @type {(units: string) => string[]} */
+export declare const excludeFor: (units: string) => string[];
 /**
- * @param {Omit<Manifest, "packs"> & { packs?: string[] }} manifest
+ * @param {Omit<Manifest, "packs" | "exclude"> & { packs?: string[]; exclude?: string[] }} manifest
  * @returns {string}
  */
-export declare function manifestOf({ tooling, core, units, packs, files }: Omit<Manifest, "packs"> & {
+export declare function manifestOf({ tooling, core, units, packs, exclude, files }: Omit<Manifest, "packs" | "exclude"> & {
     packs?: string[];
+    exclude?: string[];
 }): string;
 /** @type {(types?: TypeEntry[]) => string[]} */
 export declare const rootFolders: (types?: TypeEntry[]) => string[];

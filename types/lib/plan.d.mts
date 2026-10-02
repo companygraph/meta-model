@@ -34,6 +34,7 @@ export type UpgradeAsk = {
         };
         tooling?: string;
         packs?: string[];
+        exclude?: string[];
     };
     held: Map<string, string | undefined>;
     workflow: string | null;
@@ -93,7 +94,7 @@ export type BackfillAsk = {
  * @property {Map<string, Files> | undefined} [packs]
  * @property {string} tooling
  * @property {string} tag
- * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[] }} manifest
+ * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[] }} manifest
  * @property {Map<string, string | undefined>} held
  * @property {string | null} workflow
  * @property {boolean | undefined} [fetched]

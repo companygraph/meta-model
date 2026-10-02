@@ -6,6 +6,7 @@
 //
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
 //   companygraph check [<folder>]
+//   companygraph form [<folder>] [--fix]
 //   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
@@ -27,7 +28,8 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
-import { exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { formCheck } from "../lib/form.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
@@ -55,7 +57,7 @@ import { localizationOf, staleTranslationsOf } from "../lib/localization.mjs";
  * @typedef {{
  *   _: string[];
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
- *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean;
+ *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean; fix?: boolean;
  *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string;
  *   from?: string; range?: string; message?: string; since?: string;
  * }} Flags
@@ -69,6 +71,7 @@ const USAGE = `companygraph [<command>]
   (none)              at a terminal, a menu over init, check, upgrade, obsidian and seats, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
+  form [<folder>]     the one Markdown form over a repository, or --fix to write it
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
@@ -84,6 +87,7 @@ commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
 ids: --backfill  --range <a>..<b>
 translations: --range <a>..<b>
+form: --fix
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -141,7 +145,7 @@ const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 // once rather than teaching this parser about them a second time. Everything else takes a value,
 // and a value that is missing or looks like another flag is refused by name rather than silently
 // eaten or handed to a prompt further down.
-const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill"]);
+const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill", "fix"]);
 
 /**
  * @param {string[]} argv
@@ -666,20 +670,70 @@ function said(done, plugin, vault) {
   console.log(`${good("✓")} ${moved}${vault ? ` in ${shown(vault)}` : ""}${done.enabled ? ", and switched on" : ""}`);
 }
 
+// The manifest at a folder, or null where it has none. A manifest that is not JSON is said by name.
+/** @param {string} root */
+function manifestAt(root) {
+  const at = join(root, ".companygraph/manifest.json");
+  if (!existsSync(at)) return null;
+  try {
+    return JSON.parse(readFileSync(at, "utf8"));
+  } catch (error) {
+    throw new Error(`${at} could not be read as JSON: ${/** @type {Error} */ (error).message}`);
+  }
+}
+
+// What the form leaves out of a folder: its manifest's own list, else an instance's default, else
+// nothing, for a folder that took no tooling and is held whole.
+/** @param {{ exclude?: string[]; units?: string; core?: unknown } | null} manifest */
+const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFor(manifest.units ?? "meta") : []);
+
+// The form over a folder, said: one line per hit and the command that writes them, or one line
+// that it passed. It refuses a manifest naming another release, as the checker's own guard does,
+// because the form is the release's too and a workflow pinned to one release runs this.
+/**
+ * @param {string[]} argv
+ * @returns {number}
+ */
+function form(argv) {
+  const given = flags(argv);
+  const root = given._[0] ?? ".";
+  const manifest = manifestAt(root);
+  if (manifest?.tooling && manifest.tooling !== PACKAGE.version) {
+    console.error(`✗ this checker is ${PACKAGE.version} and .companygraph/manifest.json names ${manifest.tooling} — move the pin and the workflow together, or call the release the manifest names`);
+    return 1;
+  }
+  const { files, hits, error } = formCheck(root, { exclude: excludeOf(manifest), fix: Boolean(given.fix) });
+  if (error) {
+    console.error(`✗ ${error}`);
+    return 1;
+  }
+  if (hits.length) {
+    for (const hit of hits) console.error(`✗ ${hit}`);
+    console.error(given.fix ? "✗ the hits above have no automatic fix; edit them by hand" : `✗ "companygraph form ${root} --fix" rewrites these into the form`);
+    return 1;
+  }
+  if (!files) console.log("✓ no Markdown file to hold to the form");
+  else console.log(`✓ ${files} Markdown file${files === 1 ? "" : "s"} in the one form${given.fix ? ", fixed where they were not" : ""}`);
+  return 0;
+}
+
 /**
  * @param {string[]} argv
  * @returns {Promise<number>}
  */
 async function check(argv) {
+  const root = flags(argv)._[0] ?? ".";
   // A second door to the same code, so a guard failure must read exactly as it does through
   // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
   const { checkPath } = await import("./check-instance.mjs");
+  let model;
   try {
-    return checkPath(argv[0] ?? ".") > 0 ? 1 : 0;
+    model = checkPath(root) > 0 ? 1 : 0;
   } catch (error) {
     console.error(`✗ ${/** @type {Error} */ (error).message}`);
     return 1;
   }
+  return Math.max(model, form([root]));
 }
 
 // A path as a person types it at the prompt, where no shell expands `~` first.
@@ -1057,6 +1111,7 @@ try {
   else if (command === "upgrade") await upgrade(rest);
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
+  else if (command === "form") process.exitCode = form(rest);
   else if (command === "commits") process.exitCode = commits(rest);
   else if (command === "seats") process.exitCode = seats(rest);
   else if (command === "id") console.log(uuidv7());
