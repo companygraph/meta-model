@@ -88,6 +88,13 @@ export declare function changedPagesOf(cwd: string, range: string, model?: strin
 export declare function deletedPagesOf(cwd: string, range: string, model?: string): DeletedPage[];
 /**
  * @param {string} cwd
+ * @param {string} a
+ * @param {string} b
+ * @returns {string}
+ */
+export declare function mergeBaseOf(cwd: string, a: string, b: string): string;
+/**
+ * @param {string} cwd
  * @param {string} rev
  * @param {string} rel
  * @returns {string[]}

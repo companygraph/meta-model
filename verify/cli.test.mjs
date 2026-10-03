@@ -1619,3 +1619,33 @@ test("ids --range refuses a decision deleted in the range", () => {
   assert.equal(said.status, 3);
   assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
 });
+
+// A pull request's range runs from the base branch's tip when the event fired, which on a branch
+// behind its base is not where it branched: a decision main added since is not one the branch
+// deleted, and a decision the branch did delete still fails from there.
+test("ids --range holds a branch behind its base to what the branch did, not to what main did since", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const decision = (title) => `---\nsource: Local\nstatus: Standing\n---\n\n# ${title}\n\n> We decided it.\n`;
+  write("model/decisions/2026-core-is-vendored.md", decision("Core is vendored"));
+  g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "-b", "topic");
+  write("model/notes.md", "# Notes\n");
+  g("add", "-A"); g("commit", "-qm", "on the branch", "--no-verify");
+  g("checkout", "-q", "main");
+  write("model/decisions/2026-packs-are-units.md", decision("Packs are units"));
+  g("add", "-A"); g("commit", "-qm", "on main", "--no-verify");
+  const range = () => `${g("rev-parse", "main")}..${g("rev-parse", "topic")}`;
+  const behind = spawnSync(process.execPath, [cli, "ids", root, "--range", range()], { encoding: "utf8" });
+  assert.equal(behind.status, 0, behind.stderr);
+
+  g("checkout", "-q", "topic");
+  g("rm", "-q", "model/decisions/2026-core-is-vendored.md"); g("commit", "-qm", "delete", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", range()], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
+  assert.doesNotMatch(said.stderr, /packs-are-units/);
+});

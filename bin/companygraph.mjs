@@ -36,7 +36,7 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
@@ -1142,12 +1142,19 @@ function ids(argv) {
     const failures = idChangesOf(changes, base);
     // An instance's pages are held to what a change may do to them as well: a decision is kept
     // as written and never deleted, and a label stays with its item and is never used again. The
-    // repository that makes core ranges over schemas, which carry neither.
-    if (!onCore)
+    // repository that makes core ranges over schemas, which carry neither. These two read what
+    // the branch did, from where it branched: from a base tip that moved on since, a decision main
+    // added would read as one the branch deleted. The id check stays on the range as given, since
+    // its base is the ids the default branch holds now.
+    if (!onCore) {
+      const fork = mergeBaseOf(root, ends[0], ends[1]);
+      const own = `${fork}..${ends[1]}`;
+      const branched = own === given.range ? changes : changedPagesOf(root, own, folder);
       failures.push(
-        ...keptChangesOf(changes, deletedPagesOf(root, given.range, folder), base, { types }),
-        ...labelChangesOf(changes, base, { types, historyOf: (c) => pageHistoryOf(root, ends[0], c.before) }),
+        ...keptChangesOf(branched, deletedPagesOf(root, own, folder), base, { types }),
+        ...labelChangesOf(branched, base, { types, historyOf: (c) => pageHistoryOf(root, fork, c.before) }),
       );
+    }
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
       return REFUSED;
