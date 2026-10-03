@@ -34,7 +34,7 @@
     "test:untar": "node --test verify/untar.test.mjs",
     "test:fetch-core": "node --test verify/fetch-core.test.mjs",
     "test:obsidian": "node --test verify/obsidian.test.mjs",
-    "test:judge": "node --test verify/questions.test.mjs",
+    "test:judge": "node --test verify/questions.test.mjs verify/judge.test.mjs",
     "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs"
   },
   "devDependencies": { "@types/node": "22.20.4", "markdownlint-cli2": "0.23.2", "typescript": "7.0.2" }
