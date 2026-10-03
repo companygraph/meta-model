@@ -32,7 +32,7 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
    lowest verdicts it marks with `?` — and then every other page as before. The report is
    advisory: it never stands in for this reading, and a page it does not list is still read.
 
-   One writing rule produces a report line rather than a failure, and the role schema says so:
+   One finding is a report line rather than a failure, and the profile schema's Purpose says so:
    for every profile whose nature is `human` and that lists roles, every skill a listed role
    `requires` that has no row in the profile's Skills table is a gap —
    `gap <profile>: <role> requires <skill>` — reported once per role and skill and never

@@ -115,11 +115,11 @@ test("every writing rule in core and the packs opens with its subject", () => {
     }
 });
 
-const KPI_LIKE = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `read-with` | No | array of ref → thing | Another. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `> [Definition]` | Yes | One line. |\n\n## Writing rules\n\n- `read-with` names a thing that moves against this one.\n- The definition says what it counts.\n- Kept in mind whatever happens.\n";
-const kpiLike = (fields) => {
+const KPI_LIKE = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `read-with` | No | array of ref → thing | Another. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `> [Definition]` | Yes | One line. |\n\n## Writing rules\n\n- `read-with` names a thing that moves against this one.\n- The definition says what it counts.\n- The page is kept in mind whatever happens.\n";
+const kpiLike = (fields, schemaText = KPI_LIKE) => {
   const entity = (path, f) => ({ path, type: "thing", name: path, id: path, owner: null, tagline: "", sections: [], fields: f });
   const graph = { entities: [entity("things/a.md", fields)] };
-  return questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", KPI_LIKE]]) });
+  return questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", schemaText]]) });
 };
 
 test("a rule about a field is asked only of a page that carries the field", () => {
@@ -133,8 +133,15 @@ test("a rule about a field is asked only of a page that carries the field", () =
 });
 
 test("a rule with no subject at its opening, as an instance's own schema may have, is asked of every page", () => {
-  const { asked } = kpiLike({ id: "x" });
+  const { asked } = kpiLike({ id: "x" }, KPI_LIKE.replace("- The page is kept in mind", "- Kept in mind"));
   assert.ok(asked[0].questions.some((q) => q.id === "r3" && q.rule === "Kept in mind whatever happens."));
+});
+
+test("a schema whose rules do not all open with their subject keeps fields out of the skip, as cores before #254 do", () => {
+  const old = KPI_LIKE.replace("- The page is kept in mind", "- Kept in mind");
+  assert.deepEqual(kpiLike({ id: "x" }, old).asked[0].questions.map((q) => q.id), ["r1", "r2", "r3"], "a rule opening with a field may judge its absence there");
+  const before = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `role` | No | string | The part. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n\n## Writing rules\n\n- `role` is filled where the H1 does not already name the part, and left absent where it does.\n- A list of tools is not an achievement.\n";
+  assert.ok(kpiLike({ id: "x" }, before).asked[0].questions.some((q) => q.id === "r1"), "the old experience r1 is asked of a page without `role`");
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
