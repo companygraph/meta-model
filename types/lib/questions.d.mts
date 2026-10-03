@@ -45,6 +45,7 @@ export type Failed = {
 export type Band = {
     low: number;
     high: number;
+    pick: number;
 };
 /** @import { Files, InstanceFiles, InstanceGraph, Entity } from "./instance.mjs" */
 /**
@@ -60,7 +61,7 @@ export type Band = {
  * @typedef {{ pick: string; probabilities: Record<string, number> }} GroupAnswer
  * @typedef {Record<string, RuleAnswer | GroupAnswer>} Answers
  * @typedef {{ error: string }} Failed
- * @typedef {{ low: number; high: number }} Band
+ * @typedef {{ low: number; high: number; pick: number }} Band
  */
 /**
  * @param {string} schemaText
