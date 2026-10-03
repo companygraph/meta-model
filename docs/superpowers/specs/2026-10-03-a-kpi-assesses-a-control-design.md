@@ -56,7 +56,17 @@ Each organization keeps its reports in one place: the Google Cloud project its M
 
 ## The weekly job
 
-A workflow in each MCP host repository, on Monday morning and by hand, for the ISO week that ended:
+It runs from each organization's MCP host repository, where the variable `KPI_APP_ID` and the secret `KPI_APP_PRIVATE_KEY` are kept:
+
+| Organization | Repository |
+| --- | --- |
+| robertblust | `robertblust/mcp-blust-ch` |
+| companygraph | `companygraph/mcp-companygraph-io` |
+| guestgraph | `guestgraph/mcp-guestgraph-io` |
+
+The host is the right home for now, decided by the owner on October 3, 2026: the project, its identity pool, its Terraform and its reports bucket are set up from there, the chat's weekly report already runs there, and the App's key stays with the one job that uses it. A repository of its own per organization, such as `<org>/reports`, is cleaner and becomes worth its pool admission and Terraform once several organization-wide jobs exist. The host repositories are public; the job runs only on schedule and by hand from `main`, where a fork's pull request never receives the secret, and it prints counts only.
+
+A workflow in each of those repositories, on Monday morning and by hand, for the ISO week that ended:
 
 1. Exchanges the organization's GitHub App key (`KPI_APP_ID`, `KPI_APP_PRIVATE_KEY`) for an installation token with `actions/create-github-app-token`.
 2. Lists the organization's repositories and, per repository, the rule suites on its default branch with result `bypass` in the week, following pages; a repository the App cannot read is named in the log and counted as unread, never as zero.
