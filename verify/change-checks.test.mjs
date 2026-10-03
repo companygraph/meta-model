@@ -89,6 +89,25 @@ test("a decision whose line ends differ between base and head and whose words do
   assert.deepEqual(kept([change(call().replace(/\n/g, "\r\n"), call({ status: "Revised" }))]), []);
 });
 
+test("a sentence ending in a capital letter or in No. is a sentence end, and the abbreviations a date meets are not", () => {
+  const base = call();
+  for (const consequences of [
+    "We keep a copy per instance. Dropped in 2026 for plan B. Nothing replaced it.",
+    "We keep a copy per instance. Dropped in 2026, and the answer was No. Nothing replaced it.",
+  ])
+    assert.equal(kept([change(base, call({ status: "Dropped", consequences }))]).length, 1, consequences);
+  for (const consequences of [
+    "We keep a copy per instance. Dropped on Sept. 3, 2026, i.e. with the account closed.",
+    "We keep a copy per instance. Dropped in 2026 for vendors, cloud hosts etc. that left.",
+  ])
+    assert.deepEqual(kept([change(base, call({ status: "Dropped", consequences }))]), [], consequences);
+});
+
+test("a renamed decision whose content is the same passes", () => {
+  assert.deepEqual(kept([{ before: DECISION, after: "model/decisions/2026-core-is-vendored-everywhere.md", beforeText: call(), afterText: call() }]), []);
+});
+
+
 // --- A name a decision carries follows the entity it names ---------------------------------
 
 // A decision names entities by their canonical names, so renaming or deleting one would leave a
@@ -137,6 +156,34 @@ test("a name in a Bears on row follows its entity's rename and deletion, and not
   assert.deepEqual(followed([change(was, call({ bears: [["product", "Books", "", "Made it"], ["product", "Ledger", "", "Made it"]] }))], base, head), [TEXT]);
 });
 
+test("a name dropped while its entity was only renamed fails, in a field and in a Bears on row", () => {
+  const base = { "model/strategic-objectives/old.md": entity(O1, "Old"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  const head = { "model/strategic-objectives/new.md": entity(O1, "New"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  assert.deepEqual(followed([change(call({ serves: ["Old", "Other"] }), call({ serves: ["Other"] }))], base, head), [FIELD("serves")]);
+  const products = { "model/products/ledger.md": entity(P1, "Ledger"), "model/products/till.md": entity(V1, "Till") };
+  const renamed = { "model/products/books.md": entity(P1, "Books"), "model/products/till.md": entity(V1, "Till") };
+  const was = call({ bears: [["product", "Ledger", "", "Made it"], ["product", "Till", "", "Ended it"]] });
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Till", "", "Ended it"]] }))], products, renamed), [TEXT]);
+});
+
+test("a name dropped because its entity no longer exists at the head passes, in a field and in a Bears on row", () => {
+  const base = { "model/strategic-objectives/old.md": entity(O1, "Old"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  const head = { "model/strategic-objectives/other.md": entity(O2, "Other") };
+  assert.deepEqual(followed([change(call({ serves: ["Old", "Other"] }), call({ serves: ["Other"] }))], base, head), []);
+  const products = { "model/products/ledger.md": entity(P1, "Ledger"), "model/products/till.md": entity(V1, "Till") };
+  const was = call({ bears: [["product", "Ledger", "", "Made it"], ["product", "Till", "", "Ended it"]] });
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Till", "", "Ended it"]] }))], products, { "model/products/till.md": entity(V1, "Till") }), []);
+});
+
+test("a reference field rewritten in another YAML shape is the same call, and a changed value is not", () => {
+  const both = { "model/strategic-objectives/old.md": entity(O1, "Old"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  const block = call({ serves: ["Old", "Other"] });
+  const flow = block.replace("serves:\n  - Old\n  - Other\n", "serves: [Old, \"Other\"]\n");
+  assert.notEqual(flow, block);
+  assert.deepEqual(followed([change(block, flow)], both, both), []);
+  assert.deepEqual(followed([change(block, flow.replace("Old", "Elder"))], both, both), [FIELD("serves")]);
+});
+
 // --- Labels ----------------------------------------------------------------------------------
 
 const TYPES_WITH_SOFTWARE = [...TYPES, ...PACKS.software];
@@ -180,4 +227,18 @@ test("the history is not read where no label is new", () => {
   let read = 0;
   labels([change(invariants([["INV-1", "A."]]), invariants([["INV-1", "B."]]), AGG)], () => { read++; return []; });
   assert.equal(read, 0);
+});
+
+test("three kept labels that rotate their texts fail, whatever the length of the cycle", () => {
+  const a = "A total never changes.", b = "One customer.", c = "One currency.";
+  const f = labels([change(invariants([["INV-1", a], ["INV-2", b], ["INV-3", c]]), invariants([["INV-1", b], ["INV-2", c], ["INV-3", a]]), AGG)]);
+  assert.equal(f.length, 3, f.join("\n"));
+  assert.match(f[0], /"INV-1" under ## Invariants carries what "INV-2" carried at main; a label stays with its item \(R16\)/);
+});
+
+test("labels whose base ends its lines in CRLF and whose head in LF, and whose words are the same, pass", () => {
+  const rows = [["INV-1", "A total never changes."], ["INV-2", "One customer."]];
+  assert.deepEqual(labels([change(invariants(rows).replace(/\n/g, "\r\n"), invariants(rows), AGG)]), []);
+  const body = "Given a period,\nWhen it closes,\nThen invoices go out.";
+  assert.deepEqual(labels([change(scenarios([["SC-1", "A period closes", body]]).replace(/\n/g, "\r\n"), scenarios([["SC-1", "A period closes", body]]), FD)]), []);
 });

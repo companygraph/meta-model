@@ -152,6 +152,27 @@ test("a payload type names a term of its own context of either kind, and never a
   assert.equal(typeCells(billing(event("billing", "Invoice issued", ["Posting"]))).length, 1);
 });
 
+test("a type matching a term only by a plural in -ies fails, and a leading list of is read in any case", () => {
+  const terms = (cell) => typeCells(billing(design("billing", "Policy", "value object"), design("billing", "Category", "value object"),
+    design("billing", "Line", "value object", attributes([cell]))));
+  for (const [cell, near] of [["Policies", "Policy"], ["categories", "Category"], ["List of Amounts", "Amount"]]) {
+    const f = terms(cell);
+    assert.equal(f.length, 1, cell);
+    assert.match(f[0], new RegExp(`the concept-design it matches here is "${near}"; a type names a term exactly`), cell);
+  }
+  assert.deepEqual(terms("List of Amount"), []);
+  assert.equal(terms("LIST OF Invoice").length, 1);
+});
+
+test("an attribute matching an entity only loosely is told an entity is a relation, and a payload is told to name it exactly", () => {
+  const f = typeCells(billing(design("billing", "Line", "value object", attributes(["invoice"]))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /line\.md: `Type` in "## Attributes" says "invoice", which matches "Invoice", a concept-design of kind `entity`; a type names one of kind `value object`, and any other is a relation \(R16\)/);
+  const p = typeCells(billing(event("billing", "Invoice issued", ["invoice"])));
+  assert.equal(p.length, 1, p.join("\n"));
+  assert.match(p[0], /the concept-design it matches here is "Invoice"; a type names a term exactly/);
+});
+
 const aggregate = (root) => [`${BC}/billing/aggregates/invoice.md`, page([`root: ${root}`], "Invoice",
   "\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | A total never changes. |\n")];
 const roots = (files) => run(files).failures.filter((f) => f.includes("`root` names"));
@@ -206,6 +227,14 @@ test("a rule naming one entity twice is still one entity, and fails", () => {
   assert.equal(binds(rules(["role | Reviewer | ", "role | Reviewer | "])).length, 1);
 });
 
+test("a rule naming one entity twice, its type written in another case, is still one entity, and fails", () => {
+  assert.equal(binds(rules(["role | Reviewer | ", "Role | Reviewer | "])).length, 1);
+});
+
+test("two rows differing only by their owner name two entities, and pass", () => {
+  assert.deepEqual(binds(rules(["phase | Review | Delivery", "phase | Review | Release"])), []);
+});
+
 test("a rule naming two entities, one a control enforces, and one with no rows all pass", () => {
   assert.deepEqual(binds(rules(["role | Reviewer | ", "process | Delivery | "])), []);
   assert.deepEqual(binds(rules(["role | Reviewer | "], true)), []);
@@ -239,7 +268,6 @@ test("a replaced call still carrying the status most calls not superseded carry 
 test("dropped and replaced calls may share one status while most calls stand", () => {
   assert.deepEqual(replaced(decisions([["A", "Retired"], ["B", "Retired"], ["C", "Standing", ["A"]], ["D", "Standing"], ["E", "Standing"]])), []);
 });
-
 
 // --- A seat's required skill not claimed, and the company's address repeated: notes ---------
 
@@ -288,7 +316,8 @@ test("a person's URL equal to identity's own or to one of its rows is noted, wit
   ]);
 });
 
+// Every person here carries identity's mail, so the person who claims every required skill and is
+// never noted, in the case above, is the mail half of this one.
 test("a person's mail equal to identity's is two facts and never noted, and an agent's page is not read", () => {
-  assert.deepEqual(notesOf(people({ claims: ["Java", "Testing"] })), []);
   assert.deepEqual(notesOf(people({ nature: "agent", location: "Rotterdam", urls: ["https://beacon.example"] })), []);
 });
