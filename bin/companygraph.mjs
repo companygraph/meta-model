@@ -6,6 +6,7 @@
 //
 //   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
 //   companygraph check [<folder>]
+//   companygraph judge [<folder>]
 //   companygraph form [<folder>] [--fix]
 //   companygraph pins [<folder>]
 //   companygraph adopt [<folder>]
@@ -72,6 +73,7 @@ const USAGE = `companygraph [<command>]
   (none)              at a terminal, a menu over init, check, upgrade, obsidian, seats, adopt and pins, open until Quit or Ctrl+C
   init [<folder>]     write a new instance, or add one to this folder with --here
   check [<folder>]    the mechanical checks over an instance
+  judge [<folder>]    ask a decision model whether each page keeps its schema's writing rules; advisory, and it asks before sending anything
   form [<folder>]     the one Markdown form over a repository, or --fix to write it
   pins [<folder>]     which pins a repository's pins.json declares are behind; moves nothing
   adopt [<folder>]    give a repository that is not an instance the form check, its workflow, the seat hook and a pins.json declaring its tooling pin
@@ -867,6 +869,65 @@ async function check(argv) {
   return Math.max(model, form([root]));
 }
 
+// The writing rules, asked of a judge. Advisory: it gates nothing and runs in no workflow, since
+// a judge's answer can move between runs and a public repository's run cannot hold the key. It
+// sends an instance's pages out of the machine, which for a private company is a decision about
+// its data, so it names the service and every file, and sends only on a typed yes; nothing skips
+// the question, and with no key it prints what it would ask and sends nothing.
+/**
+ * @param {string[]} argv
+ * @returns {Promise<number>}
+ */
+async function judge(argv) {
+  const root = resolve(flags(argv)._[0] ?? ".");
+  const { instanceAt } = await import("../lib/history.mjs");
+  const { questionsOf, reportOf } = await import("../lib/questions.mjs");
+  const judges = await import("./judges/typesafe.mjs");
+  const instance = instanceAt(root);
+  const questions = questionsOf(instance);
+  const count = questions.asked.reduce((n, r) => n + r.questions.length, 0);
+  console.log(`judge: ${count} questions about ${questions.asked.length} pages of ${root}, from the writing rules of its vendored core ${instance.core ?? "at an unnamed version"}`);
+  const key = process.env.TYPESAFE_API_KEY;
+  if (!key) {
+    for (const r of questions.asked) {
+      console.log(`\nmodel/${r.path}`);
+      for (const q of r.questions)
+        console.log(`  ${q.id}  ${q.kind === "rule" ? q.rule : `"${q.bullet}": one of ${Object.keys(q.options).join(", ")}`}`);
+    }
+    console.log(`\nno TYPESAFE_API_KEY: nothing was sent. These are the questions a run with the key would send to ${judges.SERVICE.name}.`);
+    return 0;
+  }
+  const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
+  console.log(`\nThis sends these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.SERVICE.host}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
+  for (const r of questions.asked) console.log(`  model/${r.path}`);
+  if (!yes(await ask(prompt("Send them?", "y/N")))) {
+    console.log("Nothing was sent.");
+    return 0;
+  }
+  /** @type {Map<string, import("../lib/questions.mjs").Answers | { error: string }>} */
+  const answers = new Map();
+  let refused = false;
+  const queue = [...questions.asked];
+  // Four at a time: well inside the service's request rate, and a few hundred pages in minutes.
+  await Promise.all(Array.from({ length: 4 }, async () => {
+    for (let r = queue.shift(); r && !refused; r = queue.shift()) {
+      try {
+        answers.set(r.path, await judges.ask(r, { key }));
+      } catch (error) {
+        if (error instanceof judges.KeyRefused) refused = true;
+        answers.set(r.path, { error: /** @type {Error} */ (error).message });
+      }
+    }
+  }));
+  if (refused) {
+    console.error(`${judges.SERVICE.name} refused the key in TYPESAFE_API_KEY; no report.`);
+    return 1;
+  }
+  console.log("");
+  for (const line of reportOf(questions, answers)) console.log(line);
+  return 0;
+}
+
 // A path as a person types it at the prompt, where no shell expands `~` first.
 /** @param {string} answer */
 const typed = (answer) => (answer === "~" || answer.startsWith("~/") ? join(homedir(), answer.slice(1)) : answer);
@@ -1182,6 +1243,7 @@ try {
   else if (command === "adopt") adopt(rest);
   else if (command === "obsidian") await obsidian(rest);
   else if (command === "check") process.exitCode = await check(rest);
+  else if (command === "judge") process.exitCode = await judge(rest);
   else if (command === "form") process.exitCode = form(rest);
   else if (command === "pins") process.exitCode = pins(rest);
   else if (command === "commits") process.exitCode = commits(rest);
