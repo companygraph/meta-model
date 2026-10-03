@@ -318,8 +318,10 @@ on:
   workflow_dispatch:
 jobs:
   kpi:
+    permissions: { contents: read, id-token: write }
     uses: companygraph/mcp-server/.github/workflows/kpi-google.yml@v0.52.0
-    secrets: inherit
+    with: { app-id: ${{ vars.KPI_APP_ID }} }
+    secrets: { KPI_APP_PRIVATE_KEY: ${{ secrets.KPI_APP_PRIVATE_KEY }} }
 ```
 
 - [ ] The pull request's terraform plan (run as `terraform-plan@`) shows the bucket, the service account and the two bindings to add and nothing to destroy; the PR body quotes the plan's summary line.
