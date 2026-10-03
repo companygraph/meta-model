@@ -4,7 +4,7 @@ A control says what holds a rule, and the rules and controls spec of September 3
 
 Status: decided by the owner on October 3, 2026: a KPI names the controls it assesses in a field of its own, `assesses`, rather than widening `measures`; the field is built together with the first KPI that uses it, Ruleset Bypasses; its values are kept in a reports bucket of its own per organization, `kpi-reports-<project>`, beside the chat's reports bucket and not inside it; the bypasses are read with a GitHub App per organization, with Administration read on all its repositories.
 
-Amended by the owner later on October 3, 2026, once the first weeks were read: of 23 bypasses in week 39, 21 were merges of a branch that was behind main with every required check passed, and 2 were merges while a required check was still running. The KPI counts only the second kind, the merges that went past a check, and is named Merges Past Their Checks; the weekly object keeps both kinds. The GitHub Apps gained Checks, Contents and Pull requests read to tell them apart.
+Amended by the owner later on October 3, 2026, once the first weeks were read: of 20 bypasses in week 39, 18 were merges of a branch that was behind main with every required check passed, and 2 were merges before a required check had run. The KPI counts only the second kind, the merges that went past a check, and is named Merges Past Their Checks; the weekly object keeps both kinds. The GitHub Apps gained Checks, Contents and Pull requests read to tell them apart.
 
 ## Where this comes from
 
@@ -42,7 +42,7 @@ A rule suite with result `bypass` records that a rule did not pass when a change
 - **Behind main:** the pull request's head had every required check of the branch's rules completed with success before the merge, and the branch lacked commits the default branch had. The checks passed against a main that had since moved; nothing went untested on the pull request.
 - **Past its checks:** a required check had not completed with success by the merge (still running, failed, or never reported), or the change reached the branch with no pull request at all, or a rule other than required status checks was bypassed. Something went past a check.
 
-The required checks are the contexts the branch's rules name (`GET /repos/{owner}/{repo}/rules/branches/{branch}`); a check run counts when it completed with conclusion `success` at or before the pull request's `merged_at`. A bypass the job cannot classify, because the pull request, its check runs or the comparison cannot be read, counts as past its checks, the side a wrong guess can be undone from.
+The required checks are the contexts the ruleset named at the merge, read from its history (`GET /repos/{owner}/{repo}/rulesets/{id}/history`); where that history cannot be read, as GitHub refuses it to an App, the rule suite's own count of required checks at the merge decides, met only by checks today's rules name (`GET /repos/{owner}/{repo}/rules/branches/{branch}`), and a check required today but not then can, if it ran green, stand in for one that never started; a check run counts when it completed with conclusion `success` at or before the pull request's `merged_at`. A bypass the job cannot classify, because the pull request, its check runs or the comparison cannot be read, counts as past its checks, the side a wrong guess can be undone from.
 
 ## The first KPI: Merges Past Their Checks
 
