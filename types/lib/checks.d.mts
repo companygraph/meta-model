@@ -45,6 +45,29 @@ export type TypeEntry = {
         kind: string;
     };
     /**
+     * An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
+     */
+    gathers?: {
+        by: string;
+        field: string;
+        least: number;
+    };
+    /**
+     * An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
+     */
+    binds?: {
+        section: string;
+        by: string;
+        field: string;
+    };
+    /**
+     * The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
+     */
+    replaced?: {
+        field: string;
+        status: string;
+    };
+    /**
      * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
      */
     expires?: string;
@@ -86,6 +109,9 @@ export type Check = {
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {{ section: string, column: string, names: string, kind?: string }} [typeCells] A string column whose cell may name an entity of the type `names`, owned by the page's own owner: a cell that names one names it exactly, of the `kind` given where one is, and never one of another owner's alone.
  * @property {{ field: string, kind: string }} [refKind] A reference field whose target carries this value in its own `kind`.
+ * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
+ * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
+ * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
  * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**

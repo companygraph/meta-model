@@ -163,3 +163,75 @@ test("an aggregate whose root is an entity passes, one whose root is a value obj
   ]);
   assert.deepEqual(roots(billing(aggregate("Ghost"))), []);
 });
+
+// --- A question kind holds two, a rule binds more than one, a replaced call carries one status --
+
+const questions = (kinds, asked) => new Map([
+  ["meta/core/question-kind-schema.md", core("question-kind")],
+  ["meta/core/question-schema.md", core("question")],
+  ...kinds.map((k, i) => [`model/question-kinds/${k.toLowerCase()}.md`, page([`rank: ${(i + 1) * 10}`], k)]),
+  ...asked.map((k, i) => [`model/questions/q${i}.md`, page([`kind: ${k}`], `Question ${i}?`)]),
+]);
+const kinds = (files) => run(files).failures.filter((f) => f.includes("gathers at least"));
+
+test("a question kind named by two questions passes, and one named by one or none fails", () => {
+  assert.deepEqual(kinds(questions(["Product"], ["Product", "Product"])), []);
+  assert.deepEqual(kinds(questions(["Product", "Company"], ["Product", "Product", "Company"])), [
+    "model/question-kinds/company.md: 1 question page names it in `kind`; a question-kind gathers at least 2, and one with fewer is folded into the nearest (R16)",
+  ]);
+  assert.match(kinds(questions(["Product", "Company"], ["Product", "Product"]))[0], /company\.md: 0 question pages name it/);
+});
+
+test("an instance holding at most one question asks nothing of its kinds", () => {
+  assert.deepEqual(kinds(questions(["Product", "Company"], ["Product"])), []);
+  assert.deepEqual(kinds(questions(["Product"], [])), []);
+});
+
+const appliesTo = (rows) => rows.length ? `\n## Applies to\n\n| Type | Entity | Owner |\n| --- | --- | --- |\n${rows.map((r) => `| ${r} |\n`).join("")}` : "";
+const rules = (rows, enforced = false) => new Map([
+  ["meta/core/rule-schema.md", core("rule")],
+  ["meta/core/control-schema.md", core("control")],
+  ["model/rules/a-change-is-reviewed.md", page(["modality: must"], "A change is reviewed", `\n## Why\n\nProse.\n${appliesTo(rows)}`)],
+  ["model/controls/main-requires-a-review.md", page(["kind: preventive", "mode: automated", ...(enforced ? ["enforces:", "  - A change is reviewed"] : [])], "Main requires a review", "\n## How it is carried out\n\nProse.\n")],
+]);
+const binds = (files) => run(files).failures.filter((f) => f.includes("binds more than one"));
+
+test("a rule naming one entity and enforced by no control fails, naming the section and the control type", () => {
+  assert.deepEqual(binds(rules(["role | Reviewer | "])), [
+    'model/rules/a-change-is-reviewed.md: "## Applies to" names one entity and no control names this rule in `enforces`; a rule binds more than one or is enforced, and a refusal only one makes stays on that one\'s page (R16)',
+  ]);
+});
+
+test("a rule naming one entity twice is still one entity, and fails", () => {
+  assert.equal(binds(rules(["role | Reviewer | ", "role | Reviewer | "])).length, 1);
+});
+
+test("a rule naming two entities, one a control enforces, and one with no rows all pass", () => {
+  assert.deepEqual(binds(rules(["role | Reviewer | ", "process | Delivery | "])), []);
+  assert.deepEqual(binds(rules(["role | Reviewer | "], true)), []);
+  assert.deepEqual(binds(rules([])), []);
+});
+
+const decisions = (calls) => new Map([
+  ["meta/core/decision-schema.md", core("decision")],
+  ...calls.map(([name, status, supersedes = []], i) => [`model/decisions/2026-d${i}.md`,
+    page(["decided: 2026-01", "kind: Architecture", `status: ${status}`, "by: Owner", ...(supersedes.length ? ["supersedes:", ...supersedes.map((s) => `  - ${s}`)] : [])], name)]),
+]);
+const replaced = (files) => run(files).failures.filter((f) => f.includes("carries one") || f.includes("still standing"));
+
+test("superseded calls sharing one status that no standing call carries pass, and so does an instance with no supersedes", () => {
+  assert.deepEqual(replaced(decisions([["A", "Replaced"], ["B", "Replaced"], ["C", "Standing", ["A", "B"]]])), []);
+  assert.deepEqual(replaced(decisions([["A", "Standing"], ["B", "Proposed"]])), []);
+});
+
+test("superseded calls carrying two statuses fail once, naming each status and its pages", () => {
+  assert.deepEqual(replaced(decisions([["A", "Replaced"], ["B", "Dropped"], ["C", "Standing", ["A", "B"]]])), [
+    'the decision entities another names in `supersedes` carry 2 values of `status`: "Replaced" (model/decisions/2026-d0.md); "Dropped" (model/decisions/2026-d1.md); a replaced decision carries one (R16)',
+  ]);
+});
+
+test("a call nothing supersedes that carries the replaced status fails, naming it", () => {
+  assert.deepEqual(replaced(decisions([["A", "Replaced"], ["B", "Replaced"], ["C", "Standing", ["A"]]])), [
+    'model/decisions/2026-d1.md: `status` is "Replaced", which every decision named in another\'s `supersedes` carries, and none names this one there; a decision still standing does not carry it (R16)',
+  ]);
+});
