@@ -51,7 +51,7 @@ Nothing owns a rule and a rule owns nothing: a rule reaches across the seats, pr
 
 ## Purpose
 
-A rule is a statement under the company's own authority that obliges, forbids or permits something (SBVR; BMM's directive). It answers "what must, must not or may happen here, and why?" for a person or an agent about to act. It is for what reaches across: a refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. Whether a machine or a person holds a change to the rule is read from the controls that enforce it, which name the rule; the rule names none of them. A rule binds more than one seat, process or phase, or is what a control checks, and a refusal only one of them makes stays in that page's `## What it never does`.
+A rule is a statement under the company's own authority that obliges, forbids or permits something (SBVR; BMM's directive). It answers "what must, must not or may happen here, and why?" for a person or an agent about to act. It is for what reaches across: a refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. Whether a machine or a person holds a change to the rule is read from the controls that enforce it, which name the rule; the rule names none of them. A rule binds more than one seat, process or phase, or is what a control checks, and a refusal only one of them makes stays in that page's `## What it never does`. A rule with no `## Applies to` rows applies everywhere and so binds them all.
 
 ## Writing rules
 
