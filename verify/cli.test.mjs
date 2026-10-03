@@ -325,10 +325,10 @@ test("the hook runs the checker in a git-dependency layout whose bin lost its ex
     fs.mkdirSync(path.join(pkg, "bin"), { recursive: true });
     for (const entry of ["package.json", "lib", "core", "form", "packs", "agents"])
       fs.symlinkSync(path.join(repo, entry), path.join(pkg, entry));
-    for (const file of fs.readdirSync(path.join(repo, "bin"))) {
-      fs.copyFileSync(path.join(repo, "bin", file), path.join(pkg, "bin", file));
-      fs.chmodSync(path.join(pkg, "bin", file), 0o644);
-    }
+    // bin/ holds a folder, bin/judges/, so it is copied whole and every file in it loses its bit.
+    fs.cpSync(path.join(repo, "bin"), path.join(pkg, "bin"), { recursive: true });
+    for (const file of fs.readdirSync(path.join(pkg, "bin"), { recursive: true }))
+      if (fs.statSync(path.join(pkg, "bin", file)).isFile()) fs.chmodSync(path.join(pkg, "bin", file), 0o644);
     fs.mkdirSync(path.join(dir, "node_modules/.bin"));
     fs.symlinkSync("../companygraph-meta-model/bin/companygraph.mjs", path.join(dir, "node_modules/.bin/companygraph"));
     assert.equal(fs.statSync(path.join(dir, "node_modules/.bin/companygraph")).mode & 0o111, 0, "the layout's bin is not executable");

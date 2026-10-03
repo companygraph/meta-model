@@ -13,7 +13,8 @@
     "./plan": { "types": "./types/lib/plan.d.mts", "default": "./lib/plan.mjs" },
     "./write": { "types": "./types/lib/write.d.mts", "default": "./lib/write.mjs" },
     "./obsidian": { "types": "./types/lib/obsidian.d.mts", "default": "./lib/obsidian.mjs" },
-    "./localization": { "types": "./types/lib/localization.d.mts", "default": "./lib/localization.mjs" }
+    "./localization": { "types": "./types/lib/localization.d.mts", "default": "./lib/localization.mjs" },
+    "./questions": { "types": "./types/lib/questions.d.mts", "default": "./lib/questions.mjs" }
   },
   "scripts": {
     "build": "tsc",
@@ -33,6 +34,7 @@
     "test:untar": "node --test verify/untar.test.mjs",
     "test:fetch-core": "node --test verify/fetch-core.test.mjs",
     "test:obsidian": "node --test verify/obsidian.test.mjs",
+    "test:judge": "node --test verify/questions.test.mjs verify/judge.test.mjs verify/judge-faults.test.mjs",
     "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs"
   },
   "devDependencies": { "@types/node": "22.20.4", "markdownlint-cli2": "0.23.2", "typescript": "7.0.2" }
