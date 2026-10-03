@@ -92,15 +92,59 @@ const example = () => {
 };
 const BEACON = "profiles/mira-halvorsen/experiences/2022-beacon-systems.md";
 
-test("every page is asked every writing rule of its schema, verbatim, with the purpose and the page whole", () => {
+const NORTHWIND = "profiles/mira-halvorsen/experiences/2018-northwind-atelier.md";
+
+test("a page is asked every writing rule whose subject it has, verbatim, numbered as in its schema, with the purpose and the page whole", () => {
   const { asked } = questionsOf(example());
   const page = asked.find((r) => r.path === BEACON);
   const rules = writingRulesOf(schema("experience"));
-  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })));
+  const ids = page.questions.filter((q) => q.kind === "rule").map((q) => q.id);
+  assert.ok(!ids.includes("r14"), "Beacon has no `## Ending`");
+  assert.ok(ids.includes("r12"), "Beacon has a References table with its `What` column");
+  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })).filter((q) => q.id !== "r14"));
   assert.equal(page.state.entity, exampleFiles().get(BEACON));
   assert.equal(page.state.purpose, purposeOf(schema("experience")));
   assert.equal(page.type, "experience");
   assert.equal(page.name, "Splitting the billing domain");
+});
+
+test("a rule left out for want of its subject is named, with what the page lacks", () => {
+  const { asked, skipped } = questionsOf(example());
+  const ids = (p) => asked.find((r) => r.path === p).questions.map((q) => q.id);
+  assert.ok(ids(NORTHWIND).includes("r14"), "Northwind has an `## Ending`");
+  assert.ok(!ids(NORTHWIND).includes("r12"), "Northwind has no References table");
+  assert.ok(ids(NORTHWIND).includes("r1") && ids(BEACON).includes("r1"), "a rule that opens with a field is asked either way");
+  assert.deepEqual(skipped.find((s) => s.path === BEACON && s.id === "r14"),
+    { path: BEACON, type: "experience", id: "r14", rule: writingRulesOf(schema("experience"))[13], without: "without `## Ending`" });
+  assert.equal(skipped.find((s) => s.path === NORTHWIND && s.id === "r12")?.without, "without a `What` column");
+});
+
+test("a concept without a Relations table is not asked the rule about As, and one with it is", () => {
+  const { asked, skipped } = questionsOf(example());
+  const ids = (p) => asked.find((r) => r.path === p).questions.map((q) => q.id);
+  assert.ok(ids("concepts/contract.md").includes("r4"));
+  assert.ok(!ids("concepts/customer.md").includes("r4"));
+  assert.equal(skipped.find((s) => s.path === "concepts/customer.md" && s.id === "r4")?.without, "without an `As` column");
+});
+
+test("a table without the optional column its rule is about leaves the rule unasked", () => {
+  const files = exampleFiles(), schemas = coreSchemas();
+  const text = files.get("concepts/contract.md")
+    .replace("| Concept | Cardinality | As |\n| --- | --- | --- |", "| Concept | Cardinality |\n| --- | --- |")
+    .replace(/^(\| [^|]+\| [^|]+\|) [^|]+\|$/gm, "$1");
+  assert.ok(!text.includes("| As |") && text.includes("| Customer | one |\n"), text);
+  files.set("concepts/contract.md", text);
+  const { asked } = questionsOf({ graph: parseInstance(files, { schemas }), files, schemas });
+  assert.ok(!asked.find((r) => r.path === "concepts/contract.md").questions.some((q) => q.id === "r4"));
+});
+
+test("a page whose every rule lacks its subject and that groups nothing is named, and says why", () => {
+  const thing = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `## Notes` | No | Prose. |\n\n## Writing rules\n\n- `## Notes` are written in full sentences.\n";
+  const graph = { entities: [{ path: "things/a.md", type: "thing", name: "A", id: "x", owner: null, tagline: "", sections: [] }] };
+  const { asked, notAsked, skipped } = questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", thing]]) });
+  assert.deepEqual(asked, []);
+  assert.deepEqual(notAsked, [{ path: "things/a.md", why: "it has nothing a writing rule of its schema is about, and nothing grouped" }]);
+  assert.equal(skipped.length, 1);
 });
 
 test("a grouped bullet is a choice among the instance's kinds, each described by its own page", () => {

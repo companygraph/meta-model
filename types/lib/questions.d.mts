@@ -27,9 +27,17 @@ export type NotAsked = {
     path: string;
     why: string;
 };
+export type Skipped = {
+    path: string;
+    type: string;
+    id: string;
+    rule: string;
+    without: string;
+};
 export type Questions = {
     asked: Request[];
     notAsked: NotAsked[];
+    skipped: Skipped[];
 };
 export type Subjects = {
     sections: Set<string>;
@@ -63,7 +71,8 @@ export type Band = {
  * @typedef {RuleQuestion | GroupQuestion} Question
  * @typedef {{ path: string; type: string; name: string; state: { purpose: string; entity: string }; questions: Question[] }} Request
  * @typedef {{ path: string; why: string }} NotAsked
- * @typedef {{ asked: Request[]; notAsked: NotAsked[] }} Questions
+ * @typedef {{ path: string; type: string; id: string; rule: string; without: string }} Skipped
+ * @typedef {{ asked: Request[]; notAsked: NotAsked[]; skipped: Skipped[] }} Questions
  * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string> }} Subjects
  * @typedef {{ sections: string[]; column: string | null }} Subject
  */
