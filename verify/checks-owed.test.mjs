@@ -235,3 +235,56 @@ test("a call nothing supersedes that carries the replaced status fails, naming i
     'model/decisions/2026-d1.md: `status` is "Replaced", which every decision named in another\'s `supersedes` carries, and none names this one there; a decision still standing does not carry it (R16)',
   ]);
 });
+
+
+// --- A seat's required skill not claimed, and the company's address repeated: notes ---------
+
+const skills = (names) => names.length ? `\n## Skills\n\n| Skill | Level |\n| --- | --- |\n${names.map((n) => `| ${n} | Proficient |\n`).join("")}` : "";
+const alsoAt = (urls) => urls.length ? `\n## Also at\n\n| Where | URL |\n| --- | --- |\n${urls.map((u) => `| Somewhere | ${u} |\n`).join("")}` : "";
+const people = ({ nature = "human", roles = ["Backend Engineer"], claims = [], location = null, urls = [] } = {}) => new Map([
+  ["meta/core/profile-schema.md", core("profile")],
+  ["meta/core/role-schema.md", core("role")],
+  ["meta/core/identity-schema.md", core("identity")],
+  ["model/identity.md", page(["email: hello@beacon.example", "location: Rotterdam", "url: https://beacon.example"], "Beacon Systems", alsoAt(["https://github.example/beacon"]))],
+  ["model/roles/backend-engineer.md", page(["requires:", "  - Java", "  - Testing"], "Backend Engineer")],
+  ["model/roles/reviewer.md", page(["requires:", "  - Testing"], "Reviewer")],
+  ["model/profiles/mira/mira.md", page([`nature: ${nature}`, ...(roles.length ? ["roles:", ...roles.map((r) => `  - ${r}`)] : []),
+    "email: hello@beacon.example", ...(location ? [`location: ${location}`] : [])], "Mira", skills(claims) + alsoAt(urls))],
+]);
+const notesOf = (files) => run(files).notes;
+
+test("a person holding a seat is noted once per required skill they do not claim", () => {
+  assert.deepEqual(notesOf(people({ claims: ["Java"] })), ["gap Mira: Backend Engineer requires Testing"]);
+  assert.deepEqual(notesOf(people({ claims: [] })), ["gap Mira: Backend Engineer requires Java", "gap Mira: Backend Engineer requires Testing"]);
+});
+
+test("two seats requiring one skill are noted once each, and a seat listed twice once", () => {
+  assert.deepEqual(notesOf(people({ roles: ["Backend Engineer", "Reviewer", "Reviewer"], claims: ["Java"] })),
+    ["gap Mira: Backend Engineer requires Testing", "gap Mira: Reviewer requires Testing"]);
+});
+
+test("an agent, a person who claims every required skill and a seat naming nothing are never noted", () => {
+  assert.deepEqual(notesOf(people({ nature: "agent" })), []);
+  assert.deepEqual(notesOf(people({ claims: ["Java", "Testing"] })), []);
+  assert.deepEqual(notesOf(people({ roles: ["Ghost"] })), []);
+});
+
+test("a person's location equal to identity's is noted, and one that differs is not", () => {
+  const all = { claims: ["Java", "Testing"] };
+  assert.deepEqual(notesOf(people({ ...all, location: "Rotterdam" })),
+    ['model/profiles/mira/mira.md: `location` is "Rotterdam", as identity\'s is; identity holds it, and this page carries its own only where it differs']);
+  assert.deepEqual(notesOf(people({ ...all, location: "Bergen" })), []);
+});
+
+test("a person's URL equal to identity's own or to one of its rows is noted, without a trailing slash or case", () => {
+  const all = { claims: ["Java", "Testing"] };
+  assert.deepEqual(notesOf(people({ ...all, urls: ["https://Beacon.example/", "https://github.example/beacon", "https://github.example/mira"] })), [
+    'model/profiles/mira/mira.md: "## Also at" lists https://Beacon.example/, which identity holds as its `url`; identity holds it, and this page carries its own only where it differs',
+    'model/profiles/mira/mira.md: "## Also at" lists https://github.example/beacon, which identity holds as a row of its "## Also at"; identity holds it, and this page carries its own only where it differs',
+  ]);
+});
+
+test("a person's mail equal to identity's is two facts and never noted, and an agent's page is not read", () => {
+  assert.deepEqual(notesOf(people({ claims: ["Java", "Testing"] })), []);
+  assert.deepEqual(notesOf(people({ nature: "agent", location: "Rotterdam", urls: ["https://beacon.example"] })), []);
+});

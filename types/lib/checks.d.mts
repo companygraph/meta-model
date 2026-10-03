@@ -68,6 +68,33 @@ export type TypeEntry = {
         status: string;
     };
     /**
+     * What a page whose `when.field` is `when.is` claims: each entity its `field` names lists in its own `requires` what the page's `section` table names in `column`, and one it does not name is noted as a gap.
+     */
+    claims?: {
+        when: {
+            field: string;
+            is: string;
+        };
+        field: string;
+        requires: string;
+        section: string;
+        column: string;
+    };
+    /**
+     * What a page whose `when.field` is `when.is` repeats of the singular type `of`: each of `fields` equal to its, and each URL of the `section` table's `column` equal to its `url` or one of its own rows, is noted.
+     */
+    restates?: {
+        when: {
+            field: string;
+            is: string;
+        };
+        of: string;
+        fields: string[];
+        section: string;
+        column: string;
+        url: string;
+    };
+    /**
      * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
      */
     expires?: string;
@@ -112,6 +139,8 @@ export type Check = {
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
+ * @property {{ when: { field: string, is: string }, field: string, requires: string, section: string, column: string }} [claims] What a page whose `when.field` is `when.is` claims: each entity its `field` names lists in its own `requires` what the page's `section` table names in `column`, and one it does not name is noted as a gap.
+ * @property {{ when: { field: string, is: string }, of: string, fields: string[], section: string, column: string, url: string }} [restates] What a page whose `when.field` is `when.is` repeats of the singular type `of`: each of `fields` equal to its, and each URL of the `section` table's `column` equal to its `url` or one of its own rows, is noted.
  * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**
