@@ -164,10 +164,21 @@ test("a type matching a term only by a plural in -ies fails, and a leading list 
   assert.equal(terms("LIST OF Invoice").length, 1);
 });
 
+// A cell such as `date` or `status` in a context that holds a design `Date` or `Status` still
+// fails, since a type names a term exactly; the message gives both ways out, the design named
+// exactly or the cell renamed where a plain type is meant.
+test("a plain type that matches a design only by case is told both ways out", () => {
+  const f = typeCells(billing(design("billing", "Date", "value object"), design("billing", "Status", "entity"),
+    design("billing", "Line", "value object", attributes(["date", "status"]))));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.match(f[0], /says "date", and the concept-design it matches here is "Date"; a type names a term exactly: write "Date", or rename the cell if a plain type is meant \(R16\)/);
+  assert.match(f[1], /says "status", which matches "Status", a concept-design of kind `entity`; a type names one of kind `value object`, and any other is a relation: write it as one, or rename the cell if a plain type is meant \(R16\)/);
+});
+
 test("an attribute matching an entity only loosely is told an entity is a relation, and a payload is told to name it exactly", () => {
   const f = typeCells(billing(design("billing", "Line", "value object", attributes(["invoice"]))));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /line\.md: `Type` in "## Attributes" says "invoice", which matches "Invoice", a concept-design of kind `entity`; a type names one of kind `value object`, and any other is a relation \(R16\)/);
+  assert.match(f[0], /line\.md: `Type` in "## Attributes" says "invoice", which matches "Invoice", a concept-design of kind `entity`; a type names one of kind `value object`, and any other is a relation: write it as one, or rename the cell if a plain type is meant \(R16\)/);
   const p = typeCells(billing(event("billing", "Invoice issued", ["invoice"])));
   assert.equal(p.length, 1, p.join("\n"));
   assert.match(p[0], /the concept-design it matches here is "Invoice"; a type names a term exactly/);
@@ -229,6 +240,13 @@ test("a rule naming one entity twice is still one entity, and fails", () => {
 
 test("a rule naming one entity twice, its type written in another case, is still one entity, and fails", () => {
   assert.equal(binds(rules(["role | Reviewer | ", "Role | Reviewer | "])).length, 1);
+});
+
+// A role is owned by nothing, so an Owner cell on its row is R4's finding and names no other
+// entity: a row with a stray owner and the same row without one are one role.
+test("a stray owner on a row of an unowned type does not make it a second entity", () => {
+  assert.equal(binds(rules(["role | Reviewer | Delivery", "role | Reviewer | "])).length, 1);
+  assert.deepEqual(binds(rules(["role | Reviewer | Delivery", "role | Reviewer | "], true)), []);
 });
 
 test("two rows differing only by their owner name two entities, and pass", () => {
