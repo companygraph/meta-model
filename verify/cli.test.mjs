@@ -1733,6 +1733,12 @@ const upgradeRepo = () => {
   const DECISION = "model/decisions/2026-core-is-vendored.md", AGGREGATE = "model/bounded-contexts/billing/aggregates/invoice.md";
   return { root, g, write, decision, aggregate, commit, ids, DECISION, AGGREGATE };
 };
+// What a release does to a vendored unit: its schema changes and its manifest's version moves.
+const release = (root, unit, schema) => {
+  fs.appendFileSync(path.join(root, `meta/${unit}/${schema}-schema.md`), "\nA sentence a release added.\n");
+  const at = path.join(root, `meta/${unit}/manifest.json`);
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), version: "99.0.0" }) + "\n");
+};
 const DECISION_LINE = /^ {2}the decision schema changed in this range: decision text not held$/m;
 const LABEL_LINE = /^ {2}the aggregate schema changed in this range: aggregate label text not held$/m;
 
@@ -1759,7 +1765,7 @@ test("ids --range still refuses a decision with a word changed, after the form",
 test("ids --range over a change to the vendored decision schema does not hold a decision rewritten in it, and says so once", () => {
   const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
   write(DECISION, decision("Architect"));
-  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a release added.\n");
+  release(root, "core", "decision");
   commit();
   const said = ids();
   assert.equal(said.status, 0, said.stderr);
@@ -1767,11 +1773,34 @@ test("ids --range over a change to the vendored decision schema does not hold a 
   assert.equal(said.stdout.match(/not held/g)?.length, 1, said.stdout);
 });
 
+// A hand edit of the vendored schema is no release: with the unit's version where it was, the
+// decision rewritten is refused as it would be anywhere.
+test("ids --range over a hand edit of the vendored decision schema, its version unmoved, still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a hand added.\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
+  assert.doesNotMatch(said.stdout, /not held/);
+});
+
+test("ids --range over a version moved with the schema file untouched still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  const at = path.join(root, "meta/core/manifest.json");
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), version: "99.0.0" }) + "\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+});
+
 test("ids --range over a decision schema change still holds a label moved in the same range", () => {
   const { root, write, decision, aggregate, commit, ids, DECISION, AGGREGATE } = upgradeRepo();
   write(DECISION, decision("Architect"));
   write(AGGREGATE, aggregate("INV-9"));
-  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a release added.\n");
+  release(root, "core", "decision");
   commit();
   const said = ids();
   assert.equal(said.status, 3, said.stdout);
@@ -1782,7 +1811,7 @@ test("ids --range over a decision schema change still holds a label moved in the
 test("ids --range over a change to the aggregate schema does not hold a label moved in it", () => {
   const { root, write, aggregate, commit, ids, AGGREGATE } = upgradeRepo();
   write(AGGREGATE, aggregate("INV-9"));
-  fs.appendFileSync(path.join(root, "meta/software/aggregate-schema.md"), "\nA sentence a release added.\n");
+  release(root, "software", "aggregate");
   commit();
   const said = ids();
   assert.equal(said.status, 0, said.stderr);

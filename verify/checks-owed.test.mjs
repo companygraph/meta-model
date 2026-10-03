@@ -253,6 +253,14 @@ test("two rows differing only by their owner name two entities, and pass", () =>
   assert.deepEqual(binds(rules(["phase | Review | Delivery", "phase | Review | Release"])), []);
 });
 
+// An aggregate is owned by a bounded context, which only the pack declares: the same name in two
+// contexts is two entities, and the lookup of what an owner makes of a row reads the pack too.
+test("two rows naming same-named aggregates of two contexts name two entities, and pass", () => {
+  const files = rules(["aggregate | Invoice | Billing", "aggregate | Invoice | Ledger"]);
+  for (const n of ["bounded-context", "aggregate"]) files.set(`meta/software/${n}-schema.md`, pack(n));
+  assert.deepEqual(binds(files), []);
+});
+
 test("a rule naming two entities, one a control enforces, and one with no rows all pass", () => {
   assert.deepEqual(binds(rules(["role | Reviewer | ", "process | Delivery | "])), []);
   assert.deepEqual(binds(rules(["role | Reviewer | "], true)), []);

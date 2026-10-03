@@ -104,6 +104,13 @@ export declare function changedFilesOf(cwd: string, a: string, b: string, paths:
 /**
  * @param {string} cwd
  * @param {string} rev
+ * @param {string} path
+ * @returns {string | null}
+ */
+export declare function versionAt(cwd: string, rev: string, path: string): string | null;
+/**
+ * @param {string} cwd
+ * @param {string} rev
  * @param {string} [model]
  * @returns {Map<string, string>}
  */

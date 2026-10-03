@@ -36,7 +36,7 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
@@ -1173,13 +1173,20 @@ function ids(argv) {
       // A release that changes the vendored schema governing one of these checks, the decision
       // schema or a schema whose type declares labels, may reshape the pages that check holds in
       // the same range, which the check would refuse with no way through. Where the range changes
-      // that schema, the check stands aside for that type and says so; any other upgrade, re-pin
-      // or resync is held as always, and the id check always runs.
+      // that schema and moves the version of the unit it is vendored from, core's or its pack's,
+      // the check stands aside for that type and says so: a release is what changes a schema
+      // here, and a hand edit of one with the version where it was is held like any page. Any
+      // other upgrade, re-pin or resync is held as always, and the id check always runs.
       const governed = types.filter((t) => t.kept || t.labels);
       const changedSchemas = changedFilesOf(root, fork, ends[1], governed.map((t) => schemaOf(t.type)));
+      const released = (/** @type {{ dir: string }} */ t) => {
+        const at = `${t.dir}/manifest.json`;
+        const before = versionAt(root, fork, at), after = versionAt(root, ends[1], at);
+        return after !== null && before !== after;
+      };
       /** @type {import("../lib/checks.mjs").TypeEntry[]} */
       const held = types.map((t) => {
-        if (!(t.kept || t.labels) || !changedSchemas.has(schemaOf(t.type))) return t;
+        if (!(t.kept || t.labels) || !changedSchemas.has(schemaOf(t.type)) || !released(t)) return t;
         notes.push(`  the ${t.type} schema changed in this range: ${t.type}${t.kept ? "" : " label"} text not held`);
         const { kept, labels, ...rest } = t;
         return rest;

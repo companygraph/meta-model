@@ -157,6 +157,13 @@ test("formattedOf with no tool to run gives the texts back as they were, and say
   assert.match(error ?? "", /could not be run/);
 });
 
+test("formattedOf where the tool exits 1 with no hit line is a failure to run, and says why", () => {
+  const texts = new Map([["head/model/a.md", "# A\n\n* one\n"]]);
+  const { formatted, error } = formattedOf(texts, { linter: { command: process.execPath, args: ["-e", "console.error('npm error 404 not found'); process.exit(1)", "--"] } });
+  assert.equal(formatted.get("head/model/a.md"), "# A\n\n* one\n");
+  assert.match(error ?? "", /exited 1/);
+});
+
 test("formattedOf with nothing handed in runs nothing", () => {
   const { formatted, error } = formattedOf(new Map(), { linter: { command: path.join(os.tmpdir(), "no-such-markdownlint"), args: [] } });
   assert.equal(formatted.size, 0);
