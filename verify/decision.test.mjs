@@ -48,7 +48,10 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["model/profiles/mira-halvorsen/experiences/2022-beacon.md", "---\nstart: 2022-02\n---\n\n# Splitting the billing domain\n\n> A period.\n"],
   ["model/decision-kinds/architecture.md", "---\nsource: Local\n---\n\n# Architecture\n\n> How the tooling is built.\n\n## What it means\n\nProse.\n"],
   ["model/decision-statuses/standing.md", "---\nsource: Local\n---\n\n# Standing\n\n> Holds as written.\n\n## What it means\n\nProse.\n"],
-  ["model/decisions/2026-submodule.md", decision("Core is a submodule", ["source: Local", "decided: 2026-08-20", "kind: Architecture", "status: Standing", "by: Owner"])],
+  // The call GOOD supersedes carries the status kept for a replaced call, and no standing call
+  // carries it, as the replaced-status check holds.
+  ["model/decision-statuses/replaced.md", "---\nsource: Local\n---\n\n# Replaced\n\n> Read through the call that replaced it.\n\n## What it means\n\nProse.\n"],
+  ["model/decisions/2026-submodule.md", decision("Core is a submodule", ["source: Local", "decided: 2026-08-20", "kind: Architecture", "status: Replaced", "by: Owner"])],
   [`model/decisions/${filename}`, decision("Core is vendored at a named release", fm, opts)],
 ]);
 const about = (fm, opts, filename, ...words) =>
