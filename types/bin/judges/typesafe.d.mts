@@ -25,12 +25,13 @@ export declare function fromWire(request: Request, body: unknown): Answers;
 export declare class KeyRefused extends Error {
     constructor();
 }
+export declare const REQUEST_BUDGET = 150000;
 /**
  * @param {Request} request
  * @param {{ key: string; fetch?: typeof globalThis.fetch; sleep?: (ms: number) => Promise<void>; attempts?: number }} options
  * @returns {Promise<Answers>}
  */
-export declare function ask(request: Request, { key, fetch, sleep, attempts }: {
+export declare function ask(request: Request, options: {
     key: string;
     fetch?: typeof globalThis.fetch;
     sleep?: (ms: number) => Promise<void>;

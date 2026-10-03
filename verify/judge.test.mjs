@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { SERVICE, toWire, fromWire, ask, KeyRefused } from "../bin/judges/typesafe.mjs";
+import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET } from "../bin/judges/typesafe.mjs";
 
 const request = {
   path: "a.md", type: "experience", name: "A", state: { purpose: "P.", entity: "# A\n" },
@@ -22,7 +22,7 @@ const body = { model: "jev-1.13.0", answers: {
   r1: { type: "noul", noul: 0.83 },
   g1: { type: "choice", choice: "Delivery", probabilities: { Delivery: 0.9, Results: 0.1 }, confidence: 0.8 },
 } };
-const reply = (status, json, headers = {}) => ({ ok: status < 300, status, headers: new Headers(headers), json: async () => json });
+const reply = (status, json, headers = {}) => ({ ok: status < 300, status, headers: new Headers(headers), json: async () => json, text: async () => JSON.stringify(json) });
 
 test("a rule is a noul carrying the rule verbatim, a bullet a choice over the options, on the pinned model", () => {
   const wire = toWire(request);
@@ -163,7 +163,7 @@ test("a page the service fails is named under not asked, and the run goes on", a
   try {
     const { code, out } = await judge(fresh(), { input: "y\n", env: { ...withoutKey(), TYPESAFE_API_KEY: "sk-secret", COMPANYGRAPH_TYPESAFE_URL: fake.url } });
     assert.equal(code, 0);
-    assert.match(out, /^ {2}model\/identity\.md: TypeSafe answered 500$/m);
+    assert.match(out, /^ {2}model\/identity\.md: TypeSafe answered 500(: .+)?$/m);
   } finally {
     fake.close();
   }
@@ -174,4 +174,26 @@ test("judge outside an instance cannot run, and says why", async () => {
   assert.equal(code, 1);
   // The error's own words: the usage text says "a repository that is not an instance" too.
   assert.match(err, /is not an instance: it has no \.companygraph\/manifest\.json/);
+});
+
+test("a page whose questions outgrow one request is sent in several, each with the whole state, and the answers merged", async () => {
+  const options = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`Kind ${i}`, { summary: "x".repeat(700) }]));
+  const big = { ...request, questions: Array.from({ length: 60 }, (_, i) => ({ id: `g${i + 1}`, kind: "group", section: "Achievements", heading: "Kind 0", bullet: `Bullet ${i}.`, options })) };
+  assert.ok(JSON.stringify(toWire(big)).length > REQUEST_BUDGET, "the fixture is larger than one request");
+  const sent = [];
+  const answers = await ask(big, { key: "k", fetch: async (url, init) => {
+    const wire = JSON.parse(init.body);
+    sent.push(wire);
+    const answered = Object.fromEntries(Object.keys(wire.questions).map((id) => [id, { type: "choice", choice: "Kind 0", probabilities: { "Kind 0": 1 } }]));
+    return reply(200, { answers: answered });
+  } });
+  assert.ok(sent.length > 1);
+  assert.ok(sent.every((w) => JSON.stringify(w).length <= REQUEST_BUDGET && w.state.entity === big.state.entity));
+  assert.deepEqual(Object.keys(answers).sort(), big.questions.map((q) => q.id).sort());
+});
+
+test("a refusal carries the service's own reason, never the key", async () => {
+  const refusal = { ok: false, status: 422, headers: new Headers(), json: async () => ({}), text: async () => JSON.stringify({ detail: "questions.g1.criteria: at most 255 options" }) };
+  await assert.rejects(ask(request, { key: "sk-secret", fetch: async () => refusal }),
+    (e) => /TypeSafe answered 422: .*at most 255 options/.test(e.message) && !e.message.includes("sk-secret"));
 });

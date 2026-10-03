@@ -80,7 +80,7 @@ export declare function bulletsOf(sectionText: string): {
     heading: string | null;
     bullet: string;
 }[];
-export declare const STATE_BUDGET = 100000;
+export declare const STATE_BUDGET = 90000;
 /**
  * @param {{ graph: InstanceGraph; files: InstanceFiles; schemas: Files }} instance
  * @returns {Questions}

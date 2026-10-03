@@ -52,6 +52,44 @@ export class KeyRefused extends Error {
   }
 }
 
+// Jev reads 64k tokens in one request, state and every question together. A page with many
+// grouped bullets repeats every option's description in every choice, so its questions are
+// sent in as many requests as keep each under this many characters, three to a token with room
+// to spare, each with the whole state, and the answers are merged.
+export const REQUEST_BUDGET = 150_000;
+
+/**
+ * @param {Request} request
+ * @returns {Request[]}
+ */
+function partsOf(request) {
+  /** @type {Request[]} */
+  const parts = [];
+  /** @type {Request["questions"]} */
+  let questions = [];
+  for (const q of request.questions) {
+    if (questions.length && JSON.stringify(toWire({ ...request, questions: [...questions, q] })).length > REQUEST_BUDGET) {
+      parts.push({ ...request, questions });
+      questions = [];
+    }
+    questions.push(q);
+  }
+  if (questions.length) parts.push({ ...request, questions });
+  return parts;
+}
+
+/**
+ * @param {Request} request
+ * @param {{ key: string; fetch?: typeof globalThis.fetch; sleep?: (ms: number) => Promise<void>; attempts?: number }} options
+ * @returns {Promise<Answers>}
+ */
+export async function ask(request, options) {
+  /** @type {Answers} */
+  const answers = {};
+  for (const part of partsOf(request)) Object.assign(answers, await askOnce(part, options));
+  return answers;
+}
+
 // A rate limit (429) and an overload (529) are retried, after the `retry-after` the service
 // sends or else a doubling wait, as TypeSafe's own clients do; anything else is the page's
 // failure, and a refused key is the run's.
@@ -60,7 +98,7 @@ export class KeyRefused extends Error {
  * @param {{ key: string; fetch?: typeof globalThis.fetch; sleep?: (ms: number) => Promise<void>; attempts?: number }} options
  * @returns {Promise<Answers>}
  */
-export async function ask(request, { key, fetch = globalThis.fetch, sleep = (ms) => new Promise((done) => setTimeout(done, ms)), attempts = 4 }) {
+async function askOnce(request, { key, fetch = globalThis.fetch, sleep = (ms) => new Promise((done) => setTimeout(done, ms)), attempts = 4 }) {
   const url = process.env.COMPANYGRAPH_TYPESAFE_URL ?? URL_DEFAULT;
   for (let i = 1; ; i++) {
     const res = await fetch(url, {
@@ -75,6 +113,16 @@ export async function ask(request, { key, fetch = globalThis.fetch, sleep = (ms)
       await sleep(after > 0 ? after * 1000 : 1000 * 2 ** (i - 1));
       continue;
     }
-    throw new Error(`${SERVICE.name} answered ${res.status}`);
+    // The service's own reason, where it gave one, so a refused page says why; it never holds
+    // the key, which went only in a header.
+    const reason = await res.text().then((body) => {
+      try {
+        const detail = JSON.parse(body)?.detail;
+        return typeof detail === "string" ? detail : JSON.stringify(detail ?? body);
+      } catch {
+        return body;
+      }
+    }, () => "");
+    throw new Error(`${SERVICE.name} answered ${res.status}${reason ? `: ${reason.slice(0, 300)}` : ""}`);
   }
 }

@@ -176,3 +176,15 @@ test("an instance is read with its pages and its vendored schemas, and questions
   const page = questionsOf(instanceAt(root)).asked.find((r) => r.path === "identity.md");
   assert.equal(page.questions[0].rule, "A rule only this instance has.");
 });
+
+test("a grouped section with more entities to choose among than one choice holds asks no choice, and says so", () => {
+  const { graph, files, schemas } = example();
+  const many = Array.from({ length: 256 }, (_, i) => ({ id: `k${i}`, address: `k${i}`, type: "achievement-kind", name: `Kind ${i}`, tagline: "A kind.", fields: {}, sections: [], owner: null, path: `achievement-kinds/k${i}.md` }));
+  const { asked, notAsked } = questionsOf({ graph: { ...graph, entities: [...graph.entities, ...many] }, files, schemas });
+  assert.ok(asked.find((r) => r.path === BEACON).questions.every((q) => q.kind === "rule"));
+  assert.ok(notAsked.some((n) => n.path === BEACON && /"## Achievements" as a choice: more than 255 achievement-kind entities/.test(n.why)));
+});
+
+test("the state budget counts three characters to a token, which German pages come close to", () => {
+  assert.ok(STATE_BUDGET <= 32_000 * 3);
+});
