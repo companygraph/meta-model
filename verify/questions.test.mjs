@@ -4,7 +4,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
-import { writingRulesOf, purposeOf, bulletsOf, questionsOf, STATE_BUDGET } from "../lib/questions.mjs";
+import { writingRulesOf, purposeOf, bulletsOf, questionsOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
@@ -97,4 +97,57 @@ test("a page longer than the judge reads in one request is not asked, and is nam
   const { asked, notAsked } = questionsOf({ graph, files, schemas });
   assert.ok(!asked.some((r) => r.path === BEACON));
   assert.deepEqual(notAsked.find((n) => n.path === BEACON), { path: BEACON, why: "longer than the judge reads in one request" });
+});
+// A small asked set, by hand, so each line of the report is pinned to the answer that made it.
+const rule = (id, text) => ({ id, kind: "rule", rule: text });
+const asked = {
+  asked: [
+    { path: "a.md", type: "experience", name: "A", state: { purpose: "", entity: "" },
+      questions: [rule("r1", "One."), rule("r2", "Two."), rule("r3", "Three."), rule("r4", "Four."),
+        { id: "g1", kind: "group", section: "Achievements", heading: "Delivery", bullet: "Split a service.", options: { Delivery: {}, Results: {} } },
+        { id: "g2", kind: "group", section: "Achievements", heading: null, bullet: "Before any heading.", options: { Delivery: {}, Results: {} } }] },
+    { path: "b.md", type: "experience", name: "B", state: { purpose: "", entity: "" }, questions: [rule("r1", "One."), rule("r2", "Two.")] },
+    { path: "c.md", type: "experience", name: "C", state: { purpose: "", entity: "" }, questions: [rule("r1", "One.")] },
+  ],
+  notAsked: [{ path: "big.md", why: "longer than the judge reads in one request" }],
+};
+const answers = new Map([
+  ["a.md", { r1: { p: 0.9 }, r2: { p: 0.2 }, r3: { p: 0.5 }, r4: { p: 0.45 },
+             g1: { pick: "Results", probabilities: { Results: 0.8, Delivery: 0.2 } },
+             g2: { pick: "Delivery", probabilities: { Delivery: 0.6, Results: 0.4 } } }],
+  ["b.md", { r1: { p: 0.55 }, r2: { p: 0.95 } }],
+  ["c.md", { error: "TypeSafe answered 500" }],
+]);
+
+test("unmeasured, the report flags nothing and lists each page's lowest verdicts, marked", () => {
+  assert.equal(BAND, null);
+  const lines = reportOf(asked, answers);
+  assert.match(lines[0], /^judge: advisory/);
+  assert.ok(lines.some((l) => /probabilities unmeasured/.test(l)));
+  const a = lines.slice(lines.indexOf("model/a.md") + 1, lines.indexOf("model/b.md"));
+  assert.deepEqual(a.filter((l) => /\br\d\b/.test(l)).map((l) => l.trim().split(/\s+/).slice(0, 3)),
+    [["?", "0.20", "r2"], ["?", "0.45", "r4"], ["?", "0.50", "r3"]]);
+  assert.equal(LOWEST, 3);
+  assert.ok(a.some((l) => /\? 0\.80 {2}g1 {2}"Split a service\." stands under ### Delivery; the judge picks Results/.test(l)));
+  assert.ok(a.some((l) => /g2 {2}"Before any heading\." stands under no heading; the judge picks Delivery/.test(l)));
+  assert.ok(!lines.some((l) => l.includes("!")), "nothing is flagged unmeasured");
+});
+
+test("measured, a verdict below the band is flagged and a rule near even for most pages cannot be judged", () => {
+  const lines = reportOf(asked, answers, { band: { low: 0.4, high: 0.6 } });
+  assert.ok(lines.some((l) => /^ {2}! 0\.20 {2}r2 {2}Two\.$/.test(l)));
+  assert.ok(lines.some((l) => /^ {2}! 0\.80 {2}g1 /.test(l)), "a pick that differs from its heading, above the band, is flagged");
+  assert.ok(!lines.some((l) => /^ {2}! 0\.60 {2}g2 /.test(l)), "a pick inside the band is not");
+  const r1 = lines.find((l) => /^ {2}experience r1:/.test(l));
+  assert.match(r1, /asked of 2, median 0\.\d\d, near even for 1$/);
+  const r3 = lines.find((l) => /^ {2}experience r3:/.test(l));
+  assert.match(r3, /asked of 1, median 0\.50, near even for 1 — cannot be judged as written; a finding against the schema$/);
+});
+
+test("the report never reads as a pass and ends naming what it did not ask, a failed page among them", () => {
+  const lines = reportOf(asked, answers);
+  assert.ok(!lines.some((l) => l.includes("✓")));
+  const tail = lines.slice(lines.indexOf("not asked:"));
+  assert.ok(tail.length > 1, lines.join("\n"));
+  assert.deepEqual(tail.slice(1), ["  model/big.md: longer than the judge reads in one request", "  model/c.md: TypeSafe answered 500"]);
 });
