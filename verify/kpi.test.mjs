@@ -136,5 +136,5 @@ test("assesses naming a control that does not exist fails by name", () => {
 });
 
 test("assesses naming an entity of another type fails, since the field names controls", () => {
-  assert.equal(about([...GOOD, "assesses:", "  - Craftsmanship"], undefined, "Craftsmanship").length, 1);
+  assert.equal(about([...GOOD, "assesses:", "  - Craftsmanship"], undefined, "Craftsmanship", "not control").length, 1);
 });

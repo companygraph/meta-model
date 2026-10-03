@@ -12,7 +12,8 @@ vision.md                        billing nobody has to explain
 brand.md                         Beacon — the mark, the colors, the faces and the voice
 strategic-objectives/            support-stops-explaining-invoices.md
 strategies/                      invoicing-strategy.md
-kpis/                            change-lead-time.md, change-fail-rate.md
+kpis/                            change-lead-time.md, change-fail-rate.md,
+                                 review-escapes.md
 roles/                           backend-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 features/                        billing-run.md, charge-explanation.md, credit-notes.md,

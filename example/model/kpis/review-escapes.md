@@ -10,12 +10,12 @@ direction: lower
 
 # Review Escapes
 
-> The changes that reached the default branch without the review the ruleset asks for.
+> The changes that reached the default branch without the review its protection asks for.
 
 ## How it is measured
 
-The changes merged to the default branch in a calendar month whose ruleset evaluation was bypassed, read from the repository host's record of rule evaluations.
+The pull requests merged to the default branch in a calendar month without an approving review from someone other than their author, read from the repository host's pull request reviews.
 
 ## What it can hide
 
-A repository with no ruleset is never evaluated, so a change to it escapes without being counted; and an override made for a good reason counts the same as one made in a hurry.
+A change pushed to the default branch without a pull request carries no reviews to read, so it escapes without being counted; and an override made for a good reason counts the same as one made in a hurry.
