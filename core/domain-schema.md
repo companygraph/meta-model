@@ -41,6 +41,6 @@ A domain is one area of the company — the words it means something exact by th
 
 ## Writing rules
 
-- The tagline says what the domain covers and names at least one thing it deliberately leaves to another domain, because a boundary stated from one side only is not a boundary.
-- A domain is named for the area, not for the team that owns it or the system that implements it.
-- A domain carries no diagram and no list of its concepts or its products. Each is a second copy of what those files already say.
+- The scope says what the domain covers and names at least one thing it deliberately leaves to another domain, because a boundary stated from one side only is not a boundary.
+- The H1 names the area, not the team that owns it or the system that implements it.
+- The page carries no diagram and no list of the domain's concepts or its products. Each is a second copy of what those files already say.

@@ -43,4 +43,4 @@ The localization file says which language the model is written in, so that a rea
 
 - `locale` is one language tag. Which tags exist is the registry's, and the check holds only the shape.
 - The statement names who reads the model in that language: the owner, a customer, an agent answering in it.
-- Names and prose are in the language `locale` names (R14).
+- The page writes names and prose in the language `locale` names (R14).

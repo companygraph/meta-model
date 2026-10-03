@@ -65,7 +65,7 @@ Nothing owns a decision and a decision owns nothing: a call bears on entities of
 
 ## Purpose
 
-A decision is a call the company made on a date, written with the options that lost, so that whoever arrives after it can disagree with a reason rather than a rewrite. It answers "why is it this way and not the other way, who decided, and does it still hold?" for someone about to re-open a question that was already closed, or about to act on a call that no longer stands. It is not a strategy, which is the route currently taken and is deleted when replaced; a decision is kept as written for as long as the company exists, and its status says whether it holds.
+A decision is a call the company made on a date, written with the options that lost, so that whoever arrives after it can disagree with a reason rather than a rewrite. It answers "why is it this way and not the other way, who decided, and does it still hold?" for someone about to re-open a question that was already closed, or about to act on a call that no longer stands. It is not a strategy, which is the route currently taken and is deleted when replaced; a decision is kept as written for as long as the company exists, and its status says whether it holds. A decision is not rewritten to say something else: `status` is the one field that moves, and `decided` with it once when a proposed call is made, what replaced the call is read from the later decision's `supersedes`, and a call that another supersedes carries the status the instance keeps for a replaced call.
 
 ## Writing rules
 
@@ -93,16 +93,13 @@ A decision is a call the company made on a date, written with the options that l
   by any call the company makes tells a reader nothing.
 - `serves` names an objective only where the call was made for it; a call that serves no
   written objective is still a decision, and gains no invented one.
-- A decision names the objective it serves, never the strategy it follows: which route a call
-  sits on is read from the strategy that serves the same objective, and a strategy the call
+- `serves` names the objective the decision serves, never the strategy it follows: which route a
+  call sits on is read from the strategy that serves the same objective, and a strategy the call
   produced or changed is a `## Bears on` row.
 - Every row of `## Bears on` names an entity the call made, changed or ended. An entity the
   call merely mentions is not borne on.
-- A decision is not rewritten to say something else. `status` is the one field that moves, and
-  `decided` with it once when a proposed call is made; what replaced the call is read from the
-  later decision's `supersedes`, and a call that another supersedes carries the status the
-  instance keeps for a replaced call. Where a call is dropped and nothing replaced it, one
-  dated sentence closing `## Consequences` says so.
-- Written in the company's own first person, "I" for a company of one, "we" otherwise, and the
-  same one throughout the instance.
-- Names and prose are American English (R14).
+- `## Consequences` closes with one dated sentence saying so where a call is dropped and nothing
+  replaced it.
+- The page is written in the company's own first person, "I" for a company of one, "we"
+  otherwise, and the same one throughout the instance.
+- The page writes names and prose in American English (R14).

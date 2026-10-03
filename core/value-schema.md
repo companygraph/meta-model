@@ -45,12 +45,13 @@ A value is something the company holds itself to, written so that a strategy, a 
 - `## In practice` speaks in the company's own first person — "I" for a company of one, "We"
   for a company of more — and the same one throughout the instance. Which pronoun is the
   instance's business; that it is first person is not.
-- It is never addressed at the reader — "You should …" — and never written as an instruction.
-  A value is a commitment the company makes, not advice it gives.
-- The first half says what we do, in situations that have actually come up. The second half is
-  one sentence beginning "I never …" / "We never …", and it names the specific way this value
-  gets broken — not its absence.
-- Both halves name a situation, not an adjective. "We write the decision down before the code"
-  can be checked against last week; "We value quality" cannot be checked against anything.
+- `## In practice` is never addressed at the reader — "You should …" — and never written as an
+  instruction. A value is a commitment the company makes, not advice it gives.
+- `## In practice` opens with what we do, in situations that have actually come up. Its second
+  half is one sentence beginning "I never …" / "We never …", and it names the specific way this
+  value gets broken — not its absence.
+- `## In practice` names a situation in both halves, not an adjective. "We write the decision
+  down before the code" can be checked against last week; "We value quality" cannot be checked
+  against anything.
 - The statement is a sentence someone could disagree with. If no reasonable company would hold
   the opposite, it is a slogan and the value it is standing in for has not been written yet.

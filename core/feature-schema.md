@@ -46,6 +46,6 @@ A feature is one thing a product lets someone do, and it answers "what is this f
 
 - The tagline says what someone can now do, in their words, and never names a screen, a service or a vendor.
 - `## Description` says where the feature stops as plainly as what it does, because the boundary is what tells two neighboring features apart.
-- A feature is named for the capability, not for the vendor that supplies it. Where a vendor is what varies, the vendor is a concept the feature names and not a feature of its own.
-- Nothing about a release, a ticket or a delivery date goes here: those move, and a feature outlives all three.
+- The H1 names the capability, not the vendor that supplies it. Where a vendor is what varies, the vendor is a concept the feature names and not a feature of its own.
+- The page says nothing about a release, a ticket or a delivery date: those move, and a feature outlives all three.
 - `What` in `## References` names the kind of thing a row opens, never the surface, product or vendor by name.

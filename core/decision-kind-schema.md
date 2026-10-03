@@ -44,13 +44,9 @@ A kind answers "what sort of call is this?", the question a reader cannot otherw
 
 ## Writing rules
 
-- `## What it means` is written so that two readers filing the same call would file it under
-  the same kind. A kind that cannot do that is not yet a kind.
-- It says what the kind excludes as well as what it covers, since the boundary with the kind
-  beside it is where every disagreement will be.
-- A kind is about the sort of call, never about how large it was, how it turned out or who
-  made it. Those belong to the decision.
-- Name it for what the calls are, `Architecture`, `Career`, and never for the section or the
-  type they sit in.
-- No rank: kinds never order anything inside a page, and two kinds are told apart by what they
-  cover, not by a number.
+- `## What it means` says what the kind excludes as well as what it covers, since the boundary
+  with the kind beside it is where every disagreement will be.
+- `## What it means` is about the sort of call, never about how large it was, how it turned out
+  or who made it. Those belong to the decision.
+- The H1 names what the calls are, `Architecture`, `Career`, and never the section or the type
+  they sit in.

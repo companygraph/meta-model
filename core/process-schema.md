@@ -58,22 +58,14 @@ A process is the path work takes through the company's seats — one folder, the
 
 ## Writing rules
 
-- Person-neutral, as a role is: a process names seats and never who holds them.
-- Named for the work rather than for the tool that carries it: `Delivery`, not `The board`.
-- Tracks run together in one pass rather than instead of one another. A change that is both
-  code and prose runs down both, so a phase's `### [Track]` headings are strands of one step
-  and never alternative routes through it, and a phase may produce a deliverable per track in
-  the same pass.
+- The page is person-neutral, as a role is: a process names seats and never who holds them.
+- The H1 names the work rather than the tool that carries it: `Delivery`, not `The board`.
 - Each line under `## What it never does` is a sentence an agent can hold a change against.
   "Never merges without the Owner" can fail; "works carefully" cannot.
-- `## Phases` lists every phase in the folder and nothing else, in the order the work passes
-  through them. It is the authority on that order, and each phase's `gate-to` agrees with it;
-  the instance checks hold both.
-- A phase is named in `## Phases` by its canonical name and nothing beside it (R3). A path to
-  the phase's file is not written there: a path moves, nothing resolves one, and whatever shows
-  the model to a reader can make the name a link.
-- `## Tracks` lists every track in the folder and nothing else, each by its canonical name and
-  nothing beside it (R3); the instance checks hold it. What a track produces is said once, in
-  the track's own file, and is not repeated here.
-- A process with one track says so and names it; a track table is not omitted because there
-  happens to be only one kind of work today.
+- `## Phases` names a phase by its canonical name and nothing beside it (R3). A path to the
+  phase's file is not written there: a path moves, nothing resolves one, and whatever shows the
+  model to a reader can make the name a link.
+- `## Tracks` names each track by its canonical name and nothing beside it (R3). What a track
+  produces is said once, in the track's own file, and is not repeated here. (The half "lists
+  every track in the folder and nothing else" is dropped: the instance check that an owner lists
+  every track it owns holds it, R5.)

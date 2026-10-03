@@ -45,13 +45,10 @@ An achievement kind answers "what sort of claim is this bullet?" — the questio
 
 ## Writing rules
 
-- `## What it means` is written so that two readers filing the same bullet would file it under
-  the same kind. A kind that cannot do that is not yet a kind.
-- It says what the kind excludes as well as what it covers, since the boundary with the kind
-  beside it is where every disagreement will be. How to decide between two kinds is written
-  here, in the instance, and nowhere else.
-- A kind is about the sort of claim, never about how important it is. Importance is not an order
-  the model can hold.
-- Name it for what the claims are — `Architecture`, `Results` — and never for the section they
-  sit in.
-- `rank` orders kinds within an entry and nothing else, and two kinds never share one.
+- `## What it means` says what the kind excludes as well as what it covers, since the boundary
+  with the kind beside it is where every disagreement will be. How to decide between two kinds
+  is written here, in the instance, and nowhere else.
+- `## What it means` is about the sort of claim, never about how important it is. Importance is
+  not an order the model can hold.
+- The H1 names what the claims are — `Architecture`, `Results` — and never the section they sit
+  in.

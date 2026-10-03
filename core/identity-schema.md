@@ -53,7 +53,7 @@ A presence is a place the company maintains a page on, named by the place and ad
 
 ## Purpose
 
-Identity is the company itself: the entity every other file in the instance is about. It answers "whose model is this?" — which nothing else does, because a repository folder's name is a path, and R2 and R3 exist to keep a canonical name out of a path. Without it an instance describes a company it never names.
+Identity is the company itself: the entity every other file in the instance is about. It answers "whose model is this?" — which nothing else does, because a repository folder's name is a path, and R2 and R3 exist to keep a canonical name out of a path. Without it an instance describes a company it never names. A fact lives in one place: where identity and a profile would state the same thing, an address, identity holds it and the profile carries its own only where it differs, and a mail address is two facts, the company's here and a person's own on their profile.
 
 ## Writing rules
 
@@ -65,11 +65,7 @@ Identity is the company itself: the entity every other file in the instance is a
   vision's business.
 - `## What it is` says what the company does and for whom, in the company's own voice. It is
   not a history and not a pitch; an achievement belongs to a profile's experience.
-- A fact lives in one place. Where identity and a profile would state the same thing — an
-  address — identity holds it, and the profile carries its own only where it differs. A mail
-  address is two facts, not one: identity's is where to reach the company, and a human's
-  profile carries the person's own, the one their commits are authored under.
 - One row per place in `## Also at`, and a place the company no longer maintains has no row:
   the table is what a reader will follow.
-- The URL in `## Also at` is the page that is the company's own on that place, not a search, a
+- `URL` in `## Also at` is the page that is the company's own on that place, not a search, a
   feed or a post. What a reader lands on has to be the company.

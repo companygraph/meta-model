@@ -52,11 +52,9 @@ A question answers "where in the model is the answer to what people actually ask
 
 - The H1 is worded as people ask, not as the model names things: "Can Robert still write code himself?", not "Software engineering proficiency". A question worded in the model's own vocabulary adds nothing the words search did not already find.
 - The answer routes. It may say what kind of thing the answer is and where it lies, and it may say what the model does not claim; it states no count, version, date or fact that another entity holds, because that would be a second copy nothing keeps true.
-- An answer with no `## Rests on` is mastered on the question. It states only what no other entity holds: a stance, a boundary, or a claim the model deliberately does not make. A fact that belongs on an entity is written on that entity, and the question rests on it.
-- Every entity the answer draws on has a row, and no row names an entity the answer does not draw on.
-- A question is not an alias. A concept's other names belong in its `## Also known as`; a question is how people ask, not what a thing is called.
-- Names and prose are American English (R14). A visitor asking in German is matched by the chat, not by a German question.
-- One question per thing asked. Two wordings of the same question are one file; the H1 takes the wording people use most.
-- A question has one kind, the one a visitor would look under first. A question that seems to need two is either two questions or is filed where most visitors would look for it.
+- The answer, where there is no `## Rests on`, is mastered on the question. It states only what no other entity holds: a stance, a boundary, or a claim the model deliberately does not make. A fact that belongs on an entity is written on that entity, and the question rests on it.
+- The answer draws on no entity without a row in `## Rests on`, and no row names an entity the answer does not draw on.
+- The page writes names and prose in American English (R14). A visitor asking in German is matched by the chat, not by a German question.
+- `kind` is the one a visitor would look under first. A question that seems to need two is either two questions or is filed where most visitors would look for it.
 
 The answer is required, because a question with no answer is an open issue and not an entity: what the model is asked and cannot answer yet is a change to the model, written as one, and the question follows it. `## Rests on` is optional, because some honest answers rest on nothing else in the model. What that costs is that no check can tell a question resting on nothing on purpose from one whose rows were forgotten; the writing rules and the owner's review of each question carry that, as they carry the rest of what an answer may say.

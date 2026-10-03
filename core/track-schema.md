@@ -43,14 +43,9 @@ A track is one kind of thing a process makes, and it answers “which of the thi
 
 ## Writing rules
 
-- A track is named for what it makes, not for who makes it: `Code`, not `Engineering`.
+- The H1 names what the track makes, not who makes it: `Code`, not `Engineering`.
 - The tagline says what is left behind when a change has run down the track, as a thing a
   reader could point at: “a merged change to the platform”, not “development work”.
-- A track's name is unique within its process (R2): two processes may each have a track called
-  `Code`, and a phase's heading or a process's `## Tracks` finds the one in its own process
-  (R4).
-- A track carries no order: the order a process lists its tracks in is the order a reader meets
-  them and nothing more.
-- A track carries its name and what it produces, and nothing more. R9 lets a page hold sections
-  of its own, so no script refuses one here; what a track would say in it belongs to the phase
-  that does the work or to the process that owns the track.
+- The page carries the track's name and what it produces, and nothing more. R9 lets a page hold
+  sections of its own, so no script refuses one here; what a track would say in it belongs to
+  the phase that does the work or to the process that owns the track.

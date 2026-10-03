@@ -75,30 +75,16 @@ A phase is one step of a process and the gate at its end — what enters, what i
 
 ## Writing rules
 
-- A gate criterion is a sentence that can fail: "the checks pass on the branch" can, "quality
-  is good" cannot.
-- A phase whose activities are the same for every track carries no track headings at all, and
-  one that carries any puts every activity under one: an activity above the first heading
-  belongs to no track, and the instance checks say so.
-- Activities are numbered because their order is the order the work is done in, and the section
-  declares it, so the instance checks hold it (R16). A numbered list under no track heading is a
-  phase whose work is the same on every track.
-- `gate-to` names the next phase and the owning process's `## Phases` table says the same thing;
-  where the two disagree the model is wrong, not the reader, and the instance checks say so.
-- The last phase has no `gate-to`, and its gate is the one that releases the work; its
-  `## If not met` still says what happens when it cannot.
-- A phase's name is unique within its process (R2): two processes may each call a phase
-  `Review`, and a `gate-to` or a process's `## Phases` finds the one in its own process (R4). A
-  phase and a role may share a name, since a reference carries the type it resolves under.
+- Each `## Gate` criterion is a sentence that can fail: "the checks pass on the branch" can,
+  "quality is good" cannot.
 - `executed-by` names the seats that do the work, never the seat that approves it; a seat that
   only signs belongs in `gate-approvers`.
-- An outcome is what the escalation authority decides, in a word or a few, as a past participle
+- `Outcome` is what the escalation authority decides, in a word or a few, as a past participle
   where it can be: `reworked`, `narrowed`, `dropped`. It is not the gate criterion that failed.
-- `Leads to` names this phase where the work stays in it, redone or waiting, and an earlier phase
-  where the work goes back. It never names a later one: a failure that skips work is a happy
-  path, and it belongs in `gate-to`. The instance checks say so.
 - An empty `Leads to` stops the process. A hand-off to another process is a stop in this table,
   and the paragraph under it names the process the work goes to.
-- Two rows may lead to the same phase; the outcome is what tells them apart.
-- The paragraph under the table says only what the rows cannot, a reason or a hand-off, and a
-  page whose rows say everything carries none.
+- `## If not met` carries a paragraph under the table only for what the rows cannot say, a
+  reason or a hand-off, and a page whose rows say everything carries none.
+- `## Activities` treats its `### [Track]` headings as strands of one step and never as
+  alternative routes through it, since tracks run together in one pass rather than instead of
+  one another, and a phase may produce a deliverable per track in the same pass.

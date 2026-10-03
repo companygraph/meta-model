@@ -59,12 +59,10 @@ A concept design is a term of one context's language and means nothing outside i
 
 ## Purpose
 
-A concept design answers "what does this word mean here?" It is one term of a bounded context's ubiquitous language (Evans), and an entity or a value object by its kind. It may refine an enterprise concept of core, which says what the thing is for the whole company; the concept design says what it is inside one context, which is narrower and may differ from another context's term of the same name.
+A concept design answers "what does this word mean here?" It is one term of a bounded context's ubiquitous language (Evans), and an entity or a value object by its kind. It may refine an enterprise concept of core, which says what the thing is for the whole company; the concept design says what it is inside one context, which is narrower and may differ from another context's term of the same name. A relation is written on one side only, as core's concept relations are, so no two concept designs each name the other in `## Relations`. An attribute whose type is a value object names that value object's concept design exactly.
 
 ## Writing rules
 
 - The meaning says what the thing is in this context, not what a system does with it.
-- The kind follows Evans's test: if every attribute changed, would it still be the same one? Then it is an entity.
-- A relation is written on one side only, as core's concept relations are.
-- An attribute whose type is a value object names that value object's concept design exactly.
-- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
+- `kind` follows Evans's test: if every attribute changed, would it still be the same one? Then it is an entity.
+- `source`, on a page drawn from code, names that code, the repository a sync reads, and the module or package is its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.

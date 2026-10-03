@@ -46,10 +46,11 @@ A status answers "is this call made, and does it still hold?" for someone about 
 
 - `## What it means` says what a reader may rely on: a proposed call is not acted on, a
   standing call is, a replaced one is read through the decision that replaced it.
-- It says how a call leaves the state, which decision or event moves it on, so that a status
-  is never changed by hand without a reason the model can show.
-- An instance has exactly one status for a call that holds as written, and every other status
-  says which decision or event moves a call into it.
-- A status is about whether the call is made and holds, never about how well it went. What
-  came of a call is the next decision's question or a period's result.
-- Name it for the state of the call, `Standing`, `Revised`, and never for a verdict on it.
+- `## What it means` says how a call leaves the state, which decision or event moves it on, so
+  that a status is never changed by hand without a reason the model can show.
+- `## What it means`, on every status but the one for a call that holds as written, says which
+  decision or event moves a call into it. (The half "an instance has exactly one status for a
+  call that holds as written" is dropped: no single page can break it.)
+- `## What it means` is about whether the call is made and holds, never about how well it went.
+  What came of a call is the next decision's question or a period's result.
+- The H1 names the state of the call, `Standing`, `Revised`, and never a verdict on it.
