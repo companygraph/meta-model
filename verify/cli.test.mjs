@@ -1693,7 +1693,7 @@ test("ids --range with a manifest that is not JSON says so in one line and exits
   fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", "HEAD..HEAD"], { encoding: "utf8" });
   assert.equal(said.status, 1);
-  assert.match(said.stderr, /^✗ .*\.companygraph\/manifest\.json could not be read as JSON/);
+  assert.match(said.stderr, /^✗ .*\.companygraph[\\/]manifest\.json could not be read as JSON/);
   assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
 });
 
