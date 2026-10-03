@@ -51,7 +51,14 @@ New vocabulary, a type for core or a pack, starts with the skill `companygraph-v
   carries weight before its shape is checked breaks silently. `verify` now fails loudly on
   a schema off the shape or outside the vocabulary, so R16 holds an instance to what its
   schemas declare, and the instance checks read the core the instance vendored. What a
-  script cannot read — a schema's writing rules — stays with the agent pass (R0).
+  script cannot read — what a schema's writing rules say — stays with the agent pass (R0);
+  `verify` holds only how each one opens, and a norm that needs more than one page is a check.
+- **A norm that needs more than one page is a check, not a sentence.** Writing one as a
+  writing rule cost nothing and checked nothing: thirty such rules sat in core until #254
+  moved them out, and the agent pass, reading one page at a time, could not see them. A
+  change that adds such a norm adds the instance check that holds it in the same pull
+  request; a spec that states one and plans no check says why and opens the issue the check
+  is owed under.
 - **Core defines a type; it does not oblige you to populate it.** A company of one has no
   `group`; the type stays in core, unused.
 - **A pack adds vocabulary only some kinds of company need at all** — types that are
