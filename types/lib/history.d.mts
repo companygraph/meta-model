@@ -96,6 +96,13 @@ export declare function mergeBaseOf(cwd: string, a: string, b: string): string;
 /**
  * @param {string} cwd
  * @param {string} rev
+ * @param {string} [model]
+ * @returns {Map<string, string>}
+ */
+export declare function treeAt(cwd: string, rev: string, model?: string): Map<string, string>;
+/**
+ * @param {string} cwd
+ * @param {string} rev
  * @param {string} rel
  * @returns {string[]}
  */

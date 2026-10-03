@@ -36,7 +36,7 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
@@ -1100,7 +1100,8 @@ function ids(argv) {
   // id by the backfill, and held by the range's checks of what a change may do to it.
   const manifestPath = join(root, ".companygraph/manifest.json");
   const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
-  const { types } = vocabularyOf({ packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${manifest.units ?? "meta"}/${name}` })) });
+  const units = manifest.units ?? "meta";
+  const { types, schemaOf } = vocabularyOf({ core: `${units}/core`, packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${units}/${name}` })) });
   if (given.backfill) {
     /** @type {Map<string, string>} */
     const files = new Map();
@@ -1151,7 +1152,13 @@ function ids(argv) {
       const own = `${fork}..${ends[1]}`;
       const branched = own === given.range ? changes : changedPagesOf(root, own, folder);
       failures.push(
-        ...keptChangesOf(branched, deletedPagesOf(root, own, folder), base, { types }),
+        // A name a decision carries may follow the entity it names, read against the schema the
+        // instance vendored and the model where the branch began and where it ends.
+        ...keptChangesOf(branched, deletedPagesOf(root, own, folder), base, {
+          types,
+          schemaOf: (type) => (existsSync(join(root, schemaOf(type))) ? readFileSync(join(root, schemaOf(type)), "utf8") : null),
+          treeOf: (side) => treeAt(root, side === "base" ? fork : ends[1], folder),
+        }),
         ...labelChangesOf(branched, base, { types, historyOf: (c) => pageHistoryOf(root, fork, c.before) }),
       );
     }

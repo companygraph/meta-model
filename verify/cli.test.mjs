@@ -1605,6 +1605,38 @@ test("ids --range refuses a decision rewritten and an invariant relabelled, and 
   assert.match(said.stderr, /✗ model\/bounded-contexts\/billing\/aggregates\/invoice\.md: "INV-9" under ## Invariants carries what "INV-1" carried/);
 });
 
+// A name a decision carries follows the entity it names: the range reads the decision schema the
+// instance vendored and the model at both ends, so an objective renamed with its id kept, and the
+// decision's `serves` moved to the new name, passes, while moving it to another objective fails.
+test("ids --range passes a decision's reference following a rename, and refuses one moved elsewhere", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const objective = (id, name) => `---\nid: ${id}\nsource: Local\nadopted: 2026-01\n---\n\n# ${name}\n\n> A statement.\n`;
+  const decision = (serves) => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: Standing\nby: Owner\nserves:\n  - ${serves}\n---\n\n# Core is vendored\n\n> We vendor core.\n`;
+  const [o1, o2] = [run(["id"]).trim(), run(["id"]).trim()];
+  write("model/strategic-objectives/old.md", objective(o1, "Old"));
+  write("model/strategic-objectives/other.md", objective(o2, "Other"));
+  write("model/decisions/2026-core-is-vendored.md", decision("Old"));
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+
+  g("mv", "model/strategic-objectives/old.md", "model/strategic-objectives/new.md");
+  write("model/strategic-objectives/new.md", objective(o1, "New"));
+  write("model/decisions/2026-core-is-vendored.md", decision("New"));
+  g("add", "-A"); g("commit", "-qm", "rename", "--no-verify");
+  const renamed = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(renamed.status, 0, renamed.stderr);
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Other"));
+  g("commit", "-qam", "elsewhere", "--no-verify");
+  const moved = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(moved.status, 3);
+  assert.match(moved.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `serves` changed since [0-9a-f]{7}/);
+});
+
 test("ids --range refuses a decision deleted in the range", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

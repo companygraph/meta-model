@@ -217,7 +217,7 @@ const decisions = (calls) => new Map([
   ...calls.map(([name, status, supersedes = []], i) => [`model/decisions/2026-d${i}.md`,
     page(["decided: 2026-01", "kind: Architecture", `status: ${status}`, "by: Owner", ...(supersedes.length ? ["supersedes:", ...supersedes.map((s) => `  - ${s}`)] : [])], name)]),
 ]);
-const replaced = (files) => run(files).failures.filter((f) => f.includes("carries one") || f.includes("still standing"));
+const replaced = (files) => run(files).failures.filter((f) => f.includes("carries one") || f.includes("still "));
 
 test("superseded calls sharing one status that no standing call carries pass, and so does an instance with no supersedes", () => {
   assert.deepEqual(replaced(decisions([["A", "Replaced"], ["B", "Replaced"], ["C", "Standing", ["A", "B"]]])), []);
@@ -230,10 +230,14 @@ test("superseded calls carrying two statuses fail once, naming each status and i
   ]);
 });
 
-test("a call nothing supersedes that carries the replaced status fails, naming it", () => {
-  assert.deepEqual(replaced(decisions([["A", "Replaced"], ["B", "Replaced"], ["C", "Standing", ["A"]]])), [
-    'model/decisions/2026-d1.md: `status` is "Replaced", which every decision named in another\'s `supersedes` carries, and none names this one there; a decision still standing does not carry it (R16)',
+test("a replaced call still carrying the status most calls not superseded carry fails on it alone", () => {
+  assert.deepEqual(replaced(decisions([["A", "Standing"], ["B", "Standing", ["A"]], ["C", "Standing"], ["D", "Standing"]])), [
+    'model/decisions/2026-d0.md: superseded by B and still carries "Standing", which most decisions not superseded carry; a replaced decision carries the status the instance keeps for one (R16)',
   ]);
+});
+
+test("dropped and replaced calls may share one status while most calls stand", () => {
+  assert.deepEqual(replaced(decisions([["A", "Retired"], ["B", "Retired"], ["C", "Standing", ["A"]], ["D", "Standing"], ["E", "Standing"]])), []);
 });
 
 

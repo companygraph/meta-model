@@ -62,7 +62,7 @@ export type TypeEntry = {
         field: string;
     };
     /**
-     * The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
+     * The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
      */
     replaced?: {
         field: string;
@@ -147,7 +147,7 @@ export type Check = {
  * @property {{ field: string, kind: string }} [refKind] A reference field whose target carries this value in its own `kind`.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
- * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
+ * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
  * @property {{ when: { field: string, is: string }, field: string, requires: string, section: string, column: string }} [claims] What a page whose `when.field` is `when.is` claims: each entity its `field` names lists in its own `requires` what the page's `section` table names in `column`, and one it does not name is noted as a gap.
  * @property {{ when: { field: string, is: string }, of: string, fields: string[], section: string, column: string, url: string }} [restates] What a page whose `when.field` is `when.is` repeats of the singular type `of`: each of `fields` equal to its, and each URL of the `section` table's `column` equal to its `url` or one of its own rows, is noted.
  * @property {{ moves: string, closing: string }} [kept] A page kept as written once it is on the default branch: the field `moves` is the one that changes, the change that moves it may add one dated sentence at the end of the section `closing`, and the page is never deleted.
@@ -307,16 +307,34 @@ export declare function checkInstance(files: InstanceFiles, { core, model, packs
  * @returns {string[]}
  */
 export declare function idChangesOf(changes: PageChange[], base: string): string[];
+export type NamedRef = {
+    type: string;
+    name: string;
+    owner: string | null;
+};
+export type DeclaredRefs = {
+    fields: Map<string, string>;
+    columns: {
+        section: string;
+        column: string;
+        form: string;
+        target: string | null;
+        by: string | null;
+        in: string | null;
+    }[];
+};
 /**
  * @param {PageChange[]} changes
  * @param {DeletedPage[]} deleted
  * @param {string} base
- * @param {{ model?: string, types?: TypeEntry[] }} [options]
+ * @param {{ model?: string, types?: TypeEntry[], schemaOf?: (type: string) => string | null | undefined, treeOf?: (side: "base" | "head") => Map<string, string | Uint8Array> }} [options]
  * @returns {string[]}
  */
-export declare function keptChangesOf(changes: PageChange[], deleted: DeletedPage[], base: string, { model, types }?: {
+export declare function keptChangesOf(changes: PageChange[], deleted: DeletedPage[], base: string, { model, types, schemaOf, treeOf }?: {
     model?: string;
     types?: TypeEntry[];
+    schemaOf?: (type: string) => string | null | undefined;
+    treeOf?: (side: "base" | "head") => Map<string, string | Uint8Array>;
 }): string[];
 /**
  * @param {string} text

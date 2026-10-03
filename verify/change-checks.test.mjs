@@ -4,11 +4,14 @@
 // the cases are PageChange fixtures; the history a reuse is read from is handed in.
 import test from "node:test";
 import assert from "node:assert/strict";
+import fs from "node:fs";
 import { keptChangesOf, labelChangesOf, labelsOf, PACKS, TYPES } from "../lib/checks.mjs";
 
 const DECISION = "model/decisions/2026-vendored-core.md";
-const call = ({ id = "id: 01a0dd35-9358-7f34-b9f9-9c998df35ff1\n", status = "Standing", by = "Owner", why = "It holds still under every model.", consequences = "We keep a copy per instance." } = {}) =>
-  `---\n${id}source: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: ${status}\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n\n## Why\n\n${why}\n\n## Consequences\n\n${consequences}\n`;
+const list = (field, values) => (values.length ? `${field}:\n${values.map((v) => `  - ${v}\n`).join("")}` : "");
+const call = ({ id = "id: 01a0dd35-9358-7f34-b9f9-9c998df35ff1\n", status = "Standing", by = "Owner", serves = [], upholds = [], why = "It holds still under every model.", consequences = "We keep a copy per instance.", bears = [] } = {}) =>
+  `---\n${id}source: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: ${status}\nby: ${by}\n${list("serves", serves)}${list("upholds", upholds)}---\n\n# Core is vendored\n\n> We vendor core.\n\n## Why\n\n${why}\n\n## Consequences\n\n${consequences}\n` +
+  (bears.length ? `\n## Bears on\n\n| Type | Entity | Owner | How |\n| --- | --- | --- | --- |\n${bears.map((r) => `| ${r.join(" | ")} |\n`).join("")}` : "");
 const change = (before, after, path = DECISION) => ({ before: path, after: path, beforeText: before, afterText: after });
 const kept = (changes, deleted = []) => keptChangesOf(changes, deleted, "main");
 
@@ -45,6 +48,33 @@ test("a closing sentence fails without the status moving, without a date, or as 
     assert.equal(kept([change(base, call({ status, consequences }))]).length, 1, consequences);
 });
 
+test("a closing sentence with a common abbreviation in it is one sentence", () => {
+  const base = call();
+  for (const consequences of [
+    "We keep a copy per instance. Dropped on Oct. 3, 2026.",
+    "We keep a copy per instance. Dropped in 2026, i.e. the account closed.",
+    "We keep a copy per instance. Dropped in 2026 for a reason outside the call, e.g. a vendor leaving.",
+  ])
+    assert.deepEqual(kept([change(base, call({ status: "Dropped", consequences }))]), [], consequences);
+});
+
+test("a closing sentence that is not one dated sentence is told so, and not told to add one", () => {
+  const base = call();
+  assert.deepEqual(kept([change(base, call({ status: "Dropped", consequences: "We keep a copy per instance. Dropped, with nothing to replace it." }))]), [
+    `${DECISION}: what this change adds at the end of "## Consequences" is not one sentence carrying a year; a decision is kept as written, and the change that moves \`status\` adds one dated sentence there and nothing else (R16)`,
+  ]);
+  assert.deepEqual(kept([change(base, call({ consequences: "We keep a copy per instance. Dropped on 2026-10-03." }))]), [
+    `${DECISION}: this change adds to the end of "## Consequences" and leaves \`status\` as it was; a decision is kept as written, and only the change that moves \`status\` may add one dated sentence there (R16)`,
+  ]);
+});
+
+test("whitespace at a line's end and a final newline are not a rewrite, and a changed word still is", () => {
+  assert.deepEqual(kept([change(call(), `${call()}\n`)]), []);
+  assert.deepEqual(kept([change(call(), call().replace(/\n$/, ""))]), []);
+  assert.deepEqual(kept([change(call(), call().replace("We vendor core.", "We vendor core.  "))]), []);
+  assert.equal(kept([change(call(), `${call({ why: "It holds still under any model." })}\n`)]).length, 1);
+});
+
 test("a deleted decision fails, and a deleted page of another type does not", () => {
   assert.deepEqual(kept([], [{ before: DECISION, beforeText: call() }, { before: "model/skills/java.md", beforeText: "# Java\n" }]), [
     `${DECISION}: deleted in this change; a decision is kept for as long as the company exists, and one that no longer holds says so in \`status\` (R16)`,
@@ -57,6 +87,54 @@ test("a page of a type not kept as written may change freely", () => {
 
 test("a decision whose line ends differ between base and head and whose words do not passes", () => {
   assert.deepEqual(kept([change(call().replace(/\n/g, "\r\n"), call({ status: "Revised" }))]), []);
+});
+
+// --- A name a decision carries follows the entity it names ---------------------------------
+
+// A decision names entities by their canonical names, so renaming or deleting one would leave a
+// stale name that R4 fails and the kept check refused to repair. A name may follow its entity: to
+// the new name where the entity kept its id, or out where the entity is gone. What the decision
+// declares a reference is read from its schema, and the trees at base and head are handed in.
+const DECISION_SCHEMA = fs.readFileSync(new URL("../core/decision-schema.md", import.meta.url), "utf8");
+const entity = (id, name) => `---\nid: ${id}\nsource: Local\n---\n\n# ${name}\n\n> A statement.\n`;
+const O1 = "01a0dd35-0000-7000-8000-000000000001", O2 = "01a0dd35-0000-7000-8000-000000000002", P1 = "01a0dd35-0000-7000-8000-000000000003", V1 = "01a0dd35-0000-7000-8000-000000000004", V2 = "01a0dd35-0000-7000-8000-000000000005";
+const followed = (changes, base, head) => keptChangesOf(changes, [], "main", {
+  schemaOf: (type) => (type === "decision" ? DECISION_SCHEMA : null),
+  treeOf: (side) => new Map(Object.entries(side === "base" ? base : head)),
+});
+const FIELD = (field) => `${DECISION}: \`${field}\` changed since main; a decision is kept as written, and \`status\` is the one field that moves (R16)`;
+const TEXT = `${DECISION}: its text changed since main; a decision is kept as written, and only the change that moves \`status\` may add one dated sentence at the end of "## Consequences" (R16)`;
+
+test("a name in a reference field follows its entity's rename, the id the same and the old name gone", () => {
+  const base = { "model/strategic-objectives/old.md": entity(O1, "Old") };
+  const head = { "model/strategic-objectives/new.md": entity(O1, "New") };
+  assert.deepEqual(followed([change(call({ serves: ["Old"] }), call({ serves: ["New"] }))], base, head), []);
+});
+
+test("a name in a reference field leaves with its entity's deletion", () => {
+  const base = { "model/values/candor.md": entity(V1, "Candor"), "model/values/rigor.md": entity(V2, "Rigor") };
+  const head = { "model/values/rigor.md": entity(V2, "Rigor") };
+  assert.deepEqual(followed([change(call({ upholds: ["Candor", "Rigor"] }), call({ upholds: ["Rigor"] }))], base, head), []);
+  assert.deepEqual(followed([change(call({ upholds: ["Candor"] }), call())], base, head), []);
+});
+
+test("a reference moved to another entity, or a name dropped while its entity stands, still fails", () => {
+  const both = { "model/strategic-objectives/old.md": entity(O1, "Old"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  assert.deepEqual(followed([change(call({ serves: ["Old"] }), call({ serves: ["Other"] }))], both, both), [FIELD("serves")]);
+  assert.deepEqual(followed([change(call({ serves: ["Old", "Other"] }), call({ serves: ["Other"] }))], both, both), [FIELD("serves")]);
+  const renamed = { "model/strategic-objectives/new.md": entity(O1, "New"), "model/strategic-objectives/other.md": entity(O2, "Other") };
+  assert.deepEqual(followed([change(call({ serves: ["Old"] }), call({ serves: ["Other"] }))], both, renamed), [FIELD("serves")]);
+  assert.deepEqual(followed([change(call({ serves: ["Old"] }), call({ serves: ["New", "Other"] }))], both, renamed), [FIELD("serves")]);
+});
+
+test("a name in a Bears on row follows its entity's rename and deletion, and nothing else in the row moves", () => {
+  const base = { "model/products/ledger.md": entity(P1, "Ledger"), "model/products/till.md": entity(O2, "Till") };
+  const head = { "model/products/books.md": entity(P1, "Books") };
+  const was = call({ bears: [["product", "Ledger", "", "Made it"], ["product", "Till", "", "Ended it"]] });
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Books", "", "Made it"], ["product", "Till", "", "Ended it"]] }))], base, head), []);
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Books", "", "Made it"]] }))], base, head), []);
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Books", "", "Changed it"]] }))], base, head), [TEXT]);
+  assert.deepEqual(followed([change(was, call({ bears: [["product", "Books", "", "Made it"], ["product", "Ledger", "", "Made it"]] }))], base, head), [TEXT]);
 });
 
 // --- Labels ----------------------------------------------------------------------------------

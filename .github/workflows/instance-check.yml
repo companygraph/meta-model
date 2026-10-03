@@ -54,8 +54,10 @@ jobs:
       - name: every commit names a seat its phase lists
         if: github.event_name == 'pull_request'
         run: node .companygraph-checker/bin/companygraph.mjs commits . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
-      # R18: an id on the default branch never changes. Only on a pull request, as the seat check,
-      # and over the same range; checkout's full history is what lets git pair a rename.
-      - name: no id on the default branch changed
+      # What a pull request may do to a page already on the default branch: an id never changes
+      # (R18), a decision is not rewritten or removed, and a label stays with its item and is never
+      # used again (R16). Only on a pull request, as the seat check, and over the same range;
+      # checkout's full history is what lets git pair a rename and read where the branch began.
+      - name: no id changed, no decision rewritten, no label moved
         if: github.event_name == 'pull_request'
         run: node .companygraph-checker/bin/companygraph.mjs ids . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
