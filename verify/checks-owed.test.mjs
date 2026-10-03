@@ -113,3 +113,53 @@ test("two bounded contexts each naming the other in Relationships fail", () => {
     `${BC}/billing/billing.md and ${BC}/ledger/ledger.md each name the other in "## Relationships"; a relation is written on one side only (R16)`,
   ]);
 });
+
+// --- A type cell names a term of its own context exactly, and a root is an entity ------------
+
+const attributes = (types) => `\n## Attributes\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n${types.map((t, i) => `| A${i} | ${t} | |\n`).join("")}`;
+const payload = (types) => `\n## Payload\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n${types.map((t, i) => `| A${i} | ${t} | |\n`).join("")}`;
+const event = (ctx, name, types) => [`${BC}/${ctx}/domain-events/${name.toLowerCase().replace(/ /g, "-")}.md`, page(["emitted-by: Invoice"], name, payload(types))];
+const typeCells = (files) => run(files).failures.filter((f) => /`Type` in "## (Attributes|Payload)"/.test(f));
+const billing = (...entries) => softwareTree(context("Billing"), context("Ledger"),
+  design("billing", "Invoice", "entity"), design("billing", "Amount", "value object"), design("ledger", "Posting", "value object"), ...entries);
+
+test("an attribute naming a value object of its own context, a list of one, or a plain type passes", () => {
+  assert.deepEqual(typeCells(billing(design("billing", "Line", "value object", attributes(["Amount", "`list of Amount`", "date", "Money"])))), []);
+});
+
+test("an attribute naming an entity of its own context fails, since an entity is a relation", () => {
+  const f = typeCells(billing(design("billing", "Line", "value object", attributes(["Invoice"]))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /line\.md: `Type` in "## Attributes" says "Invoice", a concept-design of kind `entity`; a type names one of kind `value object`/);
+});
+
+test("a type matching a term of its own context only by case, slug or plural fails", () => {
+  for (const cell of ["amount", "Amounts", "AMOUNT"]) {
+    const f = typeCells(billing(design("billing", "Line", "value object", attributes([cell]))));
+    assert.equal(f.length, 1, cell);
+    assert.match(f[0], /the concept-design it matches here is "Amount"; a type names a term exactly/, cell);
+  }
+});
+
+test("a type naming a term of another context and of none in its own fails", () => {
+  const f = typeCells(billing(design("billing", "Line", "value object", attributes(["Posting"]))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /says "Posting", which is a concept-design of bounded-contexts\/ledger and of none in bounded-contexts\/billing/);
+});
+
+test("a payload type names a term of its own context of either kind, and never another context's", () => {
+  assert.deepEqual(typeCells(billing(event("billing", "Invoice issued", ["Invoice", "Amount", "timestamp"]))), []);
+  assert.equal(typeCells(billing(event("billing", "Invoice issued", ["Posting"]))).length, 1);
+});
+
+const aggregate = (root) => [`${BC}/billing/aggregates/invoice.md`, page([`root: ${root}`], "Invoice",
+  "\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | A total never changes. |\n")];
+const roots = (files) => run(files).failures.filter((f) => f.includes("`root` names"));
+
+test("an aggregate whose root is an entity passes, one whose root is a value object fails, and one naming nothing is R4's", () => {
+  assert.deepEqual(roots(billing(aggregate("Invoice"))), []);
+  assert.deepEqual(roots(billing(aggregate("Amount"))), [
+    `${BC}/billing/aggregates/invoice.md: \`root\` names "Amount", a concept-design of kind \`value object\`; it names one of kind \`entity\` (R16)`,
+  ]);
+  assert.deepEqual(roots(billing(aggregate("Ghost"))), []);
+});

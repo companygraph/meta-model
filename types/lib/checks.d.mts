@@ -29,6 +29,22 @@ export type TypeEntry = {
         column: string;
     };
     /**
+     * A string column whose cell may name an entity of the type `names`, owned by the page's own owner: a cell that names one names it exactly, of the `kind` given where one is, and never one of another owner's alone.
+     */
+    typeCells?: {
+        section: string;
+        column: string;
+        names: string;
+        kind?: string;
+    };
+    /**
+     * A reference field whose target carries this value in its own `kind`.
+     */
+    refKind?: {
+        field: string;
+        kind: string;
+    };
+    /**
      * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
      */
     expires?: string;
@@ -68,6 +84,8 @@ export type Check = {
  * @property {{ year: string, rest: string }} [filename]
  * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
+ * @property {{ section: string, column: string, names: string, kind?: string }} [typeCells] A string column whose cell may name an entity of the type `names`, owned by the page's own owner: a cell that names one names it exactly, of the `kind` given where one is, and never one of another owner's alone.
+ * @property {{ field: string, kind: string }} [refKind] A reference field whose target carries this value in its own `kind`.
  * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**
