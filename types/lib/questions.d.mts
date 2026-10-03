@@ -31,6 +31,15 @@ export type Questions = {
     asked: Request[];
     notAsked: NotAsked[];
 };
+export type Subjects = {
+    sections: Set<string>;
+    columns: Map<string, string[]>;
+    fields: Set<string>;
+};
+export type Subject = {
+    sections: string[];
+    column: string | null;
+};
 export type RuleAnswer = {
     p: number;
 };
@@ -55,6 +64,8 @@ export type Band = {
  * @typedef {{ path: string; type: string; name: string; state: { purpose: string; entity: string }; questions: Question[] }} Request
  * @typedef {{ path: string; why: string }} NotAsked
  * @typedef {{ asked: Request[]; notAsked: NotAsked[] }} Questions
+ * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string> }} Subjects
+ * @typedef {{ sections: string[]; column: string | null }} Subject
  */
 /**
  * @typedef {{ p: number }} RuleAnswer
@@ -73,6 +84,17 @@ export declare function writingRulesOf(schemaText: string): string[];
  * @returns {string}
  */
 export declare const purposeOf: (schemaText: string) => string;
+/**
+ * @param {string} schemaText
+ * @returns {Subjects}
+ */
+export declare function subjectsOf(schemaText: string): Subjects;
+/**
+ * @param {string} rule
+ * @param {Subjects} subjects
+ * @returns {Subject | null}
+ */
+export declare function subjectOf(rule: string, subjects: Subjects): Subject | null;
 /**
  * @param {string} sectionText
  * @returns {{ heading: string | null; bullet: string }[]}

@@ -9,7 +9,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
-import { writingRulesOf, purposeOf, bulletsOf, questionsOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
+import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
@@ -27,6 +27,37 @@ test("a schema without writing rules gives none, and one without a purpose gives
   assert.deepEqual(writingRulesOf(bare), []);
   assert.equal(purposeOf(bare), "");
   assert.match(purposeOf(schema("experience")), /^An experience is one dated period/);
+});
+
+test("a rule's subject is the section or table column its opening names, never a field", () => {
+  const rules = (n) => writingRulesOf(schema(n));
+  const of = (n, i) => subjectOf(rules(n)[i - 1], subjectsOf(schema(n)));
+  assert.deepEqual(of("experience", 14), { sections: ["Ending"], column: null });
+  assert.deepEqual(of("concept", 4), { sections: ["Relations"], column: "As" });
+  assert.equal(of("experience", 1), null, "`role` is a field, and r1 judges whether it is there");
+  assert.equal(of("experience", 3), null, "a backticked name later in the sentence does not count");
+  assert.equal(of("concept", 6), null, "a rule with no opening name is asked as now");
+});
+
+test("a column declared in two sections' tables stands for both", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | Yes | string | Its name. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `## Sources` | No | Table. |\n| `## References` | No | Table. |\n\n`## Sources` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n| `name` | No | string | A name. |\n";
+  const subjects = subjectsOf(text);
+  assert.deepEqual(subjectOf("`What` names the kind of document.", subjects), { sections: ["Sources", "References"], column: "What" });
+  assert.equal(subjectOf("`name` is the thing's own.", subjects), null, "a name that is a field as well as a column is read as the field");
+  assert.equal(subjectOf("`## Missing` is written well.", subjects), null, "an opening name the schema does not declare is asked");
+});
+
+test("no writing rule in core or a pack opens with a subject that is also a frontmatter field", () => {
+  const dirs = [new URL("../core/", import.meta.url), ...fs.readdirSync(new URL("../packs/", import.meta.url), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => new URL(`../packs/${d.name}/`, import.meta.url))];
+  for (const dir of dirs)
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md"))) {
+      const text = fs.readFileSync(new URL(f, dir), "utf8"), subjects = subjectsOf(text);
+      for (const rule of writingRulesOf(text)) {
+        const s = subjectOf(rule, subjects);
+        if (s?.column) assert.ok(!subjects.fields.has(s.column), `${f}: "${rule.slice(0, 60)}"`);
+      }
+    }
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
