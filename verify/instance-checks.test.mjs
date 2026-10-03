@@ -483,7 +483,7 @@ test("a heading that names nothing of its type is a failure naming the type", ()
   const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Deliverly"));
   assert.ok(hit, `no failure named the heading; got: ${failures.join(" | ") || "none"}`);
   assert.match(hit, /achievement-kind/);
-  assert.match(hit, /R16/);
+  assert.match(hit, /R4/);
 });
 
 // A tie in rank and the same heading twice used to fall through the same `<=` and be reported
@@ -753,12 +753,12 @@ test("a successor written in quotes is read as every other check reads a field, 
 });
 
 test("a row that matches no H1 is reported once, as a name that resolves nowhere, and not as another owner's", () => {
-  // The phase file is there and has no H1, so "Build" names no phase anywhere: R16 says so, and
+  // The phase file is there and has no H1, so "Build" names no phase anywhere: R4 says so, and
   // the owner check, which speaks only of a name that resolves to another owner's entity, does not.
   const failures = ownedWith(processWith(["Specify", "Build"]), [["specify", "Specify", "Build"], ["build", null, null]]);
   const about = failures.filter((f) => f.includes("delivery.md") && f.includes('"Build"') && !f.includes("gate-to"));
   assert.equal(about.length, 1, failures.join("\n"));
-  assert.ok(about[0].includes("R16"), about[0]);
+  assert.ok(about[0].includes("R4"), about[0]);
 });
 
 // R3, the half a machine can read. An entity names another by its canonical name and never by
@@ -960,7 +960,7 @@ test("a folder inside an owner's folder that it does not own is a failure", () =
 // R16's to report, that it resolves nowhere; the owner check speaks only of a name that does
 // resolve and belongs to another owner. Found in the plugin, where a blank-named period showed
 // twice in the pane.
-test("a name of an owned type that names nothing at all is reported once, by R16, and not by the owner check", () => {
+test("a name of an owned type that names nothing at all is reported once, by R4, and not by the owner check", () => {
   const failures = checkInstance(
     new Map([
       ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA],
@@ -973,7 +973,32 @@ test("a name of an owned type that names nothing at all is reported once, by R16
     { core: "meta/core" },
   ).failures.filter((f) => f.includes("A period that never was"));
   assert.equal(failures.length, 1, failures.join("\n"));
-  assert.ok(failures[0].includes("R16"), failures[0]);
+  assert.ok(failures[0].includes("R4"), failures[0]);
+});
+
+// "references resolve" once walked the profiles alone, so a misspelled reference anywhere else
+// reported under R16 and a reader took the check's name to cover what it did not (#242).
+test("a reference on a page outside the profiles that names nothing fails under R4", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["meta/core/value-schema.md", schema("value", ["| `serves` | No | array of ref → skill | A skill. |"])],
+    ["model/skills/java.md", "# Java\n\n> A language.\n"],
+    ["model/values/plain.md", "---\nserves:\n  - Jaav\n---\n\n# Plain\n\n> A value.\n"],
+  ]);
+  const hits = checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("Jaav"));
+  assert.equal(hits.length, 1, hits.join("\n"));
+  assert.match(/** @type {string} */ (hits[0]), /plain\.md.*names no entity.*\(R4\)/);
+});
+
+test("two unowned pages of one type sharing a canonical name fail under R4, naming both", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["model/skills/java.md", "# Java\n\n> A language.\n"],
+    ["model/skills/java-again.md", "# Java\n\n> The same language.\n"],
+  ]);
+  const hits = checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("share the canonical name"));
+  assert.equal(hits.length, 1, hits.join("\n"));
+  assert.match(/** @type {string} */ (hits[0]), /java\.md and .*java-again\.md \(R4\)|java-again\.md and .*java\.md \(R4\)/);
 });
 
 // R2, for an owned type: a name is unique within its owner. The checks list a type's own folder
