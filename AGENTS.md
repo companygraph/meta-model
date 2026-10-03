@@ -1,9 +1,10 @@
-<!-- conventions · v1.32.0 -->
+<!-- conventions · v1.40.0 -->
 Shared conventions of the robertblust, guestgraph and companygraph organizations live in `conventions/`, vendored from robertblust/conventions at the release `conventions.json` names. Read them before writing or committing anything here.
 
 - `conventions/WRITING.md` — how we write: one voice, three registers, English and German.
 - `conventions/WORKING.md` — how we work with git and GitHub.
 - `conventions/REPOSITORIES.md` — the family: what each repository is and what pins what.
+- `conventions/PINS.md` — what a member pins and how the family resync moves it.
 - `conventions/WRITER.md`, `conventions/TRANSLATOR.md`, `conventions/EDITOR.md`,
   `conventions/BACKREADER.md`, `conventions/GLOSSARY.md`, `conventions/GERMAN.md` — the four roles
   that make a text, the terms they keep and the German they write.
@@ -33,6 +34,8 @@ That is not only confidentiality — it is the design. A meta-model that carries
 
 When writing here, describe the *pattern*. "The multi-person instance keeps a thin file per person" is useful and portable. Naming the company, its file counts or its issue tracker is neither.
 
+New vocabulary, a type for core or a pack, starts with the skill `companygraph-vocabulary` in `.claude/skills/`: it keeps what a private source says in a report under the ignored `dist/`, and brings only its pattern into the spec it ends in.
+
 ## Decisions that are settled
 
 - **Schemas are Markdown, read by agents and by the checker alike.** Not a stage on the way
@@ -55,10 +58,13 @@ When writing here, describe the *pattern*. "The multi-person instance keeps a th
   *absent*, not types that are optional.
 - **The repo is `meta-model`; `core` is a folder inside it.** The repo says what the
   project is, folders say how it is divided — and `core/` sits beside `packs/`, so a repo
-  named `core` would hold non-core things.
+  named `core` would hold non-core things. `packs/` holds one folder per pack, released with
+  core under one tag.
 - Resist scaffolding folders the spec has not settled — §10 still lists open questions, and
-  the roadmap adds types one slice at a time. `packs/` does not exist until a pack does.
+  the roadmap adds types one slice at a time.
 
 ## Checks
 
 Two jobs, both required by the ruleset on `main`: `verify`, this repository's own suite, and `conventions`, called from robertblust/conventions at the pinned tag and shown by GitHub as `conventions / conventions`. A third workflow, `instance-check.yml`, is required by nothing here: it is called by an instance, which is why its ref and `version` in package.json are set to the release together before tagging — the checker it runs compares its own version against the instance's pin and refuses when they differ. The prose check leaves out `.superpowers`, tooling scratch, and `docs/superpowers`, whose specs and plans quote the very words it scans for. Core's own rule R14 says what the vocabulary's spelling is; `conventions/WRITING.md` says the same for every word the family writes, and the two agree. Everything else about how to write and how to work with git is in `conventions/`.
+
+The JavaScript in `lib/` and `bin/` is the source and what runs, and its types are JSDoc in the same files. A TypeScript consumer reads the declarations `npm run build` writes from that JSDoc into `types/`, and they are committed, because a consumer takes the package from a tag and builds nothing. So a change to a type is made in the JSDoc, built, and committed with what the build wrote, and a file in `types/` is never edited by hand; `npm run build:check`, which `verify` and `windows` run before their suites, writes the declarations into a temporary folder and fails on one in `types/` that differs or that no module writes. TypeScript and Node's types are devDependencies and nothing else is: they are what that check runs on, no consumer installs them, and `instance-check.yml` installs nothing. Why the types are JSDoc rather than TypeScript source is in `docs/superpowers/specs/2026-09-30-types-from-jsdoc-design.md`.

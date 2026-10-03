@@ -1,0 +1,105 @@
+import type { TypeEntry } from "./checks.mjs";
+export type Manifest = {
+    tooling: string;
+    core: {
+        version: string;
+        shape: number;
+        source: string;
+    };
+    units: string;
+    packs: string[];
+    exclude?: string[];
+    files: Record<string, string>;
+};
+/** @import { TypeEntry } from "./checks.mjs" */
+/**
+ * `.companygraph/manifest.json`: the release of the tooling the instance runs, the core it
+ * vendors and where from, the folder that core sits under, and the hash of every file the
+ * tooling wrote and owns.
+ * @typedef {object} Manifest
+ * @property {string} tooling
+ * @property {{ version: string; shape: number; source: string }} core
+ * @property {string} units
+ * @property {string[]} packs
+ * @property {string[]} [exclude]
+ * @property {Record<string, string>} files
+ */
+/** @type {(text: string | Uint8Array) => string} */
+export declare const hashOf: (text: string | Uint8Array) => string;
+/** @type {(text: string) => string} */
+export declare const unixLines: (text: string) => string;
+export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
+export declare const GITIGNORE = "dist/\n.obsidian/\n";
+export declare const INSTANCE_PINS: string;
+/** @type {(manifest: { tooling: string; exclude: string[] }) => string} */
+export declare const adoptedManifestOf: (manifest: {
+    tooling: string;
+    exclude: string[];
+}) => string;
+/** @type {(tag: string) => string} */
+export declare const repositoryWorkflowFor: (tag: string) => string;
+/** @type {(units: string) => string[]} */
+export declare const excludeFor: (units: string) => string[];
+/**
+ * @param {Omit<Manifest, "packs" | "exclude"> & { packs?: string[]; exclude?: string[] }} manifest
+ * @returns {string}
+ */
+export declare function manifestOf({ tooling, core, units, packs, exclude, files }: Omit<Manifest, "packs" | "exclude"> & {
+    packs?: string[];
+    exclude?: string[];
+}): string;
+/** @type {(types?: TypeEntry[]) => string[]} */
+export declare const rootFolders: (types?: TypeEntry[]) => string[];
+/**
+ * @param {string[]} folders
+ * @param {string} [units]
+ * @param {(TypeEntry & { unit?: string })[]} [types] the vocabulary the folders are drawn from; core's unless a pack is taken
+ * @returns {Map<string, string>}
+ */
+export declare function readmesFor(folders: string[], units?: string, types?: (TypeEntry & {
+    unit?: string;
+})[]): Map<string, string>;
+/**
+ * @param {{ name: string; id?: () => string; localizationSchema?: string | undefined }} instance
+ * @returns {Map<string, string>}
+ */
+export declare function startingEntities({ name, id, localizationSchema }: {
+    name: string;
+    id?: () => string;
+    localizationSchema?: string | undefined;
+}): Map<string, string>;
+/**
+ * @param {{ name: string }} instance
+ * @returns {Map<string, string>}
+ */
+export declare function exportFilesFor({ name }: {
+    name: string;
+}): Map<string, string>;
+/** @type {(tag: string) => string} */
+export declare const workflowFor: (tag: string) => string;
+export declare const HOOK = "#!/bin/sh\n# Refuses a commit whose author is a seat of this instance that the phase named in its trailers\n# does not list. Written by companygraph init; see `companygraph commits`.\nhere=$(cd \"$(dirname \"$0\")/../..\" && pwd)\ntooling=$(sed -n 's/.*\"tooling\" *: *\"\\([^\"]*\\)\".*/\\1/p' \"$here/.companygraph/manifest.json\" | head -1)\n# git commit hands its hooks the repository it is committing to, GIT_INDEX_FILE above all\n# (absolute in a worktree and for commit -a), and the git clone npx runs to fetch the tooling\n# would inherit it and write the tooling's index over this one. Git runs a hook at the top of the\n# worktree, so the checker finds the same repository from its cwd without them.\nunset GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE GIT_PREFIX GIT_OBJECT_DIRECTORY GIT_ALTERNATE_OBJECT_DIRECTORIES\n# A passing check says nothing: its stdout is kept, and shown only when it did not pass. Its\n# refusals are on stderr, which always reaches the committer.\nstatus=1\nif [ -n \"${COMPANYGRAPH_CLI:-}\" ]; then\n  said=$(node \"$COMPANYGRAPH_CLI\" commits \"$here\" --message \"$1\")\n  status=$?\nelif command -v npx > /dev/null 2>&1 && [ -n \"$tooling\" ]; then\n  package=\"github:companygraph/meta-model#v$tooling\"\n  said=$(npx --yes --prefer-offline --package \"$package\" companygraph commits \"$here\" --message \"$1\")\n  status=$?\n  # Up to 0.71.0 git recorded the bin without its execute bit, and npm sets the bit only when it\n  # links a bin: a repository whose own node_modules holds the release npx asks for, put back\n  # under a link that was already there, has a bin sh cannot run: bash says 126, Debian's dash\n  # 127. node can, from the bin npm exec puts first on PATH.\n  if [ \"$status\" -eq 126 ] || [ \"$status\" -eq 127 ]; then\n    said=$(COMPANYGRAPH_HERE=\"$here\" COMPANYGRAPH_MESSAGE=\"$1\" npx --yes --prefer-offline --package \"$package\" -c \\\n      'IFS=:; for d in $PATH; do [ -f \"$d/companygraph\" ] && exec node \"$d/companygraph\" commits \"$COMPANYGRAPH_HERE\" --message \"$COMPANYGRAPH_MESSAGE\"; done; exit 127')\n    status=$?\n  fi\nfi\n[ \"$status\" -eq 0 ] && exit 0\n[ -n \"${said:-}\" ] && printf '%s\\n' \"$said\"\n[ \"$status\" -eq 3 ] && exit 1\necho \"commit-msg: the seat check did not run here (exit $status); the pull request's check will run it\" >&2\nexit 0\n";
+/** @type {(page: { id: string; source: string }) => string} */
+export declare const IDENTIFIER_PAGE: (page: {
+    id: string;
+    source: string;
+}) => string;
+/** @type {(page: { id: string; source: string; locale?: string }) => string} */
+export declare const LOCALIZATION_PAGE: (page: {
+    id: string;
+    source: string;
+    locale?: string;
+}) => string;
+/** @type {(schema: string | undefined, page: { id: string; source: string }) => string} */
+export declare const localizationPageFor: (schema: string | undefined, page: {
+    id: string;
+    source: string;
+}) => string;
+/**
+ * @param {{ agent: string; name: string; units: string }} ask
+ * @returns {Map<string, string>}
+ */
+export declare function agentFilesFor({ agent, name, units }: {
+    agent: string;
+    name: string;
+    units: string;
+}): Map<string, string>;

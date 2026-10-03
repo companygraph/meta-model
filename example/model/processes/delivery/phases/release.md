@@ -1,4 +1,5 @@
 ---
+id: 01a0a8c7-74d8-7361-97d6-5f56164eff80
 source: Local
 owner: Reviewer
 executed-by:
@@ -45,4 +46,8 @@ Release is the last phase. The work is done when all of these hold:
 - The page is live.
 - The change has been exercised in production without incident.
 
-Where they cannot be met, the Reviewer decides whether the release is rolled back.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| rolled back | |

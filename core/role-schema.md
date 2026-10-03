@@ -1,3 +1,7 @@
+---
+id: 01a0a6a7-53f8-7824-b858-32860e752f35
+---
+
 # Role Schema
 
 > Required structure for role files.
@@ -12,6 +16,7 @@ A role owns nothing and nothing owns it, so it is a file. A profile holds one by
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `requires` | No | array of ref → skill | The skills the seat needs, each the H1 of a file in `skills/`. Absent while nobody has said what the seat needs. |

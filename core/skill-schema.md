@@ -1,3 +1,7 @@
+---
+id: 01a02f31-3488-773e-a919-f51e729f2ba4
+---
+
 # Skill Schema
 
 > Required structure for skill files.
@@ -12,6 +16,7 @@ A skill owns nothing, so it is a file. Nothing owns a skill either: a profile cl
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `group` | No | string | Free-text grouping, e.g. `Testing`. Whether a group becomes an entity of its own is deliberately open. |
@@ -23,6 +28,14 @@ A skill owns nothing, so it is a file. Nothing owns a skill either: a profile cl
 | `# [Skill]` | Yes | The canonical name. Profiles, experiences and roles reference this exact string. |
 | `> [Definition]` | Yes | One-paragraph definition of what the skill is |
 | `## In practice` | No | What someone using this skill actually does |
+| `## References` | No | Table. What a reader can open to learn more about the skill; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a framework, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

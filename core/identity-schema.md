@@ -1,3 +1,7 @@
+---
+id: 01a04c7b-6b80-73dc-8007-6a193b1138d3
+---
+
 # Identity Schema
 
 > Required structure for the identity file — who the company is.
@@ -14,9 +18,10 @@ The file is the graph's root as well as its subject: every other file in the ins
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `model/sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
-| `email` | No | string | Where to reach the company |
+| `email` | No | string | Where to reach the company — a role address such as `info@` serves. No commit is judged by it: a person commits under their profile's `email`. |
 | `location` | No | string | Where the company works from |
 | `url` | No | string | The company's own address on the web |
 
@@ -28,6 +33,7 @@ The file is the graph's root as well as its subject: every other file in the ins
 | `> [Tagline]` | Yes | One-paragraph statement of what the company is |
 | `## What it is` | Yes | What the company does, and for whom |
 | `## Also at` | No | Table. One row per presence the company maintains elsewhere; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the company; its columns are declared below. |
 
 `## Also at` is a table with these columns:
 
@@ -37,6 +43,13 @@ The file is the graph's root as well as its subject: every other file in the ins
 | `URL` | Yes | string | The company's own page there |
 
 A presence is a place the company maintains a page on, named by the place and addressed by that page — never a single post, an article or a recording, which document an experience and belong in that experience's `## References`.
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a register entry, articles of association |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
@@ -52,9 +65,10 @@ Identity is the company itself: the entity every other file in the instance is a
   vision's business.
 - `## What it is` says what the company does and for whom, in the company's own voice. It is
   not a history and not a pitch; an achievement belongs to a profile's experience.
-- A fact lives in one place. Where identity and a profile would state the same thing —
-  an address, a mail address — identity holds it, and the profile carries its own only where it
-  differs.
+- A fact lives in one place. Where identity and a profile would state the same thing — an
+  address — identity holds it, and the profile carries its own only where it differs. A mail
+  address is two facts, not one: identity's is where to reach the company, and a human's
+  profile carries the person's own, the one their commits are authored under.
 - One row per place in `## Also at`, and a place the company no longer maintains has no row:
   the table is what a reader will follow.
 - The URL in `## Also at` is the page that is the company's own on that place, not a search, a

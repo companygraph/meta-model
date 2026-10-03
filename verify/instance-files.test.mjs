@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor,
+  agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -65,17 +65,37 @@ test("a type with a noun spells its folder README with it, and one without reads
   );
 });
 
-test("an instance starts with a source and its three singular entities, naming the instance", () => {
-  const files = startingEntities({ name: "Acme" });
-  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identity.md", "model/sources/local.md", "model/vision.md"]);
-  assert.match(files.get("model/identity.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
+test("an instance starts with a source and its singular entities, naming the instance", () => {
+  // Ids are handed out in order from a fixed list, so each page's id is known and the pages
+  // are seen to take one each (R18), none shared.
+  const ids = ["01a0f10b-0000-7000-8000-000000000001", "01a0f10b-0000-7000-8000-000000000002", "01a0f10b-0000-7000-8000-000000000003", "01a0f10b-0000-7000-8000-000000000004", "01a0f10b-0000-7000-8000-000000000005", "01a0f10b-0000-7000-8000-000000000006"];
+  let next = 0;
+  const files = startingEntities({ name: "Acme", id: () => ids[next++] });
+  assert.deepEqual([...files.keys()].sort(), ["model/brand.md", "model/identifier.md", "model/identity.md", "model/localization.md", "model/sources/local.md", "model/vision.md"]);
+  assert.equal(next, ids.length);
+  assert.deepEqual(new Set([...files.values()].map((text) => text.match(/^---\nid: (\S+)\n/)[1])), new Set(ids));
+  assert.match(files.get("model/identity.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
   assert.match(files.get("model/identity.md"), /\n## What it is\n/);
   assert.match(files.get("model/vision.md"), /\n## What it means\n/);
-  assert.match(files.get("model/brand.md"), /^---\nsource: Local\n---\n\n# Acme\n\n> /);
+  assert.match(files.get("model/brand.md"), /^---\nid: \S+\nsource: Local\n---\n\n# Acme\n\n> /);
   for (const section of ["Mark", "Color", "Typography", "Voice", "References"]) assert.match(files.get("model/brand.md"), new RegExp(`\n## ${section}\n`));
-  // A table is its header alone: nothing a reader could mistake for content, and the checks pass it.
-  assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\n## Typography\n/);
-  assert.match(files.get("model/sources/local.md"), /^# Local\n/);
+  // A required table section carries at least one row (R16), so the starting table holds a
+  // placeholder row a reader cannot mistake for a real color, and the checks pass it.
+  assert.match(files.get("model/brand.md"), /\n## Color\n\n\| Name \| Means \| Never \|\n\| --- \| --- \| --- \|\n\| .+ \|\n\n## Typography\n/);
+  assert.match(files.get("model/sources/local.md"), /^---\nid: \S+\n---\n\n# Local\n/);
+  assert.match(files.get("model/identifier.md"), /^---\nid: \S+\nsource: Local\nformat: uuidv7\n---\n\n# /);
+});
+
+// One language per model: the stub names the model's language in `locale` and says who reads it.
+test("the localization stub names its locale and says who reads the model in it", () => {
+  assert.equal(
+    LOCALIZATION_PAGE({ id: "x", source: "Local" }),
+    "---\nid: x\nsource: Local\nlocale: en-US\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n",
+  );
+  assert.equal(
+    LOCALIZATION_PAGE({ id: "x", source: "Local", locale: "de-CH" }),
+    "---\nid: x\nsource: Local\nlocale: de-CH\n---\n\n# Language\n\n> Everyone who reads this model, people and agents alike, reads it in de-CH.\n",
+  );
 });
 
 test("the workflow calls the reusable check at the release it is given", () => {
@@ -90,4 +110,37 @@ test("Claude's files name the vendored core and the instance", () => {
   assert.equal(files.get("CLAUDE.md").trim(), "@AGENTS.md");
   assert.ok(files.get("AGENTS.md").includes("meta/core/CONVENTIONS.md"));
   assert.ok(files.get("AGENTS.md").includes("Acme"));
+});
+
+test("the export's inputs name the instance and count nothing themselves, so they hold for any model", () => {
+  const files = exportFilesFor({ name: "Acme" });
+  assert.deepEqual([...files.keys()].sort(), ["export/README.md", "export/gemini-notebook-AGENTS.md"]);
+  const guide = files.get("export/gemini-notebook-AGENTS.md");
+  assert.match(guide, /^# Acme — the model\n/);
+  assert.match(guide, /\{\{entities\}\}/);
+  assert.match(guide, /References between entities are by name/);
+  // A digit in the guide is a count nobody substitutes; only the build's tokens state numbers.
+  assert.ok(!/\d/.test(guide), "the guide states no number of its own");
+  assert.ok(!/\{\{count:/.test(guide), "the guide names no source a model may not have");
+});
+
+test("the manifest carries what the form check leaves out, and an instance leaves out dist and its units", () => {
+  assert.deepEqual(excludeFor("meta"), ["dist", "meta"]);
+  assert.deepEqual(excludeFor("schemas"), ["dist", "schemas"]);
+  const read = JSON.parse(manifestOf({ tooling: "0.1.0", core: { version: "0.1.0", shape: 3, source: "bundled" }, units: "meta", exclude: ["dist", "meta"], files: {} }));
+  assert.deepEqual(read.exclude, ["dist", "meta"]);
+  assert.deepEqual(Object.keys(read), ["tooling", "core", "units", "packs", "exclude", "files"]);
+});
+
+// Final review, minors: an older core's schema declares a `## Locales` table and no `locale`, so a
+// page written against it takes the form that schema reads.
+test("the localization page takes the form its core's schema declares", () => {
+  const withLocale = "| `locale` | Yes | string | The language |\n";
+  assert.equal(localizationPageFor(withLocale, { id: "x", source: "Local" }), LOCALIZATION_PAGE({ id: "x", source: "Local" }));
+  assert.equal(localizationPageFor(undefined, { id: "x", source: "Local" }), LOCALIZATION_PAGE({ id: "x", source: "Local" }));
+  assert.equal(
+    localizationPageFor("# Localization Schema\n\n## Locales\n", { id: "x", source: "Local" }),
+    "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
+      "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
+  );
 });

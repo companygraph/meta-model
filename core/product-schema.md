@@ -1,3 +1,7 @@
+---
+id: 01a0c231-9ef8-7add-8875-3ed58850ec6e
+---
+
 # Product Schema
 
 > Required structure for product files.
@@ -12,6 +16,7 @@ A product owns nothing, so it is a file. Nothing owns a product either, and it l
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `domain` | Yes | ref → domain | The area of the company this product belongs to — the H1 of a file in `domains/` |
@@ -23,6 +28,14 @@ A product owns nothing, so it is a file. Nothing owns a product either, and it l
 | --- | --- | --- |
 | `# [Product]` | Yes | The canonical name of the product. A feature's `products` references this exact string. |
 | `> [What it is]` | Yes | One-paragraph statement of what the product is and who opens it |
+| `## References` | No | Table. What a reader can open to learn more about the product; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — documentation, a release page |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

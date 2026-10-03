@@ -1,3 +1,7 @@
+---
+id: 01a06385-9d00-7eef-86a5-d2218d053998
+---
+
 # Experience Kind Schema
 
 > Required structure for experience kind files.
@@ -14,6 +18,7 @@ The set is deliberately the instance's own. A career acquires categories — a s
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 
@@ -24,6 +29,14 @@ The set is deliberately the instance's own. A career acquires categories — a s
 | `# [Label]` | Yes | The canonical name. Every experience references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the kind covers |
 | `## What it means` | Yes | Which periods belong to this kind, and which do not |
+| `## References` | No | Table. What a reader can open to learn more about the kind; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a classification, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

@@ -15,7 +15,8 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
 2. Run the mechanical checks from the instance root, at the release the manifest names:
    `npx github:companygraph/meta-model#v<tooling> check`. It covers every rule it names in its
    own output: the shape of every schema, the files under `model/`, frontmatter, references,
-   tables, owned folders and the vendored files against the manifest's hashes. Do not repeat
+   tables, owned folders, ids against `model/identifier.md` (R18) and the vendored files
+   against the manifest's hashes. Do not repeat
    any of it by hand; copy its failures into the report as they are. When it cannot run — no
    network, no Node — say so under **Not checked** rather than walking those rules yourself,
    because a check done by hand is the one that gets a rule subtly wrong and still returns
@@ -35,10 +36,12 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
    profile whose nature is `agent` claims no skill and carries no Skills table, so a seat it
    holds reports no gap: what that seat requires is answered by its rulebook, not by a row the
    agent wrote about itself.
+
 5. Read what only reading judges: whether each Evidence row's `What it shows` is a concrete
    fact rather than a restatement of the level, whether `## In practice` prose says what
    following and breaking the value looks like, and every other line a schema asks a reader to
-   judge.
+   judge. A `pattern` in `model/identifier.md` that matches something taken from the entity, a
+   name or a type, fails the identifier schema's first writing rule.
 
 ## Report
 

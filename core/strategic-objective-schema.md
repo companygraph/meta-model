@@ -1,3 +1,7 @@
+---
+id: 01a0a48a-b970-7f8e-b95f-0769904c5a94
+---
+
 # Strategic Objective Schema
 
 > Required structure for strategic objective files.
@@ -12,6 +16,7 @@ One file per objective. Nothing owns an objective and an objective owns nothing,
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `adopted` | Yes | date | When this objective began directing the work |
@@ -24,6 +29,14 @@ One file per objective. Nothing owns an objective and an objective owns nothing,
 | `# [Objective]` | Yes | The canonical name, the objective stated as a phrase. Everything references the objective by this exact string. |
 | `> [Statement]` | Yes | One-paragraph statement of what must become true |
 | `## What it makes true` | Yes | What is concretely different when it holds, and what falls outside it |
+| `## References` | No | Table. What a reader can open to learn more about the objective; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a plan, a board paper |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

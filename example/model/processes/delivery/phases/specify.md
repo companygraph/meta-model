@@ -1,4 +1,5 @@
 ---
+id: 01a0a8c7-74d8-7c8a-9e3a-0d72ef94fce1
 source: Local
 owner: Backend Engineer
 executed-by:
@@ -44,4 +45,9 @@ To leave Specify, all of these hold:
 - The approach is chosen and the rejected ones are named.
 - What the change will not do is written down.
 
-Where they cannot be met, the Reviewer decides whether the request is reshaped or dropped.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| reshaped | Specify |
+| dropped | |

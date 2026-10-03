@@ -10,12 +10,21 @@ jobs:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
-      # No install step: nothing run below has a dependency — check.mjs reads this
-      # repository's own files, and the parser and its tests are pure, fed fixture maps —
-      # and there is no lockfile to install from. `npm ci` here would fail, not pass emptily.
+      # The JavaScript in lib/ and bin/ is the source, and its types are JSDoc in the same files.
+      # The declarations in types/ are written from that JSDoc and committed, because a consumer
+      # takes the package by tag and builds nothing. TypeScript and Node's types are devDependencies
+      # and nothing else is: they are installed here to write the declarations into a temporary
+      # folder and fail when the committed ones are not what the JSDoc declares. Nothing a consumer
+      # installs changes, and nothing below runs against anything but the committed files.
+      - name: Install the compiler
+        run: npm ci
+      - name: The committed declarations are what the JSDoc declares
+        run: npm run build:check
       - name: Check the repository's own shape
         run: npm run verify
       - name: The parser still parses
@@ -32,12 +41,27 @@ jobs:
         run: npm run test:plan
       - name: The files an instance starts with
         run: npm run test:instance-files
+      - name: The Markdown form, held by the pinned markdownlint
+        run: npm run test:form
+      - name: The pin report, against a fake ls-remote
+        run: npm run test:pins
       - name: The command, run over real folders
         run: npm run test:cli
+      - name: An entity's id, made and read
+        run: npm run test:ids
+      - name: A model's languages, read
+        run: npm run test:localization
+      - name: A commit's seat, judged against what governs it
+        run: npm run test:seats
       - name: Another release's core is read from its tarball
         run: npm run test:untar && npm run test:fetch-core
       - name: The Obsidian plugin is put into a vault
         run: npm run test:obsidian
+      # R18: a schema's id on the default branch never changes. Only on a pull request, over its
+      # own range, as an instance's workflow runs the same command over its pages.
+      - name: No schema's id changed
+        if: github.event_name == 'pull_request'
+        run: node bin/companygraph.mjs ids . --range "${{ github.event.pull_request.base.sha }}..${{ github.event.pull_request.head.sha }}"
 
   # The same suite on Windows, where the command is also run: a checkout there has `\r\n` line
   # ends unless `.gitattributes` says otherwise, and `path` answers with `\`. A job of its own
@@ -50,14 +74,21 @@ jobs:
       - uses: actions/setup-node@v7
         with:
           node-version: "22"
+      # As in `verify`: the compiler is installed only to hold the committed declarations to the
+      # JSDoc, here with the line ends and path separators a Windows checkout has.
+      - name: Install the compiler
+        run: npm ci
+      - name: The committed declarations are what the JSDoc declares
+        run: npm run build:check
       - name: Check the repository's own shape
+        if: ${{ !cancelled() }}
         run: npm run verify
       - name: The parser, the instance checks and the rules
         if: ${{ !cancelled() }}
         run: npm run test:instance && npm run test:instance-checks && npm run test:rules
       - name: The plan, the files an instance starts with, and the command over real folders
         if: ${{ !cancelled() }}
-        run: npm run test:plan && npm run test:instance-files && npm run test:cli
+        run: npm run test:plan && npm run test:instance-files && npm run test:form && npm run test:pins && npm run test:cli && npm run test:ids && npm run test:localization && npm run test:seats
       - name: The tarball, the fetch and the Obsidian install
         if: ${{ !cancelled() }}
         run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian

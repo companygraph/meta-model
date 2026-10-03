@@ -1,3 +1,7 @@
+---
+id: 01a02f39-6248-779b-b3d9-aed29f14e367
+---
+
 # Value Schema
 
 > Required structure for value files.
@@ -12,6 +16,7 @@ One file per value. Both source instances kept their values in a single document
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 
@@ -22,6 +27,14 @@ One file per value. Both source instances kept their values in a single document
 | `# [Value]` | Yes | The canonical name. Everything references the value by this exact string. |
 | `> [Statement]` | Yes | One-paragraph statement of the value |
 | `## In practice` | Yes | What following this value looks like, and what breaking it looks like |
+| `## References` | No | Table. What a reader can open to learn more about the value; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a code of conduct, a handbook |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

@@ -1,3 +1,7 @@
+---
+id: 01a0a48b-9818-7d5d-a7eb-46aee2dfe2a7
+---
+
 # Strategy Schema
 
 > Required structure for strategy files.
@@ -12,6 +16,7 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `adopted` | Yes | date | When this strategy began deciding things |
@@ -27,6 +32,14 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 | `## The approach` | Yes | How, concretely enough that someone could follow it |
 | `## What it rules out` | Yes | The options this choice forecloses |
 | `## What would show it is working` | Yes | What is observable, early enough to change course |
+| `## References` | No | Table. What a reader can open to learn more about the strategy; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a plan, a board paper |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

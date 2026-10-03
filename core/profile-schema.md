@@ -1,3 +1,7 @@
+---
+id: 01a02f3d-4e30-7b02-9ed7-cc37d8a2aa93
+---
+
 # Profile Schema
 
 > Required structure for profile files.
@@ -12,11 +16,12 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `nature` | Yes | enum | `human` or `agent`. What holds this profile: a person, or an agent that runs under rulebooks and stands for whichever model runs it. |
 | `roles` | No | array of ref → role | The seats this profile holds, each the H1 of a file in `roles/`. Absent for a profile without a seat. |
-| `email` | No | string | Contact address |
+| `email` | No | string | Contact address. On a profile whose `nature` is `human`, also the address the person's own commits are authored under: a commit from it is that person's, whatever seats the profile holds, and passes without trailers. |
 | `location` | No | string | Where the person works from |
 | `image` | No | image | The person's picture, a file in this profile's folder — square, 512×512 recommended, 256–1024 pixels on a side, at most 300 KB |
 
@@ -30,6 +35,7 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 | `## Evidence` | No | Table. Under `## Skills`. One row per fact a claim rests on; its columns are declared below. |
 | `## Summary` | No | A paragraph of context |
 | `## Also at` | No | Table. One row per presence the person maintains elsewhere; its columns are declared below. |
+| `## References` | No | Table. What a reader can open to learn more about the person; its columns are declared below. |
 
 `## Skills` is a table with these columns:
 
@@ -62,6 +68,13 @@ The column is `What it shows` rather than `Evidence` so that it does not restate
 | `URL` | Yes | string | The person's own page there |
 
 A presence is a place the person maintains a page on, named by the place and addressed by that page — never a single post, an article or a recording, which document an experience and belong in that experience's `## References`.
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a register entry, a publication |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 

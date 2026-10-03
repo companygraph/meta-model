@@ -1,3 +1,7 @@
+---
+id: 01a08666-4360-7bac-8ac9-4b7c234e01fc
+---
+
 # Surface Schema
 
 > Required structure for surface files.
@@ -12,6 +16,7 @@ A surface is a place the company publishes from the model. A place is published 
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a record key, an entry id. Absent when the source has none, as a repository does not. |
 | `production` | Yes | enum | `built` or `written`. `built` means a script writes the surface and holds its rules; `written` means a person or an agent writes it from this file. |
@@ -27,6 +32,14 @@ A surface is a place the company publishes from the model. A place is published 
 | `## What it shows` | Yes | Bulleted. One item per unit the surface presents, naming the unit and what fills it |
 | `## Projection rules` | No | Bulleted. How the model becomes this surface: what is carried, what is left out and why. Required for a `written` surface, absent for a `built` one. |
 | `## Constraints` | No | Bulleted. What the published result must satisfy, each written so a reader can pass or fail it |
+| `## References` | No | Table. What a reader can open to learn more about the surface; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a platform's published limits, a style guide |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
