@@ -47,17 +47,28 @@ test("a column declared in two sections' tables stands for both", () => {
   assert.equal(subjectOf("`## Missing` is written well.", subjects), null, "an opening name the schema does not declare is asked");
 });
 
-test("no writing rule in core or a pack opens with a subject that is also a frontmatter field", () => {
+// The rules whose opening name a schema declares both as a frontmatter field and as a column:
+// subjectOf reads such a name as the field and asks the rule always, so a column rule written
+// that way would never be left out, and nothing else would say so.
+const collisionsOf = (text) => {
+  const subjects = subjectsOf(text);
+  return writingRulesOf(text).filter((rule) => {
+    const name = rule.match(/^`([^`]+)`/)?.[1]?.trim();
+    return name !== undefined && subjects.fields.has(name) && subjects.columns.has(name);
+  });
+};
+
+test("a rule opening with a name that is both a field and a column is found", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | Yes | string | Its name. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `## References` | No | Table. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | No | string | A name. |\n\n## Writing rules\n\n- `name` is the thing's own.\n";
+  assert.deepEqual(collisionsOf(text), ["`name` is the thing's own."]);
+});
+
+test("no writing rule in core or a pack opens with a name that is both a field and a column", () => {
   const dirs = [new URL("../core/", import.meta.url), ...fs.readdirSync(new URL("../packs/", import.meta.url), { withFileTypes: true })
     .filter((d) => d.isDirectory()).map((d) => new URL(`../packs/${d.name}/`, import.meta.url))];
   for (const dir of dirs)
-    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md"))) {
-      const text = fs.readFileSync(new URL(f, dir), "utf8"), subjects = subjectsOf(text);
-      for (const rule of writingRulesOf(text)) {
-        const s = subjectOf(rule, subjects);
-        if (s?.column) assert.ok(!subjects.fields.has(s.column), `${f}: "${rule.slice(0, 60)}"`);
-      }
-    }
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md")))
+      assert.deepEqual(collisionsOf(fs.readFileSync(new URL(f, dir), "utf8")), [], f);
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
