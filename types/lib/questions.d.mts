@@ -27,9 +27,33 @@ export type NotAsked = {
     path: string;
     why: string;
 };
+export type Skipped = {
+    path: string;
+    type: string;
+    id: string;
+    rule: string;
+    without: string;
+};
 export type Questions = {
     asked: Request[];
     notAsked: NotAsked[];
+    skipped: Skipped[];
+};
+export type Subjects = {
+    sections: Set<string>;
+    columns: Map<string, string[]>;
+    fields: Set<string>;
+};
+export type Subject = {
+    sections: string[];
+    column: string | null;
+};
+export type Seen = {
+    type: string;
+    id: string;
+    rule: string;
+    ps: number[];
+    lacked: Map<string, number>;
 };
 export type RuleAnswer = {
     p: number;
@@ -54,7 +78,11 @@ export type Band = {
  * @typedef {RuleQuestion | GroupQuestion} Question
  * @typedef {{ path: string; type: string; name: string; state: { purpose: string; entity: string }; questions: Question[] }} Request
  * @typedef {{ path: string; why: string }} NotAsked
- * @typedef {{ asked: Request[]; notAsked: NotAsked[] }} Questions
+ * @typedef {{ path: string; type: string; id: string; rule: string; without: string }} Skipped
+ * @typedef {{ asked: Request[]; notAsked: NotAsked[]; skipped: Skipped[] }} Questions
+ * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string> }} Subjects
+ * @typedef {{ sections: string[]; column: string | null }} Subject
+ * @typedef {{ type: string; id: string; rule: string; ps: number[]; lacked: Map<string, number> }} Seen
  */
 /**
  * @typedef {{ p: number }} RuleAnswer
@@ -74,6 +102,17 @@ export declare function writingRulesOf(schemaText: string): string[];
  */
 export declare const purposeOf: (schemaText: string) => string;
 /**
+ * @param {string} schemaText
+ * @returns {Subjects}
+ */
+export declare function subjectsOf(schemaText: string): Subjects;
+/**
+ * @param {string} rule
+ * @param {Subjects} subjects
+ * @returns {Subject | null}
+ */
+export declare function subjectOf(rule: string, subjects: Subjects): Subject | null;
+/**
  * @param {string} sectionText
  * @returns {{ heading: string | null; bullet: string }[]}
  */
@@ -91,6 +130,11 @@ export declare function questionsOf({ graph, files, schemas }: {
     files: InstanceFiles;
     schemas: Files;
 }): Questions;
+/**
+ * @param {Skipped[]} skipped
+ * @returns {string[]}
+ */
+export declare function leftOutOf(skipped: Skipped[]): string[];
 export declare const BAND: Band | null;
 export declare const LOWEST = 3;
 /**
@@ -99,6 +143,6 @@ export declare const LOWEST = 3;
  * @param {{ band?: Band | null }} [options]
  * @returns {string[]}
  */
-export declare function reportOf({ asked, notAsked }: Questions, answers: Map<string, Answers | Failed>, { band }?: {
+export declare function reportOf({ asked, notAsked, skipped }: Questions, answers: Map<string, Answers | Failed>, { band }?: {
     band?: Band | null;
 }): string[];

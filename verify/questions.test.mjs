@@ -9,7 +9,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
-import { writingRulesOf, purposeOf, bulletsOf, questionsOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
+import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
@@ -27,6 +27,48 @@ test("a schema without writing rules gives none, and one without a purpose gives
   assert.deepEqual(writingRulesOf(bare), []);
   assert.equal(purposeOf(bare), "");
   assert.match(purposeOf(schema("experience")), /^An experience is one dated period/);
+});
+
+test("a rule's subject is the section or table column its opening names, never a field", () => {
+  const rules = (n) => writingRulesOf(schema(n));
+  const of = (n, i) => subjectOf(rules(n)[i - 1], subjectsOf(schema(n)));
+  assert.deepEqual(of("experience", 14), { sections: ["Ending"], column: null });
+  assert.deepEqual(of("concept", 4), { sections: ["Relations"], column: "As" });
+  assert.equal(of("experience", 1), null, "`role` is a field, and r1 judges whether it is there");
+  assert.equal(of("experience", 3), null, "a backticked name later in the sentence does not count");
+  assert.equal(of("concept", 6), null, "a rule with no opening name is asked as now");
+});
+
+test("a column declared in two sections' tables stands for both", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | Yes | string | Its name. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `## Sources` | No | Table. |\n| `## References` | No | Table. |\n\n`## Sources` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n| `name` | No | string | A name. |\n";
+  const subjects = subjectsOf(text);
+  assert.deepEqual(subjectOf("`What` names the kind of document.", subjects), { sections: ["Sources", "References"], column: "What" });
+  assert.equal(subjectOf("`name` is the thing's own.", subjects), null, "a name that is a field as well as a column is read as the field");
+  assert.equal(subjectOf("`## Missing` is written well.", subjects), null, "an opening name the schema does not declare is asked");
+});
+
+// The rules whose opening name a schema declares both as a frontmatter field and as a column:
+// subjectOf reads such a name as the field and asks the rule always, so a column rule written
+// that way would never be left out, and nothing else would say so.
+const collisionsOf = (text) => {
+  const subjects = subjectsOf(text);
+  return writingRulesOf(text).filter((rule) => {
+    const name = rule.match(/^`([^`]+)`/)?.[1]?.trim();
+    return name !== undefined && subjects.fields.has(name) && subjects.columns.has(name);
+  });
+};
+
+test("a rule opening with a name that is both a field and a column is found", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | Yes | string | Its name. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `## References` | No | Table. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | No | string | A name. |\n\n## Writing rules\n\n- `name` is the thing's own.\n";
+  assert.deepEqual(collisionsOf(text), ["`name` is the thing's own."]);
+});
+
+test("no writing rule in core or a pack opens with a name that is both a field and a column", () => {
+  const dirs = [new URL("../core/", import.meta.url), ...fs.readdirSync(new URL("../packs/", import.meta.url), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => new URL(`../packs/${d.name}/`, import.meta.url))];
+  for (const dir of dirs)
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md")))
+      assert.deepEqual(collisionsOf(fs.readFileSync(new URL(f, dir), "utf8")), [], f);
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
@@ -61,15 +103,59 @@ const example = () => {
 };
 const BEACON = "profiles/mira-halvorsen/experiences/2022-beacon-systems.md";
 
-test("every page is asked every writing rule of its schema, verbatim, with the purpose and the page whole", () => {
+const NORTHWIND = "profiles/mira-halvorsen/experiences/2018-northwind-atelier.md";
+
+test("a page is asked every writing rule whose subject it has, verbatim, numbered as in its schema, with the purpose and the page whole", () => {
   const { asked } = questionsOf(example());
   const page = asked.find((r) => r.path === BEACON);
   const rules = writingRulesOf(schema("experience"));
-  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })));
+  const ids = page.questions.filter((q) => q.kind === "rule").map((q) => q.id);
+  assert.ok(!ids.includes("r14"), "Beacon has no `## Ending`");
+  assert.ok(ids.includes("r12"), "Beacon has a References table with its `What` column");
+  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })).filter((q) => q.id !== "r14"));
   assert.equal(page.state.entity, exampleFiles().get(BEACON));
   assert.equal(page.state.purpose, purposeOf(schema("experience")));
   assert.equal(page.type, "experience");
   assert.equal(page.name, "Splitting the billing domain");
+});
+
+test("a rule left out for want of its subject is named, with what the page lacks", () => {
+  const { asked, skipped } = questionsOf(example());
+  const ids = (p) => asked.find((r) => r.path === p).questions.map((q) => q.id);
+  assert.ok(ids(NORTHWIND).includes("r14"), "Northwind has an `## Ending`");
+  assert.ok(!ids(NORTHWIND).includes("r12"), "Northwind has no References table");
+  assert.ok(ids(NORTHWIND).includes("r1") && ids(BEACON).includes("r1"), "a rule that opens with a field is asked either way");
+  assert.deepEqual(skipped.find((s) => s.path === BEACON && s.id === "r14"),
+    { path: BEACON, type: "experience", id: "r14", rule: writingRulesOf(schema("experience"))[13], without: "without `## Ending`" });
+  assert.equal(skipped.find((s) => s.path === NORTHWIND && s.id === "r12")?.without, "without a `What` column");
+});
+
+test("a concept without a Relations table is not asked the rule about As, and one with it is", () => {
+  const { asked, skipped } = questionsOf(example());
+  const ids = (p) => asked.find((r) => r.path === p).questions.map((q) => q.id);
+  assert.ok(ids("concepts/contract.md").includes("r4"));
+  assert.ok(!ids("concepts/customer.md").includes("r4"));
+  assert.equal(skipped.find((s) => s.path === "concepts/customer.md" && s.id === "r4")?.without, "without an `As` column");
+});
+
+test("a table without the optional column its rule is about leaves the rule unasked", () => {
+  const files = exampleFiles(), schemas = coreSchemas();
+  const text = files.get("concepts/contract.md")
+    .replace("| Concept | Cardinality | As |\n| --- | --- | --- |", "| Concept | Cardinality |\n| --- | --- |")
+    .replace(/^(\| [^|]+\| [^|]+\|) [^|]+\|$/gm, "$1");
+  assert.ok(!text.includes("| As |") && text.includes("| Customer | one |\n"), text);
+  files.set("concepts/contract.md", text);
+  const { asked } = questionsOf({ graph: parseInstance(files, { schemas }), files, schemas });
+  assert.ok(!asked.find((r) => r.path === "concepts/contract.md").questions.some((q) => q.id === "r4"));
+});
+
+test("a page whose every rule lacks its subject and that groups nothing is named, and says why", () => {
+  const thing = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `## Notes` | No | Prose. |\n\n## Writing rules\n\n- `## Notes` are written in full sentences.\n";
+  const graph = { entities: [{ path: "things/a.md", type: "thing", name: "A", id: "x", owner: null, tagline: "", sections: [] }] };
+  const { asked, notAsked, skipped } = questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", thing]]) });
+  assert.deepEqual(asked, []);
+  assert.deepEqual(notAsked, [{ path: "things/a.md", why: "it has nothing a writing rule of its schema is about, and nothing grouped" }]);
+  assert.equal(skipped.length, 1);
 });
 
 test("a grouped bullet is a choice among the instance's kinds, each described by its own page", () => {
@@ -160,6 +246,35 @@ test("measured, a verdict below the band is flagged and a rule near even for mos
   assert.match(r1, /asked of 2, median 0\.\d\d, near even for 1$/);
   const r3 = lines.find((l) => /^ {2}experience r3:/.test(l));
   assert.match(r3, /asked of 1, median 0\.50, near even for 1 — cannot be judged as written; a finding against the schema$/);
+});
+
+test("a rule's summary counts the pages it was left out of, and a rule asked of none still has its line", () => {
+  const skipped = [
+    { path: "x.md", type: "experience", id: "r1", rule: "One.", without: "without `## Ending`" },
+    { path: "y.md", type: "experience", id: "r9", rule: "Nine.", without: "without `## Ending`" },
+    { path: "z.md", type: "experience", id: "r9", rule: "Nine.", without: "without `## Ending`" },
+  ];
+  const lines = reportOf({ ...asked, skipped }, answers, { band: { low: 0.4, high: 0.6, pick: 0.7 } });
+  assert.match(lines.find((l) => /^ {2}experience r1:/.test(l)), /asked of 2, median 0\.\d\d, near even for 1; not asked of 1 without `## Ending`$/);
+  assert.equal(lines.find((l) => /^ {2}experience r9:/.test(l)), "  experience r9: asked of 0; not asked of 2 without `## Ending`");
+  assert.ok(!reportOf(asked, answers).some((l) => /not asked of/.test(l)), "a run that left nothing out says nothing of it");
+});
+
+test("what a page is without takes the article its column's name is said with", () => {
+  const thing = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `## References` | No | Table. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `URL` | Yes | string | Where. |\n| `Owner` | No | string | Whose. |\n\n## Writing rules\n\n- `URL` is the page itself.\n- `Owner` is a seat.\n";
+  const graph = { entities: [{ path: "things/a.md", type: "thing", name: "A", id: "x", owner: null, tagline: "", sections: [] }] };
+  const { skipped } = questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", thing]]) });
+  assert.deepEqual(skipped.map((s) => s.without), ["without a `URL` column", "without an `Owner` column"]);
+});
+
+test("the rules left out are listed per rule, for a run that sends nothing", () => {
+  const skipped = [
+    { path: "y.md", type: "experience", id: "r14", rule: "", without: "without `## Ending`" },
+    { path: "c.md", type: "concept", id: "r4", rule: "", without: "without an `As` column" },
+    { path: "z.md", type: "experience", id: "r14", rule: "", without: "without `## Ending`" },
+  ];
+  assert.deepEqual(leftOutOf(skipped), ["  concept r4: not asked of 1 without an `As` column", "  experience r14: not asked of 2 without `## Ending`"]);
+  assert.deepEqual(leftOutOf([]), []);
 });
 
 test("the report never reads as a pass and ends naming what it did not ask, a failed page among them", () => {
