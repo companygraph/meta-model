@@ -4,6 +4,8 @@ A control says what holds a rule, and the rules and controls spec of September 3
 
 Status: decided by the owner on October 3, 2026: a KPI names the controls it assesses in a field of its own, `assesses`, rather than widening `measures`; the field is built together with the first KPI that uses it, Ruleset Bypasses; its values are kept in a reports bucket of its own per organization, `kpi-reports-<project>`, beside the chat's reports bucket and not inside it; the bypasses are read with a GitHub App per organization, with Administration read on all its repositories.
 
+Amended by the owner later on October 3, 2026, once the first weeks were read: of 23 bypasses in week 39, 21 were merges of a branch that was behind main with every required check passed, and 2 were merges while a required check was still running. The KPI counts only the second kind, the merges that went past a check, and is named Merges Past Their Checks; the weekly object keeps both kinds. The GitHub Apps gained Checks, Contents and Pull requests read to tell them apart.
+
 ## Where this comes from
 
 The rules and controls spec (`2026-09-30-rules-risks-and-controls-design.md`) deferred this: "Pointing a KPI's `measures` at a control is a change to the `kpi` type, which this spec does not make." The control schema repeats that a control's effectiveness is measured "where the company measures it, by a KPI, never by a number on this page".
@@ -33,14 +35,23 @@ The control schema's sentence becomes: "How well it works is measured, where the
 
 The example instance gains one KPI that assesses its control, so the checks and the MCP server's tests see the edge. This is core 0.54.0 and the package v0.72.0: additive, nothing an instance holds breaks.
 
-## The first KPI: Ruleset Bypasses
+## Telling the bypasses apart
+
+A rule suite with result `bypass` records that a rule did not pass when a change reached the default branch. In the family's repositories the rule is almost always required status checks, and the record does not say why. The weekly job classifies each bypass from the pull request that made it:
+
+- **Behind main:** the pull request's head had every required check of the branch's rules completed with success before the merge, and the branch lacked commits the default branch had. The checks passed against a main that had since moved; nothing went untested on the pull request.
+- **Past its checks:** a required check had not completed with success by the merge (still running, failed, or never reported), or the change reached the branch with no pull request at all, or a rule other than required status checks was bypassed. Something went past a check.
+
+The required checks are the contexts the branch's rules name (`GET /repos/{owner}/{repo}/rules/branches/{branch}`); a check run counts when it completed with conclusion `success` at or before the pull request's `merged_at`. A bypass the job cannot classify, because the pull request, its check runs or the comparison cannot be read, counts as past its checks, the side a wrong guess can be undone from.
+
+## The first KPI: Merges Past Their Checks
 
 Written in companygraph/mental-model first, since CompanyGraph decides its vocabulary, then in robertblust/mental-model and guestgraph/mental-model, each in its own voice and each entry put to the owner before it is committed.
 
-- `direction: lower`, `unit: bypasses per week`.
+- `direction: lower`, `unit: merges per week`.
 - `assesses`: the instance's control "Main takes a change only through a green, current pull request".
-- `## How it is measured`: the number of rule suites on a default branch of any of the organization's repositories whose result is `bypass`, in one ISO week, read from GitHub's rule-suite record by the weekly job below.
-- `## What it can hide`: a repository with no ruleset is never evaluated, so a change to it is no bypass; a bypass counts a merge whose required checks had not passed, whoever pressed the button and for whatever reason, so it does not tell a deliberate override from an impatient one; and a merge whose required check never reported because a path filter skipped it counts as a bypass although nothing was skipped on purpose.
+- `## How it is measured`: the bypasses classified past their checks, on the default branches of the organization's repositories, in one ISO week, read from GitHub's rule-suite record and each bypass's pull request by the weekly job below.
+- `## What it can hide`: a repository with no ruleset is never evaluated; a check that is not required does not count; a merge behind main with its checks passed is not counted although its checks ran against an older main; and a required check that a path filter skipped counts as past its checks although nothing was skipped on purpose.
 - `## References`: the weekly job, and the bucket where the values are kept.
 
 Whether it gets `serves` or `read-with` is the instance's to say when it is written.
@@ -52,7 +63,7 @@ Each organization keeps its reports in one place: the Google Cloud project its M
 - `kpi-reports-<project>`, in the project's region, uniform bucket-level access, public access prevention enforced, object versioning on, no deletion rule.
 - A service account `kpi-reporter`, with `roles/storage.objectUser` on that bucket only, impersonable by a run of the host repository's `main` through the workload identity pool the host's bootstrap made.
 - Both in the MCP host's own Terraform, not in chat-server's: a KPI is not the chat's.
-- One object per KPI per week: `ruleset-bypasses/<ISO year>-W<ISO week>.json`, holding `{ "kpi": "Ruleset Bypasses", "organization", "week", "from", "to", "bypasses", "repositories": { "<repo>": n }, "read_at" }`. A run for a week already written replaces it; versioning keeps the earlier object.
+- One object per KPI per week: `ruleset-bypasses/<ISO year>-W<ISO week>.json`, holding `{ "kpi": "Merges Past Their Checks", "organization", "week", "from", "to", "bypasses", "past_checks", "behind_main", "repositories": { "<owner>/<repo>": { "bypasses": n, "past_checks": n, "behind_main": n } }, "unread", "read_at" }`, where `bypasses` is the sum of the other two. A run for a week already written replaces it; versioning keeps the earlier object.
 
 ## The weekly job
 
@@ -70,10 +81,11 @@ A workflow in each of those repositories, on Monday morning and by hand, for the
 
 1. Exchanges the organization's GitHub App key (`KPI_APP_ID`, `KPI_APP_PRIVATE_KEY`) for an installation token with `actions/create-github-app-token`.
 2. Lists the organization's repositories and, per repository, the rule suites on its default branch with result `bypass` in the week, following pages; a repository the App cannot read is named in the log and counted as unread, never as zero.
-3. Writes the week's object to `kpi-reports-<project>` through `google-github-actions/auth` as `kpi-reporter`.
-4. Prints the count and the repositories it read, never anything else.
+3. Classifies each bypass as behind main or past its checks, as above, from its pull request, that head's check runs, the comparison with the default branch and the branch's rules.
+4. Writes the week's object to `kpi-reports-<project>` through `google-github-actions/auth` as `kpi-reporter`.
+5. Prints the counts and the repositories it read, never anything else.
 
-The owner's steps, which no run can take: create the three GitHub Apps (Administration: Read-only, installed on all repositories), add `KPI_APP_ID` as a variable and `KPI_APP_PRIVATE_KEY` as a secret in each host repository, and apply each host's Terraform.
+The owner's steps, which no run can take: create the three GitHub Apps (Administration, Checks, Contents and Pull requests: Read-only, installed on all repositories), add `KPI_APP_ID` as a variable and `KPI_APP_PRIVATE_KEY` as a secret in each host repository, and apply each host's Terraform.
 
 ## Tests
 

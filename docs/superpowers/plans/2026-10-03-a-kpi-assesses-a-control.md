@@ -2,7 +2,7 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** A KPI names the controls it assesses, the first such KPI, Ruleset Bypasses, is counted every week from GitHub's rule-suite record, and its values are kept in a bucket of their own per organization.
+**Goal:** A KPI names the controls it assesses, the first such KPI, Merges Past Their Checks (amended from Ruleset Bypasses, Task 6), is counted every week from GitHub's rule-suite record, and its values are kept in a bucket of their own per organization.
 
 **Architecture:** meta-model gains the optional KPI field `assesses: array of ref → control` (core 0.54.0, package v0.72.0). companygraph/mcp-server gains a Terraform module for the `kpi-reports-<project>` bucket and its `kpi-reporter` service account, a counting script, and a reusable workflow that runs it with the organization's GitHub App token; each MCP host calls the module from its own `infra/main.tf`, which its deploy workflow already applies on a merge to main, and calls the workflow on a weekly schedule. Each model writes the KPI once it is on v0.72.0.
 
@@ -332,3 +332,15 @@ jobs:
 - [ ] Upgrade each instance to meta-model v0.72.0 (one PR each), as on October 2.
 - [ ] Draft the KPI Ruleset Bypasses for companygraph/mental-model first, from the spec's section, assessing its control "Main takes a change only through a green, current pull request", with `## References` naming the weekly workflow and the bucket; put it to the owner in chat; commit on his word as the Writer; then the same for robertblust and guestgraph in their voices.
 - [ ] The content re-pins of hosts and sites follow, on the owner's word, as on October 3.
+
+## Task 6: telling the bypasses apart (the amendment of October 3)
+
+The spec's amendment, read before this task: the KPI counts only bypasses past their checks, as Merges Past Their Checks; the object gains `past_checks` and `behind_main` and a split per repository. The GitHub Apps have Checks, Contents and Pull requests read, verified on October 3 against a bypass in each organization.
+
+**Files:** companygraph/mcp-server `lib/bypasses.mjs`, `bin/bypasses.mjs`, `test/bypasses.test.mjs`, README's KPI paragraph, and the header comment of `.github/workflows/kpi-google.yml` (write the host's call as block mappings; the one-line flow-mapping form with `${{ }}` does not parse). The workflow's App-token step asks for `permission-checks`, `permission-contents` and `permission-pull-requests: read` beside administration.
+
+- [ ] **Step 1: Failing tests.** `classify({ merged_at, head_sha, required, runs, behind })` → `"behind_main"` when every name in `required` has a run with conclusion `success` and `completed_at <= merged_at` and `behind > 0`; `"past_checks"` otherwise, including no pull request, a run completed after `merged_at`, a failed run, a missing required name, and `behind === 0` with checks not all passed. A bypass whose pull request, runs or comparison answer non-200 is `"past_checks"`. The CLI test's fake server answers, per bypass, `commits/{sha}/pulls`, `commits/{head}/check-runs`, `compare/{head}...{base}` and `rules/branches/{branch}`, and asserts the object's keys, the per-repository split, and `bypasses = past_checks + behind_main`.
+- [ ] **Step 2:** see them fail; **Step 3:** implement; **Step 4:** `npm test` and the terraform validate pass.
+- [ ] **Step 5:** commit as Implementer; the release v0.53.0 and the hosts' re-pin to it follow on the owner's word, then one run by hand per host, robertblust first, read back against a classification done directly for one week.
+
+The KPI entries of Task 5 are written as Merges Past Their Checks, unit `merges per week`, counting `past_checks`.
