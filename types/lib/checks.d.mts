@@ -22,6 +22,13 @@ export type TypeEntry = {
         heading?: boolean;
     };
     /**
+     * A reference column written on one side only: no two entities of the type each name the other in it.
+     */
+    oneSided?: {
+        section: string;
+        column: string;
+    };
+    /**
      * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
      */
     expires?: string;
@@ -60,6 +67,7 @@ export type Check = {
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
  * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+ * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**
