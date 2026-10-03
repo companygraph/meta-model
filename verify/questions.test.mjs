@@ -39,21 +39,22 @@ const ENDING = idOf("experience", "`## Ending`");
 const WHAT = idOf("experience", "`What`");
 const AS = idOf("concept", "`As`");
 
-test("a rule's subject is the section or table column its opening names, never a field", () => {
+test("a rule's subject is the section, column or field its opening names", () => {
   const rules = (n) => writingRulesOf(schema(n));
   const of = (n, i) => subjectOf(rules(n)[i - 1], subjectsOf(schema(n)));
-  assert.deepEqual(of("experience", Number(ENDING.slice(1))), { sections: ["Ending"], column: null });
-  assert.deepEqual(of("concept", Number(AS.slice(1))), { sections: ["Relations"], column: "As" });
-  assert.equal(of("experience", 1), null, "`role` is a field, and r1 judges whether it is there");
-  assert.equal(of("experience", 3), null, "a backticked name later in the sentence does not count");
+  assert.deepEqual(of("experience", Number(ENDING.slice(1))), { sections: ["Ending"], column: null, field: null });
+  assert.deepEqual(of("concept", Number(AS.slice(1))), { sections: ["Relations"], column: "As", field: null });
+  assert.equal(of("experience", 1), null, "experience r1 opens with The H1, which every page has");
+  assert.deepEqual(of("experience", 3), { sections: [], column: null, field: "skills" }, "\"Every entry in `skills:`\" opens with the field after a short lead-in");
+  assert.equal(subjectOf("A rule that names a phase and then `skills` is long.", subjectsOf(schema("experience"))), null, "a backticked name further into the sentence does not count");
   assert.equal(subjectOf("A rule that opens with no name.", subjectsOf(schema("concept"))), null, "a rule with no opening name is asked as now");
 });
 
 test("a column declared in two sections' tables stands for both", () => {
   const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `name` | Yes | string | Its name. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `## Sources` | No | Table. |\n| `## References` | No | Table. |\n\n`## Sources` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `What` | Yes | string | What it is. |\n| `name` | No | string | A name. |\n";
   const subjects = subjectsOf(text);
-  assert.deepEqual(subjectOf("`What` names the kind of document.", subjects), { sections: ["Sources", "References"], column: "What" });
-  assert.equal(subjectOf("`name` is the thing's own.", subjects), null, "a name that is a field as well as a column is read as the field");
+  assert.deepEqual(subjectOf("`What` names the kind of document.", subjects), { sections: ["Sources", "References"], column: "What", field: null });
+  assert.deepEqual(subjectOf("`name` is the thing's own.", subjects), { sections: [], column: null, field: "name" }, "a name that is a field as well as a column is read as the field");
   assert.equal(subjectOf("`## Missing` is written well.", subjects), null, "an opening name the schema does not declare is asked");
 });
 
@@ -114,6 +115,28 @@ test("every writing rule in core and the packs opens with its subject", () => {
     }
 });
 
+const KPI_LIKE = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `read-with` | No | array of ref → thing | Another. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `> [Definition]` | Yes | One line. |\n\n## Writing rules\n\n- `read-with` names a thing that moves against this one.\n- The definition says what it counts.\n- Kept in mind whatever happens.\n";
+const kpiLike = (fields) => {
+  const entity = (path, f) => ({ path, type: "thing", name: path, id: path, owner: null, tagline: "", sections: [], fields: f });
+  const graph = { entities: [entity("things/a.md", fields)] };
+  return questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", KPI_LIKE]]) });
+};
+
+test("a rule about a field is asked only of a page that carries the field", () => {
+  const without = kpiLike({ id: "x" });
+  assert.deepEqual(without.asked[0].questions.map((q) => q.id), ["r2", "r3"]);
+  assert.equal(without.skipped[0].without, "without `read-with`");
+  const empty = kpiLike({ id: "x", "read-with": [] });
+  assert.deepEqual(empty.asked[0].questions.map((q) => q.id), ["r2", "r3"], "an empty list is no value");
+  const withIt = kpiLike({ id: "x", "read-with": ["Other"] });
+  assert.deepEqual(withIt.asked[0].questions.map((q) => q.id), ["r1", "r2", "r3"]);
+});
+
+test("a rule with no subject at its opening, as an instance's own schema may have, is asked of every page", () => {
+  const { asked } = kpiLike({ id: "x" });
+  assert.ok(asked[0].questions.some((q) => q.id === "r3" && q.rule === "Kept in mind whatever happens."));
+});
+
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
   const text = "- Before any heading.\n\n### Delivery\n\n- Split one service into two, so the second\n  team stopped waiting.\n- Another.\n\n### Results\n\n- Measured.";
   assert.deepEqual(bulletsOf(text), [
@@ -149,13 +172,15 @@ const BEACON = "profiles/mira-halvorsen/experiences/2022-beacon-systems.md";
 const NORTHWIND = "profiles/mira-halvorsen/experiences/2018-northwind-atelier.md";
 
 test("a page is asked every writing rule whose subject it has, verbatim, numbered as in its schema, with the purpose and the page whole", () => {
-  const { asked } = questionsOf(example());
+  const { asked, skipped } = questionsOf(example());
   const page = asked.find((r) => r.path === BEACON);
   const rules = writingRulesOf(schema("experience"));
   const ids = page.questions.filter((q) => q.kind === "rule").map((q) => q.id);
   assert.ok(!ids.includes(ENDING), "Beacon has no `## Ending`");
   assert.ok(ids.includes(WHAT), "Beacon has a References table with its `What` column");
-  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })).filter((q) => q.id !== ENDING));
+  const left = new Set(skipped.filter((s) => s.path === BEACON).map((s) => s.id));
+  assert.ok(left.has(ENDING) && !left.has(WHAT));
+  assert.deepEqual(page.questions.filter((q) => q.kind === "rule"), rules.map((rule, i) => ({ id: `r${i + 1}`, kind: "rule", rule })).filter((q) => !left.has(q.id)));
   assert.equal(page.state.entity, exampleFiles().get(BEACON));
   assert.equal(page.state.purpose, purposeOf(schema("experience")));
   assert.equal(page.type, "experience");

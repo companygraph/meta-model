@@ -52,6 +52,7 @@ export type Opening = {
 export type Subject = {
     sections: string[];
     column: string | null;
+    field: string | null;
 };
 export type Seen = {
     type: string;
@@ -87,7 +88,7 @@ export type Band = {
  * @typedef {{ asked: Request[]; notAsked: NotAsked[]; skipped: Skipped[] }} Questions
  * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string>; label: string | null }} Subjects
  * @typedef {{ kind: "section" | "field" | "column" | "fixed"; name: string }} Opening
- * @typedef {{ sections: string[]; column: string | null }} Subject
+ * @typedef {{ sections: string[]; column: string | null; field: string | null }} Subject
  * @typedef {{ type: string; id: string; rule: string; ps: number[]; lacked: Map<string, number> }} Seen
  */
 /**
