@@ -95,6 +95,14 @@ export declare function deletedPagesOf(cwd: string, range: string, model?: strin
 export declare function mergeBaseOf(cwd: string, a: string, b: string): string;
 /**
  * @param {string} cwd
+ * @param {string} a
+ * @param {string} b
+ * @param {string} units
+ * @returns {boolean}
+ */
+export declare function upgradedIn(cwd: string, a: string, b: string, units: string): boolean;
+/**
+ * @param {string} cwd
  * @param {string} rev
  * @param {string} [model]
  * @returns {Map<string, string>}
