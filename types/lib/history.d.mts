@@ -1,4 +1,4 @@
-import type { InstanceGraph } from "./instance.mjs";
+import type { InstanceFiles, InstanceGraph } from "./instance.mjs";
 import type { Trailers } from "./seats.mjs";
 export type Commit = {
     sha: string;
@@ -20,9 +20,19 @@ export declare function gitTop(dir: string): string | null;
 export declare const isInstance: (dir: string) => boolean;
 /**
  * @param {string} dir
+ * @returns {{ graph: InstanceGraph; files: InstanceFiles; schemas: Map<string, string>; core: string | null }}
+ */
+export declare function instanceAt(dir: string): {
+    graph: InstanceGraph;
+    files: InstanceFiles;
+    schemas: Map<string, string>;
+    core: string | null;
+};
+/**
+ * @param {string} dir
  * @returns {InstanceGraph}
  */
-export declare function readInstance(dir: string): InstanceGraph;
+export declare const readInstance: (dir: string) => InstanceGraph;
 /**
  * @param {string} cwd
  * @param {{ range?: string | undefined; since?: string | undefined }} [options]

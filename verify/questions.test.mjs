@@ -4,6 +4,11 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
+import os from "node:os";
+import path from "node:path";
+import { execFileSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
+import { instanceAt } from "../lib/history.mjs";
 import { writingRulesOf, purposeOf, bulletsOf, questionsOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
@@ -150,4 +155,24 @@ test("the report never reads as a pass and ends naming what it did not ask, a fa
   const tail = lines.slice(lines.indexOf("not asked:"));
   assert.ok(tail.length > 1, lines.join("\n"));
   assert.deepEqual(tail.slice(1), ["  model/big.md: longer than the judge reads in one request", "  model/c.md: TypeSafe answered 500"]);
+});
+// fileURLToPath, not `.pathname`: on Windows a URL's pathname is `/C:/…`, which no process can run.
+const cli = fileURLToPath(new URL("../bin/companygraph.mjs", import.meta.url));
+const fresh = () => {
+  const root = fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-judge-"));
+  execFileSync(process.execPath, [cli, "init", root, "--name", "Acme", "--agent", "claude", "--no-hook"], { encoding: "utf8" });
+  return root;
+};
+
+test("an instance is read with its pages and its vendored schemas, and questions come from those", () => {
+  const root = fresh();
+  const instance = instanceAt(root);
+  assert.ok(instance.files.has("identity.md"));
+  assert.ok(instance.schemas.has("identity-schema.md"));
+  assert.equal(instance.core, JSON.parse(fs.readFileSync(path.join(root, ".companygraph", "manifest.json"), "utf8")).core.version);
+  // The vendored copy is what is asked: a rule added to it is asked, and core in this package is not read.
+  const vendored = path.join(root, "meta", "core", "identity-schema.md");
+  fs.writeFileSync(vendored, fs.readFileSync(vendored, "utf8").replace("## Writing rules\n\n", "## Writing rules\n\n- A rule only this instance has.\n"));
+  const page = questionsOf(instanceAt(root)).asked.find((r) => r.path === "identity.md");
+  assert.equal(page.questions[0].rule, "A rule only this instance has.");
 });
