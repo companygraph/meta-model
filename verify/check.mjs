@@ -31,6 +31,7 @@ import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
 import { TYPES, PACKS, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
+import { subjectsOf, writingRulesOf, openingOf } from "../lib/questions.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EX = `example/${MODEL}`;
@@ -168,6 +169,15 @@ const CHECKS = [
         const rules = (s.get("Writing rules") ?? "").trim();
         if (rules && !rules.split("\n").some((l) => /^[-*]\s+\S/.test(l)))
           fail(`${path}: "## Writing rules" is not a list`);
+
+        // CONVENTIONS asks each rule to open with its subject, so a reader and the judge can tell
+        // at once whether a page has anything for it to judge. Core and the packs are held to it;
+        // an instance's own schema is not, and the judge asks such a rule of every page.
+        const subjects = subjectsOf(text);
+        writingRulesOf(text).forEach((rule, i) => {
+          if (!openingOf(rule, subjects))
+            fail(`${path}: writing rule r${i + 1} opens with no subject — a declared section, field or column in backticks, "The H1", the tagline or "The page": "${rule.slice(0, 60)}…"`);
+        });
 
         // R9 gives Purpose one paragraph: the sentence someone needs before writing their first
         // entity of the type, not the rationale for the design. Nothing read that rule, and

@@ -9,7 +9,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
-import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
+import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, openingOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
@@ -79,6 +79,39 @@ test("no writing rule in core or a pack opens with a name that is both a field a
   for (const dir of dirs)
     for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md")))
       assert.deepEqual(collisionsOf(fs.readFileSync(new URL(f, dir), "utf8")), [], f);
+});
+
+test("a rule opens with a declared subject, a fixed word, or a short lead-in to one", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `direction` | Yes | enum | Its direction. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `> [Statement]` | Yes | One line. |\n| `## Notes` | No | Table. |\n\n`## Notes` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `Line` | Yes | string | A line. |\n";
+  const s = subjectsOf(text);
+  assert.equal(s.label, "Statement");
+  assert.deepEqual(openingOf("`## Notes` are short.", s), { kind: "section", name: "Notes" });
+  assert.deepEqual(openingOf("Every row of `## Notes` is short.", s), { kind: "section", name: "Notes" });
+  assert.deepEqual(openingOf("Each `Line` is a sentence.", s), { kind: "column", name: "Line" });
+  assert.deepEqual(openingOf("`direction: target` is written only where …", s), { kind: "field", name: "direction" });
+  assert.deepEqual(openingOf("The H1 names the thing.", s), { kind: "fixed", name: "The H1" });
+  assert.deepEqual(openingOf("The statement says where.", s), { kind: "fixed", name: "The statement" });
+  assert.deepEqual(openingOf("The page writes names and prose in American English (R14).", s), { kind: "fixed", name: "The page" });
+  assert.equal(openingOf("A rule that names a phase and then `## Notes` is long.", s), null, "a lead-in longer than a few words hides the subject");
+  assert.equal(openingOf("`## Missing` is short.", s), null, "a section the schema does not declare");
+  assert.equal(openingOf("Names and prose are American English (R14).", s), null);
+});
+
+test("a tagline label that is a phrase gives no fixed word of its own", () => {
+  const text = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `> [What it gives]` | Yes | One line. |\n";
+  const s = subjectsOf(text);
+  assert.equal(openingOf("The what it gives says it.", s), null);
+  assert.deepEqual(openingOf("The tagline says it.", s), { kind: "fixed", name: "The tagline" });
+});
+
+test("every writing rule in core and the packs opens with its subject", () => {
+  const dirs = [new URL("../core/", import.meta.url), ...fs.readdirSync(new URL("../packs/", import.meta.url), { withFileTypes: true })
+    .filter((d) => d.isDirectory()).map((d) => new URL(`../packs/${d.name}/`, import.meta.url))];
+  for (const dir of dirs)
+    for (const f of fs.readdirSync(dir).filter((x) => x.endsWith("-schema.md"))) {
+      const text = fs.readFileSync(new URL(f, dir), "utf8"), s = subjectsOf(text);
+      writingRulesOf(text).forEach((rule, i) => assert.ok(openingOf(rule, s), `${f} r${i + 1}: "${rule.slice(0, 70)}"`));
+    }
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {
