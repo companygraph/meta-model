@@ -1681,3 +1681,31 @@ test("ids --range holds a branch behind its base to what the branch did, not to 
   assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
   assert.doesNotMatch(said.stderr, /packs-are-units/);
 });
+
+// A range that cannot run says why in one line and exits 1, as a malformed range does: a manifest
+// that is not JSON, and two ends with no commit in common, which a shallow clone also shows.
+test("ids --range with a manifest that is not JSON says so in one line and exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", "HEAD..HEAD"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /^✗ .*\.companygraph\/manifest\.json could not be read as JSON/);
+  assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
+});
+
+test("ids --range whose ends share no commit names the cause in one line and exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "--orphan", "other"); g("commit", "-qm", "unrelated", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "other")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /^✗ .*have no commit in common here.*fetch its full history/);
+  assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
+});

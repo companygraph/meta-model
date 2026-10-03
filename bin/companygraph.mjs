@@ -1098,8 +1098,14 @@ function ids(argv) {
   const folder = onCore ? "core" : "model";
   // The packs the instance took, so a page of a pack's type is known as a core page is: given its
   // id by the backfill, and held by the range's checks of what a change may do to it.
-  const manifestPath = join(root, ".companygraph/manifest.json");
-  const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+  /** @type {{ units?: string, packs?: string[] }} */
+  let manifest = {};
+  try {
+    manifest = (!onCore && manifestAt(root)) || {};
+  } catch (error) {
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
+    return 1;
+  }
   const units = manifest.units ?? "meta";
   const { types, schemaOf } = vocabularyOf({ core: `${units}/core`, packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${units}/${name}` })) });
   if (given.backfill) {
@@ -1148,7 +1154,16 @@ function ids(argv) {
     // added would read as one the branch deleted. The id check stays on the range as given, since
     // its base is the ids the default branch holds now.
     if (!onCore) {
-      const fork = mergeBaseOf(root, ends[0], ends[1]);
+      // Where the two ends hold no commit in common there is no branch point to read from: in a
+      // shallow clone because the history that holds it was not fetched, and otherwise because
+      // the two are unrelated. Said in one line, as a git failure, and not as git's own message.
+      let fork;
+      try {
+        fork = mergeBaseOf(root, ends[0], ends[1]);
+      } catch {
+        console.error(`✗ ${ends[0]} and ${ends[1]} have no commit in common here, so where the branch began cannot be read; in a shallow clone, fetch its full history (fetch-depth: 0) and run again`);
+        return 1;
+      }
       const own = `${fork}..${ends[1]}`;
       const branched = own === given.range ? changes : changedPagesOf(root, own, folder);
       failures.push(
