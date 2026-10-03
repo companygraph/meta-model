@@ -52,7 +52,7 @@ Nothing owns a control and a control owns nothing: it reaches across the process
 
 ## Purpose
 
-A control is what the company does, or has a machine do, so that a risk is less likely or less harmful, or a rule is kept (ISO 31000: a measure that maintains or modifies risk; COSO's control activities). It answers "what actually stops this, finds it, or repairs it, and is it a machine or a person?" The control is the entity: a gate's criteria and a check's code stay where they are, and the control says in prose how it is carried out and points at the file that does it. How well it works is measured, where the company measures it, by a KPI, never by a number on this page.
+A control is what the company does, or has a machine do, so that a risk is less likely or less harmful, or a rule is kept (ISO 31000: a measure that maintains or modifies risk; COSO's control activities). It answers "what actually stops this, finds it, or repairs it, and is it a machine or a person?" The control is the entity: a gate's criteria and a check's code stay where they are, and the control says in prose how it is carried out and points at the file that does it. How well it works is measured, where the company measures it, by a KPI that names it in `assesses`, never by a number on this page.
 
 ## Writing rules
 

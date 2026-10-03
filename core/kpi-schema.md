@@ -21,6 +21,7 @@ One file per key performance indicator. Nothing owns a KPI and a KPI owns nothin
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `owner` | Yes | ref → role | The seat accountable for improving it, the H1 of a file in `roles/` |
 | `measures` | No | ref → process | The process whose performance it measures, the H1 of a process file. Absent where it measures none. |
+| `assesses` | No | array of ref → control | The controls whose effectiveness this KPI's number tells, each the H1 of a file in `controls/`. Absent where it assesses none. |
 | `serves` | No | array of ref → strategic-objective | The objectives it indicates progress toward, the H1 of a file in `strategic-objectives/` |
 | `unit` | Yes | string | What one value is counted in, with its period where it has one: `hours`, `deployments per week`, `percent of deployments` |
 | `direction` | Yes | enum | `lower`, `higher` or `target`. Which way is better: down, up, or toward a band, where too high and too low are both worse. |
@@ -73,6 +74,8 @@ A KPI is a quantity the company has chosen to watch, defined once so that everyo
 - `serves` names an objective only where the KPI moving would actually tell whether that
   objective holds. A KPI that indicates no objective has none, and is still a KPI the company
   watches.
+- `assesses` names a control only where the number moving would tell how well that control works; a KPI that merely shares a subject with a control names none.
+- A KPI that assesses a control says in `## What it can hide` what the control lets through that the number does not count.
 - A KPI that nothing measures yet is a valid definition. It carries no References row for
   values until one exists, and it gains no invented one.
 - Names and prose are American English (R14).
