@@ -237,6 +237,18 @@ test("measured, a verdict below the band is flagged and a rule near even for mos
   assert.match(r3, /asked of 1, median 0\.50, near even for 1 — cannot be judged as written; a finding against the schema$/);
 });
 
+test("a rule's summary counts the pages it was left out of, and a rule asked of none still has its line", () => {
+  const skipped = [
+    { path: "x.md", type: "experience", id: "r1", rule: "One.", without: "without `## Ending`" },
+    { path: "y.md", type: "experience", id: "r9", rule: "Nine.", without: "without `## Ending`" },
+    { path: "z.md", type: "experience", id: "r9", rule: "Nine.", without: "without `## Ending`" },
+  ];
+  const lines = reportOf({ ...asked, skipped }, answers, { band: { low: 0.4, high: 0.6, pick: 0.7 } });
+  assert.match(lines.find((l) => /^ {2}experience r1:/.test(l)), /asked of 2, median 0\.\d\d, near even for 1; not asked of 1 without `## Ending`$/);
+  assert.equal(lines.find((l) => /^ {2}experience r9:/.test(l)), "  experience r9: asked of 0; not asked of 2 without `## Ending`");
+  assert.ok(!reportOf(asked, answers).some((l) => /not asked of/.test(l)), "a run that left nothing out says nothing of it");
+});
+
 test("the report never reads as a pass and ends naming what it did not ask, a failed page among them", () => {
   const lines = reportOf(asked, answers);
   assert.ok(!lines.some((l) => l.includes("✓")));

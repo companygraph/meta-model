@@ -48,6 +48,13 @@ export type Subject = {
     sections: string[];
     column: string | null;
 };
+export type Seen = {
+    type: string;
+    id: string;
+    rule: string;
+    ps: number[];
+    lacked: Map<string, number>;
+};
 export type RuleAnswer = {
     p: number;
 };
@@ -75,6 +82,7 @@ export type Band = {
  * @typedef {{ asked: Request[]; notAsked: NotAsked[]; skipped: Skipped[] }} Questions
  * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string> }} Subjects
  * @typedef {{ sections: string[]; column: string | null }} Subject
+ * @typedef {{ type: string; id: string; rule: string; ps: number[]; lacked: Map<string, number> }} Seen
  */
 /**
  * @typedef {{ p: number }} RuleAnswer
@@ -130,6 +138,6 @@ export declare const LOWEST = 3;
  * @param {{ band?: Band | null }} [options]
  * @returns {string[]}
  */
-export declare function reportOf({ asked, notAsked }: Questions, answers: Map<string, Answers | Failed>, { band }?: {
+export declare function reportOf({ asked, notAsked, skipped }: Questions, answers: Map<string, Answers | Failed>, { band }?: {
     band?: Band | null;
 }): string[];
