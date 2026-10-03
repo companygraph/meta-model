@@ -31,6 +31,8 @@ test("a rule is a noul carrying the rule verbatim, a bullet a choice over the op
   assert.equal(wire.questions.r1.type, "noul");
   assert.equal(wire.questions.r1.instructions.rule, "Every entry in `skills:` is one the body shows.");
   assert.match(wire.questions.r1.criteria.true, /including where the rule does not apply/);
+  assert.doesNotMatch(wire.questions.g1.instructions.question, /chiefly/, "the wording is any grouped section's, not the achievements' alone");
+  assert.match(wire.questions.g1.instructions.question, /## Achievements/);
   assert.equal(wire.questions.g1.type, "choice");
   assert.equal(wire.questions.g1.instructions.bullet, "Split a service.");
   assert.deepEqual(wire.questions.g1.criteria, request.questions[1].options);
@@ -120,7 +122,7 @@ test("with a key, judge names the service and every file, and sends nothing with
     for (const input of ["", "n\n", "no\n"]) {
       const { code, out } = await judge(fresh(), { input, env: { ...withoutKey(), TYPESAFE_API_KEY: "sk-secret", COMPANYGRAPH_TYPESAFE_URL: fake.url } });
       assert.equal(code, 0);
-      assert.match(out, /to TypeSafe \(api\.typesafe\.ai, jev-1\.13\.0\)/);
+      assert.match(out, new RegExp(`to TypeSafe \\(${new URL(fake.url).host.replace(/\./g, "\\.")}, jev-1\\.13\\.0\\)`), "it names the host it would send to, not the one it usually does");
       assert.match(out, /^ {2}model\/identity\.md$/m);
       assert.match(out, /Nothing was sent\./);
       assert.ok(!out.includes("sk-secret"));
@@ -196,4 +198,69 @@ test("a refusal carries the service's own reason, never the key", async () => {
   const refusal = { ok: false, status: 422, headers: new Headers(), json: async () => ({}), text: async () => JSON.stringify({ detail: "questions.g1.criteria: at most 255 options" }) };
   await assert.rejects(ask(request, { key: "sk-secret", fetch: async () => refusal }),
     (e) => /TypeSafe answered 422: .*at most 255 options/.test(e.message) && !e.message.includes("sk-secret"));
+});
+
+test("a network error is retried like an overload", async () => {
+  const waits = [];
+  let calls = 0;
+  const answers = await ask(request, { key: "k", sleep: async (ms) => { waits.push(ms); }, fetch: async () => {
+    if (++calls === 1) throw new TypeError("fetch failed");
+    return reply(200, body);
+  } });
+  assert.equal(calls, 2);
+  assert.deepEqual(waits, [1000]);
+  assert.equal(answers.r1.p, 0.83);
+});
+
+test("a wait longer than a minute is not waited out, and the page says what was asked", async () => {
+  const waits = [];
+  await assert.rejects(ask(request, { key: "k", sleep: async (ms) => { waits.push(ms); }, fetch: async () => reply(429, {}, { "retry-after": "3600" }) }),
+    /TypeSafe asked to wait 3600 s/);
+  assert.deepEqual(waits, []);
+});
+
+test("a send to TypeSafe itself takes a yes typed at a terminal, never a piped one", async () => {
+  const env = { ...withoutKey(), TYPESAFE_API_KEY: "sk-not-a-real-key" };
+  const { code, out } = await judge(fresh(), { input: "y\n", env });
+  assert.equal(code, 0);
+  assert.match(out, /sends only on a yes typed at a terminal/);
+  assert.match(out, /Nothing was sent\./);
+  assert.doesNotMatch(out, /judge: advisory/);
+});
+
+const measure = fileURLToPath(new URL("../tools/measure-judge.mjs", import.meta.url));
+const measured = (env) => new Promise((done, fail) => {
+  const child = spawn(process.execPath, [measure], { env });
+  let out = "", err = "";
+  child.stdout.on("data", (d) => (out += d));
+  child.stderr.on("data", (d) => (err += d));
+  child.on("error", fail);
+  child.on("close", (code) => done({ code, out, err }));
+});
+
+test("the measuring asks in judge's own shape, a whole page per request, and prints both curves", async () => {
+  const fake = await service();
+  try {
+    const { code, out } = await measured({ ...withoutKey(), TYPESAFE_API_KEY: "k", COMPANYGRAPH_TYPESAFE_URL: fake.url });
+    assert.equal(code, 0, out);
+    assert.ok(fake.seen.length > 0);
+    assert.ok(fake.seen.every((s) => Object.keys(s.body.questions).filter((id) => id.startsWith("r")).length > 1), "every request carries all of a page's rules");
+    assert.match(out, /^rules: /m);
+    assert.match(out, /^choices: /m);
+    assert.match(out, /^failed: 0 requests$/m);
+  } finally {
+    fake.close();
+  }
+});
+
+test("a failing request is counted and the measuring still prints what it has", async () => {
+  const fake = await service(500);
+  try {
+    const { code, out } = await measured({ ...withoutKey(), TYPESAFE_API_KEY: "k", COMPANYGRAPH_TYPESAFE_URL: fake.url });
+    assert.equal(code, 0, out);
+    assert.match(out, /^failed: [1-9]\d* requests/m);
+    assert.match(out, /^rules: /m);
+  } finally {
+    fake.close();
+  }
 });

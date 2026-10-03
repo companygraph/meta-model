@@ -898,8 +898,15 @@ async function judge(argv) {
     return 0;
   }
   const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
-  console.log(`\nThis sends these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.SERVICE.host}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
+  console.log(`\nThis sends these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().host}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
   for (const r of questions.asked) console.log(`  model/${r.path}`);
+  // The spec asks for a typed yes and no setting that skips it: a send to TypeSafe itself needs
+  // a person at a terminal, so an answer piped in, by a script or an agent, never sends a page.
+  // Piped answers count only where the tests point the tool at a fake service.
+  if (judges.isTypeSafe() && !process.stdin.isTTY) {
+    console.log(`${judges.SERVICE.name} sends only on a yes typed at a terminal, and this is not one. Nothing was sent.`);
+    return 0;
+  }
   if (!yes(await ask(prompt("Send them?", "y/N")))) {
     console.log("Nothing was sent.");
     return 0;

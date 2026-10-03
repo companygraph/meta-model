@@ -2,9 +2,10 @@
 import type { Request, Answers } from "../../lib/questions.mjs";
 export declare const SERVICE: {
     name: string;
-    host: string;
     model: string;
 };
+export declare const endpoint: () => import("url").URL;
+export declare const isTypeSafe: () => boolean;
 /**
  * @param {Request} request
  */

@@ -188,3 +188,20 @@ test("a grouped section with more entities to choose among than one choice holds
 test("the state budget counts three characters to a token, which German pages come close to", () => {
   assert.ok(STATE_BUDGET <= 32_000 * 3);
 });
+
+test("a nested bullet is part of its rule, and an achievement of its own under the same heading", () => {
+  assert.deepEqual(writingRulesOf("## Writing rules\n\n- Top rule.\n  - a sub point\n- Second.\n"), ["Top rule. a sub point", "Second."]);
+  assert.deepEqual(bulletsOf("### Delivery\n\n- Top.\n  - Sub claim.\n"), [{ heading: "Delivery", bullet: "Top." }, { heading: "Delivery", bullet: "Sub claim." }]);
+});
+
+test("an owned target is chosen among the entities of the page's own owner", () => {
+  const { graph, files, schemas } = example();
+  const entities = graph.entities.map((e) => e.type === "phase" && e.name === "Build"
+    ? { ...e, sections: e.sections.map((s) => (s.heading === "Activities" ? { ...s, text: "### Code\n\n- Write it." } : s)) }
+    : e);
+  entities.push({ id: "elsewhere", address: "elsewhere", type: "track", name: "Elsewhere", tagline: "Another process's track.", fields: {}, sections: [], owner: "another-process", path: "processes/other/tracks/elsewhere.md" });
+  const page = questionsOf({ graph: { ...graph, entities }, files, schemas }).asked.find((r) => r.path === "processes/delivery/phases/build.md");
+  const groups = page.questions.filter((q) => q.kind === "group");
+  assert.equal(groups.length, 1);
+  assert.deepEqual(Object.keys(groups[0].options).sort(), ["Code", "Docs"]);
+});

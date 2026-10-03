@@ -6,8 +6,18 @@
 // measured again before it is named here.
 /** @import { Request, Answers } from "../../lib/questions.mjs" */
 
-export const SERVICE = { name: "TypeSafe", host: "api.typesafe.ai", model: "jev-1.13.0" };
+export const SERVICE = { name: "TypeSafe", model: "jev-1.13.0" };
 const URL_DEFAULT = "https://api.typesafe.ai/v1/systemone";
+
+// Where a request goes: TypeSafe, unless COMPANYGRAPH_TYPESAFE_URL points the tests at a fake.
+// `judge` names this host before it sends, so the name is the one the key would go to.
+export const endpoint = () => new URL(process.env.COMPANYGRAPH_TYPESAFE_URL ?? URL_DEFAULT);
+
+// Whether the endpoint is TypeSafe itself, where a page leaves the machine for real.
+export const isTypeSafe = () => endpoint().href === URL_DEFAULT;
+
+// The longest wait a `retry-after` is waited out for; past it, the page fails and says so.
+const LONGEST_WAIT = 60_000;
 
 // A rule that does not apply to a page is kept by it, and the criteria say so: without that, a
 // rule about one-offs reads as broken by every page that is not one.
@@ -23,7 +33,7 @@ export function toWire(request) {
           instructions: { rule: q.rule, question: "Does the page in `entity` keep `rule`? `purpose` is what the page's type is for." },
           criteria: { true: "The page keeps the rule, including where the rule does not apply to it.", false: "The page breaks the rule." } }
       : { type: "choice",
-          instructions: { bullet: q.bullet, question: `\`bullet\` is a bullet of the page's "## ${q.section}". Which option is it chiefly evidence of?` },
+          instructions: { bullet: q.bullet, question: `\`bullet\` is a bullet of the page's "## ${q.section}", which groups its bullets under headings that name these options. Under which does it belong?` },
           criteria: q.options };
   return { model: SERVICE.model, state: request.state, questions };
 }
@@ -90,27 +100,38 @@ export async function ask(request, options) {
   return answers;
 }
 
-// A rate limit (429) and an overload (529) are retried, after the `retry-after` the service
-// sends or else a doubling wait, as TypeSafe's own clients do; anything else is the page's
-// failure, and a refused key is the run's.
+// A rate limit (429), an overload (529) and a request that never reached the service are
+// retried, after the `retry-after` the service sends or else a doubling wait, as TypeSafe's own
+// clients do; a wait past a minute is not waited out. Anything else is the page's failure, and a
+// refused key is the run's.
 /**
  * @param {Request} request
  * @param {{ key: string; fetch?: typeof globalThis.fetch; sleep?: (ms: number) => Promise<void>; attempts?: number }} options
  * @returns {Promise<Answers>}
  */
 async function askOnce(request, { key, fetch = globalThis.fetch, sleep = (ms) => new Promise((done) => setTimeout(done, ms)), attempts = 4 }) {
-  const url = process.env.COMPANYGRAPH_TYPESAFE_URL ?? URL_DEFAULT;
+  const url = endpoint();
   for (let i = 1; ; i++) {
-    const res = await fetch(url, {
-      method: "POST",
-      headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
-      body: JSON.stringify(toWire(request)),
-    });
+    /** @type {Response} */
+    let res;
+    try {
+      res = await fetch(url, {
+        method: "POST",
+        headers: { authorization: `Bearer ${key}`, "content-type": "application/json" },
+        body: JSON.stringify(toWire(request)),
+      });
+    } catch (error) {
+      if (i >= attempts) throw error;
+      await sleep(1000 * 2 ** (i - 1));
+      continue;
+    }
     if (res.ok) return fromWire(request, await res.json());
     if (res.status === 401) throw new KeyRefused();
     if ((res.status === 429 || res.status === 529) && i < attempts) {
       const after = Number(res.headers.get("retry-after"));
-      await sleep(after > 0 ? after * 1000 : 1000 * 2 ** (i - 1));
+      const wait = after > 0 ? after * 1000 : 1000 * 2 ** (i - 1);
+      if (wait > LONGEST_WAIT) throw new Error(`${SERVICE.name} asked to wait ${after} s, longer than a run waits`);
+      await sleep(wait);
       continue;
     }
     // The service's own reason, where it gave one, so a refused page says why; it never holds
