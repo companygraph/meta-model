@@ -1554,3 +1554,23 @@ test("the repository workflow holds the Markdown to the form with the checker it
   assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
   assert.doesNotMatch(yml, /check-instance/);
 });
+
+// A note is printed under `noted:` on a passing run and on a failing one, and never moves the
+// exit code: a horizon passes on a date, and failing on it would turn a green default branch red
+// overnight.
+test("check prints a passed horizon under noted:, on a passing run and a failing one, and exits on the failures alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const dir = path.join(root, "model/strategic-objectives");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "invoices-explain-themselves.md"),
+    `---\nid: ${run(["id"]).trim()}\nsource: Local\nadopted: 2020-01\nhorizon: 2020-06\n---\n\n# Invoices explain themselves\n\n> A customer reads why a line is on an invoice without asking.\n\n## What it makes true\n\nNobody calls to ask.\n`);
+  const passing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(passing.status, 0, passing.stdout + passing.stderr);
+  assert.match(passing.stdout, /^ {2}noted:\n {4}model\/strategic-objectives\/invoices-explain-themselves\.md: `horizon` is 2020-06, which has passed/m);
+
+  fs.writeFileSync(path.join(root, "model/stray.md"), "# Stray\n\n> Nothing.\n");
+  const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failing.status, 1);
+  assert.match(failing.stdout, /^ {2}noted:\n {4}model\/strategic-objectives\/invoices-explain-themselves\.md/m);
+});

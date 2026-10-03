@@ -21,6 +21,10 @@ export type TypeEntry = {
         column?: string;
         heading?: boolean;
     };
+    /**
+     * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
+     */
+    expires?: string;
 };
 export type PipeTable = {
     columns: string[];
@@ -56,6 +60,7 @@ export type Check = {
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
  * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+ * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**
  * A pipe table as the checks read it: its header row's cells and every row after the separator.
@@ -174,30 +179,36 @@ export declare const tablesOf: (body: string) => (PipeTable | null)[];
  * @returns {string | null}
  */
 export declare function typeOfPath(rel: string, model: string, types?: TypeEntry[]): string | null;
+/** @param {string} date @returns {string} */
+export declare const lastDayOf: (date: string) => string;
 /**
- * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void, requireSchemaIds?: boolean, packs?: PackRef[] }} options
+ * @param {{ files: InstanceFiles, core?: string, model?: string, fail: (message: string) => void, note?: (message: string) => void, today?: string, requireSchemaIds?: boolean, packs?: PackRef[] }} options
  * @returns {Check[]}
  */
-export declare function instanceChecks({ files, core, model, fail, requireSchemaIds, packs }: {
+export declare function instanceChecks({ files, core, model, fail, note, today, requireSchemaIds, packs }: {
     files: InstanceFiles;
     core?: string;
     model?: string;
     fail: (message: string) => void;
+    note?: (message: string) => void;
+    today?: string;
     requireSchemaIds?: boolean;
     packs?: PackRef[];
 }): Check[];
 /**
  * @param {InstanceFiles} files
- * @param {{ core?: string, model?: string, packs?: PackRef[] }} [options]
- * @returns {{ failures: string[], skipped: string[] }}
+ * @param {{ core?: string, model?: string, packs?: PackRef[], today?: string }} [options]
+ * @returns {{ failures: string[], skipped: string[], notes: string[] }}
  */
-export declare function checkInstance(files: InstanceFiles, { core, model, packs }?: {
+export declare function checkInstance(files: InstanceFiles, { core, model, packs, today }?: {
     core?: string;
     model?: string;
     packs?: PackRef[];
+    today?: string;
 }): {
     failures: string[];
     skipped: string[];
+    notes: string[];
 };
 /**
  * @param {PageChange[]} changes
