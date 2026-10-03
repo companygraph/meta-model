@@ -96,6 +96,7 @@ test("a rule opens with a declared subject, a fixed word, or a short lead-in to 
   assert.equal(openingOf("A rule that names a phase and then `## Notes` is long.", s), null, "a lead-in longer than a few words hides the subject");
   assert.equal(openingOf("`## Missing` is short.", s), null, "a section the schema does not declare");
   assert.equal(openingOf("Names and prose are American English (R14).", s), null);
+  assert.equal(openingOf("The statements are many.", s), null, "the label is a word of its own");
 });
 
 test("a tagline label that is a phrase gives no fixed word of its own", () => {
@@ -103,6 +104,8 @@ test("a tagline label that is a phrase gives no fixed word of its own", () => {
   const s = subjectsOf(text);
   assert.equal(openingOf("The what it gives says it.", s), null);
   assert.deepEqual(openingOf("The tagline says it.", s), { kind: "fixed", name: "The tagline" });
+  const two = subjectsOf(text.replace("What it gives", "Short line"));
+  assert.equal(openingOf("The short line says it.", two), null, "a label of more than one word is no fixed word");
 });
 
 test("every writing rule in core and the packs opens with its subject", () => {
@@ -128,6 +131,8 @@ test("a rule about a field is asked only of a page that carries the field", () =
   assert.equal(without.skipped[0].without, "without `read-with`");
   const empty = kpiLike({ id: "x", "read-with": [] });
   assert.deepEqual(empty.asked[0].questions.map((q) => q.id), ["r2", "r3"], "an empty list is no value");
+  const quoted = kpiLike({ id: "x", "read-with": '""' });
+  assert.deepEqual(quoted.asked[0].questions.map((q) => q.id), ["r2", "r3"], "a quoted empty string is no value");
   const withIt = kpiLike({ id: "x", "read-with": ["Other"] });
   assert.deepEqual(withIt.asked[0].questions.map((q) => q.id), ["r1", "r2", "r3"]);
 });

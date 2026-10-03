@@ -19,7 +19,7 @@
 import fs from "node:fs";
 import { sectionsOf } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
-import { questionsOf, bulletsOf } from "../lib/questions.mjs";
+import { questionsOf, bulletsOf, writingRulesOf } from "../lib/questions.mjs";
 import { instanceAt } from "../lib/history.mjs";
 import { ask, SERVICE } from "../bin/judges/typesafe.mjs";
 import { FAULTS } from "./judge-faults.mjs";
@@ -48,7 +48,9 @@ const sources = process.argv.slice(2);
 const instances = sources.length ? sources.map((root) => ({ name: root, ...instanceAt(root) })) : [{ name: "the example", ...example() }];
 const entries = instances.flatMap((instance) => {
   const skills = instance.graph.entities.filter((e) => e.type === "skill").map((e) => e.name);
-  return questionsOf(instance).asked.filter((r) => r.type === "experience").map((request) => ({ request, skills }));
+  const schema = [...instance.schemas].find(([k]) => k.endsWith("experience-schema.md"))?.[1] ?? "";
+  const all = writingRulesOf(schema);
+  return questionsOf(instance).asked.filter((r) => r.type === "experience").map((request) => ({ request, skills, all }));
 });
 
 let failed = 0;
@@ -81,21 +83,27 @@ const choices = [];
 /** @param {any} answer @param {string} truth */
 const choice = (answer, truth) => choices.push({ p: answer.probabilities[answer.pick] ?? 0, right: answer.pick === truth });
 
-for (const { request: r, skills } of entries) {
+for (const { request: r, skills, all } of entries) {
   const clean = await asked(r);
   if (clean) for (const q of r.questions) if (q.kind === "group" && q.heading) choice(clean[q.id], q.heading);
   for (const f of FAULTS) {
     const planted = f.plant(r.state.entity, { skills });
     if (!planted) continue;
     // An instance whose vendored core words the rule differently is not asked about it.
-    const rule = r.questions.find((q) => q.kind === "rule" && q.rule.startsWith(f.rule));
+    // A rule about a field the clean page does not carry was left out of its request, and the
+    // fault may be what plants the field, as a skill planted on an entry with no `skills:` does:
+    // the faulted copy is asked the rule, and the clean one has no verdict on it.
+    const at = all.findIndex((x) => x.startsWith(f.rule));
+    const rule = r.questions.find((q) => q.kind === "rule" && q.rule.startsWith(f.rule))
+      ?? (at >= 0 ? { id: `r${at + 1}`, kind: /** @type {const} */ ("rule"), rule: /** @type {string} */ (all[at]) } : null);
     if (!rule) continue;
-    const questions = questionsFor(r, planted.text);
+    const base = questionsFor(r, planted.text);
+    const questions = base.some((q) => q.id === rule.id) ? base : [rule, ...base];
     const faulted = await asked({ ...r, state: { ...r.state, entity: planted.text }, questions });
-    if (clean) rules.push({ p: clean[rule.id].p, kept: true });
+    if (clean?.[rule.id]) rules.push({ p: clean[rule.id].p, kept: true });
     if (!faulted) continue;
     rules.push({ p: faulted[rule.id].p, kept: false });
-    if (clean) pairs.get(f.name).push({ clean: clean[rule.id].p, faulted: faulted[rule.id].p });
+    if (clean?.[rule.id]) pairs.get(f.name).push({ clean: clean[rule.id].p, faulted: faulted[rule.id].p });
     const moved = planted.moved && questions.find((q) => q.kind === "group" && q.bullet === planted.moved.bullet);
     if (moved) choice(faulted[moved.id], planted.moved.from);
   }
