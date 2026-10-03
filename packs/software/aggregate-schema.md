@@ -57,12 +57,10 @@ id: 01a0f94d-fa63-7c7e-8af5-b2d7e5b870cf
 
 ## Purpose
 
-An aggregate answers "what has to stay consistent together, and through what is it changed?" It is Evans's aggregate: a cluster of concept designs changed only through its root. The invariants are a table and not a numbered list, because they are a set and not a sequence, and a position is no key anything outside can cite. A command is a row here and not a type, because nothing outside the aggregate names it. The events it emits are not written here: each event names its aggregate as `emitted-by`, and the edge is read from that end.
+An aggregate answers "what has to stay consistent together, and through what is it changed?" It is Evans's aggregate: a cluster of concept designs changed only through its root. The invariants are a table and not a numbered list, because they are a set and not a sequence, and a position is no key anything outside can cite. A command is a row here and not a type, because nothing outside the aggregate names it. The events it emits are not written here: each event names its aggregate as `emitted-by`, and the edge is read from that end. The root is a concept design of kind entity, since a value object has no identity to reach the rest through. A label stays when its invariant is reworded, a new rule takes a new label, and a removed rule's label is not used again.
 
 ## Writing rules
 
-- The root is an entity. A value object cannot be a root, since it has no identity to reach the rest through.
-- An invariant is a rule that holds after every command, stated so a test could check it.
-- A command is named in the imperative and an event in the past tense, so the two are never confused.
-- A label stays when its invariant is reworded. A new rule takes a new label, and a removed rule's label is not used again.
-- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
+- `Invariant` is a rule that holds after every command, stated so a test could check it.
+- `Command` is named in the imperative, and an event in the past tense, so the two are never confused.
+- `source`, on a page drawn from code, names that code, the repository a sync reads, and the module or package is its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.

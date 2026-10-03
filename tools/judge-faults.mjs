@@ -40,7 +40,7 @@ const textOf = (bullet) => bullet.map((l) => l.trim()).join(" ").replace(/^[-*]\
 export const FAULTS = [
   {
     name: "a stack listed as an achievement",
-    rule: "A list of tools or a stack is not an achievement",
+    rule: "`## Achievements` holds no list of tools or stack",
     /** @param {string} text */
     plant(text) {
       const lines = text.split("\n");
@@ -72,7 +72,7 @@ export const FAULTS = [
   },
   {
     name: "a bullet under a kind it is not chiefly evidence of",
-    rule: "Where an instance defines achievement kinds",
+    rule: "`## Achievements`, where an instance defines achievement kinds",
     /** @param {string} text */
     plant(text) {
       const lines = text.split("\n");
@@ -87,7 +87,7 @@ export const FAULTS = [
   },
   {
     name: "a running period whose tagline does not say so",
-    rule: "A period still running has no `end`",
+    rule: "The tagline of a period still running says so",
     /** @param {string} text */
     plant(text) {
       const lines = text.split("\n");

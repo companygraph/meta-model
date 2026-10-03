@@ -41,20 +41,15 @@ The set is the instance's own, as an achievement kind's is. What a company's vis
 
 ## Purpose
 
-A kind answers "what is this question about?", the question a visitor asks of a list too long to read, when what they want is the part of it that concerns them. Its value is that the answer is a reference rather than a word: the kinds are nodes in the graph, a surface can draw the questions of one kind together or one from each, and the chat can say what the model answers about from the model rather than from its own reading.
+A kind answers "what is this question about?", the question a visitor asks of a list too long to read, when what they want is the part of it that concerns them. Its value is that the answer is a reference rather than a word: the kinds are nodes in the graph, a surface can draw the questions of one kind together or one from each, and the chat can say what the model answers about from the model rather than from its own reading. A kind holds at least two questions, unless the instance holds only one, and a question alone is filed under the nearest kind until a second arrives.
 
 ## Writing rules
 
-- `## What it means` is written so that two readers filing the same question would file it under
-  the same kind, and it says what the kind excludes, since the boundary with the kind beside it
-  is where every disagreement will be.
-- A kind is about what the visitor has in mind when they ask, never about which entity the
-  answer rests on.
-- Name it as a visitor would read it above the questions it holds, `Career`, `Brand`, and never
-  for the type or the section the answers sit in.
-- `rank` orders kinds wherever questions are drawn grouped, and nothing else. The first kind is
-  the one most visitors come for, and two kinds never share a rank.
-- A kind holds at least two questions, unless the instance holds only one. One question alone is
-  filed under the nearest kind until a second arrives, because a group of one is a heading over a
-  single line.
-- Names and prose are American English (R14).
+- `## What it means` says what the kind excludes, since the boundary with the kind beside it is
+  where every disagreement will be. (The reader-agreement half is dropped; this is its checkable
+  sibling.)
+- `## What it means` is about what the visitor has in mind when they ask, never about which
+  entity the answer rests on.
+- The H1 names the kind as a visitor would read it above the questions it holds, `Career`,
+  `Brand`, and never the type or the section the answers sit in.
+- The page writes names and prose in American English (R14).

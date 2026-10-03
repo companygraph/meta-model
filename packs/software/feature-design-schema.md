@@ -51,12 +51,11 @@ A feature design uses the contexts it touches and owns none, because a context o
 
 ## Purpose
 
-A feature design answers "how is this feature built, and across which contexts?" It is the solution side of what core's feature says it gives, and it refines that feature. Its operational principle is Jackson's: the one scenario that shows why the design exists. Its scenarios are written as Gherkin writes them.
+A feature design answers "how is this feature built, and across which contexts?" It is the solution side of what core's feature says it gives, and it refines that feature. Its operational principle is Jackson's: the one scenario that shows why the design exists. Its scenarios are written as Gherkin writes them. A scenario's label stays when its title is reworded, since it is what the test that proves it cites.
 
 ## Writing rules
 
-- The operational principle is one scenario, told as what happens, not a list of capabilities.
-- A scenario says Given, When and Then, and each step is something a person or the system does or sees.
-- Every term and event the scenarios mention has a row in `## Uses`, and no row names one they do not.
-- A scenario's label is what the test that proves it cites. It stays when the title is reworded.
-- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
+- `## Operational principle` is one scenario, told as what happens, not a list of capabilities.
+- Each `## Scenarios` scenario says Given, When and Then, and each step is something a person or the system does or sees.
+- The page lists in `## Uses` every term and event its scenarios mention, and no row there names one they do not.
+- `source`, on a page drawn from code, names that code, the repository a sync reads, and the module or package is its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.

@@ -47,10 +47,9 @@ id: 01a0f94d-fa9a-7907-ae3d-621f34d6e909
 
 ## Purpose
 
-A domain event answers "what happened that other parts of the domain care about?" It is Evans's and Vernon's domain event, named in the past tense. It is a type and not a row of its aggregate because other contexts consume it and feature designs name it, and a row cannot be named from outside its page.
+A domain event answers "what happened that other parts of the domain care about?" It is Evans's and Vernon's domain event, named in the past tense. It is a type and not a row of its aggregate because other contexts consume it and feature designs name it, and a row cannot be named from outside its page. A payload type that names a term names one of the event's own context, and a consumer translates it into its own language.
 
 ## Writing rules
 
-- The name is in the past tense and says what happened, not what should happen next.
-- A payload type that names a term names one of the event's own context; a consumer translates it into its own language.
-- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
+- The H1 is in the past tense and says what happened, not what should happen next.
+- `source`, on a page drawn from code, names that code, the repository a sync reads, and the module or package is its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.

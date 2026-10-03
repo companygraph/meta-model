@@ -57,14 +57,10 @@ A strategy is how an objective gets reached — one route among routes that coul
 - `## What would show it is working` states something observable while there is still time to
   change course. A measure that only arrives at the horizon is a verdict rather than an
   instrument, and the objective is where a verdict belongs.
-- It says how, never where. A strategy restating the vision has skipped the objective that was
-  supposed to sit between them.
-- `serves` names at least one objective. A strategy serving none is either an objective nobody
-  wrote down or work nothing in the model asked for.
+- The statement says how, never where. A strategy restating the vision has skipped the objective
+  that was supposed to sit between them.
 - `upholds` names the values that actually constrained the route, where any did. A citation that
   would be equally true of any strategy the company might have chosen instead tells a reader
   nothing.
-- Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
-  same one throughout the instance.
-- A strategy that has been replaced is deleted rather than marked, because the model states the
-  route currently being taken and git holds the ones that were.
+- The page is written in the company's own first person — "I" for a company of one, "we"
+  otherwise — and the same one throughout the instance.

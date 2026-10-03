@@ -43,16 +43,14 @@ A skill is a capability a person can claim, an experience can evidence and a rol
 
 ## Writing rules
 
-- The tagline starts with the thing itself, never with a wrapper — not "The practice of", "The
-  discipline of", "The ability to".
+- The definition starts with the thing itself, never with a wrapper — not "The practice of",
+  "The discipline of", "The ability to".
 - `## In practice` is person-neutral: no name, employer, date or number from any profile. A
   second profile must be able to claim the skill without a word changing.
 - `## In practice` is written in the imperative without a subject — "Assess …", "Translate …",
   "Engage …" — never "Someone doing this …" or "They …".
-- Products and tools appear only in a closing clause of the form `Typical tools: …`, and only
-  where a product is what the skill is done with. A product is not a skill.
-- One skill is distinct from its neighbors in what someone doing it does, not in which product
-  they use. Two files that differ only by tool are one skill.
-- Public vocabularies (SFIA, ESCO, O*NET, Lightcast) may be consulted to find the grain and to
-  check for gaps; none is cited or reproduced in a skill file. The vocabulary is the instance's
-  own.
+- The page names products and tools only in a closing clause of the form `Typical tools: …`, and
+  only where a product is what the skill is done with. A product is not a skill.
+- The page cites and reproduces none of the public vocabularies (SFIA, ESCO, O*NET, Lightcast),
+  which may be consulted to find the grain and to check for gaps. The vocabulary is the
+  instance's own.

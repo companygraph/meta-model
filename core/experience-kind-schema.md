@@ -44,15 +44,14 @@ A kind answers "what sort of period is this?" — the question a reader cannot o
 
 ## Writing rules
 
-- `## What it means` is written so that two readers filing the same period would file it the
-  same way. A kind that cannot do that is not yet a kind.
-- It says what the kind excludes as well as what it covers. The boundary between a role and a
-  project, or a project and a community entry, is where every disagreement will be.
-- A kind is about the sort of period, never about how it went, how long it lasted or how
-  senior it was. Those belong to the period.
-- Name it for what the period *is*, not for the type it belongs to: `Role`, not `Experience`.
-- `organization` means a different thing under each kind — an employer, a client, a host, an
-  awarding body — and each kind says which one it means. That sentence has nowhere else to live.
-- A kind carries no dates and governs none. How a date on an experience reads is the
+- `## What it means` says what the kind excludes as well as what it covers. The boundary between
+  a role and a project, or a project and a community entry, is where every disagreement will be.
+- `## What it means` is about the sort of period, never about how it went, how long it lasted or
+  how senior it was. Those belong to the period.
+- The H1 names what the period *is*, not the type it belongs to: `Role`, not `Experience`.
+- `## What it means` says which one `organization` means under this kind — an employer, a
+  client, a host, an awarding body — since the field means a different thing under each kind.
+  That sentence has nowhere else to live.
+- `## What it means` carries no dates and governs none. How a date on an experience reads is the
   experience's business whatever kind it is, and a kind claiming otherwise would make an absent
   `end` mean two things and resolve it by a label.

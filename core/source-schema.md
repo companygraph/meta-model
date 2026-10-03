@@ -43,10 +43,11 @@ A source is the answer to "if this page is wrong, where does it get fixed?" Ever
 - The description says what the source holds and whether anything syncs from it. A reader
   deciding where to make a correction needs both halves, and the second one is what says
   whether an edit here would survive.
-- Where the source issues identifiers, the description says what a `source-id` is in it — a
-  record key, a directory id, an entry's `id` in a named folder. Without that sentence a
+- The description says what a `source-id` is in the source, where the source issues identifiers
+  — a record key, a directory id, an entry's `id` in a named folder. Without that sentence a
   `source-id` is an opaque string that only its author can resolve.
-- `url` is set where the source has an address a person or a sync could open, and left absent
-  where it has none. A repository with no remote has none, and the empty field says so.
-- The source is the place with authority over the fact, not the place the fact was read. If
-  correcting a page means editing somewhere else first, that somewhere else is the source.
+- The page sets `url` where the source has an address a person or a sync could open, and leaves
+  it absent where it has none. A repository with no remote has none, and the empty field says
+  so.
+- The description names the place with authority over the fact, not the place the fact was read.
+  If correcting a page means editing somewhere else first, that somewhere else is the source.

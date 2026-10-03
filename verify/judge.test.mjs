@@ -123,7 +123,7 @@ test("with no key, judge lists the rules it would leave out, and why", async () 
   const { code, out } = await judge(root, { env: withoutKey() });
   assert.equal(code, 0);
   assert.match(out, /^left out, for want of what they are about:$/m);
-  assert.match(out, /^ {2}concept r4: not asked of 1 without an `As` column$/m);
+  assert.match(out, /^ {2}concept r3: not asked of 1 without an `As` column$/m);
 });
 
 test("with a key, judge names the service and every file, and sends nothing without a typed yes", async () => {

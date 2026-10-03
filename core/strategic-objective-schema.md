@@ -40,22 +40,18 @@ One file per objective. Nothing owns an objective and an objective owns nothing,
 
 ## Purpose
 
-A strategic objective is what must become true for the vision to be reached — the layer between a direction that holds still and the strategies that change under it. It answers "what are we trying to make true, that we are not sure of yet?" for someone weighing whether a piece of work is worth doing at all.
+A strategic objective is what must become true for the vision to be reached — the layer between a direction that holds still and the strategies that change under it. It answers "what are we trying to make true, that we are not sure of yet?" for someone weighing whether a piece of work is worth doing at all. A `horizon` that passes with the objective unmet is a decision and not a fact: the objective is restated, re-dated or deleted, and leaving it to age is none of those.
 
 ## Writing rules
 
-- It says what must become true, never by what means. A means is a strategy, and an objective
-  that names one has already chosen a route the model cannot then see being chosen.
-- It names something the company could fail at. An objective no outcome could contradict is the
-  vision restated in longer words.
+- The statement says what must become true, never by what means. A means is a strategy, and an
+  objective that names one has already chosen a route the model cannot then see being chosen.
+- The statement names something the company could fail at. An objective no outcome could
+  contradict is the vision restated in longer words.
 - `## What it makes true` is concrete enough that a reader could tell whether it holds today,
   and it states what falls outside it, because an objective silent on its boundary is read as
   covering everything.
-- `horizon` is written only where a real date exists. A standing objective leaves it absent
+- The page sets `horizon` only where a real date exists. A standing objective leaves it absent
   rather than inventing one, and an invented horizon is a claim like any other.
-- Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
-  same one throughout the instance.
-- An objective that has been reached is deleted, as a replaced strategy is — the model states
-  what the company is currently trying to make true, and git holds what it used to be.
-- A `horizon` that passes with the objective unmet is a decision and not a fact: the objective
-  is restated, re-dated or deleted, and leaving it to age is none of those.
+- The page is written in the company's own first person — "I" for a company of one, "we"
+  otherwise — and the same one throughout the instance.

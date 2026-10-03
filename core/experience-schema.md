@@ -62,12 +62,12 @@ An experience is one dated period in a profile's history, and the place a skill 
 
 ## Writing rules
 
-- `role` is filled where the H1 does not already name the part the subject played, and left
-  absent where it does. An entry named for what it delivered, or for the event it happened at,
-  does not say who the subject was on it. An entry named for a position does, and repeating it
-  in the field would be the same fact twice. Which of those an instance writes is the instance's
-  own convention and no rule here fixes it; the field is what carries the part when the H1 does
-  not.
+- The H1 names the part the subject played, or `role` carries it: the field is filled where the
+  H1 does not already name the part, and left absent where it does. An entry named for what it
+  delivered, or for the event it happened at, does not say who the subject was on it. An entry
+  named for a position does, and repeating it in the field would be the same fact twice. Which
+  of those an instance writes is the instance's own convention and no rule here fixes it; the
+  field is what carries the part when the H1 does not.
 - `role` is the part, not the employer and not the client. Who the work was done for is
   `organization`. Who it was done through is not a field at all: it is the period that contains
   this one, and an instance that wants it stated reads it from there.
@@ -76,32 +76,30 @@ An experience is one dated period in a profile's history, and the place a skill 
 - An `## Achievements` bullet states an outcome, one idea each. "Responsible for the platform"
   is a job description; "held platform cost flat as volume grew to 89M events a year" is an
   achievement. Where a number, a system or a named result exists, it goes in the bullet.
-- Where an instance defines achievement kinds, every entry with achievements groups them: each
-  bullet sits under the heading of the one kind it is chiefly evidence of, headings follow the
-  kinds' `rank`, and a kind with nothing in the entry has no heading. An instance that defines
-  none writes a flat list.
-- Every entry with achievements carries the headings, even one bullet under one heading, so a
-  reader finds a kind in the same place in every entry.
-- Within a kind the broadest claim comes first, peers follow the order they happened in, and a
-  bullet that points back comes directly after what it points to — or names it, where the
-  grouping would part them.
-- A list of tools or a stack is not an achievement: what was built with a tool says so in the
-  bullet that built it.
-- A period still running has no `end`, and the tagline says so — a reader sees a tagline and
-  does not see an absent field.
-- A one-off is not a period: a talk, a certification, an award or a publication sets `end`
-  equal to `start`. Left absent it would read as still running, and no other field says
-  otherwise. The two being equal is what makes it a one-off, and the interval that shared
-  value denotes is how precisely it is placed: `2012-05-04 .. 2012-05-04` is a day,
-  `2016-10 .. 2016-10` a month, `2002 .. 2002` an event known only to its year. A period that
-  genuinely ran a whole year is not written `2002 .. 2002` — it takes the months it ran,
-  `2002-01 .. 2002-12`, which is also the only way to tell the two apart.
+- `## Achievements`, where an instance defines achievement kinds, groups them: each bullet sits
+  under the heading of the one kind it is chiefly evidence of, headings follow the kinds'
+  `rank`, and a kind with nothing in the entry has no heading. An instance that defines none
+  writes a flat list.
+- `## Achievements` puts the broadest claim first within a kind; peers follow the order they
+  happened in, and a bullet that points back comes directly after what it points to — or names
+  it, where the grouping would part them.
+- `## Achievements` holds no list of tools or stack, since that is not an achievement: what was
+  built with a tool says so in the bullet that built it.
+- The tagline of a period still running says so, and the period has no `end` — a reader sees a
+  tagline and does not see an absent field.
+- The H1 of a one-off — a talk, a certification, an award or a publication — comes with `end`
+  set equal to `start`, since a one-off is not a period. Left absent it would read as still
+  running, and no other field says otherwise. The two being equal is what makes it a one-off,
+  and the interval that shared value denotes is how precisely it is placed: `2012-05-04 ..
+  2012-05-04` is a day, `2016-10 .. 2016-10` a month, `2002 .. 2002` an event known only to its
+  year. A period that genuinely ran a whole year is not written `2002 .. 2002` — it takes the
+  months it ran, `2002-01 .. 2002-12`, which is also the only way to tell the two apart.
 - `url` is the entry's own address and nothing else — the conference's page, the recording,
   the published case study. A link that lets a reader check a claim the entry makes is not the
   entry's address; it is a reference, and it goes in the table.
 - `What` names the kind of document, not its significance. "Commercial register entry" is a
   fact about the link; "proof that the company existed" is a reading of it.
-- For a one-off, `organization` is whoever hosted, awarded or published it. The field is a
-  stretch there and the alternative — leaving it empty — says less.
+- The H1 of a one-off comes with `organization` naming whoever hosted, awarded or published it.
+  The field is a stretch there and the alternative — leaving it empty — says less.
 - `## Ending` is written in the person's own voice and looks forward: what the period had
   settled, and what it made the next thing. It is neither an achievement nor a grievance.

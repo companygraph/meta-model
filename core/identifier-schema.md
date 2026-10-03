@@ -44,5 +44,4 @@ The identifier file says what shape the `id` on every page takes, so that a pers
 
 - A `pattern` matches nothing taken from the entity: not its name, its type, its language or its owner, since each of those can change and the id cannot.
 - The statement names who relies on the id: a tracker, a graph, a link somebody wrote down.
-- An instance that declares `pattern` says in its own agent file how a new id is made, since the tooling makes only UUID version 7.
-- Names and prose are American English (R14).
+- The page writes names and prose in American English (R14).

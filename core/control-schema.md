@@ -56,9 +56,9 @@ A control is what the company does, or has a machine do, so that a risk is less 
 
 ## Writing rules
 
-- A control names at least one risk it mitigates or one rule it enforces. The grammar declares each field on its own, so this rule is the agent pass's to hold.
+- The H1 names a control that mitigates at least one risk or enforces at least one rule, and `mitigates` or `enforces` names that risk or rule. The grammar declares each field on its own, so this rule is the agent pass's to hold.
 - `## How it is carried out` says what does the work and when, as a reader could check: "the seat check, run by the commit hook and again by the instance check on every pull request, refuses a commit whose seat the named phase does not list". The hook, the workflow or the command it names goes in `## References`.
-- A gate is a control where the phase's gate is one: the control names the phase in `## Applies to`, and the gate's criteria stay the phase's bullets.
-- `performed-by` names a seat for a manual control, never a person; an automated control names none.
+- `## Applies to`, on a control that is a phase's gate, names that phase, and the gate's criteria stay the phase's bullets.
+- `mode` decides `performed-by`: a manual control names a seat there, never a person, and an automated control names none.
 - An `## Applies to` row names a role, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
-- Names and prose are American English (R14).
+- The page writes names and prose in American English (R14).

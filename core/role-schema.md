@@ -45,15 +45,10 @@ A role is a seat the company needs filled — one file, named once, held by whic
 
 ## Writing rules
 
-- Person-neutral: no name, employer, date or number from any profile, and never who holds
-  the seat. Who holds it is the profile's fact.
-- Named for the seat, so a second holder would still be called that: `Owner`, not
+- The page is person-neutral: no name, employer, date or number from any profile, and never who
+  holds the seat. Who holds it is the profile's fact.
+- The H1 names the seat, so a second holder would still be called that: `Owner`, not
   `Entrepreneur`; `Reviewer`, not the reviewer's name.
 - Each line under `## What it never does` is a sentence an agent can hold an output against.
   "Never merges" can fail; "acts responsibly" cannot.
 - `requires` lists what the seat needs, not what its current holder happens to have.
-- A skill the role requires that a person holding it does not claim is a gap the validation
-  pass reports, never an error. It says what the holder has to learn or the company has to
-  hire, which is information about the person and not a defect in the model. An agent claims
-  nothing, so a seat held by one reports no gap and needs none: what the seat requires is
-  answered by its rulebook.

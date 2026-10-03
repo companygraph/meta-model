@@ -78,51 +78,33 @@ A presence is a place the person maintains a page on, named by the place and add
 
 ## Purpose
 
-A profile is the one page that says who a person or an agent is and what they claim — the entity every experience is owned by, every skill claim is made from and every role is held by. It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with them. It is not a curriculum vitae: what happened, when and where lives in the experiences the profile owns, and what a capability *is* lives in the skill. What only the profile can hold is the claim — this person, this skill, at this level, on this evidence.
+A profile is the one page that says who a person or an agent is and what they claim — the entity every experience is owned by, every skill claim is made from and every role is held by. It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with them. It is not a curriculum vitae: what happened, when and where lives in the experiences the profile owns, and what a capability *is* lives in the skill. What only the profile can hold is the claim — this person, this skill, at this level, on this evidence. A person who holds a role claims the skills the role requires in their Skills table, with evidence, and where they cannot the gap stays visible as a finding the validation pass reports, never an error and never an invented row, while an agent claims nothing, so a seat it holds reports no gap.
 
 ## Writing rules
 
 - The tagline and `## Summary` are the person's own, in their own voice: what they do and what
   runs through it. Not their employer's description of the role, and not a job advertisement.
-- A tagline may state the claim the person's work makes rather than describe the work. Then the
-  claim is one the model holds elsewhere — a value, or the thread the summary names — and a
+- The tagline may state the claim the person's work makes rather than describe the work. Then
+  the claim is one the model holds elsewhere — a value, or the thread the summary names — and a
   reader can follow it there. A line with nothing behind it is a slogan, and nothing on the page
   tells one from the other except what backs it.
 - A `What it shows` cell states a fact that can be checked — a system, an organization, a
   number, a named outcome. "Extensive experience" and "deep knowledge" are not evidence.
-- Evidence never restates the level. If removing the Level column would lose nothing, the row
-  is describing confidence rather than the work.
-- A row that says no more than its own `Experience` cell says nothing. It is dropped rather
-  than written.
-- One sentence per row, under forty words. The sentence does not repeat the period of the
-  experience its `Experience` column names; a period of the fact's own, shorter than that one,
-  stays in it.
-- Rows run in the order the Skills table lists the skills, and chronologically within a skill.
-- A level is weighed against the rows under it and the rung's own definition, not against how
-  long the person has done it. Rows that name different experiences show breadth, and breadth
-  is what the count is read for; the count never outranks the definition. Three rows that show
-  less than the rung asks for do not reach it, and one row that shows it does.
-- One row per skill claimed in `## Skills`, and every claim has at least one row under it in
-  `## Evidence`. A skill the person can name but not evidence has no row in either: the table
-  is the claim, and a claim needs something under it. The sections table declares it, `Under`,
-  and the instance checks hold it both ways (R16).
-- An `Experience` names a period this profile owns, and that experience lists this skill in its
-  `skills` field. Both are held by the instance checks from what the schemas declare: the
-  first as every name of an owned type is held to its owner, the second because the column
-  declares it, `skills` lists `Skill`. A miss has two repairs that claim different things,
-  adding the skill to the experience or naming another period, and which is true is the
-  writer's to say.
-- The Skills table is where a person's history with a skill lives. The skill file stays
-  person-neutral, so nothing here belongs there and nothing there belongs here.
+- `What it shows` never restates the level. If removing the Level column would lose nothing, the
+  row is describing confidence rather than the work.
+- `What it shows` says more than its own row's `Experience` cell; a row that says no more says
+  nothing, and is dropped rather than written.
+- `What it shows` is one sentence, under forty words. The sentence does not repeat the period of
+  the experience its `Experience` column names; a period of the fact's own, shorter than that
+  one, stays in it.
+- `## Evidence` rows run in the order the Skills table lists the skills, and chronologically
+  within a skill.
 - One row per place in `## Also at`, and a place the person no longer maintains has no row:
   the table is what a reader will follow.
-- The URL in `## Also at` is the page that is the person's own on that place, not a search, a
-  feed or a post. What a reader lands on has to be the person.
-- A person who holds a role claims the skills the role requires in their Skills table, with
-  evidence. Where they cannot, the gap stays visible: the validation pass reports it and
-  nothing here invents a row to close it.
-- The image is the person, recognizably, as the tagline is their own voice: not a logo, a team
-  or an illustration standing in for them. A profile whose nature is `agent` may carry one, and
+- `URL` in `## Also at` is the page that is the person's own on that place, not a search, a feed
+  or a post. What a reader lands on has to be the person.
+- `image` is the person, recognizably, as the tagline is their own voice: not a logo, a team or
+  an illustration standing in for them. A profile whose nature is `agent` may carry one, and
   then it shows what holds the profile; the rule below that an agent claims no skill does not
   reach it.
 - `nature` says what holds the profile, never how well. A profile whose nature is `agent`

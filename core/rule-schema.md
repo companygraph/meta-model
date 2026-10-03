@@ -51,14 +51,11 @@ Nothing owns a rule and a rule owns nothing: a rule reaches across the seats, pr
 
 ## Purpose
 
-A rule is a statement under the company's own authority that obliges, forbids or permits something (SBVR; BMM's directive). It answers "what must, must not or may happen here, and why?" for a person or an agent about to act. It is for what reaches across: a refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. Whether a machine or a person holds a change to the rule is read from the controls that enforce it, which name the rule; the rule names none of them.
+A rule is a statement under the company's own authority that obliges, forbids or permits something (SBVR; BMM's directive). It answers "what must, must not or may happen here, and why?" for a person or an agent about to act. It is for what reaches across: a refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. Whether a machine or a person holds a change to the rule is read from the controls that enforce it, which name the rule; the rule names none of them. A rule binds more than one seat, process or phase, or is what a control checks, and a refusal only one of them makes stays in that page's `## What it never does`.
 
 ## Writing rules
 
 - The statement says one thing, as the people it binds would say it, and could be kept or broken. A statement nobody could tell was kept or broken is advice and is not written (SBVR: no business rule is an advice).
-- A rule that no control enforces is still a rule, and one a person or a reviewer holds a change against.
-- A refusal only one seat, one process or one phase makes stays in that page's `## What it never does`. A rule is for what binds more than one of them, or what a control checks, and where a rule replaces a refusal restated on several pages, those restatements are removed.
-- A value's "We never …" is the value's own boundary and stays; a rule may protect it.
 - `motivated-by` names a risk only where the rule exists because of it.
 - An `## Applies to` row names a role, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
-- Names and prose are American English (R14).
+- The page writes names and prose in American English (R14).

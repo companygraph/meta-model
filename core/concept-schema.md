@@ -55,14 +55,11 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 
 ## Purpose
 
-A concept is one word the company means something exact by, and it answers "what do we mean when we say this, and what does it hang off?" for anyone reading a feature, a process or a role that names it. It is an entity rather than a heading in a glossary so that a file can cite it, a rename is caught everywhere at once, and the relations between the company's words are rows a check resolves instead of lines in a drawing.
+A concept is one word the company means something exact by, and it answers "what do we mean when we say this, and what does it hang off?" for anyone reading a feature, a process or a role that names it. It is an entity rather than a heading in a glossary so that a file can cite it, a rename is caught everywhere at once, and the relations between the company's words are rows a check resolves instead of lines in a drawing. A relation is written on one side only, so no two concepts each name the other in `## Relations`.
 
 ## Writing rules
 
 - The definition says what the thing is, not what a system does with it, and it is written so that someone outside the company could tell one of these from something adjacent.
-- A concept this one hangs off belongs in `## Relations`, where it resolves, and never in the definition dressed as a link.
-- A relation is written on one side only. Where it reads better the other way round, write it on the other concept and not here as well.
+- The definition never carries a concept this one hangs off dressed as a link; that concept belongs in `## Relations`, where it resolves.
 - `As` is the name the target goes by in this relation, written as the company says it: `booker`, `primary guest`, `included services`.
-- An alias is never used as a reference anywhere in the model. It is there so a reader searching the wrong word finds the right page.
-- A deprecated alias stays until nothing outside the model uses the old name, and then it goes; it is not a history of the name.
-- An alias of kind `translation` is the concept's name in a language other than the one the model is written in: what a French customer calls it, in a model kept in English.
+- A `Term` of kind `translation` is the concept's name in a language other than the one the model is written in: what a French customer calls it, in a model kept in English.

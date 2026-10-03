@@ -45,7 +45,7 @@ A risk is what could go wrong: an event that would affect the company's objectiv
 
 ## Writing rules
 
-- A risk is written as an event, not as a feeling or a gap: "a secret reaches a transcript", not "security".
-- It carries no likelihood, impact or score. Those are assessments that move, and the model holds how things are made and not their state (R17), as a KPI holds its definition and none of its values. Where the company rates its risks, `## References` points at where it does.
+- The H1 is written as an event, not as a feeling or a gap: "a secret reaches a transcript", not "security".
+- The page carries no likelihood, impact or score. Those are assessments that move, and the model holds how things are made and not their state (R17), as a KPI holds its definition and none of its values. Where the company rates its risks, `## References` points at where it does.
 - `owner` names the seat, never the person, as a role is person-neutral.
-- Names and prose are American English (R14).
+- The page writes names and prose in American English (R14).

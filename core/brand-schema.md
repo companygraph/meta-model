@@ -68,8 +68,8 @@ The brand is what the company looks and sounds like wherever it appears, stated 
 
 ## Writing rules
 
-- No hex code, size, weight, line height or file dimension anywhere in the file. A value moves
-  with a release, and a References row says where it is kept.
+- The page holds no hex code, size, weight, line height or file dimension anywhere. A value
+  moves with a release, and a References row says where it is kept.
 - A `## Color` row is named as the place that masters its value names it, so a reader can find
   it there by the same string.
 - A `Means` cell says what a thing in that color, or a sentence with that trait, is saying; a
@@ -77,12 +77,12 @@ The brand is what the company looks and sounds like wherever it appears, stated 
   checked; "never misused" cannot.
 - A `Job` names what a face sets in the words the page uses for it — prose, the ledger, a section
   mark — and says nothing about how it is set.
-- A trait is one a draft can fail. "Plain" fails a sentence with an adjective that sells;
+- A `Trait` is one a draft can fail. "Plain" fails a sentence with an adjective that sells;
   "professional" fails nothing.
 - `## Voice` speaks in the company's first person, "I" for a company of one and "We" for a company
   of more, the same one the instance's values use.
 - `## Mark` says where the shape is mastered and never carries a copy of it, so the mark has one
   source and every render is made from it.
-- Positioning stays out: the promise is one paragraph, and what the company is, where it is going
+- The promise is one paragraph and keeps positioning out: what the company is, where it is going
   and what it holds to are the identity's, the vision's and the values' to say.
-- Names and prose are American English (R14).
+- The page writes names and prose in American English (R14).

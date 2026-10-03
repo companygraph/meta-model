@@ -44,7 +44,6 @@ A product is something the company ships that somebody uses on its own, and it a
 ## Writing rules
 
 - The tagline names what the product is and who opens it, in that order, and claims nothing about how well it does either.
-- A product is named as the people who use it name it, not as its repository or its internal project is named.
-- Two names for one thing a user opens are one product, and the second name is not a second product; where a concept of the same name exists, the second name is recorded there as an alias.
-- A product names one domain, the one whose concepts its users came to it for. A product that works across two still names one, and the concepts its features name show the rest.
-- Nothing about a release, a version or a roadmap goes here: a product outlives all three.
+- The H1 names the product as the people who use it name it, not as its repository or its internal project is named.
+- `domain` names the one domain whose concepts the product's users came to it for. A product that works across two still names one, and the concepts its features name show the rest.
+- The page says nothing about a release, a version or a roadmap: a product outlives all three.

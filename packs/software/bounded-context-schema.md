@@ -59,14 +59,12 @@ A bounded context owns the terms of its language, its aggregates and its events,
 
 ## Purpose
 
-A bounded context answers "within which boundary does one model, and one meaning of each word, hold?" It is Evans's bounded context and the solution side of core's domain: a domain says what area of the company something belongs to, and a context says where one model of it is built. It owns the terms of its language, so two contexts may mean different things by one word, which is the problem domain-driven design exists to solve. Its strategic classification departs from Evans, who puts it on the subdomain; it sits here, as the DDD Crew's canvas puts it, so that core's domain stays untouched.
+A bounded context answers "within which boundary does one model, and one meaning of each word, hold?" It is Evans's bounded context and the solution side of core's domain: a domain says what area of the company something belongs to, and a context says where one model of it is built. It owns the terms of its language, so two contexts may mean different things by one word, which is the problem domain-driven design exists to solve. Its strategic classification departs from Evans, who puts it on the subdomain; it sits here, as the DDD Crew's canvas puts it, so that core's domain stays untouched. A relationship is written on the downstream context, the side that knows it depends, and a symmetric pattern, a partnership or a shared kernel, is written once, on either side.
 
 ## Writing rules
 
-- The name is the business's, not a service's or a team's: "Billing", not "billing-service".
+- The H1 is the business's name, not a service's or a team's: "Billing", not "billing-service".
 - The purpose names one thing the context leaves to another, so its boundary can be read from its first line.
-- A relationship is written on the downstream context, the side that knows it depends. A symmetric pattern, a partnership or a shared kernel, is written once, on either side.
-- The context map is drawn from the Relationships rows and never written as a page.
-- An event is consumed where the Consumes table names it, and the Relationships table names the context it comes from.
-- A reaction says what happens here, not in the context that emitted the event.
-- A page drawn from code names that code as its `source`, the repository a sync reads, and the module or package as its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.
+- `## Consumes` names each event the context consumes, and `## Relationships` names the context it comes from.
+- `Reaction` says what happens here, not in the context that emitted the event.
+- `source`, on a page drawn from code, names that code, the repository a sync reads, and the module or package is its `source-id`; a page written here that code then follows names the code in `## References` as `Implementation`.

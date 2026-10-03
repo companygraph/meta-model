@@ -51,22 +51,20 @@ A surface is a place the company publishes from the model. For a written surface
   because nothing re-runs a person. A `built` surface carries none and names the repository in
   `built-by`, because the script is the projection and a second copy of a rule is what this
   model exists to end.
-- A surface is named for the page, never for the place that carries it. The place is what a
-  profile's or an identity's `## Also at` lists, and a surface named for it would turn that
-  table's `Where` column from data into references.
+- The H1 names the page, never the place that carries it. The place is what a profile's or an
+  identity's `## Also at` lists, and a surface named for it would turn that table's `Where`
+  column from data into references.
 - A line of `## What it shows` names a unit the surface itself has, in the words the surface
   uses for it, and then what fills it. A reader has to be able to find that unit by that name
   while looking at the surface. It names the unit as the place a rule lands, never what that
   unit currently holds — not a count, not a sample, not its present wording.
-- A projection rule states what the surface does with the model, not what the model contains. A
-  rule that could be read off an entity is a fact restated, and the entity is where it lives.
-- Every omission from a written surface is a rule with a reason. Silence about something the
-  model holds and the surface does not show cannot be told apart from drift, which is the one
-  thing this type is for.
-- A constraint is written as a check: something a reader looking at the published result can
-  pass or fail. "Every unit that can appear alone pairs the name with a role or a domain" can
-  be failed; "the tone is professional" cannot.
-- Where the surface imposes a limit, the constraint names the number and where it was read. A
-  limit quoted from memory is a claim like any other.
-- The file never states what the surface currently shows. That is an observation, true on the
+- Each line of `## Projection rules` states what the surface does with the model, not what the
+  model contains. A rule that could be read off an entity is a fact restated, and the entity is
+  where it lives.
+- Each line of `## Constraints` is written as a check: something a reader looking at the
+  published result can pass or fail. "Every unit that can appear alone pairs the name with a
+  role or a domain" can be failed; "the tone is professional" cannot.
+- `## Constraints` names the number and where it was read wherever the surface imposes a limit.
+  A limit quoted from memory is a claim like any other.
+- The page never states what the surface currently shows. That is an observation, true on the
   day it was written and unfalsifiable here afterwards (R17).

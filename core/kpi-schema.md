@@ -51,11 +51,12 @@ A KPI is a quantity the company has chosen to watch, defined once so that everyo
 
 ## Writing rules
 
-- No target, threshold, baseline or measured value, ever. Each moves, and a number that moves
-  goes stale in the model without a sound; a References row says where they are kept.
-- Named for the quantity, not for the dashboard or tool that shows it: `Change Lead Time`, not
+- The page holds no target, threshold, baseline or measured value, ever. Each moves, and a
+  number that moves goes stale in the model without a sound; a References row says where they
+  are kept.
+- The H1 names the quantity, not the dashboard or tool that shows it: `Change Lead Time`, not
   `the lead-time chart`.
-- Person-neutral, as a role is: the definition names seats and never who holds them.
+- The page is person-neutral, as a role is: the definition names seats and never who holds them.
 - `## How it is measured` says what counts as the event in this company's terms — what a
   deployment is here, what a failure is — concretely enough that two people counting would get
   the same number. A definition that leaves the event open lets every reader count a different
@@ -67,7 +68,7 @@ A KPI is a quantity the company has chosen to watch, defined once so that everyo
 - `can-cost` names a value only where `## What it can hide` says how pushing the number wears
   it down. The field is the edge; the section is the reason, and a name with no reason under it
   is a claim nothing backs.
-- A value any KPI could cost tells a reader nothing, and is not named.
+- `can-cost` names no value any KPI could cost, since such a value tells a reader nothing.
 - `direction: target` is written only where both too high and too low are worse; an indicator
   that is better lower down to some floor is `lower`.
 - `unit` names the period wherever the value is a rate: `deployments per week`, not `count`.
@@ -75,7 +76,6 @@ A KPI is a quantity the company has chosen to watch, defined once so that everyo
   objective holds. A KPI that indicates no objective has none, and is still a KPI the company
   watches.
 - `assesses` names a control only where the number moving would tell how well that control works; a KPI that merely shares a subject with a control names none.
-- A KPI that assesses a control says in `## What it can hide` what the control lets through that the number does not count.
-- A KPI that nothing measures yet is a valid definition. It carries no References row for
-  values until one exists, and it gains no invented one.
-- Names and prose are American English (R14).
+- `## What it can hide`, on a KPI that assesses a control, says what the control lets through
+  that the number does not count.
+- The page writes names and prose in American English (R14).

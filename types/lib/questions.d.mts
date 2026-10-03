@@ -43,10 +43,16 @@ export type Subjects = {
     sections: Set<string>;
     columns: Map<string, string[]>;
     fields: Set<string>;
+    label: string | null;
+};
+export type Opening = {
+    kind: "section" | "field" | "column" | "fixed";
+    name: string;
 };
 export type Subject = {
     sections: string[];
     column: string | null;
+    field: string | null;
 };
 export type Seen = {
     type: string;
@@ -80,8 +86,9 @@ export type Band = {
  * @typedef {{ path: string; why: string }} NotAsked
  * @typedef {{ path: string; type: string; id: string; rule: string; without: string }} Skipped
  * @typedef {{ asked: Request[]; notAsked: NotAsked[]; skipped: Skipped[] }} Questions
- * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string> }} Subjects
- * @typedef {{ sections: string[]; column: string | null }} Subject
+ * @typedef {{ sections: Set<string>; columns: Map<string, string[]>; fields: Set<string>; label: string | null }} Subjects
+ * @typedef {{ kind: "section" | "field" | "column" | "fixed"; name: string }} Opening
+ * @typedef {{ sections: string[]; column: string | null; field: string | null }} Subject
  * @typedef {{ type: string; id: string; rule: string; ps: number[]; lacked: Map<string, number> }} Seen
  */
 /**
@@ -121,6 +128,12 @@ export declare function bulletsOf(sectionText: string): {
     bullet: string;
 }[];
 export declare const STATE_BUDGET = 90000;
+/**
+ * @param {string} rule
+ * @param {Subjects} subjects
+ * @returns {Opening | null}
+ */
+export declare function openingOf(rule: string, subjects: Subjects): Opening | null;
 /**
  * @param {{ graph: InstanceGraph; files: InstanceFiles; schemas: Files }} instance
  * @returns {Questions}
