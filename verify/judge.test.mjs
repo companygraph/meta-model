@@ -229,8 +229,8 @@ test("a send to TypeSafe itself takes a yes typed at a terminal, never a piped o
 });
 
 const measure = fileURLToPath(new URL("../tools/measure-judge.mjs", import.meta.url));
-const measured = (env) => new Promise((done, fail) => {
-  const child = spawn(process.execPath, [measure], { env });
+const measured = (env, args = []) => new Promise((done, fail) => {
+  const child = spawn(process.execPath, [measure, ...args], { env });
   let out = "", err = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (err += d));
@@ -260,6 +260,26 @@ test("a failing request is counted and the measuring still prints what it has", 
     assert.equal(code, 0, out);
     assert.match(out, /^failed: [1-9]\d* requests/m);
     assert.match(out, /^rules: /m);
+  } finally {
+    fake.close();
+  }
+});
+
+test("the measuring reads the instances it is named, and says per fault how often the judge caught it", async () => {
+  // An instance holding the example's model, with one tagline marked, so what was sent can be traced to it.
+  const root = fresh();
+  fs.rmSync(path.join(root, "model"), { recursive: true });
+  fs.cpSync(fileURLToPath(new URL("../example/model", import.meta.url)), path.join(root, "model"), { recursive: true });
+  const page = path.join(root, "model/profiles/mira-halvorsen/experiences/2022-beacon-systems.md");
+  fs.writeFileSync(page, fs.readFileSync(page, "utf8").replace("> Ongoing. Taking one service", "> Ongoing. MARKED: taking one service"));
+  const fake = await service();
+  try {
+    const { code, out } = await measured({ ...withoutKey(), TYPESAFE_API_KEY: "k", COMPANYGRAPH_TYPESAFE_URL: fake.url }, [root]);
+    assert.equal(code, 0, out);
+    assert.ok(fake.seen.some((s) => s.body.state.entity.includes("MARKED")), "the named instance's pages were sent");
+    assert.match(out, new RegExp(`over ${root.replace(/[.*+?^${}()|[\]\\]/g, "\\$&")}`));
+    for (const name of ["a stack listed as an achievement", "a skill the body does not show", "a bullet under a kind it is not chiefly evidence of", "a running period whose tagline does not say so"])
+      assert.match(out, new RegExp(`^ {2}${name}: \\d+ pages, caught on \\d+, clean mean \\d\\.\\d\\d, faulted mean \\d\\.\\d\\d$`, "m"));
   } finally {
     fake.close();
   }
