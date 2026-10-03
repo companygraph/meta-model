@@ -124,9 +124,22 @@ const answers = new Map([
   ["c.md", { error: "TypeSafe answered 500" }],
 ]);
 
-test("unmeasured, the report flags nothing and lists each page's lowest verdicts, marked", () => {
-  assert.equal(BAND, null);
+test("the band is the one measured over the reference instance on October 3, 2026", () => {
+  // Below 0.6 about four pages in five broke the rule; 0.6 to 0.7 was near even; a pick at 0.9
+  // or above was right 97% of the time, and below it mostly wrong.
+  assert.deepEqual(BAND, { low: 0.6, high: 0.7, pick: 0.9 });
+});
+
+test("measured, the report says where its band came from and flags by it", () => {
   const lines = reportOf(asked, answers);
+  assert.ok(lines.some((l) => /^flagged: a rule verdict below 0\.60, and a pick of 0\.90 or above that differs from its heading — read off the measuring of October 3, 2026$/.test(l)));
+  assert.ok(!lines.some((l) => /probabilities unmeasured/.test(l)));
+  assert.ok(lines.some((l) => /^ {2}! 0\.20 {2}r2 /.test(l)));
+  assert.ok(!lines.some((l) => /^ {2}! 0\.80 {2}g1 /.test(l)), "a pick below the pick threshold is not flagged");
+});
+
+test("unmeasured, the report flags nothing and lists each page's lowest verdicts, marked", () => {
+  const lines = reportOf(asked, answers, { band: null });
   assert.match(lines[0], /^judge: advisory/);
   assert.ok(lines.some((l) => /probabilities unmeasured/.test(l)));
   const a = lines.slice(lines.indexOf("model/a.md") + 1, lines.indexOf("model/b.md"));
@@ -139,10 +152,10 @@ test("unmeasured, the report flags nothing and lists each page's lowest verdicts
 });
 
 test("measured, a verdict below the band is flagged and a rule near even for most pages cannot be judged", () => {
-  const lines = reportOf(asked, answers, { band: { low: 0.4, high: 0.6 } });
+  const lines = reportOf(asked, answers, { band: { low: 0.4, high: 0.6, pick: 0.7 } });
   assert.ok(lines.some((l) => /^ {2}! 0\.20 {2}r2 {2}Two\.$/.test(l)));
-  assert.ok(lines.some((l) => /^ {2}! 0\.80 {2}g1 /.test(l)), "a pick that differs from its heading, above the band, is flagged");
-  assert.ok(!lines.some((l) => /^ {2}! 0\.60 {2}g2 /.test(l)), "a pick inside the band is not");
+  assert.ok(lines.some((l) => /^ {2}! 0\.80 {2}g1 /.test(l)), "a pick that differs from its heading, at or above the pick threshold, is flagged");
+  assert.ok(!lines.some((l) => /^ {2}! 0\.60 {2}g2 /.test(l)), "a pick below the pick threshold is not");
   const r1 = lines.find((l) => /^ {2}experience r1:/.test(l));
   assert.match(r1, /asked of 2, median 0\.\d\d, near even for 1$/);
   const r3 = lines.find((l) => /^ {2}experience r3:/.test(l));
