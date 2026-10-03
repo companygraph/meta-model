@@ -2,6 +2,7 @@ import { enumTokensOf, IMAGE_FILE } from "./instance.mjs";
 export { enumTokensOf, IMAGE_FILE };
 export type InstanceFiles = import("./instance.mjs").InstanceFiles;
 export type PageChange = import("./history.mjs").PageChange;
+export type DeletedPage = import("./history.mjs").DeletedPage;
 export type TypeEntry = {
     type: string;
     folder?: string;
@@ -95,6 +96,13 @@ export type TypeEntry = {
         url: string;
     };
     /**
+     * A page kept as written once it is on the default branch: the field `moves` is the one that changes, the change that moves it may add one dated sentence at the end of the section `closing`, and the page is never deleted.
+     */
+    kept?: {
+        moves: string;
+        closing: string;
+    };
+    /**
      * A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
      */
     expires?: string;
@@ -120,6 +128,7 @@ export type Check = {
 };
 /** @typedef {import("./instance.mjs").InstanceFiles} InstanceFiles */
 /** @typedef {import("./history.mjs").PageChange} PageChange */
+/** @typedef {import("./history.mjs").DeletedPage} DeletedPage */
 /**
  * A type as this release ships it: its folder, with `<placeholder>` segments for its owners, or
  * its one file; what owns it and what it owns; how prose writes it where its id will not do; and
@@ -141,6 +150,7 @@ export type Check = {
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and no entity outside them carries it.
  * @property {{ when: { field: string, is: string }, field: string, requires: string, section: string, column: string }} [claims] What a page whose `when.field` is `when.is` claims: each entity its `field` names lists in its own `requires` what the page's `section` table names in `column`, and one it does not name is noted as a gap.
  * @property {{ when: { field: string, is: string }, of: string, fields: string[], section: string, column: string, url: string }} [restates] What a page whose `when.field` is `when.is` repeats of the singular type `of`: each of `fields` equal to its, and each URL of the `section` table's `column` equal to its `url` or one of its own rows, is noted.
+ * @property {{ moves: string, closing: string }} [kept] A page kept as written once it is on the default branch: the field `moves` is the one that changes, the change that moves it may add one dated sentence at the end of the section `closing`, and the page is never deleted.
  * @property {string} [expires] A date field whose passing is noted: once the period it names has ended, the page is reported without failing.
  */
 /**
@@ -297,3 +307,35 @@ export declare function checkInstance(files: InstanceFiles, { core, model, packs
  * @returns {string[]}
  */
 export declare function idChangesOf(changes: PageChange[], base: string): string[];
+/**
+ * @param {PageChange[]} changes
+ * @param {DeletedPage[]} deleted
+ * @param {string} base
+ * @param {{ model?: string, types?: TypeEntry[] }} [options]
+ * @returns {string[]}
+ */
+export declare function keptChangesOf(changes: PageChange[], deleted: DeletedPage[], base: string, { model, types }?: {
+    model?: string;
+    types?: TypeEntry[];
+}): string[];
+/**
+ * @param {string} text
+ * @param {{ section: string, column?: string, heading?: boolean }} labels
+ * @returns {Map<string, string>}
+ */
+export declare function labelsOf(text: string, labels: {
+    section: string;
+    column?: string;
+    heading?: boolean;
+}): Map<string, string>;
+/**
+ * @param {PageChange[]} changes
+ * @param {string} base
+ * @param {{ model?: string, types?: TypeEntry[], historyOf?: (change: PageChange) => string[] }} [options]
+ * @returns {string[]}
+ */
+export declare function labelChangesOf(changes: PageChange[], base: string, { model, types, historyOf }?: {
+    model?: string;
+    types?: TypeEntry[];
+    historyOf?: (change: PageChange) => string[];
+}): string[];

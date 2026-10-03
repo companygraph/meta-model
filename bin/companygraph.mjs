@@ -36,10 +36,10 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
-import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
+import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
 /** @import { UpgradeWrites } from "../lib/plan.mjs" */
@@ -82,7 +82,7 @@ const USAGE = `companygraph [<command>]
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
-  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
+  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern, or a range that changed an id, rewrote or removed a decision, or moved or reused a label
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook
 upgrade: --core <tag>  --pack <a,b>  --force  --dry-run
@@ -1073,14 +1073,16 @@ function seats(argv) {
 
 // R18. `--backfill` gives every page without an id one stamped with its first commit and writes
 // model/identifier.md where there is none; `--range` fails a change to an id on the default
-// branch. A folder that holds core/ and is not an instance is the repository that makes core,
-// and both work on its schemas instead; `--core` already names a tag, so what the folder holds
-// is what tells the two apart.
+// branch and, on an instance, a decision rewritten or deleted and a label moved or used again.
+// A folder that holds core/ and is not an instance is the repository that makes core, and both
+// work on its schemas instead; `--core` already names a tag, so what the folder holds is what
+// tells the two apart.
 //
 // Refused is 3, not 1, so a caller such as a hook can tell a refusal — a `--range` that changed
-// an id already on the default branch, or a `--backfill` that a declared `pattern` format or an
-// unreadable identifier file refuses — from a run that could not happen at all: not an instance,
-// neither flag, a malformed range, or a git failure, each of which is 1.
+// an id already on the default branch or a page it holds as written, or a `--backfill` that a
+// declared `pattern` format or an unreadable identifier file refuses — from a run that could not
+// happen at all: not an instance, neither flag, a malformed range, or a git failure, each of
+// which is 1.
 /**
  * @param {string[]} argv
  * @returns {number}
@@ -1094,6 +1096,11 @@ function ids(argv) {
     return 1;
   }
   const folder = onCore ? "core" : "model";
+  // The packs the instance took, so a page of a pack's type is known as a core page is: given its
+  // id by the backfill, and held by the range's checks of what a change may do to it.
+  const manifestPath = join(root, ".companygraph/manifest.json");
+  const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
+  const { types } = vocabularyOf({ packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${manifest.units ?? "meta"}/${name}` })) });
   if (given.backfill) {
     /** @type {Map<string, string>} */
     const files = new Map();
@@ -1109,10 +1116,6 @@ function ids(argv) {
     const top = gitTop(root);
     /** @param {string} rel */
     const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
-    // The packs the instance took, so a page of a pack's type is given its id as a core page is.
-    const manifestPath = join(root, ".companygraph/manifest.json");
-    const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
-    const { types } = vocabularyOf({ packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${manifest.units ?? "meta"}/${name}` })) });
     const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs, types }));
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
@@ -1135,12 +1138,21 @@ function ids(argv) {
     }
     // A full commit name is shortened to seven characters for a reader; a branch name is kept.
     const base = /^[0-9a-f]{40}$/.test(ends[0]) ? ends[0].slice(0, 7) : ends[0];
-    const failures = idChangesOf(changedPagesOf(root, given.range, folder), base);
+    const changes = changedPagesOf(root, given.range, folder);
+    const failures = idChangesOf(changes, base);
+    // An instance's pages are held to what a change may do to them as well: a decision is kept
+    // as written and never deleted, and a label stays with its item and is never used again. The
+    // repository that makes core ranges over schemas, which carry neither.
+    if (!onCore)
+      failures.push(
+        ...keptChangesOf(changes, deletedPagesOf(root, given.range, folder), base, { types }),
+        ...labelChangesOf(changes, base, { types, historyOf: (c) => pageHistoryOf(root, ends[0], c.before) }),
+      );
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
       return REFUSED;
     }
-    console.log("✓ no id on the default branch changed");
+    console.log(onCore ? "✓ no id on the default branch changed" : "✓ no id on the default branch changed, no page kept as written was rewritten or removed, and no label moved or came back");
     return 0;
   }
   console.error("✗ ids needs --backfill or --range <a>..<b>");

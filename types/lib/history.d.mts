@@ -68,6 +68,10 @@ export type PageChange = {
  * @returns {number | null}
  */
 export declare function firstCommitMsOf(cwd: string, rel: string): number | null;
+export type DeletedPage = {
+    before: string;
+    beforeText: string;
+};
 /**
  * @param {string} cwd
  * @param {string} range
@@ -75,6 +79,20 @@ export declare function firstCommitMsOf(cwd: string, rel: string): number | null
  * @returns {PageChange[]}
  */
 export declare function changedPagesOf(cwd: string, range: string, model?: string): PageChange[];
+/**
+ * @param {string} cwd
+ * @param {string} range
+ * @param {string} [model]
+ * @returns {DeletedPage[]}
+ */
+export declare function deletedPagesOf(cwd: string, range: string, model?: string): DeletedPage[];
+/**
+ * @param {string} cwd
+ * @param {string} rev
+ * @param {string} rel
+ * @returns {string[]}
+ */
+export declare function pageHistoryOf(cwd: string, rev: string, rel: string): string[];
 /**
  * @param {string} top
  * @returns {Member[] | null}

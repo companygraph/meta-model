@@ -1574,3 +1574,48 @@ test("check prints a passed horizon under noted:, on a passing run and a failing
   assert.equal(failing.status, 1);
   assert.match(failing.stdout, /^ {2}noted:\n {4}model\/strategic-objectives\/invoices-explain-themselves\.md/m);
 });
+
+// The range reads the manifest's packs, so a pack page's type is known: a decision rewritten and
+// an invariant relabelled are refused beside the id check, and a status moved alone passes.
+test("ids --range refuses a decision rewritten and an invariant relabelled, and passes a status moved alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const decision = (status, by) => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: ${status}\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n`;
+  const aggregate = (label) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| ${label} | A total never changes. |\n`;
+  write("model/decisions/2026-core-is-vendored.md", decision("Standing", "Owner"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Revised", "Owner"));
+  g("commit", "-qam", "second", "--no-verify");
+  const moved = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stderr);
+  assert.match(moved.stdout, /no page kept as written was rewritten or removed/);
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Revised", "Architect"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-9"));
+  g("commit", "-qam", "third", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `by` changed since [0-9a-f]{7}/);
+  assert.match(said.stderr, /✗ model\/bounded-contexts\/billing\/aggregates\/invoice\.md: "INV-9" under ## Invariants carries what "INV-1" carried/);
+});
+
+test("ids --range refuses a decision deleted in the range", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.mkdirSync(path.join(root, "model/decisions"), { recursive: true });
+  fs.writeFileSync(path.join(root, "model/decisions/2026-core-is-vendored.md"), "---\nsource: Local\nstatus: Standing\n---\n\n# Core is vendored\n\n> We vendor core.\n");
+  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  g("rm", "-q", "model/decisions/2026-core-is-vendored.md"); g("commit", "-qm", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
+});
