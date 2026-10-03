@@ -9,7 +9,7 @@ import path from "node:path";
 import { execFileSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
-import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
+import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
@@ -258,6 +258,23 @@ test("a rule's summary counts the pages it was left out of, and a rule asked of 
   assert.match(lines.find((l) => /^ {2}experience r1:/.test(l)), /asked of 2, median 0\.\d\d, near even for 1; not asked of 1 without `## Ending`$/);
   assert.equal(lines.find((l) => /^ {2}experience r9:/.test(l)), "  experience r9: asked of 0; not asked of 2 without `## Ending`");
   assert.ok(!reportOf(asked, answers).some((l) => /not asked of/.test(l)), "a run that left nothing out says nothing of it");
+});
+
+test("what a page is without takes the article its column's name is said with", () => {
+  const thing = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n| `## References` | No | Table. |\n\n`## References` is a table with these columns:\n\n| Column | Required | Type | Description |\n| --- | --- | --- | --- |\n| `URL` | Yes | string | Where. |\n| `Owner` | No | string | Whose. |\n\n## Writing rules\n\n- `URL` is the page itself.\n- `Owner` is a seat.\n";
+  const graph = { entities: [{ path: "things/a.md", type: "thing", name: "A", id: "x", owner: null, tagline: "", sections: [] }] };
+  const { skipped } = questionsOf({ graph, files: new Map([["things/a.md", "# A\n"]]), schemas: new Map([["thing-schema.md", thing]]) });
+  assert.deepEqual(skipped.map((s) => s.without), ["without a `URL` column", "without an `Owner` column"]);
+});
+
+test("the rules left out are listed per rule, for a run that sends nothing", () => {
+  const skipped = [
+    { path: "y.md", type: "experience", id: "r14", rule: "", without: "without `## Ending`" },
+    { path: "c.md", type: "concept", id: "r4", rule: "", without: "without an `As` column" },
+    { path: "z.md", type: "experience", id: "r14", rule: "", without: "without `## Ending`" },
+  ];
+  assert.deepEqual(leftOutOf(skipped), ["  concept r4: not asked of 1 without an `As` column", "  experience r14: not asked of 2 without `## Ending`"]);
+  assert.deepEqual(leftOutOf([]), []);
 });
 
 test("the report never reads as a pass and ends naming what it did not ask, a failed page among them", () => {

@@ -130,6 +130,11 @@ export declare function questionsOf({ graph, files, schemas }: {
     files: InstanceFiles;
     schemas: Files;
 }): Questions;
+/**
+ * @param {Skipped[]} skipped
+ * @returns {string[]}
+ */
+export declare function leftOutOf(skipped: Skipped[]): string[];
 export declare const BAND: Band | null;
 export declare const LOWEST = 3;
 /**

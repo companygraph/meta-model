@@ -881,7 +881,7 @@ async function check(argv) {
 async function judge(argv) {
   const root = resolve(flags(argv)._[0] ?? ".");
   const { instanceAt } = await import("../lib/history.mjs");
-  const { questionsOf, reportOf } = await import("../lib/questions.mjs");
+  const { questionsOf, reportOf, leftOutOf } = await import("../lib/questions.mjs");
   const judges = await import("./judges/typesafe.mjs");
   const instance = instanceAt(root);
   const questions = questionsOf(instance);
@@ -894,6 +894,8 @@ async function judge(argv) {
       for (const q of r.questions)
         console.log(`  ${q.id}  ${q.kind === "rule" ? q.rule : `"${q.bullet}": one of ${Object.keys(q.options).join(", ")}`}`);
     }
+    const left = leftOutOf(questions.skipped);
+    if (left.length) console.log("\nleft out, for want of what they are about:\n" + left.join("\n"));
     console.log(`\nno TYPESAFE_API_KEY: nothing was sent. These are the questions a run with the key would send to ${judges.SERVICE.name}.`);
     return 0;
   }

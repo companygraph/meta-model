@@ -116,6 +116,16 @@ test("with no key, judge prints the questions and sends nothing", async () => {
   assert.match(out, /no TYPESAFE_API_KEY: nothing was sent/);
 });
 
+test("with no key, judge lists the rules it would leave out, and why", async () => {
+  const root = fresh();
+  fs.mkdirSync(path.join(root, "model", "concepts"), { recursive: true });
+  fs.writeFileSync(path.join(root, "model", "concepts", "term.md"), "---\nid: 01a0c25c-19f8-7ccf-b892-f4144684c95f\nsource: Local\n---\n\n# Term\n\n> A word the company uses.\n");
+  const { code, out } = await judge(root, { env: withoutKey() });
+  assert.equal(code, 0);
+  assert.match(out, /^left out, for want of what they are about:$/m);
+  assert.match(out, /^ {2}concept r4: not asked of 1 without an `As` column$/m);
+});
+
 test("with a key, judge names the service and every file, and sends nothing without a typed yes", async () => {
   const fake = await service();
   try {
