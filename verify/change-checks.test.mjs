@@ -107,7 +107,6 @@ test("a renamed decision whose content is the same passes", () => {
   assert.deepEqual(kept([{ before: DECISION, after: "model/decisions/2026-core-is-vendored-everywhere.md", beforeText: call(), afterText: call() }]), []);
 });
 
-
 // --- A name a decision carries follows the entity it names ---------------------------------
 
 // A decision names entities by their canonical names, so renaming or deleting one would leave a
