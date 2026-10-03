@@ -97,10 +97,10 @@ export declare function mergeBaseOf(cwd: string, a: string, b: string): string;
  * @param {string} cwd
  * @param {string} a
  * @param {string} b
- * @param {string} units
- * @returns {boolean}
+ * @param {string[]} paths
+ * @returns {Set<string>}
  */
-export declare function upgradedIn(cwd: string, a: string, b: string, units: string): boolean;
+export declare function changedFilesOf(cwd: string, a: string, b: string, paths: string[]): Set<string>;
 /**
  * @param {string} cwd
  * @param {string} rev

@@ -1710,69 +1710,116 @@ test("ids --range whose ends share no commit names the cause in one line and exi
   assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
 });
 
-// An upgrade or a conventions resync changes the vendored core, a pack or the conventions, and a
-// core release that reformats decisions or reshapes `## Bears on` makes the instance change its
-// decisions in that same range. Held to the decision and label checks, it could never pass, so a
-// range that touches what the instance vendors runs the id check alone and says so in one line.
+// A decision and a label are compared after both sides are put in the family's Markdown form, so
+// a change the form would make anyway is no rewrite. A release that reshapes what the decision
+// schema or a label-declaring schema asks of a page makes the instance change those pages in the
+// same range, so a range that changes the vendored schema governing a check is not held to that
+// check, and says so in one line; any other upgrade, re-pin or resync is held as always.
 const upgradeRepo = () => {
   const root = temp();
-  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
   const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
-  const decision = (by) => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: Standing\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n`;
+  const decision = (by, list = "- one\n- two\n\nA consequence on one line.") => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: Standing\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n\n## Consequences\n\n${list}\n`;
+  const aggregate = (label) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| ${label} | A total never changes. |\n`;
   write("model/decisions/2026-core-is-vendored.md", decision("Owner"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
   write("conventions.json", "{}\n");
   g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "-b", "topic");
+  const commit = () => { g("add", "-A"); g("commit", "-qm", "change", "--no-verify"); };
   const ids = () => spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
-  return { root, g, write, decision, ids };
+  const DECISION = "model/decisions/2026-core-is-vendored.md", AGGREGATE = "model/bounded-contexts/billing/aggregates/invoice.md";
+  return { root, g, write, decision, aggregate, commit, ids, DECISION, AGGREGATE };
 };
-const UPGRADE_LINE = /^ {2}an upgrade range: decision and label text not held$/m;
+const DECISION_LINE = /^ {2}the decision schema changed in this range: decision text not held$/m;
+const LABEL_LINE = /^ {2}the aggregate schema changed in this range: aggregate label text not held$/m;
 
-test("ids --range over an upgrade of the vendored core does not hold a decision rewritten in it, and says so once", () => {
-  const { root, g, write, decision, ids } = upgradeRepo();
-  g("checkout", "-q", "-b", "topic");
-  write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
+test("ids --range passes a decision whose two sides differ only where the Markdown form makes them one", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  // Another list marker, a paragraph wrapped over two lines: as written, each would read as a rewrite.
+  write(DECISION, decision("Owner", "* one\n* two\n\nA consequence\non one line."));
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, /no page kept as written was rewritten or removed/);
+  assert.doesNotMatch(said.stdout, /not held|could not be applied/);
+});
+
+test("ids --range still refuses a decision with a word changed, after the form", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Owner", "* one\n* three\n\nA consequence on one line."));
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: its text changed since [0-9a-f]{7}/);
+});
+
+test("ids --range over a change to the vendored decision schema does not hold a decision rewritten in it, and says so once", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a release added.\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, DECISION_LINE);
+  assert.equal(said.stdout.match(/not held/g)?.length, 1, said.stdout);
+});
+
+test("ids --range over a decision schema change still holds a label moved in the same range", () => {
+  const { root, write, decision, aggregate, commit, ids, DECISION, AGGREGATE } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  write(AGGREGATE, aggregate("INV-9"));
+  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a release added.\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /"INV-9" under ## Invariants carries what "INV-1" carried/);
+  assert.doesNotMatch(said.stderr, /2026-core-is-vendored/);
+});
+
+test("ids --range over a change to the aggregate schema does not hold a label moved in it", () => {
+  const { root, write, aggregate, commit, ids, AGGREGATE } = upgradeRepo();
+  write(AGGREGATE, aggregate("INV-9"));
+  fs.appendFileSync(path.join(root, "meta/software/aggregate-schema.md"), "\nA sentence a release added.\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, LABEL_LINE);
+  assert.doesNotMatch(said.stdout, DECISION_LINE);
+});
+
+test("ids --range over another change to the vendored core still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
   fs.appendFileSync(path.join(root, "meta/core/manifest.json"), "\n");
-  g("add", "-A"); g("commit", "-qm", "upgrade", "--no-verify");
+  commit();
   const said = ids();
-  assert.equal(said.status, 0, said.stderr);
-  assert.match(said.stdout, UPGRADE_LINE);
-  assert.equal(said.stdout.match(/an upgrade range/g)?.length, 1, said.stdout);
-});
-
-test("ids --range over the same decision rewrite with nothing vendored changed still refuses it", () => {
-  const { g, write, decision, ids } = upgradeRepo();
-  g("checkout", "-q", "-b", "topic");
-  write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
-  g("add", "-A"); g("commit", "-qm", "rewrite", "--no-verify");
-  const said = ids();
-  assert.equal(said.status, 3);
+  assert.equal(said.status, 3, said.stdout);
   assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `by` changed since/);
-  assert.doesNotMatch(said.stdout, /an upgrade range/);
+  assert.doesNotMatch(said.stdout, /not held/);
 });
 
-test("ids --range over a conventions resync does not hold a decision rewritten in it, and says so once", () => {
-  const { g, write, decision, ids } = upgradeRepo();
-  g("checkout", "-q", "-b", "topic");
-  write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
+test("ids --range over a conventions resync still refuses a decision rewritten in it", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
   write("conventions.json", "{ \"version\": \"1.0.0\" }\n");
-  g("add", "-A"); g("commit", "-qm", "resync", "--no-verify");
+  commit();
   const said = ids();
-  assert.equal(said.status, 0, said.stderr);
-  assert.match(said.stdout, UPGRADE_LINE);
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
 });
 
-test("ids --range over a tooling re-pin in the manifest does not hold a decision rewritten in it", () => {
-  const { root, g, write, decision, ids } = upgradeRepo();
-  g("checkout", "-q", "-b", "topic");
-  write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
+test("ids --range over a tooling re-pin in the manifest still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
   const at = path.join(root, ".companygraph/manifest.json");
   fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), tooling: "0.0.1" }, null, 2) + "\n");
-  g("add", "-A"); g("commit", "-qm", "re-pin", "--no-verify");
+  commit();
   const said = ids();
-  assert.equal(said.status, 0, said.stderr);
-  assert.match(said.stdout, UPGRADE_LINE);
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
 });
 
 // The decision and label checks compare from where the branch began, so their refusals name that
@@ -1780,7 +1827,6 @@ test("ids --range over a tooling re-pin in the manifest does not hold a decision
 test("ids --range on a branch behind main names the merge base in a decision's refusal", () => {
   const { g, write, decision, ids } = upgradeRepo();
   const fork = g("rev-parse", "--short=7", "main");
-  g("checkout", "-q", "-b", "topic");
   write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
   g("add", "-A"); g("commit", "-qm", "rewrite", "--no-verify");
   g("checkout", "-q", "main");

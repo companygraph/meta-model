@@ -31,15 +31,15 @@ import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
-import { formCheck } from "../lib/form.mjs";
+import { formCheck, formattedOf } from "../lib/form.mjs";
 import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, upgradedIn } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
-import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
+import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
 /** @import { UpgradeWrites } from "../lib/plan.mjs" */
@@ -1074,7 +1074,8 @@ function seats(argv) {
 // R18. `--backfill` gives every page without an id one stamped with its first commit and writes
 // model/identifier.md where there is none; `--range` fails a change to an id on the default
 // branch and, on an instance, a decision rewritten or deleted and a label moved or used again,
-// except in a range that upgrades what the instance vendors, which it says in one line.
+// compared after the form, except where the range changes the vendored schema that governs the
+// check, which it says in one line.
 // A folder that holds core/ and is not an instance is the repository that makes core, and both
 // work on its schemas instead; `--core` already names a tag, so what the folder holds is what
 // tells the two apart.
@@ -1154,7 +1155,10 @@ function ids(argv) {
     // the branch did, from where it branched: from a base tip that moved on since, a decision main
     // added would read as one the branch deleted. The id check stays on the range as given, since
     // its base is the ids the default branch holds now.
-    let upgrade = false;
+    /** @type {string[]} */
+    const notes = [];
+    // A check every one of whose types stands aside is left out of the tick's line.
+    let keptHeld = !onCore, labelsHeld = !onCore;
     if (!onCore) {
       // Where the two ends hold no commit in common there is no branch point to read from: in a
       // shallow clone because the history that holds it was not fetched, and otherwise because
@@ -1166,34 +1170,62 @@ function ids(argv) {
         console.error(`✗ ${ends[0]} and ${ends[1]} have no commit in common here, so where the branch began cannot be read; in a shallow clone, fetch its full history (fetch-depth: 0) and run again`);
         return 1;
       }
-      // An upgrade or a conventions resync is not held to them: a release that reformats decision
-      // pages or reshapes `## Bears on` makes the instance change its decisions in the same range,
-      // which the decision check would refuse with no way through. The id check still runs.
-      upgrade = upgradedIn(root, fork, ends[1], units);
-      if (!upgrade) {
-        const own = `${fork}..${ends[1]}`;
-        const branched = own === given.range ? changes : changedPagesOf(root, own, folder);
-        // Their refusals name the commit they compared from, the branch point, and not the base.
-        const from = fork.slice(0, 7);
-        failures.push(
-          // A name a decision carries may follow the entity it names, read against the schema the
-          // instance vendored and the model where the branch began and where it ends.
-          ...keptChangesOf(branched, deletedPagesOf(root, own, folder), from, {
-            types,
-            schemaOf: (type) => (existsSync(join(root, schemaOf(type))) ? readFileSync(join(root, schemaOf(type)), "utf8") : null),
-            treeOf: (side) => treeAt(root, side === "base" ? fork : ends[1], folder),
-          }),
-          ...labelChangesOf(branched, from, { types, historyOf: (c) => pageHistoryOf(root, fork, c.before) }),
-        );
-      }
+      // A release that changes the vendored schema governing one of these checks, the decision
+      // schema or a schema whose type declares labels, may reshape the pages that check holds in
+      // the same range, which the check would refuse with no way through. Where the range changes
+      // that schema, the check stands aside for that type and says so; any other upgrade, re-pin
+      // or resync is held as always, and the id check always runs.
+      const governed = types.filter((t) => t.kept || t.labels);
+      const changedSchemas = changedFilesOf(root, fork, ends[1], governed.map((t) => schemaOf(t.type)));
+      /** @type {import("../lib/checks.mjs").TypeEntry[]} */
+      const held = types.map((t) => {
+        if (!(t.kept || t.labels) || !changedSchemas.has(schemaOf(t.type))) return t;
+        notes.push(`  the ${t.type} schema changed in this range: ${t.type}${t.kept ? "" : " label"} text not held`);
+        const { kept, labels, ...rest } = t;
+        return rest;
+      });
+      keptHeld = held.some((t) => t.kept) || !types.some((t) => t.kept);
+      labelsHeld = held.some((t) => t.labels) || !types.some((t) => t.labels);
+      const own = `${fork}..${ends[1]}`;
+      // Where the base given is the branch point, by name or by commit, the pages already read are
+      // the ones the branch changed, and are not read again.
+      const givenBase = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${ends[0]}^{commit}`], { cwd: root, encoding: "utf8" }).stdout?.trim();
+      const branched = givenBase === fork ? changes : changedPagesOf(root, own, folder);
+      // Both sides of every page these two compare are put in the family's Markdown form first,
+      // in one run of the tool, so a change the form makes anyway is not read as a rewrite or a
+      // move. Where the tool cannot run, the pages are compared as written, and the command says so.
+      const compared = branched.filter((c) => [c.before, c.after].some((p) => {
+        const entry = held.find((t) => t.type === typeOfPath(p, folder, held));
+        return Boolean(entry?.kept || entry?.labels);
+      }));
+      /** @type {Map<string, string>} */
+      const texts = new Map(compared.flatMap((c) => [[`base/${c.before}`, c.beforeText], [`head/${c.after}`, c.afterText]]));
+      const { formatted, error } = formattedOf(texts);
+      if (error) notes.push(`  the Markdown form could not be applied, so decision and label text is compared as written: ${error.split("\n")[0]}`);
+      const pages = branched.map((c) => (compared.includes(c) ? { ...c, beforeText: formatted.get(`base/${c.before}`) ?? c.beforeText, afterText: formatted.get(`head/${c.after}`) ?? c.afterText } : c));
+      // Their refusals name the commit they compared from, the branch point, and not the base.
+      const from = fork.slice(0, 7);
+      failures.push(
+        // A name a decision carries may follow the entity it names, read against the schema the
+        // instance vendored and the model where the branch began and where it ends.
+        ...keptChangesOf(pages, deletedPagesOf(root, own, folder), from, {
+          types: held,
+          schemaOf: (type) => (existsSync(join(root, schemaOf(type))) ? readFileSync(join(root, schemaOf(type)), "utf8") : null),
+          treeOf: (side) => treeAt(root, side === "base" ? fork : ends[1], folder),
+        }),
+        ...labelChangesOf(pages, from, { types: held, historyOf: (c) => pageHistoryOf(root, fork, c.before) }),
+      );
     }
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
+      for (const n of notes) console.error(n);
       return REFUSED;
     }
-    if (onCore || upgrade) console.log("✓ no id on the default branch changed");
-    else console.log("✓ no id on the default branch changed, no page kept as written was rewritten or removed, and no label moved or came back");
-    if (upgrade) console.log("  an upgrade range: decision and label text not held");
+    const clauses = ["no id on the default branch changed"];
+    if (keptHeld) clauses.push("no page kept as written was rewritten or removed");
+    if (labelsHeld) clauses.push("no label moved or came back");
+    console.log(`✓ ${clauses.length > 2 ? `${clauses.slice(0, -1).join(", ")}, and ${clauses.at(-1)}` : clauses.join(" and ")}`);
+    for (const n of notes) console.log(n);
     return 0;
   }
   console.error("✗ ids needs --backfill or --range <a>..<b>");
