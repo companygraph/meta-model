@@ -957,7 +957,7 @@ test("a folder inside an owner's folder that it does not own is a failure", () =
   assert.ok(failures[0].includes("(R5)") || failures[0].includes("not a folder"), failures[0]);
 });
 // One cause is one finding. A qualifier or a reference that names no entity of its type at all is
-// R16's to report, that it resolves nowhere; the owner check speaks only of a name that does
+// R4's to report, that it resolves nowhere; the owner check speaks only of a name that does
 // resolve and belongs to another owner. Found in the plugin, where a blank-named period showed
 // twice in the pane.
 test("a name of an owned type that names nothing at all is reported once, by R4, and not by the owner check", () => {
@@ -990,7 +990,7 @@ test("a reference on a page outside the profiles that names nothing fails under 
   assert.match(/** @type {string} */ (hits[0]), /plain\.md.*names no entity.*\(R4\)/);
 });
 
-test("two unowned pages of one type sharing a canonical name fail under R4, naming both", () => {
+test("two unowned pages of one type sharing a canonical name fail under R2, naming both", () => {
   const files = new Map([
     ["meta/core/skill-schema.md", schema("skill", [])],
     ["model/skills/java.md", "# Java\n\n> A language.\n"],
@@ -998,7 +998,7 @@ test("two unowned pages of one type sharing a canonical name fail under R4, nami
   ]);
   const hits = checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("share the canonical name"));
   assert.equal(hits.length, 1, hits.join("\n"));
-  assert.match(/** @type {string} */ (hits[0]), /java\.md and .*java-again\.md \(R4\)|java-again\.md and .*java\.md \(R4\)/);
+  assert.match(/** @type {string} */ (hits[0]), /java\.md and .*java-again\.md;.*\(R2\)|java-again\.md and .*java\.md;.*\(R2\)/);
 });
 
 // R2, for an owned type: a name is unique within its owner. The checks list a type's own folder
