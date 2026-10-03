@@ -27,10 +27,12 @@ const tree = (fm, sections) => new Map([
   ["meta/core/process-schema.md", bare("process", "model/processes/<process>/<process>.md")],
   ["meta/core/strategic-objective-schema.md", bare("strategic-objective", "model/strategic-objectives/*.md")],
   ["meta/core/value-schema.md", bare("value", "model/values/*.md")],
+  ["meta/core/control-schema.md", bare("control", "model/controls/*.md")],
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
   ["model/roles/owner.md", "# Owner\n\n> The seat.\n"],
   ["model/processes/delivery/delivery.md", "# Delivery\n\n> How things ship.\n"],
   ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
+  ["model/controls/main-requires-a-review.md", "# Main requires a review\n\n> One holds.\n"],
   ["model/kpis/change-fail-rate.md", kpi("Change Fail Rate", ["source: Local", "owner: Owner", "unit: percent of deployments", "direction: lower"])],
   ["model/kpis/change-lead-time.md", kpi("Change Lead Time", fm, sections)],
 ]);
@@ -123,4 +125,16 @@ test("two values under can-cost draw two edges", () => {
   const { entities, edges } = parseInstance(files, { sub: "model/", schemas: folder("core") });
   const at = (address) => entities.find((e) => e.address === address).id;
   assert.deepEqual(edges.filter((e) => e.via === "can-cost").map((e) => e.to).sort(), [at("values/craftsmanship"), at("values/say-the-hard-thing")].sort());
+});
+
+test("a KPI naming a control in assesses passes", () => {
+  assert.deepEqual(about([...GOOD, "assesses:", "  - Main requires a review"]), []);
+});
+
+test("assesses naming a control that does not exist fails by name", () => {
+  assert.equal(about([...GOOD, "assesses:", "  - Nobody's control"], undefined, "Nobody's control").length, 1);
+});
+
+test("assesses naming an entity of another type fails, since the field names controls", () => {
+  assert.equal(about([...GOOD, "assesses:", "  - Craftsmanship"], undefined, "Craftsmanship", "not control").length, 1);
 });
