@@ -29,12 +29,12 @@ Found by running a prototype of meta-model's schema change and mcp-server's shap
 
 - **The new columns are not optional per table.** A column table writes every column its schema declares, so once `Emits` and `When` are declared, a `## Handled commands` table written `Command | Description` fails ("columns are Command|Description; the schema declares Command|Emits|When|Description"). companygraph/mental-model holds eight such aggregates, so taking the release migrates them (Task 2), and the release notes say an instance that writes `## Handled commands` fails until it adds the two columns. The spec's "breaks no page" holds only for `## State transitions`.
 - **A prose `## State transitions` does not fail.** The checks do not hold a table section's body to being a table, so the spec's test of that is dropped; nothing new is invented to hold it.
-- **A branch that emits nothing is drawn empty**, not with a note: a note's words would be the one text in the source written in a language, and Mermaid 12 renders an empty `else` branch (rendered 2026-10-04).
+- **A branch that emits nothing is drawn as `Note over <aggregate>: —`**, an em dash: a note's words would be the one text in the source written in a language, and an empty last branch puts its condition below the `alt` frame, so the frame needs something inside it (both rendered 2026-10-04).
 - **A lifecycle answers `transitions`,** an optional output field `[{ aggregate, from, to, command }]`, since a state is no entity and so no node a link could join; a flow's links carry their label as `Command · When` (`·` with a space each side), or `Command` where the row has no `When`.
 
 ## Review Focus
 
-- **A command whose rows are all blank `Emits`** draws its message and an `alt` of empty branches, never a refusal. Task 4 holds it.
+- **A command whose rows are all blank `Emits`** draws its message and an `alt` whose branches each hold a dash, never a refusal. Task 4 holds it.
 - **The same event named by two commands** draws two links, each labeled with its own command. Task 4 holds it.
 - **A state named in two aggregates of one context** is two states, one in each composite. Task 4 holds it.
 - **An instance whose aggregates have no handled commands or no transitions** answers a context's flow or lifecycle as `cannot_draw` `empty`, and the chat says so in one sentence. Tasks 4 and 7 hold it.
@@ -143,6 +143,7 @@ sequenceDiagram
   alt the customer signs before it expires
     n0--)caller: Quote accepted
   else it has expired (INV-T1)
+    Note over n0: —
   end
 ```
 
@@ -183,7 +184,7 @@ const cellOf = (table, row, column) => { const i = table.columns.indexOf(column)
 // handled commands in the order its table writes them. The section and the column an event is
 // named in are read from the one reference an aggregate declares to a domain event, so neither is
 // written here. A command of several rows is an alt, one branch per row under its When; a row that
-// names no event is a branch in which nothing is emitted, drawn empty. The sender is one participant, Caller,
+// names no event is a branch in which nothing is emitted, holding a dash. The sender is one participant, Caller,
 // which is no entity: the model does not say who sends a command.
 function flow(s, id) {
   const { e, aggs } = aggregatesOf(s, id);
@@ -216,11 +217,11 @@ function flow(s, id) {
   for (const { a, groups } of drawn) {
     for (const { command, rows } of groups) {
       lines.push(`  caller->>${of(a)}: ${unquoted(command)}`);
-      // A row that names no event is a branch in which nothing comes back, drawn empty: a word for
-      // it would be the one text in the source written in a language.
-      const back = (r, pad) => (r.event ? [`${pad}${of(a)}--)caller: ${unquoted(r.event.name)}`] : []);
-      if (rows.length === 1) lines.push(...back(rows[0], "  "));
-      else { rows.forEach((r, i) => lines.push(`  ${i ? "else" : "alt"} ${unquoted(r.when)}`, ...back(r, "    "))); lines.push("  end"); }
+      // A branch in which nothing comes back holds a note of one dash: an empty last branch puts its
+      // condition below the frame, and a word would be the one text in the source written in a language.
+      const back = (r) => (r.event ? `${of(a)}--)caller: ${unquoted(r.event.name)}` : `Note over ${of(a)}: —`);
+      if (rows.length === 1) { if (rows[0].event) lines.push(`  ${back(rows[0])}`); }
+      else { rows.forEach((r, i) => lines.push(`  ${i ? "else" : "alt"} ${unquoted(r.when)}`, `    ${back(r)}`)); lines.push("  end"); }
       for (const r of rows) if (r.event) links.push({ from: of(a), to: of(r.event), label: plain(r.when ? `${command} · ${r.when}` : command) });
     }
   }
@@ -283,7 +284,7 @@ As the context map's Task 3 did (companygraph/mcp-server `docs/superpowers/plans
 
 **Files:** `assets/chat.js` (strings, `mermaidConfig`), `test/fixtures/diagrams.json`, `test/chat.test.mjs`, `test/chat-diagram.test.mjs`.
 
-- [ ] `mermaidConfig` gains `sequence: { useMaxWidth: false, mirrorActors: false, actorFontSize: 13, messageFontSize: 13, noteFontSize: 12, actorMargin: 24, width: 104, height: 40, boxMargin: 6, messageMargin: 26, diagramMarginX: 8, diagramMarginY: 8 }` and `state: { useMaxWidth: false }` (the values the October 4 mockup settled). The strings gain `flow: "Flow"`, `lifecycle: "Lifecycle"` and in German `flow: "Ablauf"`, `lifecycle: "Lebenszyklus"`; `reading.flow`: "Solid arrows are commands sent to the aggregate, dashed arrows the events it emits; a box names the condition of each branch." / German "Durchgezogene Pfeile sind Befehle an das Aggregat, gestrichelte die Ereignisse, die es auslöst; ein Kasten nennt die Bedingung jedes Zweigs."; `reading.lifecycle`: "Each arrow is a step from one state to the next, labeled with the command that takes it where there is one." / German "Jeder Pfeil ist ein Schritt von einem Zustand zum nächsten, beschriftet mit dem Befehl, der ihn auslöst, wo es einen gibt." The German lines go to the Translator's review in the pull request.
+- [ ] `mermaidConfig` gains `sequence: { useMaxWidth: false, mirrorActors: false, actorFontSize: 13, messageFontSize: 13, noteFontSize: 12, actorMargin: 24, width: 150, height: 40, boxMargin: 6, messageMargin: 26, diagramMarginX: 8, diagramMarginY: 8 }` and `state: { useMaxWidth: false }` (the mockup's values, with the actor width raised from 104 to 150, which keeps a branch's condition from wrapping into fragments). The strings gain `flow: "Flow"`, `lifecycle: "Lifecycle"` and in German `flow: "Ablauf"`, `lifecycle: "Lebenszyklus"`; `reading.flow`: "Solid arrows are commands sent to the aggregate, dashed arrows the events it emits; a box names the condition of each branch." / German "Durchgezogene Pfeile sind Befehle an das Aggregat, gestrichelte die Ereignisse, die es auslöst; ein Kasten nennt die Bedingung jedes Zweigs."; `reading.lifecycle`: "Each arrow is a step from one state to the next, labeled with the command that takes it where there is one." / German "Jeder Pfeil ist ein Schritt von einem Zustand zum nächsten, beschriftet mit dem Befehl, der ihn auslöst, wo es einen gibt." The German lines go to the Translator's review in the pull request.
 - [ ] Fixtures `flow` and `lifecycle` are Task 4's two Quote pictures as `{ shape, title, mermaid, nodes, omitted }`. Tests: both captions and reading lines in both languages; an answer bringing a context, an aggregate, a flow and a lifecycle draws four fitted figures in order, each opening full screen; a flow and a lifecycle draw as SVG in both themes with no fallback source. A browser check at 1280×900 and 390×844, dark and light, looked at. Push, open the pull request; stop.
 
 ---
