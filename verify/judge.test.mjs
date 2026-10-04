@@ -255,7 +255,7 @@ test("a send to TypeSafe itself takes a yes typed at a terminal, never a piped o
   assert.match(out, /sends only on a yes typed at a terminal/);
   assert.match(out, /Nothing was sent\./);
   assert.doesNotMatch(out, /judge: advisory/);
-  assert.match(out, new RegExp(`^An agent that asked the owner passes their yes as --consent ${digestIn(out)}\\.$`, "m"));
+  assert.match(out, new RegExp(`^Ask the owner, showing the files above and this digest; on their yes, pass --consent ${digestIn(out)}\\.$`, "m"));
 });
 
 test("the digest a run without a key prints is the one a run with a key accepts, and it sends with no terminal and no typed yes", async () => {
@@ -333,6 +333,19 @@ test("a consent given for one path on a host does not send to another path on it
     const { code, out } = await judge(root, { args: ["--consent", shown], env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: elsewhere, TYPESAFE_API_KEY: "sk-secret" } });
     assert.equal(code, 1);
     assert.ok(out.includes(elsewhere), "the run names the whole endpoint it would send to");
+    assert.equal(fake.seen.length, 0);
+  } finally {
+    fake.close();
+  }
+});
+
+test("a consent that is not a digest is refused as one, before anything is compared or sent", async () => {
+  const fake = await service();
+  try {
+    const root = fresh();
+    const { code, err } = await judge(".", { args: ["--consent", root], env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: fake.url, TYPESAFE_API_KEY: "sk-secret" } });
+    assert.equal(code, 1);
+    assert.match(err, /^--consent takes the 16 hex characters of a digest judge printed, not .+$/m);
     assert.equal(fake.seen.length, 0);
   } finally {
     fake.close();

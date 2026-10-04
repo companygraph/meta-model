@@ -881,6 +881,10 @@ async function check(argv) {
  */
 async function judge(argv) {
   const options = flags(argv);
+  // A digest is 16 hex characters; anything else, a folder written after the flag most often, is
+  // refused as what it is before the instance is read, rather than as a consent that changed.
+  if (options.consent !== undefined && !/^[0-9a-f]{16}$/.test(options.consent.trim().toLowerCase()))
+    throw new Error(`--consent takes the 16 hex characters of a digest judge printed, not ${options.consent}`);
   const root = resolve(options._[0] ?? ".");
   const { instanceAt } = await import("../lib/history.mjs");
   const { questionsOf, reportOf, leftOutOf } = await import("../lib/questions.mjs");
@@ -924,7 +928,7 @@ async function judge(argv) {
     }
   } else if (judges.isTypeSafe() && !process.stdin.isTTY) {
     console.log(`${judges.SERVICE.name} sends only on a yes typed at a terminal, and this is not one. Nothing was sent.`);
-    console.log(`An agent that asked the owner passes their yes as --consent ${digest}.`);
+    console.log(`Ask the owner, showing the files above and this digest; on their yes, pass --consent ${digest}.`);
     return 0;
   } else if (!yes(await ask(prompt("Send them?", "y/N")))) {
     console.log("Nothing was sent.");
