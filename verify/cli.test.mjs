@@ -870,6 +870,7 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
   assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
   assert.ok(agents.includes("`companygraph-judge`"), "AGENTS.md names the judge skill");
+  assert.ok(agents.includes("`judge/known.md`"), "AGENTS.md names the file of known flags");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
@@ -884,6 +885,19 @@ test("the judge skill writes its report and reading to dist/judge/, the reading 
   assert.match(skill, /Change no entry/);
   assert.match(skill, /forecast cost/, "the question names what a run will cost");
   assert.match(skill, /`sent:` line/, "the reading names what the run cost");
+});
+
+test("the judge skill reads judge/known.md before the flags and proposes rows only on the owner's word", () => {
+  const skill = fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-judge/SKILL.md"), "utf8");
+  assert.match(skill, /judge\/known\.md/);
+  for (const part of ["## Known", "## Proposed for known"]) assert.ok(skill.includes(part), `the reading has ${part}`);
+  assert.ok(skill.includes("| Entity | Owner | Rule | Verdict | Why | Seat | Profile | Date | Hash |"), "a proposed row has the file's columns");
+  assert.match(skill, /one batch/, "the confirmed false flags are proposed as one batch");
+  assert.match(skill, /superseding decision/, "a finding on a standing decision says how it is fixed");
+  assert.match(skill, /never compute/i, "the hash is copied from the report, never computed");
+  assert.match(skill, /on the owner's word/i);
+  assert.match(skill, /one per flagged page/, "an accepted finding is proposed as one row per flagged page");
+  assert.match(skill, /did not raise/, "a lapsed row whose flag did not come back is proposed for removal");
 });
 
 // A release walk ships what is in the package folder, and a package folder in the npx cache is

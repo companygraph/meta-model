@@ -960,7 +960,10 @@ async function judge(argv) {
   }
   console.log("");
   console.log(`sent: ${sent.requests} requests, ${sent.tokens} input tokens, ${dollars(judges.costOf(sent.tokens))}, against a forecast of ${dollars(forecast.usd)}`);
-  for (const line of reportOf(questions, answers)) console.log(line);
+  // Each verdict carries the hash a row of judge/known.md is keyed on, from the function check
+  // holds the rows with, so the judge skill matches and writes rows by copying it.
+  const { knownHashOf } = await import("../lib/known.mjs");
+  for (const line of reportOf(questions, answers, { hashOf: (r, q) => knownHashOf(r.state.entity, q.rule) })) console.log(line);
   return 0;
 }
 

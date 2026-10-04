@@ -9,6 +9,9 @@ import path from "node:path";
 import http from "node:http";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
+import { knownHashOf } from "../lib/known.mjs";
+import { writingRulesOf } from "../lib/questions.mjs";
+import { unixLines } from "../lib/instance-files.mjs";
 import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf, forecastOf, costOf, CHARS_PER_TOKEN } from "../bin/judges/typesafe.mjs";
 
 const request = {
@@ -124,8 +127,8 @@ const judge = (root, { input = "", env, args = [] }) => new Promise((done, fail)
   child.stdin.end(input);
 });
 const digestIn = (out) => out.match(/^digest: ([0-9a-f]{16})$/m)?.[1];
-// A fake TypeSafe: every noul answered 0.9, every choice its first option.
-const service = async (status = 200) => {
+// A fake TypeSafe: every noul answered alike, 0.9 unless a test asks otherwise, every choice its first option.
+const service = async (status = 200, noul = 0.9) => {
   const seen = [];
   const server = http.createServer((req, res) => {
     let raw = "";
@@ -134,7 +137,7 @@ const service = async (status = 200) => {
       const body = JSON.parse(raw);
       seen.push({ auth: req.headers.authorization, body });
       const answers = Object.fromEntries(Object.entries(body.questions).map(([id, q]) => [id, q.type === "noul"
-        ? { type: "noul", noul: 0.9 }
+        ? { type: "noul", noul }
         : { type: "choice", choice: Object.keys(q.criteria)[0], probabilities: {}, confidence: 1 }]));
       res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ model: "jev-1.13.0", answers, usage: { input_tokens: 1000, output_tokens: 10 } }));
     });
@@ -193,6 +196,23 @@ test("on a yes, judge sends one request per page with the key and prints the adv
     assert.match(out, new RegExp(`^sent: ${fake.seen.length} requests, ${fake.seen.length * 1000} input tokens, USD \\d+\\.\\d{3}, against a forecast of USD \\d+\\.\\d{3}$`, "m"));
     assert.match(out, /^not asked:$/m);
     assert.ok(!out.includes("✓") && !out.includes("sk-secret"));
+  } finally {
+    fake.close();
+  }
+});
+
+test("a flagged line carries the hash check computes for that page and rule", async () => {
+  const fake = await service(200, 0.1);
+  try {
+    const root = fresh();
+    const { code, out } = await judge(root, { input: "y\n", env: { ...withoutKey(), TYPESAFE_API_KEY: "sk-secret", COMPANYGRAPH_TYPESAFE_URL: fake.url } });
+    assert.equal(code, 0, out);
+    const report = out.slice(out.indexOf("judge: advisory")).split("\n");
+    const flag = report[report.indexOf("model/identity.md") + 1].match(/^ {2}! 0\.10 {2}r(\d+) {2}([0-9a-f]{16}) {2}/);
+    assert.ok(flag, "identity's first flagged line carries a hash");
+    const page = unixLines(fs.readFileSync(path.join(root, "model", "identity.md"), "utf8"));
+    const rule = writingRulesOf(fs.readFileSync(path.join(root, "meta", "core", "identity-schema.md"), "utf8"))[Number(flag[1]) - 1];
+    assert.equal(flag[2], knownHashOf(page, rule));
   } finally {
     fake.close();
   }
