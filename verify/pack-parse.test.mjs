@@ -35,3 +35,21 @@ test("a Uses row resolves to the concept design inside the context it names", ()
   const billingInvoice = entities.find((e) => e.name === "Invoice" && e.address.startsWith("bounded-contexts/billing/"));
   assert.ok(edges.some((e) => e.from === f.id && e.to === billingInvoice.id), JSON.stringify(edges.filter((e) => e.from === f.id)));
 });
+
+test("a payload's Term draws an edge to the term of its own context, and a plain Type draws none", () => {
+  const files = new Map([
+    ["identity.md", "---\nsource: Local\n---\n\n# Scratch\n\n> A company.\n"],
+    ["sources/local.md", "# Local\n\n> Here.\n"],
+    ["bounded-contexts/billing/billing.md", "---\nsource: Local\nclassification: core\n---\n\n# Billing\n\n> Issues invoices.\n\n## Responsibilities\n\n- Issue\n"],
+    ["bounded-contexts/billing/concept-designs/invoice.md", "---\nsource: Local\nkind: entity\n---\n\n# Invoice\n\n> Billing's invoice.\n"],
+    ["bounded-contexts/billing/aggregates/invoice.md", "---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Kept whole.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | A total never changes. |\n"],
+    ["bounded-contexts/billing/domain-events/invoice-issued.md", "---\nsource: Local\nemitted-by: Invoice\n---\n\n# Invoice issued\n\n> An invoice was issued.\n\n## Payload\n\n| Attribute | Term | Type | Many | Description |\n| --- | --- | --- | --- | --- |\n| Invoice | Invoice | | | The issued invoice |\n| Issued at | | timestamp | | When |\n"],
+    ["bounded-contexts/crm/crm.md", "---\nsource: Local\nclassification: supporting\n---\n\n# CRM\n\n> Keeps customers.\n\n## Responsibilities\n\n- Keep\n"],
+    ["bounded-contexts/crm/concept-designs/invoice.md", "---\nsource: Local\nkind: value object\n---\n\n# Invoice\n\n> CRM's invoice.\n"],
+  ]);
+  const { entities, edges } = parseInstance(files, { schemas: schemas() });
+  const issued = entities.find((e) => e.name === "Invoice issued");
+  const billingInvoice = entities.find((e) => e.name === "Invoice" && e.address.startsWith("bounded-contexts/billing/concept-designs/"));
+  const out = edges.filter((e) => e.from === issued.id && e.via === "Payload.Term");
+  assert.deepEqual(out.map((e) => e.to), [billingInvoice.id], JSON.stringify(edges.filter((e) => e.from === issued.id)));
+});
