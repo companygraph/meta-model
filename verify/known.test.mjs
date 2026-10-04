@@ -7,6 +7,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
+import { spawnSync } from "node:child_process";
+import { fileURLToPath } from "node:url";
 import { modelAt } from "./seats-fixture.mjs";
 import { instanceAt } from "../lib/history.mjs";
 import { writingRulesOf } from "../lib/questions.mjs";
@@ -110,4 +112,54 @@ test("a lapsed row of an owned type names its owner", () => {
   const row = KNOWN_COLUMNS.map((c) => ({ Entity: "Rebuilding the order pipeline", Owner: "Mira Halvorsen", Rule: "experience r6", Verdict: "false", Why: "x", Seat: "Backend Engineer", Profile: "Mira Halvorsen", Date: "2026-10-04", Hash: "0123456789abcdef" })[c]);
   assert.deepEqual(checkKnown(fileOf(row), instance).notes,
     [`${KNOWN}: Rebuilding the order pipeline in Mira Halvorsen experience r6: lapsed, the page or the rule changed since 2026-10-04`]);
+});
+
+// The checker as CI calls it, on the fixture with a manifest naming this release.
+const checker = fileURLToPath(new URL("../bin/check-instance.mjs", import.meta.url));
+const VERSION = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
+const checkable = () => {
+  const dir = fixture();
+  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: VERSION, units: "meta" }));
+  return dir;
+};
+const run = (dir) => spawnSync(process.execPath, [checker, dir], { encoding: "utf8" });
+const write = (dir, text) => {
+  fs.mkdirSync(path.join(dir, "judge"), { recursive: true });
+  fs.writeFileSync(path.join(dir, KNOWN), text);
+};
+
+test("check passes an instance with no judge/known.md as before, and one whose rows are current", () => {
+  const dir = checkable();
+  const plain = run(dir);
+  assert.equal(plain.status, 0, plain.stderr);
+  assert.doesNotMatch(plain.stdout, /known\.md/);
+  write(dir, fileOf(decisionRow(instanceAt(dir))));
+  const known = run(dir);
+  assert.equal(known.status, 0, known.stderr);
+  assert.doesNotMatch(known.stdout, /known\.md/);
+});
+
+test("check fails a broken row and notes a lapsed one", () => {
+  const dir = checkable();
+  write(dir, fileOf(decisionRow(instanceAt(dir), { Seat: "Nobody" })));
+  const broken = run(dir);
+  assert.equal(broken.status, 1);
+  assert.match(broken.stderr, /judge\/known\.md: row 1: Seat "Nobody" names no role/);
+  write(dir, fileOf(decisionRow(instanceAt(dir))));
+  fs.appendFileSync(path.join(dir, "model", DECISION), "\nOne more line.\n");
+  const lapsed = run(dir);
+  assert.equal(lapsed.status, 0, lapsed.stderr);
+  assert.match(lapsed.stdout, /^ {2}noted:$/m);
+  assert.match(lapsed.stdout, /^ {4}judge\/known\.md: Billing leaves the monolith decision r3: lapsed, the page or the rule changed since 2026-10-04$/m);
+});
+
+test("a model that does not parse is the model's failure, and judge/known.md is noted as not read", () => {
+  const dir = checkable();
+  write(dir, fileOf(decisionRow(instanceAt(dir))));
+  // Two decisions of one name: parseInstance throws on R2 before any row could be read.
+  fs.copyFileSync(path.join(dir, "model", DECISION), path.join(dir, "model", "decisions", "2022-billing-leaves-the-monolith-again.md"));
+  const result = run(dir);
+  assert.equal(result.status, 1);
+  assert.match(result.stdout, /judge\/known\.md: not read, since the model does not parse: /);
+  assert.doesNotMatch(result.stderr, /judge\/known\.md: row/);
 });
