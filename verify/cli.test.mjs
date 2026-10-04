@@ -873,9 +873,12 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 
-test("the judge skill writes its reading of the flags beside the raw report, as findings with a fix each", () => {
+test("the judge skill writes its report and reading to dist/judge/, the reading as findings with a fix each", () => {
   const skill = fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-judge/SKILL.md"), "utf8");
-  assert.match(skill, /judge-<YYYY-MM-DD-HHMM>-read\.md/, "names the explained report beside the raw one");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>\.txt/, "the raw report goes to dist/, where every skill writes what is not committed");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>-read\.md/, "and the reading beside it");
+  assert.match(skill, /git check-ignore -q dist\/judge\//, "it checks dist/ is ignored before anything is sent");
+  assert.doesNotMatch(skill, /outside the repository|folder that holds the instance/, "nothing is written outside the repository");
   for (const part of ["## Findings", "## False flags", "## Not checked"]) assert.ok(skill.includes(part), `the report has ${part}`);
   assert.match(skill, /proposed fix/i);
   assert.match(skill, /Change no entry/);
