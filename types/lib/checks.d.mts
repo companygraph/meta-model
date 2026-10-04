@@ -30,13 +30,11 @@ export type TypeEntry = {
         column: string;
     };
     /**
-     * A string column whose cell may name an entity of the type `names`, owned by the page's own owner: a cell that names one names it exactly, of the `kind` given where one is, and never one of another owner's alone.
+     * A table whose every row fills exactly one of `columns`.
      */
-    typeCells?: {
+    oneOf?: {
         section: string;
-        column: string;
-        names: string;
-        kind?: string;
+        columns: string[];
     };
     /**
      * A reference field whose target carries this value in its own `kind`.
@@ -143,7 +141,7 @@ export type Check = {
  * @property {{ year: string, rest: string }} [filename]
  * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
- * @property {{ section: string, column: string, names: string, kind?: string }} [typeCells] A string column whose cell may name an entity of the type `names`, owned by the page's own owner: a cell that names one names it exactly, of the `kind` given where one is, and never one of another owner's alone.
+ * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string }} [refKind] A reference field whose target carries this value in its own `kind`.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
