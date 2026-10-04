@@ -63,8 +63,9 @@ Before step 5 reads the flags, it matches each flag against `judge/known.md` by 
 After the reading, a **Proposed for known** section offers rows for the owner to decide:
 
 - every false flag the reading confirmed, as one batch the owner approves or rejects whole;
-- each accepted finding on its own;
-- each lapsed row that matched a flag and was read again: with a new hash if its verdict still holds, or for removal if the flag now stands.
+- each accepted finding on its own, one row per page it flags;
+- each lapsed row that matched a flag and was read again: a `false` row with a new hash where the flag is false again, or for removal where it now stands; an `accepted` row with a new hash, for the owner to accept again, where the page still breaks the rule, or for removal where it now keeps it;
+- each lapsed row whose flag the run did not raise, for removal, since the judge now finds the page keeps the rule.
 
 Rows are written only on the owner's word and committed like any other change. Their Seat and Profile are those of whoever gave the word. A finding on a standing decision's text says that it is fixed only by a superseding decision, so that accepting it is a choice the owner sees.
 
