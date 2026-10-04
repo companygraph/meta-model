@@ -16,7 +16,7 @@ Everything below this block is this repository's own. `sh conventions/convention
 
 The meta-model for operating a company: core vocabulary, packs, and the conventions that make a graph of Markdown files checkable. What it is and why lives in `docs/superpowers/specs/2026-08-23-companygraph-design.md`. **Read that spec before changing anything here** — it records what was decided and, more usefully, what was rejected and why.
 
-**Status: first release out** — the person cluster in `core/`, `CONVENTIONS.md`, `example/` and `verify/check.mjs`. The roadmap on the organization profile at github.com/companygraph says what comes next; the spec here says why. A phase list copied back into this repository is the drift that rule exists to prevent, so link to it instead.
+**Status:** released and in use by real instances; `core/` lists the types and `packs/` the packs. The roadmap on the organization profile at [github.com/companygraph](https://github.com/companygraph/.github/blob/main/profile/README.md) says what comes next; the specs here say why. A phase list copied back into this repository is the drift that rule exists to prevent, so link to it instead.
 
 ## This is an extraction, not an invention
 
