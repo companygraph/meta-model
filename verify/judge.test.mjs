@@ -9,7 +9,10 @@ import path from "node:path";
 import http from "node:http";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf } from "../bin/judges/typesafe.mjs";
+import { knownHashOf } from "../lib/known.mjs";
+import { writingRulesOf } from "../lib/questions.mjs";
+import { unixLines } from "../lib/instance-files.mjs";
+import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf, forecastOf, costOf, CHARS_PER_TOKEN } from "../bin/judges/typesafe.mjs";
 
 const request = {
   path: "a.md", type: "experience", name: "A", state: { purpose: "P.", entity: "# A\n" },
@@ -58,6 +61,26 @@ test("the digest covers what would be sent and nothing else: the place, the mode
   assert.notEqual(digestOf([request, other], { ...at, model: "jev-y" }), d, "another model moves it");
 });
 
+test("the forecast counts the requests as they are sent, split ones included, and prices only the input", () => {
+  const options = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`Kind ${i}`, { summary: "x".repeat(700) }]));
+  const big = { ...request, path: "big.md", questions: Array.from({ length: 60 }, (_, i) => ({ id: `g${i + 1}`, kind: "group", section: "Achievements", heading: "Kind 0", bullet: `Bullet ${i}.`, options })) };
+  const small = forecastOf([request]);
+  assert.equal(small.requests, 1);
+  assert.equal(small.tokens, Math.ceil(JSON.stringify(toWire(request)).length / CHARS_PER_TOKEN));
+  const both = forecastOf([request, big]);
+  assert.ok(both.requests > 2, "the large page is sent in several requests");
+  assert.ok(both.tokens > small.tokens + Math.ceil(JSON.stringify(toWire(big)).length / CHARS_PER_TOKEN), "each split request carries the whole state again");
+  assert.equal(both.usd, costOf(both.tokens));
+  assert.equal(SERVICE.usdPerMtok, 0.042);
+  assert.equal(costOf(1_000_000), 0.042);
+});
+
+test("every answer's usage is handed to the caller, one call per request sent", async () => {
+  const seen = [];
+  await ask(request, { key: "k", onUsage: (u) => seen.push(u), fetch: async () => reply(200, { ...body, usage: { input_tokens: 296, output_tokens: 20 } }) });
+  assert.deepEqual(seen, [{ input_tokens: 296, output_tokens: 20 }]);
+});
+
 test("a rate limit is retried after the time the service asks for, then answered", async () => {
   const waits = [];
   const replies = [reply(429, {}, { "retry-after": "2" }), reply(529, {}), reply(200, body)];
@@ -104,8 +127,8 @@ const judge = (root, { input = "", env, args = [] }) => new Promise((done, fail)
   child.stdin.end(input);
 });
 const digestIn = (out) => out.match(/^digest: ([0-9a-f]{16})$/m)?.[1];
-// A fake TypeSafe: every noul answered 0.9, every choice its first option.
-const service = async (status = 200) => {
+// A fake TypeSafe: every noul answered alike, 0.9 unless a test asks otherwise, every choice its first option.
+const service = async (status = 200, noul = 0.9) => {
   const seen = [];
   const server = http.createServer((req, res) => {
     let raw = "";
@@ -114,9 +137,9 @@ const service = async (status = 200) => {
       const body = JSON.parse(raw);
       seen.push({ auth: req.headers.authorization, body });
       const answers = Object.fromEntries(Object.entries(body.questions).map(([id, q]) => [id, q.type === "noul"
-        ? { type: "noul", noul: 0.9 }
+        ? { type: "noul", noul }
         : { type: "choice", choice: Object.keys(q.criteria)[0], probabilities: {}, confidence: 1 }]));
-      res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ model: "jev-1.13.0", answers, usage: {} }));
+      res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ model: "jev-1.13.0", answers, usage: { input_tokens: 1000, output_tokens: 10 } }));
     });
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -129,7 +152,7 @@ test("with no key, judge prints the questions and sends nothing", async () => {
   assert.match(out, /^judge: \d+ questions about \d+ pages of /m);
   assert.match(out, /^model\/identity\.md$/m);
   assert.match(out, /^ {2}r1 {2}\S/m);
-  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(https:\/\/api\.typesafe\.ai\/v1\/systemone, jev-1\.13\.0\), about \d+ tokens in all:$/m);
+  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(https:\/\/api\.typesafe\.ai\/v1\/systemone, jev-1\.13\.0\), about \d+ input tokens in \d+ requests, about USD \d+\.\d{3}:$/m);
   assert.match(out, /^ {2}model\/identity\.md$/m);
   assert.ok(digestIn(out), "the keyless run prints the digest");
   assert.match(out, /no TYPESAFE_API_KEY: nothing was sent/);
@@ -170,8 +193,26 @@ test("on a yes, judge sends one request per page with the key and prints the adv
     assert.ok(fake.seen.length > 0);
     assert.ok(fake.seen.every((s) => s.auth === "Bearer sk-secret" && s.body.model === "jev-1.13.0"));
     assert.match(out, /^judge: advisory/m);
+    assert.match(out, new RegExp(`^sent: ${fake.seen.length} requests, ${fake.seen.length * 1000} input tokens, USD \\d+\\.\\d{3}, against a forecast of USD \\d+\\.\\d{3}$`, "m"));
     assert.match(out, /^not asked:$/m);
     assert.ok(!out.includes("✓") && !out.includes("sk-secret"));
+  } finally {
+    fake.close();
+  }
+});
+
+test("a flagged line carries the hash check computes for that page and rule", async () => {
+  const fake = await service(200, 0.1);
+  try {
+    const root = fresh();
+    const { code, out } = await judge(root, { input: "y\n", env: { ...withoutKey(), TYPESAFE_API_KEY: "sk-secret", COMPANYGRAPH_TYPESAFE_URL: fake.url } });
+    assert.equal(code, 0, out);
+    const report = out.slice(out.indexOf("judge: advisory")).split("\n");
+    const flag = report[report.indexOf("model/identity.md") + 1].match(/^ {2}! 0\.10 {2}r(\d+) {2}([0-9a-f]{16}) {2}/);
+    assert.ok(flag, "identity's first flagged line carries a hash");
+    const page = unixLines(fs.readFileSync(path.join(root, "model", "identity.md"), "utf8"));
+    const rule = writingRulesOf(fs.readFileSync(path.join(root, "meta", "core", "identity-schema.md"), "utf8"))[Number(flag[1]) - 1];
+    assert.equal(flag[2], knownHashOf(page, rule));
   } finally {
     fake.close();
   }

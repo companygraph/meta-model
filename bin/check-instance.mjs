@@ -34,6 +34,8 @@ import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, isNewer, MODEL, IMAGE_FILE, PACKS } from "../lib/checks.mjs";
 import { hashOf, unixLines } from "../lib/instance-files.mjs";
+import { instanceAt } from "../lib/history.mjs";
+import { KNOWN, checkKnown } from "../lib/known.mjs";
 /** @import { InstanceFiles } from "../lib/instance.mjs" */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
@@ -127,6 +129,26 @@ export function checkPath(path) {
       failures.push(`${path}: named in .companygraph/manifest.json and not in the instance`);
     else if (hashOf(text) !== recorded)
       failures.push(`${path}: not as the tooling wrote it, and it is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
+  }
+  // judge/known.md, the flags the owner has decided about the judge's report, when the instance
+  // keeps one: a row that names nothing fails here, on the commit that wrote it, and a row whose
+  // page or rule has changed since is noted, since it is a reason to read that flag again rather
+  // than a broken file. It is read as `judge` reads the instance, so the hash a row carries is
+  // the one `judge` printed. A model that does not parse has said so above, and every row would
+  // fail for that one reason, so the file is then left unread and noted.
+  if (existsSync(join(root, KNOWN))) {
+    /** @type {ReturnType<typeof instanceAt> | null} */
+    let instance = null;
+    try {
+      instance = instanceAt(root);
+    } catch (error) {
+      notes.push(`${KNOWN}: not read, since the model does not parse: ${/** @type {Error} */ (error).message}`);
+    }
+    if (instance) {
+      const known = checkKnown(unixLines(readFileSync(join(root, KNOWN), "utf8")), instance);
+      failures.push(...known.failures);
+      notes.push(...known.notes);
+    }
   }
   const against = `${MODEL}/ against ${[core, ...packs.map((/** @type {{ dir: string }} */ p) => p.dir)].join(", ")}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
 

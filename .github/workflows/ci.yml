@@ -55,6 +55,11 @@ jobs:
         run: npm run test:judge
       - name: A commit's seat, judged against what governs it
         run: npm run test:seats
+      # `exports` is read by nothing in this repository, where every test imports a path. This one
+      # packs the repository, installs the tarball into an empty project and loads each entry the
+      # way a consumer does, then holds a graph written as beacon writes one to R1 to R18.
+      - name: The package, taken as a consumer takes it
+        run: npm run test:consumer
       - name: Another release's core is read from its tarball
         run: npm run test:untar && npm run test:fetch-core
       - name: The Obsidian plugin is put into a vault
@@ -91,6 +96,6 @@ jobs:
       - name: The plan, the files an instance starts with, and the command over real folders
         if: ${{ !cancelled() }}
         run: npm run test:plan && npm run test:instance-files && npm run test:form && npm run test:pins && npm run test:cli && npm run test:ids && npm run test:localization && npm run test:judge && npm run test:seats
-      - name: The tarball, the fetch and the Obsidian install
+      - name: The tarball, the fetch, the Obsidian install and the package as a consumer takes it
         if: ${{ !cancelled() }}
-        run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian
+        run: npm run test:untar && npm run test:fetch-core && npm run test:obsidian && npm run test:consumer
