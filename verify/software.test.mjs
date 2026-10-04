@@ -113,6 +113,7 @@ test("an Emits naming an event of another context fails, as R5", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /Emits/);
   assert.match(f[0], /is not one of its bounded-context's own/);
+  assert.match(f[0], /\(R5\)$/);
 });
 
 test("a Handled commands table without Emits and When fails, naming both column sets", () => {

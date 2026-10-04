@@ -56,7 +56,7 @@ id: 01a0f94d-fa63-7c7e-8af5-b2d7e5b870cf
 | --- | --- | --- | --- |
 | `From` | No | string | The state the aggregate leaves, blank for the transition that starts it |
 | `Command` | No | string | The handled command that moves it, as `## Handled commands` writes it, blank for a step the aggregate takes on its own |
-| `To` | Yes | string | The state it reaches; a state that is never a From ends the lifecycle |
+| `To` | Yes | string | The state it reaches; a state that is never a `From` ends the lifecycle |
 
 `## References` is a table with these columns:
 
