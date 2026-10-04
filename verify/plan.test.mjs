@@ -179,6 +179,37 @@ test("an upgrade to a core newer than this tooling is refused before anything is
   assert.ok(plan.refused.includes("0.32.0") && plan.refused.includes("v0.33.0"));
 });
 
+// What an older tooling did three times to an instance on a newer core: its own release's core
+// written over the instance's, and the manifest and workflow tag moved back with it.
+const ahead = () => {
+  const { writes } = initPlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", name: "Acme", agent: "claude", units: "meta", present: new Set() });
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  const held = new Map([...writes].filter(([path]) => manifest.files[path]));
+  return { manifest, held, workflow: writes.get(".github/workflows/companygraph.yml") };
+};
+
+test("an upgrade to a core older than the instance's is refused, --force or not", () => {
+  const { manifest, held, workflow } = ahead();
+  for (const force of [false, true]) {
+    const plan = upgradePlan({ core: older, tooling: "0.31.2", tag: "v0.31.2", manifest, held, workflow, force });
+    assert.equal(plan.writes, undefined);
+    assert.ok(plan.refused.includes("0.32.0") && plan.refused.includes("0.31.1"), plan.refused);
+  }
+});
+
+test("an upgrade from a tooling older than the instance's is refused on the same core", () => {
+  const { manifest, held, workflow } = ahead();
+  const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest: { ...manifest, tooling: "0.32.4" }, held, workflow, force: true });
+  assert.equal(plan.writes, undefined);
+  assert.ok(plan.refused.includes("0.32.4") && plan.refused.includes("0.32.0"), plan.refused);
+});
+
+test("an upgrade from the instance's own release is no move back, and passes", () => {
+  const { manifest, held, workflow } = ahead();
+  const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
+  assert.equal(plan.refused, undefined);
+});
+
 test("the manifest and the workflow move with the files", () => {
   const { manifest, held, workflow } = instance();
   const plan = upgradePlan({ core: newer, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow });
@@ -685,6 +716,13 @@ test("an upgrade of an adopted repository moves tooling and its workflow's ref, 
   assert.deepEqual(JSON.parse(plan.writes.get(".companygraph/manifest.json")), { tooling: "0.69.0", exclude: ["dist", "public"] });
   assert.match(plan.writes.get(".github/workflows/companygraph.yml"), /repository-check\.yml@v0\.69\.0/);
   assert.deepEqual(adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.69.0", exclude: ["dist"] }, workflow: null, present: new Set(["pins.json"]) }).writes.size, 0);
+});
+
+test("an upgrade of an adopted repository from an older tooling is refused, naming both", () => {
+  const workflow = "jobs:\n  companygraph:\n    uses: companygraph/meta-model/.github/workflows/repository-check.yml@v0.70.0\n";
+  const plan = adoptedUpgradePlan({ tooling: "0.69.0", manifest: { tooling: "0.70.0", exclude: ["dist"] }, workflow, present: new Set() });
+  assert.equal(plan.writes, undefined);
+  assert.ok(plan.refused.includes("0.70.0") && plan.refused.includes("0.69.0"), plan.refused);
 });
 
 test("an upgrade of an adopted repository with no pins.json writes the instance pins and says it gave them", () => {

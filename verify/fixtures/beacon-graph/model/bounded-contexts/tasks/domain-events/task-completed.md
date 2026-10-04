@@ -11,11 +11,11 @@ emitted-by: Task
 
 ## Payload
 
-| Attribute | Type | Description |
-| --- | --- | --- |
-| Task | Task | The task that was completed |
-| Time spent | number | The hours worked on it |
-| Completed by | string | The agent that closed it, which differs from the holder when an integrator closed it |
+| Attribute | Term | Type | Many | Description |
+| --- | --- | --- | --- | --- |
+| Task | Task | | | The task that was completed |
+| Time spent | | number | | The hours worked on it |
+| Completed by | | string | | The agent that closed it, which differs from the holder when an integrator closed it |
 
 ## References
 

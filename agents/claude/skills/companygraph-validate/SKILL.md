@@ -27,19 +27,20 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
 4. Read each schema's `## Writing rules` and judge every entity of that type against them, one
    rule at a time. Nothing mechanical reaches these — they are written to be checkable by an
    agent reading an entity, and this pass is the only thing that checks them.
-   Where `companygraph judge` printed a report for this commit, read first the pages and rules
-   it lists — those it flags with `!`, or, while it says its probabilities are unmeasured, the
+   Where `companygraph judge` printed a report for this commit, by hand or through
+   `companygraph-judge`, read first the pages and rules it lists — those it flags with `!`, or, while it says its probabilities are unmeasured, the
    lowest verdicts it marks with `?` — and then every other page as before. The report is
    advisory: it never stands in for this reading, and a page it does not list is still read.
 
-   One finding is a report line rather than a failure, and the profile schema's Purpose says so:
-   for every profile whose nature is `human` and that lists roles, every skill a listed role
-   `requires` that has no row in the profile's Skills table is a gap —
-   `gap <profile>: <role> requires <skill>` — reported once per role and skill and never
-   counted as a failure. It says what the holder has to learn or the company has to hire. A
-   profile whose nature is `agent` claims no skill and carries no Skills table, so a seat it
-   holds reports no gap: what that seat requires is answered by its rulebook, not by a row the
-   agent wrote about itself.
+   One finding is a note rather than a failure, and the profile schema's Purpose says so: for
+   every profile whose nature is `human`, every skill a role it holds `requires` that has no row
+   in its Skills table is a gap. `companygraph check` prints each one under `noted:` as
+   `gap <profile>: <role> requires <skill>`, once per role and skill, and never counts it as a
+   failure; carry those lines into the report as they stand rather than walking the roles by
+   hand. A gap says what the holder has to learn or the company has to hire. A profile whose
+   nature is `agent` claims no skill and carries no Skills table, so a seat it holds reports no
+   gap: what that seat requires is answered by its rulebook, not by a row the agent wrote about
+   itself.
 
 5. Read what only reading judges: whether each Evidence row's `What it shows` is a concrete
    fact rather than a restatement of the level, whether `## In practice` prose says what

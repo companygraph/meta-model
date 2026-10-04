@@ -31,19 +31,19 @@ members:
 
 ## Handled commands
 
-| Command | Description |
-| --- | --- |
-| Create task | Adds a task in `queued`, or in `blocked` when it is created already blocked; refuses a milestone without a version. |
-| Claim task | Gives a queued task to the calling agent; refuses a task that is not `queued`. |
-| Start task | Moves a claimed task to `in_progress`; refuses a task that has no holder. |
-| Hand over task | Moves an `in_progress` task to `implementation_done`, ready for the integrator. |
-| Defer task | Parks an `in_progress` task as `deferred` with its cause recorded; a deferred task can be queued or claimed again. |
-| Complete task | Moves an `implementation_done` task to `done` with the hours spent; refuses anyone but the holder, except an integrator acting on behalf of the holder. |
-| Fail task | Moves a task to `failed`; refuses anyone but the holder. |
-| Cancel task | Moves a task to `cancelled`; refuses a claimed task to anyone but its holder. |
-| Reassign task | Returns a non-final task to `queued` for a new holder, or hands an `implementation_done` task directly to the integrator. |
-| Rank task | Places a task at the top, the bottom, or before or after another task in the backlog. |
-| Advance STDD phase | Moves a feature one step along the STDD phases, or back from `challenge` to `spec`; refuses any other jump. |
+| Command | Emits | When | Description |
+| --- | --- | --- | --- |
+| Create task | | | Adds a task in `queued`, or in `blocked` when it is created already blocked; refuses a milestone without a version. |
+| Claim task | | | Gives a queued task to the calling agent; refuses a task that is not `queued`. |
+| Start task | | | Moves a claimed task to `in_progress`; refuses a task that has no holder. |
+| Hand over task | | | Moves an `in_progress` task to `implementation_done`, ready for the integrator. |
+| Defer task | | | Parks an `in_progress` task as `deferred` with its cause recorded; a deferred task can be queued or claimed again. |
+| Complete task | | | Moves an `implementation_done` task to `done` with the hours spent; refuses anyone but the holder, except an integrator acting on behalf of the holder. |
+| Fail task | | | Moves a task to `failed`; refuses anyone but the holder. |
+| Cancel task | | | Moves a task to `cancelled`; refuses a claimed task to anyone but its holder. |
+| Reassign task | | | Returns a non-final task to `queued` for a new holder, or hands an `implementation_done` task directly to the integrator. |
+| Rank task | | | Places a task at the top, the bottom, or before or after another task in the backlog. |
+| Advance STDD phase | | | Moves a feature one step along the STDD phases, or back from `challenge` to `spec`; refuses any other jump. |
 
 ## State transitions
 

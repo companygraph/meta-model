@@ -25,10 +25,10 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/products/billing-console.md", page("domain: Invoicing\n", "# Billing Console\n\n> Where finance runs billing.\n")],
   ["model/features/billing-run.md", page("products:\n  - Billing Console\n", "# Billing run\n\n> A period is closed at once.\n\n## Description\n\nIt issues every invoice for a period and stops there.\n")],
   [`${BC}/billing/billing.md`, page("classification: core\nrealizes:\n  - Invoicing\n", "# Billing\n\n> Issues invoices. Telling the customer is left to Notification.\n\n## Responsibilities\n\n- Issue an invoice for a closed period\n")],
-  [`${BC}/billing/concept-designs/invoice.md`, page("kind: entity\nrefines: Invoice\n", "# Invoice\n\n> The document a customer is asked to pay, once issued.\n\n## Attributes\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n| Total | Amount | What is owed |\n\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n| Amount | one | |\n")],
+  [`${BC}/billing/concept-designs/invoice.md`, page("kind: entity\nrefines: Invoice\n", "# Invoice\n\n> The document a customer is asked to pay, once issued.\n\n## Attributes\n\n| Attribute | Term | Type | Many | Description |\n| --- | --- | --- | --- | --- |\n| Total | Amount | | | What is owed |\n\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n| Amount | one | |\n")],
   [`${BC}/billing/concept-designs/amount.md`, page("kind: value object\n", "# Amount\n\n> A sum in one currency.\n")],
   [AGG, page("root: Invoice\nmembers:\n  - Amount\n", "# Invoice\n\n> An invoice and its total change together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-B1 | An issued invoice's total never changes. |\n| INV-B2 | An invoice names one customer. |\n")],
-  [`${BC}/billing/domain-events/invoice-issued.md`, page("emitted-by: Invoice\n", "# Invoice issued\n\n> An invoice was issued to a customer.\n\n## Payload\n\n| Attribute | Type | Description |\n| --- | --- | --- |\n| Invoice | Invoice | The issued invoice |\n| Issued at | timestamp | When it was issued |\n")],
+  [`${BC}/billing/domain-events/invoice-issued.md`, page("emitted-by: Invoice\n", "# Invoice issued\n\n> An invoice was issued to a customer.\n\n## Payload\n\n| Attribute | Term | Type | Many | Description |\n| --- | --- | --- | --- | --- |\n| Invoice | Invoice | | | The issued invoice |\n| Issued at | | timestamp | | When it was issued |\n")],
   ...["concept-designs", "aggregates", "domain-events"].map((f) => [`${BC}/notification/${f}/README.md`, `# ${f}\n\n> Nothing yet.\n`]),
   [`${BC}/notification/notification.md`, page("classification: generic\n", "# Notification\n\n> Tells customers. Issuing is left to Billing.\n\n## Responsibilities\n\n- Tell a customer an invoice is ready\n\n## Relationships\n\n| Context | Pattern |\n| --- | --- |\n| Billing | customer/supplier |\n\n## Consumes\n\n| Type | Entity | Context | Reaction |\n| --- | --- | --- | --- |\n| domain-event | Invoice issued | Billing | Tells the customer the invoice is ready |\n")],
   [FD, page("refines: Billing run\ncontexts:\n  - Billing\n  - Notification\n", "# Issue an invoice\n\n> A closed period becomes invoices customers are told about.\n\n## Operational principle\n\nWhen finance closes a period, each customer's invoice is issued and the customer is told.\n\n## Scenarios\n\n### SC-B1: A period is closed\n\nGiven a customer with one billable order,\nWhen finance closes the period,\nThen one invoice is issued and the customer is told.\n\n### INV-B1: A label another page uses\n\nGiven the same label on an aggregate,\nWhen this page is checked,\nThen it passes, since a label is unique within its page.\n\n## Uses\n\n| Type | Entity | Context |\n| --- | --- | --- |\n| concept-design | Invoice | Billing |\n| domain-event | Invoice issued | Billing |\n")],
@@ -90,4 +90,35 @@ test("a label that is not letters, digits and hyphens fails", () => {
   const f = failures(tree((m) => m.set(AGG, m.get(AGG).replace("| INV-B2 |", "| INV B2 |"))));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /aggregates\/invoice\.md: "INV B2" under ## Invariants is no label/);
+});
+
+const VOIDED = `${BC}/billing/domain-events/invoice-voided.md`;
+const withCommands = (table, transitions = "| From | Command | To |\n| --- | --- | --- |\n| | Issue invoice | Issued |\n| Issued | Void invoice | Voided |\n") => (m) => {
+  m.set(VOIDED, page("emitted-by: Invoice\n", "# Invoice voided\n\n> An issued invoice was voided.\n"));
+  return m.set(AGG, m.get(AGG) + `\n## Handled commands\n\n${table}\n## State transitions\n\n${transitions}`);
+};
+const ROWS3 = "| Command | Emits | When | Description |\n| --- | --- | --- | --- |\n| Issue invoice | Invoice issued | The period is closed, by INV-B1 | Asks for an invoice |\n| Void invoice | Invoice voided | | Refuses a paid invoice |\n| Reopen invoice | | | |\n";
+
+test("an aggregate whose commands name their events and whose transitions are a table passes", () => {
+  assert.deepEqual(failures(tree(withCommands(ROWS3))), []);
+});
+
+test("an Emits naming an event of another context fails, as R5", () => {
+  const f = failures(tree((m) => {
+    m.set(`${BC}/notification/concept-designs/receipt.md`, page("kind: entity\n", "# Receipt\n\n> What a customer was told.\n"));
+    m.set(`${BC}/notification/aggregates/receipt.md`, page("root: Receipt\n", "# Receipt\n\n> A receipt is kept whole.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-N1 | A receipt names one invoice. |\n"));
+    m.set(`${BC}/notification/domain-events/customer-told.md`, page("emitted-by: Receipt\n", "# Customer told\n\n> A customer was told.\n"));
+    return withCommands(ROWS3.replace("| Invoice voided |", "| Customer told |"))(m);
+  }));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /Emits/);
+  assert.match(f[0], /is not one of its bounded-context's own/);
+  assert.match(f[0], /\(R5\)$/);
+});
+
+test("a Handled commands table without Emits and When fails, naming both column sets", () => {
+  const f = failures(tree(withCommands("| Command | Description |\n| --- | --- |\n| Issue invoice | Asks for an invoice |\n")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /columns are Command\|Description/);
+  assert.match(f[0], /schema declares Command\|Emits\|When\|Description/);
 });

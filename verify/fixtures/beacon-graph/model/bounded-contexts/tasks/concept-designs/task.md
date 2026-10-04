@@ -12,21 +12,21 @@ refines: Task
 
 ## Attributes
 
-| Attribute | Type | Description |
-| --- | --- | --- |
-| Reference | string | The short, human-facing name of the task within its project, such as `T35` |
-| Title | string | What the work is, in a line |
-| Description | string | What is asked for and how it is judged done |
-| Type | Task Type | What kind of work it is |
-| Status | Task Status | Where it stands in its lifecycle |
-| Priority | number | How urgent it is; a higher number is more urgent |
-| Rank | Rank | Its place in the backlog, independent of priority |
-| STDD Phase | STDD Phase | Where a feature stands in spec-driven development; absent for work that carries no spec |
-| Assignee | string | The agent or person holding it, absent while it is unclaimed |
-| Estimated hours | number | The effort expected |
-| Time spent | number | The hours worked, recorded when the task is completed |
-| Due date | date | The day it is wanted by |
-| Timeout | number | The minutes after which an unfinished task is failed automatically |
+| Attribute | Term | Type | Many | Description |
+| --- | --- | --- | --- | --- |
+| Reference | | string | | The short, human-facing name of the task within its project, such as `T35` |
+| Title | | string | | What the work is, in a line |
+| Description | | string | | What is asked for and how it is judged done |
+| Type | Task Type | | | What kind of work it is |
+| Status | Task Status | | | Where it stands in its lifecycle |
+| Priority | | number | | How urgent it is; a higher number is more urgent |
+| Rank | Rank | | | Its place in the backlog, independent of priority |
+| STDD Phase | STDD Phase | | | Where a feature stands in spec-driven development; absent for work that carries no spec |
+| Assignee | | string | | The agent or person holding it, absent while it is unclaimed |
+| Estimated hours | | number | | The effort expected |
+| Time spent | | number | | The hours worked, recorded when the task is completed |
+| Due date | | date | | The day it is wanted by |
+| Timeout | | number | | The minutes after which an unfinished task is failed automatically |
 
 ## Relations
 

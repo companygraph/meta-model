@@ -19,10 +19,10 @@ members:
 
 ## Handled commands
 
-| Command | Description |
-| --- | --- |
-| Create task link | Links a source task to a target task with a link type; refuses a self-link, a duplicate and a cross-project pair the caller may not reach. A `blocks` link re-evaluates whether the target is blocked. |
-| Delete task link | Removes a link by its id or by its source, target and link type; a removed `blocks` link re-evaluates whether the target is still blocked. |
+| Command | Emits | When | Description |
+| --- | --- | --- | --- |
+| Create task link | | | Links a source task to a target task with a link type; refuses a self-link, a duplicate and a cross-project pair the caller may not reach. A `blocks` link re-evaluates whether the target is blocked. |
+| Delete task link | | | Removes a link by its id or by its source, target and link type; a removed `blocks` link re-evaluates whether the target is still blocked. |
 
 ## References
 

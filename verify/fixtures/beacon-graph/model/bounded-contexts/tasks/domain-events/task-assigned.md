@@ -11,10 +11,10 @@ emitted-by: Task
 
 ## Payload
 
-| Attribute | Type | Description |
-| --- | --- | --- |
-| Task | Task | The task that was assigned |
-| Assignee | string | The agent it now belongs to |
+| Attribute | Term | Type | Many | Description |
+| --- | --- | --- | --- | --- |
+| Task | Task | | | The task that was assigned |
+| Assignee | | string | | The agent it now belongs to |
 
 ## References
 

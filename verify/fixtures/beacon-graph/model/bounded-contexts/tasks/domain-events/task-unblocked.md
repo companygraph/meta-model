@@ -11,9 +11,9 @@ emitted-by: Task
 
 ## Payload
 
-| Attribute | Type | Description |
-| --- | --- | --- |
-| Task | Task | The task that is no longer blocked |
+| Attribute | Term | Type | Many | Description |
+| --- | --- | --- | --- | --- |
+| Task | Task | | | The task that is no longer blocked |
 
 ## References
 
