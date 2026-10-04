@@ -12,7 +12,7 @@ import { fileURLToPath } from "node:url";
 import { knownHashOf } from "../lib/known.mjs";
 import { writingRulesOf } from "../lib/questions.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
-import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf } from "../bin/judges/typesafe.mjs";
+import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf, forecastOf, costOf, CHARS_PER_TOKEN } from "../bin/judges/typesafe.mjs";
 
 const request = {
   path: "a.md", type: "experience", name: "A", state: { purpose: "P.", entity: "# A\n" },
@@ -59,6 +59,26 @@ test("the digest covers what would be sent and nothing else: the place, the mode
   assert.notEqual(digestOf([request, other], { ...at, url: "http://api.example/v1/systemone" }), d, "another scheme on the same host moves it");
   assert.notEqual(digestOf([request, other], { ...at, url: "https://api.example/other" }), d, "another path on the same host moves it");
   assert.notEqual(digestOf([request, other], { ...at, model: "jev-y" }), d, "another model moves it");
+});
+
+test("the forecast counts the requests as they are sent, split ones included, and prices only the input", () => {
+  const options = Object.fromEntries(Array.from({ length: 7 }, (_, i) => [`Kind ${i}`, { summary: "x".repeat(700) }]));
+  const big = { ...request, path: "big.md", questions: Array.from({ length: 60 }, (_, i) => ({ id: `g${i + 1}`, kind: "group", section: "Achievements", heading: "Kind 0", bullet: `Bullet ${i}.`, options })) };
+  const small = forecastOf([request]);
+  assert.equal(small.requests, 1);
+  assert.equal(small.tokens, Math.ceil(JSON.stringify(toWire(request)).length / CHARS_PER_TOKEN));
+  const both = forecastOf([request, big]);
+  assert.ok(both.requests > 2, "the large page is sent in several requests");
+  assert.ok(both.tokens > small.tokens + Math.ceil(JSON.stringify(toWire(big)).length / CHARS_PER_TOKEN), "each split request carries the whole state again");
+  assert.equal(both.usd, costOf(both.tokens));
+  assert.equal(SERVICE.usdPerMtok, 0.042);
+  assert.equal(costOf(1_000_000), 0.042);
+});
+
+test("every answer's usage is handed to the caller, one call per request sent", async () => {
+  const seen = [];
+  await ask(request, { key: "k", onUsage: (u) => seen.push(u), fetch: async () => reply(200, { ...body, usage: { input_tokens: 296, output_tokens: 20 } }) });
+  assert.deepEqual(seen, [{ input_tokens: 296, output_tokens: 20 }]);
 });
 
 test("a rate limit is retried after the time the service asks for, then answered", async () => {
@@ -119,7 +139,7 @@ const service = async (status = 200, noul = 0.9) => {
       const answers = Object.fromEntries(Object.entries(body.questions).map(([id, q]) => [id, q.type === "noul"
         ? { type: "noul", noul }
         : { type: "choice", choice: Object.keys(q.criteria)[0], probabilities: {}, confidence: 1 }]));
-      res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ model: "jev-1.13.0", answers, usage: {} }));
+      res.writeHead(status, { "content-type": "application/json" }).end(JSON.stringify({ model: "jev-1.13.0", answers, usage: { input_tokens: 1000, output_tokens: 10 } }));
     });
   });
   await new Promise((r) => server.listen(0, "127.0.0.1", r));
@@ -132,7 +152,7 @@ test("with no key, judge prints the questions and sends nothing", async () => {
   assert.match(out, /^judge: \d+ questions about \d+ pages of /m);
   assert.match(out, /^model\/identity\.md$/m);
   assert.match(out, /^ {2}r1 {2}\S/m);
-  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(https:\/\/api\.typesafe\.ai\/v1\/systemone, jev-1\.13\.0\), about \d+ tokens in all:$/m);
+  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(https:\/\/api\.typesafe\.ai\/v1\/systemone, jev-1\.13\.0\), about \d+ input tokens in \d+ requests, about USD \d+\.\d{3}:$/m);
   assert.match(out, /^ {2}model\/identity\.md$/m);
   assert.ok(digestIn(out), "the keyless run prints the digest");
   assert.match(out, /no TYPESAFE_API_KEY: nothing was sent/);
@@ -173,6 +193,7 @@ test("on a yes, judge sends one request per page with the key and prints the adv
     assert.ok(fake.seen.length > 0);
     assert.ok(fake.seen.every((s) => s.auth === "Bearer sk-secret" && s.body.model === "jev-1.13.0"));
     assert.match(out, /^judge: advisory/m);
+    assert.match(out, new RegExp(`^sent: ${fake.seen.length} requests, ${fake.seen.length * 1000} input tokens, USD \\d+\\.\\d{3}, against a forecast of USD \\d+\\.\\d{3}$`, "m"));
     assert.match(out, /^not asked:$/m);
     assert.ok(!out.includes("✓") && !out.includes("sk-secret"));
   } finally {
