@@ -49,7 +49,7 @@ The schemas' Purpose and writing-rule prose that speaks of "a payload type that 
 - Where a `Term` resolves to nothing but matches a term of the same context loosely, by case or by a plural, R4's failure adds the name it matches. The loose comparison moves from `typeCells` to that message.
 - `Type` and `Many` are enums, held by the existing enum check.
 
-`verify/software.test.mjs` takes a failing fixture for each of these before the code: both filled, neither filled, an unknown `Term`, a near miss, another context's term, an entity in Attributes, a `Type` off the list and a `Many` other than `yes`. Its two passing fixtures, Invoice and Invoice issued, are rewritten in the new columns. `verify/checks-owed.test.mjs` is brought along where it writes these tables.
+`verify/checks-owed.test.mjs` takes a failing case for each of these before the code, in place of the type-cell cases it held: both filled, neither filled, an unknown `Term`, a near miss, another context's term, an entity in Attributes, a `Type` off the list and a `Many` other than `yes`. The two passing fixtures of `verify/software.test.mjs`, Invoice and Invoice issued, are rewritten in the new columns.
 
 ## What follows without a change
 
