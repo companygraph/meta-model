@@ -31,15 +31,15 @@ import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
 import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
-import { formCheck } from "../lib/form.mjs";
+import { formCheck, formattedOf } from "../lib/form.mjs";
 import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
-import { idChangesOf, PACKS, vocabularyOf } from "../lib/checks.mjs";
+import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
 /** @import { CommunityPlugin } from "../lib/obsidian.mjs" */
 /** @import { Governing } from "../lib/seats.mjs" */
 /** @import { UpgradeWrites } from "../lib/plan.mjs" */
@@ -82,7 +82,7 @@ const USAGE = `companygraph [<command>]
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
   seats [<folder>]    the history by seat: the family's where conventions lists one, else this repository's
   id                  print a fresh id, a UUID version 7
-  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern or an id a range changed
+  ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern, or a range that changed an id, rewrote or removed a decision, or moved or reused a label
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook
 upgrade: --core <tag>  --pack <a,b>  --force  --dry-run
@@ -1073,14 +1073,18 @@ function seats(argv) {
 
 // R18. `--backfill` gives every page without an id one stamped with its first commit and writes
 // model/identifier.md where there is none; `--range` fails a change to an id on the default
-// branch. A folder that holds core/ and is not an instance is the repository that makes core,
-// and both work on its schemas instead; `--core` already names a tag, so what the folder holds
-// is what tells the two apart.
+// branch and, on an instance, a decision rewritten or deleted and a label moved or used again,
+// compared after the form, except where the range changes the vendored schema that governs the
+// check, which it says in one line.
+// A folder that holds core/ and is not an instance is the repository that makes core, and both
+// work on its schemas instead; `--core` already names a tag, so what the folder holds is what
+// tells the two apart.
 //
 // Refused is 3, not 1, so a caller such as a hook can tell a refusal — a `--range` that changed
-// an id already on the default branch, or a `--backfill` that a declared `pattern` format or an
-// unreadable identifier file refuses — from a run that could not happen at all: not an instance,
-// neither flag, a malformed range, or a git failure, each of which is 1.
+// an id already on the default branch or a page it holds as written, or a `--backfill` that a
+// declared `pattern` format or an unreadable identifier file refuses — from a run that could not
+// happen at all: not an instance, neither flag, a malformed range, or a git failure, each of
+// which is 1.
 /**
  * @param {string[]} argv
  * @returns {number}
@@ -1094,6 +1098,18 @@ function ids(argv) {
     return 1;
   }
   const folder = onCore ? "core" : "model";
+  // The packs the instance took, so a page of a pack's type is known as a core page is: given its
+  // id by the backfill, and held by the range's checks of what a change may do to it.
+  /** @type {{ units?: string, packs?: string[] }} */
+  let manifest = {};
+  try {
+    manifest = (!onCore && manifestAt(root)) || {};
+  } catch (error) {
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
+    return 1;
+  }
+  const units = manifest.units ?? "meta";
+  const { types, schemaOf } = vocabularyOf({ core: `${units}/core`, packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${units}/${name}` })) });
   if (given.backfill) {
     /** @type {Map<string, string>} */
     const files = new Map();
@@ -1109,10 +1125,6 @@ function ids(argv) {
     const top = gitTop(root);
     /** @param {string} rel */
     const firstCommitMs = (rel) => (top ? firstCommitMsOf(root, rel) : null);
-    // The packs the instance took, so a page of a pack's type is given its id as a core page is.
-    const manifestPath = join(root, ".companygraph/manifest.json");
-    const manifest = !onCore && existsSync(manifestPath) ? JSON.parse(readFileSync(manifestPath, "utf8")) : {};
-    const { types } = vocabularyOf({ packs: (manifest.packs ?? []).map((/** @type {string} */ name) => ({ name, dir: `${manifest.units ?? "meta"}/${name}` })) });
     const writes = /** @type {Map<string, string> & { refused?: string }} */ (onCore ? schemaBackfillPlan(files, { firstCommitMs }) : backfillPlan(files, { firstCommitMs, types }));
     if (writes.refused) {
       console.error(`✗ ${writes.refused}`);
@@ -1135,12 +1147,92 @@ function ids(argv) {
     }
     // A full commit name is shortened to seven characters for a reader; a branch name is kept.
     const base = /^[0-9a-f]{40}$/.test(ends[0]) ? ends[0].slice(0, 7) : ends[0];
-    const failures = idChangesOf(changedPagesOf(root, given.range, folder), base);
+    const changes = changedPagesOf(root, given.range, folder);
+    const failures = idChangesOf(changes, base);
+    // An instance's pages are held to what a change may do to them as well: a decision is kept
+    // as written and never deleted, and a label stays with its item and is never used again. The
+    // repository that makes core ranges over schemas, which carry neither. These two read what
+    // the branch did, from where it branched: from a base tip that moved on since, a decision main
+    // added would read as one the branch deleted. The id check stays on the range as given, since
+    // its base is the ids the default branch holds now.
+    /** @type {string[]} */
+    const notes = [];
+    // A check every one of whose types stands aside is left out of the tick's line.
+    let keptHeld = !onCore, labelsHeld = !onCore;
+    if (!onCore) {
+      // Where the two ends hold no commit in common there is no branch point to read from: in a
+      // shallow clone because the history that holds it was not fetched, and otherwise because
+      // the two are unrelated. Said in one line, as a git failure, and not as git's own message.
+      let fork;
+      try {
+        fork = mergeBaseOf(root, ends[0], ends[1]);
+      } catch {
+        console.error(`✗ ${ends[0]} and ${ends[1]} have no commit in common here, so where the branch began cannot be read; in a shallow clone, fetch its full history (fetch-depth: 0) and run again`);
+        return 1;
+      }
+      // A release that changes the vendored schema governing one of these checks, the decision
+      // schema or a schema whose type declares labels, may reshape the pages that check holds in
+      // the same range, which the check would refuse with no way through. Where the range changes
+      // that schema and moves the version of the unit it is vendored from, core's or its pack's,
+      // the check stands aside for that type and says so: a release is what changes a schema
+      // here, and a hand edit of one with the version where it was is held like any page. Any
+      // other upgrade, re-pin or resync is held as always, and the id check always runs.
+      const governed = types.filter((t) => t.kept || t.labels);
+      const changedSchemas = changedFilesOf(root, fork, ends[1], governed.map((t) => schemaOf(t.type)));
+      const released = (/** @type {{ dir: string }} */ t) => {
+        const at = `${t.dir}/manifest.json`;
+        const before = versionAt(root, fork, at), after = versionAt(root, ends[1], at);
+        return after !== null && before !== after;
+      };
+      /** @type {import("../lib/checks.mjs").TypeEntry[]} */
+      const held = types.map((t) => {
+        if (!(t.kept || t.labels) || !changedSchemas.has(schemaOf(t.type)) || !released(t)) return t;
+        notes.push(`  the ${t.type} schema changed in this range: ${t.type}${t.kept ? "" : " label"} text not held`);
+        const { kept, labels, ...rest } = t;
+        return rest;
+      });
+      keptHeld = held.some((t) => t.kept) || !types.some((t) => t.kept);
+      labelsHeld = held.some((t) => t.labels) || !types.some((t) => t.labels);
+      const own = `${fork}..${ends[1]}`;
+      // Where the base given is the branch point, by name or by commit, the pages already read are
+      // the ones the branch changed, and are not read again.
+      const givenBase = spawnSync("git", ["rev-parse", "--verify", "--quiet", `${ends[0]}^{commit}`], { cwd: root, encoding: "utf8" }).stdout?.trim();
+      const branched = givenBase === fork ? changes : changedPagesOf(root, own, folder);
+      // Both sides of every page these two compare are put in the family's Markdown form first,
+      // in one run of the tool, so a change the form makes anyway is not read as a rewrite or a
+      // move. Where the tool cannot run, the pages are compared as written, and the command says so.
+      const compared = branched.filter((c) => [c.before, c.after].some((p) => {
+        const entry = held.find((t) => t.type === typeOfPath(p, folder, held));
+        return Boolean(entry?.kept || entry?.labels);
+      }));
+      /** @type {Map<string, string>} */
+      const texts = new Map(compared.flatMap((c) => [[`base/${c.before}`, c.beforeText], [`head/${c.after}`, c.afterText]]));
+      const { formatted, error } = formattedOf(texts);
+      if (error) notes.push(`  the Markdown form could not be applied, so decision and label text is compared as written: ${error.split("\n")[0]}`);
+      const pages = branched.map((c) => (compared.includes(c) ? { ...c, beforeText: formatted.get(`base/${c.before}`) ?? c.beforeText, afterText: formatted.get(`head/${c.after}`) ?? c.afterText } : c));
+      // Their refusals name the commit they compared from, the branch point, and not the base.
+      const from = fork.slice(0, 7);
+      failures.push(
+        // A name a decision carries may follow the entity it names, read against the schema the
+        // instance vendored and the model where the branch began and where it ends.
+        ...keptChangesOf(pages, deletedPagesOf(root, own, folder), from, {
+          types: held,
+          schemaOf: (type) => (existsSync(join(root, schemaOf(type))) ? readFileSync(join(root, schemaOf(type)), "utf8") : null),
+          treeOf: (side) => treeAt(root, side === "base" ? fork : ends[1], folder),
+        }),
+        ...labelChangesOf(pages, from, { types: held, historyOf: (c) => pageHistoryOf(root, fork, c.before) }),
+      );
+    }
     if (failures.length) {
       for (const f of failures) console.error(`✗ ${f}`);
+      for (const n of notes) console.error(n);
       return REFUSED;
     }
-    console.log("✓ no id on the default branch changed");
+    const clauses = ["no id on the default branch changed"];
+    if (keptHeld) clauses.push("no page kept as written was rewritten or removed");
+    if (labelsHeld) clauses.push("no label moved or came back");
+    console.log(`✓ ${clauses.length > 2 ? `${clauses.slice(0, -1).join(", ")}, and ${clauses.at(-1)}` : clauses.join(" and ")}`);
+    for (const n of notes) console.log(n);
     return 0;
   }
   console.error("✗ ids needs --backfill or --range <a>..<b>");

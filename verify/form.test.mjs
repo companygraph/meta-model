@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FORM_VERSION, markdownFilesOf, formCheck } from "../lib/form.mjs";
+import { FORM_VERSION, markdownFilesOf, formCheck, formattedOf } from "../lib/form.mjs";
 
 // Each test's trees have a prefix of their own, apart from the copies formCheck makes, and are
 // removed when the test ends, so a run leaves nothing in the temporary folder.
@@ -137,4 +137,35 @@ test("fix rewrites a wrapped paragraph in a repository with its own root configu
   const root = tree(temp(), { ".markdownlint-cli2.jsonc": FAMILY_ROOT_CONFIG, "README.md": WRAPPED });
   assert.deepEqual(formCheck(root, { fix: true }), { files: 1, hits: [] });
   assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Title\n\nOne paragraph that wraps.\n");
+});
+
+// The decision and label checks compare a page's two sides after the form, in one run of the
+// tool over every text handed in; where the tool cannot run, the texts come back as they were,
+// with the reason, so a caller compares them raw and says so.
+test("formattedOf puts every text handed in into the form in one run and keeps its key", () => {
+  const { formatted, error } = formattedOf(new Map([["base/model/a.md", "# A\n\n* one\n* two\n"], ["head/model/a.md", WRAPPED]]));
+  assert.equal(error, undefined);
+  assert.deepEqual([...formatted.keys()], ["base/model/a.md", "head/model/a.md"]);
+  assert.equal(formatted.get("base/model/a.md"), "# A\n\n- one\n- two\n");
+  assert.equal(formatted.get("head/model/a.md"), "# Title\n\nOne paragraph that wraps.\n");
+});
+
+test("formattedOf with no tool to run gives the texts back as they were, and says why", () => {
+  const texts = new Map([["head/model/a.md", "# A\n\n* one\n"]]);
+  const { formatted, error } = formattedOf(texts, { linter: { command: path.join(os.tmpdir(), "no-such-markdownlint"), args: [] } });
+  assert.equal(formatted.get("head/model/a.md"), "# A\n\n* one\n");
+  assert.match(error ?? "", /could not be run/);
+});
+
+test("formattedOf where the tool exits 1 with no hit line is a failure to run, and says why", () => {
+  const texts = new Map([["head/model/a.md", "# A\n\n* one\n"]]);
+  const { formatted, error } = formattedOf(texts, { linter: { command: process.execPath, args: ["-e", "console.error('npm error 404 not found'); process.exit(1)", "--"] } });
+  assert.equal(formatted.get("head/model/a.md"), "# A\n\n* one\n");
+  assert.match(error ?? "", /exited 1/);
+});
+
+test("formattedOf with nothing handed in runs nothing", () => {
+  const { formatted, error } = formattedOf(new Map(), { linter: { command: path.join(os.tmpdir(), "no-such-markdownlint"), args: [] } });
+  assert.equal(formatted.size, 0);
+  assert.equal(error, undefined);
 });

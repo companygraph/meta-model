@@ -106,7 +106,7 @@ export function checkPath(path) {
   walk(core);
   for (const p of packs) walk(p.dir);
 
-  const { failures, skipped } = checkInstance(files, { core, model: MODEL, packs });
+  const { failures, skipped, notes } = checkInstance(files, { core, model: MODEL, packs });
 
   // The manifest's per-file hashes, read on the one command every commit runs. What the tooling
   // wrote — the vendored core, and the skills where it installed them — is not the instance's to
@@ -135,6 +135,13 @@ export function checkPath(path) {
     for (const f of failures) console.error(`  ${f}`);
   } else {
     console.log(`✓ ${against}: the mechanical checks pass`);
+  }
+
+  // On both paths, and never counted: a note is a fact worth seeing that fails nothing, so the
+  // exit code stays the failures' alone.
+  if (notes.length) {
+    console.log("  noted:");
+    for (const n of notes) console.log(`    ${n}`);
   }
 
   // Always, and on both paths: a report says what it did not check.

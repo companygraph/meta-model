@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf } from "../lib/history.mjs";
+import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, changedPagesOf, deletedPagesOf, pageHistoryOf } from "../lib/history.mjs";
 import { instanceAt } from "./seats-fixture.mjs";
 
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-history-"));
@@ -90,4 +90,42 @@ test("the family is the members REPOSITORIES.md lists, at their local paths", ()
     { repo: "acme/mental-model", path: path.join(os.homedir(), "git/acme/mental-model") },
     { repo: "acme/site", path: "/srv/acme/site" },
   ]);
+});
+
+// A range's deleted pages are read beside its changed ones, each as it was at the base, so a
+// check of what a change may do can see a page removed; a rename stays a change.
+test("a range's deleted pages are read at its base, and a renamed page is a change and not a deletion", () => {
+  const dir = repo(temp());
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(dir, rel)), { recursive: true }); fs.writeFileSync(path.join(dir, rel), text); };
+  write("model/decisions/2026-a.md", "# A\n\n> One call.\n");
+  write("model/decisions/2026-b.md", "# B\n\n> Another call, long enough that a rename is detected as one.\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-qm", "first");
+  const base = git(dir, "rev-parse", "HEAD").trim();
+  git(dir, "rm", "-q", "model/decisions/2026-a.md");
+  git(dir, "mv", "model/decisions/2026-b.md", "model/decisions/2026-c.md");
+  git(dir, "commit", "-qm", "second");
+  const range = `${base}..${git(dir, "rev-parse", "HEAD").trim()}`;
+  assert.deepEqual(deletedPagesOf(dir, range), [{ before: "model/decisions/2026-a.md", beforeText: "# A\n\n> One call.\n" }]);
+  assert.deepEqual(changedPagesOf(dir, range).map((c) => [c.before, c.after]), [["model/decisions/2026-b.md", "model/decisions/2026-c.md"]]);
+});
+
+// A label is never used again on its page, so what the page said at every earlier commit is read,
+// followed across a rename, newest first.
+test("a page's history is every earlier text of it, across a rename, newest first", () => {
+  const dir = repo(temp());
+  const at = (rel) => path.join(dir, rel);
+  fs.mkdirSync(at("model/aggregates"), { recursive: true });
+  fs.writeFileSync(at("model/aggregates/invoice.md"), "# Invoice\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | One. |\n");
+  git(dir, "add", "-A");
+  git(dir, "commit", "-qm", "first");
+  fs.writeFileSync(at("model/aggregates/invoice.md"), "# Invoice\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | One. |\n| INV-2 | Two. |\n");
+  git(dir, "commit", "-qam", "second");
+  git(dir, "mv", "model/aggregates/invoice.md", "model/aggregates/bill.md");
+  git(dir, "commit", "-qm", "third");
+  const texts = pageHistoryOf(dir, "HEAD", "model/aggregates/bill.md");
+  assert.equal(texts.length, 3);
+  assert.match(texts[1], /INV-2/);
+  assert.doesNotMatch(texts[2], /INV-2/);
+  assert.deepEqual(pageHistoryOf(dir, "HEAD", "model/aggregates/none.md"), []);
 });

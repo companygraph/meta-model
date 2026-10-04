@@ -38,6 +38,9 @@ const EX = `example/${MODEL}`;
 
 const failures = [];
 export const fail = (msg) => failures.push(msg);
+// What the instance checks note about the example: printed, never counted.
+const notes = [];
+const note = (msg) => notes.push(msg);
 
 export const read = (rel) =>
   existsSync(join(ROOT, rel)) ? readFileSync(join(ROOT, rel), "utf8") : null;
@@ -520,7 +523,7 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, requireSchemaIds: true }),
+    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, note, requireSchemaIds: true }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at
@@ -673,6 +676,11 @@ const CHECKS = [
 ];
 
 for (const check of CHECKS) check.run();
+
+if (notes.length) {
+  console.log("noted:");
+  for (const n of notes) console.log(`  ${n}`);
+}
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} problem${failures.length > 1 ? "s" : ""}\n`);

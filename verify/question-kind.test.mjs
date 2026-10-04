@@ -26,6 +26,9 @@ const tree = ({ kinds = [["Product", 10], ["Company", 20]], fm = ["source: Local
   ...kinds.map(([n, r], i) => [`model/question-kinds/${n.toLowerCase()}.md`, kind(n, r, { meaning: !(missingMeaning && i === 0) })]),
   ["model/questions/who-split-billing.md", question("Who split billing?", fm)],
   ["model/questions/does-beacon-publish-its-revenue.md", question("Does Beacon publish its revenue?", ["source: Local", "kind: Company"])],
+  // A second question of each kind, since a kind holds at least two.
+  ["model/questions/how-is-an-invoice-read.md", question("How is an invoice read?", ["source: Local", "kind: Product"])],
+  ["model/questions/where-is-beacon.md", question("Where is Beacon?", ["source: Local", "kind: Company"])],
 ]);
 const failures = (opts) => checkInstance(tree(opts), { core: "meta/core", model: "model" }).failures;
 const about = (where, opts, ...words) => failures(opts).filter((f) => f.includes(where) && words.every((w) => f.includes(w)));
