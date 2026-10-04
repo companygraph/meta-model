@@ -160,6 +160,22 @@ test("a Term naming no term at all fails as a reference that does not resolve", 
   assert.match(f[0], /line\.md: `Term` in "## Attributes" is declared `ref → concept-design` and says "Amount2", which names no entity in model\/; a declared reference must resolve \(R4\)$/);
 });
 
+test("a Term matching a term of its own context only by case, a plural or backticks is told the term it matches", () => {
+  for (const cell of ["amount", "Amounts", "AMOUNT", "`Amount`"]) {
+    const f = typeCells(line([[cell]]));
+    assert.equal(f.length, 1, cell);
+    assert.match(f[0], /which names no entity in model\/; a declared reference must resolve, and the concept-design it matches here is "Amount" \(R4\)$/, cell);
+  }
+  const ies = typeCells(billing(design("billing", "Policy", "value object"), design("billing", "Line", "value object", attributes([["Policies"]]))));
+  assert.match(ies[0], /the concept-design it matches here is "Policy" \(R4\)$/);
+});
+
+test("a near miss is matched only within the page's own context", () => {
+  const f = typeCells(line([["Postings"]]));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /says "Postings", which names no entity in model\/; a declared reference must resolve \(R4\)$/);
+});
+
 test("a Term naming a term of another context fails", () => {
   const f = typeCells(line([["Posting"]]));
   assert.equal(f.length, 1, f.join("\n"));
