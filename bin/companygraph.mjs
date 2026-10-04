@@ -434,6 +434,7 @@ async function upgrade(argv) {
       workflow: existsSync(workflowPath) ? read(workflowPath) : null,
       present: new Set(["pins.json"].filter((path) => existsSync(join(root, path)))),
     });
+    if ("refused" in adopted) throw new Error(adopted.refused);
     if (!adopted.writes.size) {
       console.log(`already on ${adopted.to}; nothing to do.`);
       return "nothing";
