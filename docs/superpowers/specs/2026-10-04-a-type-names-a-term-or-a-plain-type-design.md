@@ -33,7 +33,7 @@ The two `Type` columns are the only holes. The remaining string fields that look
 | --- | --- | --- | --- |
 | `Attribute` | Yes | string | The value's name, as the context's people say it (unchanged) |
 | `Term` | No | ref → concept-design | A concept design of the same context, by its canonical name. In `## Attributes`, one of kind `value object`, since an entity is a relation. |
-| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `version`, `commit hash`, `path`, `id`, `URL` or `file`. A plain type, where the value is not a term. |
+| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `timestamp`, `duration`, `version`, `commit hash`, `path`, `id`, `URL` or `file`. A plain type, where the value is not a term: a `date` is a day, a `timestamp` a moment and a `duration` a length of time. |
 | `Many` | No | enum | `yes`. The value is a list of what `Term` or `Type` names; blank for one. |
 | `Description` | No | string | What the value says, and its unit where it has one (unchanged) |
 
@@ -63,4 +63,4 @@ The plugin, the MCP server and the sites read the vendored schemas. Once an inst
 
 ## What it does not do
 
-It does not add plain types to the list beyond the ten above, nor a unit vocabulary. It does not change `## Relations`, which already draws its edges, nor the free-text fields above. It does not touch an instance's own schemas.
+It does not add plain types to the list beyond the twelve above, nor a unit vocabulary. It does not change `## Relations`, which already draws its edges, nor the free-text fields above. It does not touch an instance's own schemas.
