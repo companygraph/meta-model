@@ -183,6 +183,13 @@ test("a Term matching a term of its own context only by case, a plural or backti
   assert.match(ies[0], /the concept-design it matches here is "Policy" \(R4\)$/);
 });
 
+test("a near miss is matched only among the entities a name resolves to, never a folder README", () => {
+  const f = typeFindings(billing([`${BC}/billing/concept-designs/README.md`, "# Concept designs\n\n> The terms of Billing.\n"],
+    design("billing", "Line", "value object", attributes([["Concept design"]]))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /says "Concept design", which names no entity in model\/; a declared reference must resolve \(R4\)$/);
+});
+
 test("a plural in -es is read only after s, x, z, ch or sh, and an empty name matches nothing", () => {
   const near = (term, cell) => typeFindings(billing(design("billing", term, "value object"), design("billing", "Line", "value object", attributes([[cell]]))));
   assert.match(near("Box", "Boxes")[0], /the concept-design it matches here is "Box" \(R4\)$/);
@@ -232,7 +239,6 @@ test("a payload names a term of its own context of either kind or a plain type, 
   assert.equal(typeFindings(billing(event("billing", "Invoice issued", [["Invoice", "string"]]))).length, 1);
   assert.equal(typeFindings(billing(event("billing", "Invoice issued", [["", "Money"]]))).length, 1);
 });
-
 
 const aggregate = (root) => [`${BC}/billing/aggregates/invoice.md`, page([`root: ${root}`], "Invoice",
   "\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | A total never changes. |\n")];
