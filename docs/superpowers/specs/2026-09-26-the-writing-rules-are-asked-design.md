@@ -40,7 +40,7 @@ The report is advisory and says so. It ends as the validate skill's report ends,
 
 It runs in no workflow. `instance-check.yml` stays the mechanical half of R0: a judge's answer can move between runs, a public repository's run cannot hold the key, and a required check that is sometimes wrong teaches everyone to ignore it.
 
-It sends an instance's files out of the machine, which for a private company's model is a decision about that company's data. `judge` asks each time, names the service, and has no setting that skips the question; an instance that must not leave the machine does not run it.
+It sends an instance's files out of the machine, which for a private company's model is a decision about that company's data. `judge` asks each time, names the service, and has no setting that skips the question; an instance that must not leave the machine does not run it. Amended on October 4, 2026 by `2026-10-04-a-yes-tied-to-what-was-shown-design.md`: the question may be asked by an agent in its own conversation, and the owner's answer carried to `judge` as `--consent` with the digest the agent showed them.
 
 It does not change the shape of a schema, the wording of any rule, or R0.
 

@@ -854,7 +854,7 @@ test("a core newer than the checker is refused naming both pins, the manifest's 
   assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
 
-const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
+const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-judge", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
 
 test("init writes the skills, hashed into the manifest like the core, and tells how to run the checks", () => {
   const root = temp();
@@ -865,10 +865,11 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
   assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
-  assert.match(said, /-company and -consent/);
+  assert.match(said, /-company, -consent and -judge/);
   const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
   assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
   assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
+  assert.ok(agents.includes("`companygraph-judge`"), "AGENTS.md names the judge skill");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
 });
 

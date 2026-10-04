@@ -99,7 +99,8 @@ An experience is one dated period in a profile's history, and the place a skill 
   entry's address; it is a reference, and it goes in the table.
 - `What` names the kind of document, not its significance. "Commercial register entry" is a
   fact about the link; "proof that the company existed" is a reading of it.
-- The H1 of a one-off comes with `organization` naming whoever hosted, awarded or published it.
-  The field is a stretch there and the alternative — leaving it empty — says less.
+- The H1 of a one-off comes with `organization` naming whoever hosted, awarded or published it,
+  where that is someone other than the person; a one-off the person put out themselves, on
+  their own site or channel, has none.
 - `## Ending` is written in the person's own voice and looks forward: what the period had
   settled, and what it made the next thing. It is neither an achievement nor a grievance.
