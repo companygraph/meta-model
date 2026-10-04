@@ -894,7 +894,7 @@ async function judge(argv) {
   const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
   /** @param {string} verb */
   const files = (verb) => {
-    console.log(`\n${verb} these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().host}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
+    console.log(`\n${verb} these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().href}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
     for (const r of questions.asked) console.log(`  model/${r.path}`);
     console.log(`digest: ${digest}`);
   };

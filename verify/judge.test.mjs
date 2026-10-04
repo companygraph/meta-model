@@ -45,14 +45,16 @@ test("the answers come back in the module's own shape, and a missing one is refu
 
 test("the digest covers what would be sent and nothing else: the place, the model and every page's request", () => {
   const other = { ...request, path: "b.md", state: { purpose: "P.", entity: "# B\n" } };
-  const at = { host: "api.example", model: "jev-x" };
+  const at = { url: "https://api.example/v1/systemone", model: "jev-x" };
   const d = digestOf([request, other], at);
   assert.match(d, /^[0-9a-f]{16}$/);
   assert.equal(digestOf([other, request], at), d, "the order pages are read in does not move it");
   assert.notEqual(digestOf([request, { ...other, state: { ...other.state, entity: "# B\nedited\n" } }], at), d, "an edited page moves it");
   assert.notEqual(digestOf([request, { ...other, questions: [{ id: "r1", kind: "rule", rule: "Another rule." }] }], at), d, "a changed rule moves it");
   assert.notEqual(digestOf([request], at), d, "a page left out moves it");
-  assert.notEqual(digestOf([request, other], { ...at, host: "elsewhere.example" }), d, "another place moves it");
+  assert.notEqual(digestOf([request, other], { ...at, url: "https://elsewhere.example/v1/systemone" }), d, "another place moves it");
+  assert.notEqual(digestOf([request, other], { ...at, url: "http://api.example/v1/systemone" }), d, "another scheme on the same host moves it");
+  assert.notEqual(digestOf([request, other], { ...at, url: "https://api.example/other" }), d, "another path on the same host moves it");
   assert.notEqual(digestOf([request, other], { ...at, model: "jev-y" }), d, "another model moves it");
 });
 
@@ -127,7 +129,7 @@ test("with no key, judge prints the questions and sends nothing", async () => {
   assert.match(out, /^judge: \d+ questions about \d+ pages of /m);
   assert.match(out, /^model\/identity\.md$/m);
   assert.match(out, /^ {2}r1 {2}\S/m);
-  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(api\.typesafe\.ai, jev-1\.13\.0\), about \d+ tokens in all:$/m);
+  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(https:\/\/api\.typesafe\.ai\/v1\/systemone, jev-1\.13\.0\), about \d+ tokens in all:$/m);
   assert.match(out, /^ {2}model\/identity\.md$/m);
   assert.ok(digestIn(out), "the keyless run prints the digest");
   assert.match(out, /no TYPESAFE_API_KEY: nothing was sent/);
@@ -149,7 +151,7 @@ test("with a key, judge names the service and every file, and sends nothing with
     for (const input of ["", "n\n", "no\n"]) {
       const { code, out } = await judge(fresh(), { input, env: { ...withoutKey(), TYPESAFE_API_KEY: "sk-secret", COMPANYGRAPH_TYPESAFE_URL: fake.url } });
       assert.equal(code, 0);
-      assert.match(out, new RegExp(`to TypeSafe \\(${new URL(fake.url).host.replace(/\./g, "\\.")}, jev-1\\.13\\.0\\)`), "it names the host it would send to, not the one it usually does");
+      assert.ok(out.includes(`to TypeSafe (${fake.url}, jev-1.13.0)`), "it names the endpoint it would send to, not the one it usually does");
       assert.match(out, /^ {2}model\/identity\.md$/m);
       assert.match(out, /Nothing was sent\./);
       assert.ok(!out.includes("sk-secret"));
@@ -319,6 +321,21 @@ test("a consent given for one endpoint does not send to another", async () => {
   } finally {
     one.close();
     two.close();
+  }
+});
+
+test("a consent given for one path on a host does not send to another path on it", async () => {
+  const fake = await service();
+  try {
+    const root = fresh();
+    const shown = digestIn((await judge(root, { env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: fake.url } })).out);
+    const elsewhere = fake.url.replace("/v1/systemone", "/v1/other");
+    const { code, out } = await judge(root, { args: ["--consent", shown], env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: elsewhere, TYPESAFE_API_KEY: "sk-secret" } });
+    assert.equal(code, 1);
+    assert.ok(out.includes(elsewhere), "the run names the whole endpoint it would send to");
+    assert.equal(fake.seen.length, 0);
+  } finally {
+    fake.close();
   }
 });
 

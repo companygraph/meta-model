@@ -18,11 +18,11 @@ export declare function toWire(request: Request): {
 };
 /**
  * @param {Request[]} requests
- * @param {{ host?: string; model?: string }} [at]
+ * @param {{ url?: string; model?: string }} [at]
  * @returns {string}
  */
-export declare function digestOf(requests: Request[], { host, model }?: {
-    host?: string;
+export declare function digestOf(requests: Request[], { url, model }?: {
+    url?: string;
     model?: string;
 }): string;
 /**

@@ -39,20 +39,21 @@ export function toWire(request) {
   return { model: SERVICE.model, state: request.state, questions };
 }
 
-// What a yes given away from a terminal covers: the place the pages go, the model that reads
+// What a yes given away from a terminal covers: the whole endpoint the pages and the key go to,
+// scheme and path as well as host, the model that reads
 // them, and every request in the shape it leaves in, so an edited page, an upgraded rule or
 // another endpoint is another question to ask. Sorted by path, so the order the pages were read
 // in does not move it; the key is not in it, so a run without one shows the digest a run with
 // one checks.
 /**
  * @param {Request[]} requests
- * @param {{ host?: string; model?: string }} [at]
+ * @param {{ url?: string; model?: string }} [at]
  * @returns {string}
  */
-export function digestOf(requests, { host = endpoint().host, model = SERVICE.model } = {}) {
+export function digestOf(requests, { url = endpoint().href, model = SERVICE.model } = {}) {
   const sorted = [...requests].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
   const wire = sorted.map((r) => ({ path: r.path, ...toWire(r), model }));
-  return createHash("sha256").update(JSON.stringify({ host, model, wire })).digest("hex").slice(0, 16);
+  return createHash("sha256").update(JSON.stringify({ url, model, wire })).digest("hex").slice(0, 16);
 }
 
 /**
