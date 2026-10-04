@@ -151,7 +151,7 @@ export declare function adoptPlan({ tooling, present }: {
 }): InitPlan;
 /**
  * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[] }; workflow: string | null; present: Set<string> }} ask
- * @returns {{ writes: Map<string, string>; given: string[]; from: string; to: string }}
+ * @returns {{ writes: Map<string, string>; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
  */
 export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present }: {
     tooling: string;
@@ -166,6 +166,9 @@ export declare function adoptedUpgradePlan({ tooling, manifest, workflow, presen
     given: string[];
     from: string;
     to: string;
+} | {
+    refused: string;
+    writes?: undefined;
 };
 /**
  * @param {Map<string, string | Uint8Array>} files

@@ -854,7 +854,7 @@ test("a core newer than the checker is refused naming both pins, the manifest's 
   assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
 
-const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
+const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-judge", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
 
 test("init writes the skills, hashed into the manifest like the core, and tells how to run the checks", () => {
   const root = temp();
@@ -865,11 +865,23 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
   assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
-  assert.match(said, /-company and -consent/);
+  assert.match(said, /-company, -consent and -judge/);
   const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
   assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
   assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
+  assert.ok(agents.includes("`companygraph-judge`"), "AGENTS.md names the judge skill");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
+});
+
+test("the judge skill writes its report and reading to dist/judge/, the reading as findings with a fix each", () => {
+  const skill = fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-judge/SKILL.md"), "utf8");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>\.txt/, "the raw report goes to dist/, where every skill writes what is not committed");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>-read\.md/, "and the reading beside it");
+  assert.match(skill, /git check-ignore -q dist\/judge\//, "it checks dist/ is ignored before anything is sent");
+  assert.doesNotMatch(skill, /outside the repository|folder that holds the instance/, "nothing is written outside the repository");
+  for (const part of ["## Findings", "## False flags", "## Not checked"]) assert.ok(skill.includes(part), `the report has ${part}`);
+  assert.match(skill, /proposed fix/i);
+  assert.match(skill, /Change no entry/);
 });
 
 // A release walk ships what is in the package folder, and a package folder in the npx cache is

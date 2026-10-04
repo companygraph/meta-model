@@ -34,4 +34,5 @@ export type Flags = {
     range?: string;
     message?: string;
     since?: string;
+    consent?: string;
 };

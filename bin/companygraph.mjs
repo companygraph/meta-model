@@ -61,7 +61,7 @@ import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabula
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
  *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean; fix?: boolean;
  *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string;
- *   from?: string; range?: string; message?: string; since?: string;
+ *   from?: string; range?: string; message?: string; since?: string; consent?: string;
  * }} Flags
  */
 
@@ -91,6 +91,7 @@ commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
 ids: --backfill  --range <a>..<b>
 form: --fix
+judge: --consent <digest>
 `;
 
 // Every file under a folder of this release, keyed by its path inside that folder. Recursive, to
@@ -387,7 +388,7 @@ async function init(argv, { menu = false } = {}) {
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
-  console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company and -consent skills; export and surface need Python 3`);
+  console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company, -consent and -judge skills; export and surface need Python 3`);
   console.log(`  core ${JSON.parse(/** @type {string} */ (core.get("manifest.json"))).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   if (packNames.length) console.log(`  packs: ${packNames.join(", ")}, vendored beside it`);
   const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
@@ -434,6 +435,7 @@ async function upgrade(argv) {
       workflow: existsSync(workflowPath) ? read(workflowPath) : null,
       present: new Set(["pins.json"].filter((path) => existsSync(join(root, path)))),
     });
+    if ("refused" in adopted) throw new Error(adopted.refused);
     if (!adopted.writes.size) {
       console.log(`already on ${adopted.to}; nothing to do.`);
       return "nothing";
@@ -879,7 +881,12 @@ async function check(argv) {
  * @returns {Promise<number>}
  */
 async function judge(argv) {
-  const root = resolve(flags(argv)._[0] ?? ".");
+  const options = flags(argv);
+  // A digest is 16 hex characters; anything else, a folder written after the flag most often, is
+  // refused as what it is before the instance is read, rather than as a consent that changed.
+  if (options.consent !== undefined && !/^[0-9a-f]{16}$/.test(options.consent.trim().toLowerCase()))
+    throw new Error(`--consent takes the 16 hex characters of a digest judge printed, not ${options.consent}`);
+  const root = resolve(options._[0] ?? ".");
   const { instanceAt } = await import("../lib/history.mjs");
   const { questionsOf, reportOf, leftOutOf } = await import("../lib/questions.mjs");
   const judges = await import("./judges/typesafe.mjs");
@@ -888,6 +895,14 @@ async function judge(argv) {
   const count = questions.asked.reduce((n, r) => n + r.questions.length, 0);
   console.log(`judge: ${count} questions about ${questions.asked.length} pages of ${root}, from the writing rules of its vendored core ${instance.core ?? "at an unnamed version"}`);
   const key = process.env.TYPESAFE_API_KEY;
+  const digest = judges.digestOf(questions.asked);
+  const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
+  /** @param {string} verb */
+  const files = (verb) => {
+    console.log(`\n${verb} these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().href}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
+    for (const r of questions.asked) console.log(`  model/${r.path}`);
+    console.log(`digest: ${digest}`);
+  };
   if (!key) {
     for (const r of questions.asked) {
       console.log(`\nmodel/${r.path}`);
@@ -896,20 +911,27 @@ async function judge(argv) {
     }
     const left = leftOutOf(questions.skipped);
     if (left.length) console.log("\nleft out, for want of what they are about:\n" + left.join("\n"));
+    files("This would send");
     console.log(`\nno TYPESAFE_API_KEY: nothing was sent. These are the questions a run with the key would send to ${judges.SERVICE.name}.`);
     return 0;
   }
-  const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
-  console.log(`\nThis sends these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().host}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
-  for (const r of questions.asked) console.log(`  model/${r.path}`);
-  // The spec asks for a typed yes and no setting that skips it: a send to TypeSafe itself needs
-  // a person at a terminal, so an answer piped in, by a script or an agent, never sends a page.
-  // Piped answers count only where the tests point the tool at a fake service.
-  if (judges.isTypeSafe() && !process.stdin.isTTY) {
+  files("This sends");
+  // The spec asks for a question every run and no setting that skips it. At a terminal the person
+  // answers it there. Away from one, an agent may ask it in its own conversation and carry the
+  // owner's yes here as the digest it showed them, which covers exactly these bytes, this model
+  // and this endpoint; anything else piped in never sends a page to TypeSafe itself. Piped answers
+  // count only where the tests point the tool at a fake service.
+  if (options.consent !== undefined) {
+    const given = options.consent.trim().toLowerCase();
+    if (given !== digest) {
+      console.error(`What would be sent has changed since the consent for ${given}: its digest is now ${digest}. Nothing was sent.`);
+      return 1;
+    }
+  } else if (judges.isTypeSafe() && !process.stdin.isTTY) {
     console.log(`${judges.SERVICE.name} sends only on a yes typed at a terminal, and this is not one. Nothing was sent.`);
+    console.log(`Ask the owner, showing the files above and this digest; on their yes, pass --consent ${digest}.`);
     return 0;
-  }
-  if (!yes(await ask(prompt("Send them?", "y/N")))) {
+  } else if (!yes(await ask(prompt("Send them?", "y/N")))) {
     console.log("Nothing was sent.");
     return 0;
   }
