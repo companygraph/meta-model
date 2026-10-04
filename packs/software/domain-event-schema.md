@@ -35,7 +35,9 @@ id: 01a0f94d-fa9a-7907-ae3d-621f34d6e909
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Attribute` | Yes | string | The value's name, as the context's people say it |
-| `Type` | Yes | string | A plain type such as `duration` or `timestamp`, or the name of a concept design in the same context |
+| `Term` | No | ref → concept-design | A concept design of the same context, of either kind, by its canonical name, where the value is one |
+| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `timestamp`, `duration`, `version`, `hash`, `path`, `id`, `URL`, `file`, `language` or `map`. A plain type, where the value is no term; its unit, or what it is of, goes in the Description. |
+| `Many` | No | enum | `yes`. The value is a list of what `Term` or `Type` names; blank for one. |
 | `Description` | No | string | What the value says |
 
 `## References` is a table with these columns:
@@ -47,7 +49,7 @@ id: 01a0f94d-fa9a-7907-ae3d-621f34d6e909
 
 ## Purpose
 
-A domain event answers "what happened that other parts of the domain care about?" It is Evans's and Vernon's domain event, named in the past tense. It is a type and not a row of its aggregate because other contexts consume it and feature designs name it, and a row cannot be named from outside its page. A payload type that names a term names one of the event's own context, and a consumer translates it into its own language.
+A domain event answers "what happened that other parts of the domain care about?" It is Evans's and Vernon's domain event, named in the past tense. It is a type and not a row of its aggregate because other contexts consume it and feature designs name it, and a row cannot be named from outside its page. A payload value names a term of the event's own context in `Term`, of either kind, or a plain type in `Type`, exactly one of the two, and a consumer translates a term into its own language.
 
 ## Writing rules
 

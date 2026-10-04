@@ -39,7 +39,9 @@ A concept design is a term of one context's language and means nothing outside i
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Attribute` | Yes | string | The attribute's name, as the context's people say it |
-| `Type` | Yes | string | A plain type such as `Money` or `date`, or the name of a value-object concept design in the same context |
+| `Term` | No | ref → concept-design | A value object of the same context, by its canonical name, where the attribute is one; an entity is a relation |
+| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `timestamp`, `duration`, `version`, `hash`, `path`, `id`, `URL`, `file`, `language` or `map`. A plain type, where the attribute is no term; its unit, or what it is of, goes in the Description. |
+| `Many` | No | enum | `yes`. The attribute is a list of what `Term` or `Type` names; blank for one. |
 | `Description` | No | string | What the attribute says |
 
 `## Relations` is a table with these columns:
@@ -59,7 +61,7 @@ A concept design is a term of one context's language and means nothing outside i
 
 ## Purpose
 
-A concept design answers "what does this word mean here?" It is one term of a bounded context's ubiquitous language (Evans), and an entity or a value object by its kind. It may refine an enterprise concept of core, which says what the thing is for the whole company; the concept design says what it is inside one context, which is narrower and may differ from another context's term of the same name. A relation is written on one side only, as core's concept relations are, so no two concept designs each name the other in `## Relations`. An attribute whose type is a value object names that value object's concept design exactly.
+A concept design answers "what does this word mean here?" It is one term of a bounded context's ubiquitous language (Evans), and an entity or a value object by its kind. It may refine an enterprise concept of core, which says what the thing is for the whole company; the concept design says what it is inside one context, which is narrower and may differ from another context's term of the same name. A relation is written on one side only, as core's concept relations are, so no two concept designs each name the other in `## Relations`. An attribute names a value object of its own context in `Term` or a plain type in `Type`, exactly one of the two, and an entity it would name is a relation.
 
 ## Writing rules
 
