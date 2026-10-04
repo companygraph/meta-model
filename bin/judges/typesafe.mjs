@@ -5,6 +5,7 @@
 // because the band the report flags by is measured against one model, and a newer one is
 // measured again before it is named here.
 /** @import { Request, Answers } from "../../lib/questions.mjs" */
+import { createHash } from "node:crypto";
 
 export const SERVICE = { name: "TypeSafe", model: "jev-1.13.0" };
 const URL_DEFAULT = "https://api.typesafe.ai/v1/systemone";
@@ -36,6 +37,23 @@ export function toWire(request) {
           instructions: { bullet: q.bullet, question: `\`bullet\` is a bullet of the page's "## ${q.section}", which groups its bullets under headings that name these options. Under which does it belong?` },
           criteria: q.options };
   return { model: SERVICE.model, state: request.state, questions };
+}
+
+// What a yes given away from a terminal covers: the whole endpoint the pages and the key go to,
+// scheme and path as well as host, the model that reads
+// them, and every request in the shape it leaves in, so an edited page, an upgraded rule or
+// another endpoint is another question to ask. Sorted by path, so the order the pages were read
+// in does not move it; the key is not in it, so a run without one shows the digest a run with
+// one checks.
+/**
+ * @param {Request[]} requests
+ * @param {{ url?: string; model?: string }} [at]
+ * @returns {string}
+ */
+export function digestOf(requests, { url = endpoint().href, model = SERVICE.model } = {}) {
+  const sorted = [...requests].sort((a, b) => (a.path < b.path ? -1 : a.path > b.path ? 1 : 0));
+  const wire = sorted.map((r) => ({ path: r.path, ...toWire(r), model }));
+  return createHash("sha256").update(JSON.stringify({ url, model, wire })).digest("hex").slice(0, 16);
 }
 
 /**

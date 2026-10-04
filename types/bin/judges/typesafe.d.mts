@@ -1,4 +1,3 @@
-/** @import { Request, Answers } from "../../lib/questions.mjs" */
 import type { Request, Answers } from "../../lib/questions.mjs";
 export declare const SERVICE: {
     name: string;
@@ -17,6 +16,15 @@ export declare function toWire(request: Request): {
     };
     questions: Record<string, object>;
 };
+/**
+ * @param {Request[]} requests
+ * @param {{ url?: string; model?: string }} [at]
+ * @returns {string}
+ */
+export declare function digestOf(requests: Request[], { url, model }?: {
+    url?: string;
+    model?: string;
+}): string;
 /**
  * @param {Request} request
  * @param {unknown} body
