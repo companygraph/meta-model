@@ -894,6 +894,8 @@ test("the judge skill reads judge/known.md before the flags and proposes rows on
   assert.match(skill, /superseding decision/, "a finding on a standing decision says how it is fixed");
   assert.match(skill, /never compute/i, "the hash is copied from the report, never computed");
   assert.match(skill, /on the owner's word/i);
+  assert.match(skill, /one per flagged page/, "an accepted finding is proposed as one row per flagged page");
+  assert.match(skill, /did not raise/, "a lapsed row whose flag did not come back is proposed for removal");
 });
 
 // A release walk ships what is in the package folder, and a package folder in the npx cache is
