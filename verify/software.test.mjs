@@ -91,3 +91,33 @@ test("a label that is not letters, digits and hyphens fails", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /aggregates\/invoice\.md: "INV B2" under ## Invariants is no label/);
 });
+
+const VOIDED = `${BC}/billing/domain-events/invoice-voided.md`;
+const withCommands = (table, transitions = "| From | Command | To |\n| --- | --- | --- |\n| | Issue invoice | Issued |\n| Issued | Void invoice | Voided |\n") => (m) => {
+  m.set(VOIDED, page("emitted-by: Invoice\n", "# Invoice voided\n\n> An issued invoice was voided.\n"));
+  return m.set(AGG, m.get(AGG) + `\n## Handled commands\n\n${table}\n## State transitions\n\n${transitions}`);
+};
+const ROWS3 = "| Command | Emits | When | Description |\n| --- | --- | --- | --- |\n| Issue invoice | Invoice issued | The period is closed, by INV-B1 | Asks for an invoice |\n| Void invoice | Invoice voided | | Refuses a paid invoice |\n| Reopen invoice | | | |\n";
+
+test("an aggregate whose commands name their events and whose transitions are a table passes", () => {
+  assert.deepEqual(failures(tree(withCommands(ROWS3))), []);
+});
+
+test("an Emits naming an event of another context fails, as R5", () => {
+  const f = failures(tree((m) => {
+    m.set(`${BC}/notification/concept-designs/receipt.md`, page("kind: entity\n", "# Receipt\n\n> What a customer was told.\n"));
+    m.set(`${BC}/notification/aggregates/receipt.md`, page("root: Receipt\n", "# Receipt\n\n> A receipt is kept whole.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-N1 | A receipt names one invoice. |\n"));
+    m.set(`${BC}/notification/domain-events/customer-told.md`, page("emitted-by: Receipt\n", "# Customer told\n\n> A customer was told.\n"));
+    return withCommands(ROWS3.replace("| Invoice voided |", "| Customer told |"))(m);
+  }));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /Emits/);
+  assert.match(f[0], /is not one of its bounded-context's own/);
+});
+
+test("a Handled commands table without Emits and When fails, naming both column sets", () => {
+  const f = failures(tree(withCommands("| Command | Description |\n| --- | --- |\n| Issue invoice | Asks for an invoice |\n")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /columns are Command\|Description/);
+  assert.match(f[0], /schema declares Command\|Emits\|When\|Description/);
+});
