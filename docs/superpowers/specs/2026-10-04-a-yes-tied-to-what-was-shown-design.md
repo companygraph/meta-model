@@ -10,7 +10,7 @@ The validate skill already reads a judge report where one was printed for the co
 
 ## The digest
 
-The digest is the first sixteen hex characters of a SHA-256 over what a run would send: the endpoint's host, the judge's model, and every page's request in its wire shape, ordered by the page's path. The wire shape is `toWire`'s, so the page's file, its schema's purpose and every question asked of it are inside. A page edited, a rule changed by an upgrade, a page added or left out, another model named or another endpoint set all change the digest. The key is not part of it, so it is the same with and without one.
+The digest is the first sixteen hex characters of a SHA-256 over what a run would send: the whole endpoint, scheme, host and path, the judge's model, and every page's request in its wire shape, ordered by the page's path. The wire shape is `toWire`'s, so the page's file, its schema's purpose and every question asked of it are inside. A page edited, a rule changed by an upgrade, a page added or left out, another model named or another endpoint set all change the digest. The key is not part of it, so it is the same with and without one.
 
 Every run that lists what it would send prints the digest under the list: the run without a key, which today prints only the questions, now also prints the files, the token estimate and the digest after them; the run with a key prints the digest above its `Send them?` prompt.
 
@@ -29,7 +29,7 @@ The 2026-09-26 spec's paragraph gains one sentence: the question may be asked by
 1. Read `.companygraph/manifest.json` for `tooling` and the core version.
 2. Run `npx github:companygraph/meta-model#v<tooling> judge` without the key, and report the number of questions and pages, the service, the model, the token estimate and the digest.
 3. Ask the owner whether to send, naming all of that. The skill asks every run; it never assumes a yes and never carries one over from an earlier run or another digest.
-4. On a yes, with `TYPESAFE_API_KEY` set, run `judge --consent <digest>` and write its output to `judge-<YYYY-MM-DD-HHMM>.txt` in the folder that holds the instance, outside the repository, so a report that quotes the pages is never committed. Without the key, say so and stop. On a refused digest, report it and ask again over the new one.
+4. On a yes, with `TYPESAFE_API_KEY` set, run `judge --consent <digest>` and write its output to `judge-<YYYY-MM-DD-HHMM>.txt` in the folder that holds the instance, outside the repository, so a report that quotes the pages is never committed. Without the key, say so and stop. On a refused digest, go back to step 2 and ask again over the new file list, counts and digest, never over a digest alone.
 5. Read the report: the pages and rules it flags with `!` first, then, while it says its probabilities are unmeasured, the lowest verdicts it marks with `?`. For each, read the page and the rule and judge whether the flag stands.
 
 The report to the owner lists the flags that stand, each with its rule, its file and one line of why, then the false flags, one line each, then **Not checked:** naming what was not read. The skill changes no entry: a fix is proposed to the owner and made on their word.
