@@ -20,7 +20,7 @@ Nothing owns a stored item and a stored item owns nothing: one key is set by sev
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
 | `mechanism` | Yes | enum | `local-storage`, `session-storage`, `cookie`, `indexeddb` or `cache`. How the browser keeps it: the two Web Storage areas, an HTTP cookie, an IndexedDB database or the Cache API (WHATWG HTML, Storage Standard). |
-| `necessity` | Yes | enum | `strictly-necessary` or `optional`. Whether the service the visitor asked for needs it (ePrivacy Directive Art. 5(3)). What follows from it differs by jurisdiction and is the law's. |
+| `necessity` | Yes | enum | `strictly-necessary` or `optional`. Whether the service the visitor asked for needs it (ePrivacy Directive Art. 5(3)). What follows from it differs by jurisdiction and is the law's, which the instance's rules cite. |
 | `duration` | No | string | How long it stays, where the mechanism does not decide it |
 | `surfaces` | Yes | array of ref → surface | The surfaces that set it, each the H1 of a file in `surfaces/` |
 | `set-by` | No | ref? → data-processor | The party that sets or reads it, where that is not the company. A name that resolves is a processor; one that does not stays a name. |

@@ -1,7 +1,8 @@
 // The data-processor, processing-activity and stored-item types, held by the instance checks
-// through their real schemas: the three files are read from disk so the test fails if a schema
-// and the checks part. The schemas they reference are bare, as rule-risk-control.test.mjs has
-// them, because only these three types' own failures are asserted.
+// through their real schemas: the three files are read from disk, and the passing case holds them
+// to no failure the instance checks raise against a schema, such as an enum that lists no tokens.
+// Their shape is verify's to hold. The schemas they reference are bare, as rule-risk-control.test.mjs
+// has them, because only these three types' own failures are asserted.
 import test from "node:test";
 import assert from "node:assert/strict";
 import fs from "node:fs";
@@ -55,10 +56,14 @@ const tree = ({ proc = PROC_FM, procName = "Lantern Mail", procSections = PROC_S
 const failuresOf = (opts, ...words) =>
   checkInstance(tree(opts), { core: "meta/core", model: "model" }).failures
     .filter((f) => /\/(data-processors|processing-activities|stored-items)\//.test(f) && words.every((w) => f.includes(w)));
+const schemaFailures = () =>
+  checkInstance(tree(), { core: "meta/core", model: "model" }).failures
+    .filter((f) => /meta\/core\/(data-processor|processing-activity|stored-item)-schema\.md/.test(f));
 const swap = (lines, from, to) => lines.map((l) => (l === from ? to : l));
 
 test("a processor, an activity naming it and a stored item naming both, with every required field and section, pass", () => {
   assert.deepEqual(failuresOf(), []);
+  assert.deepEqual(schemaFailures(), []);
 });
 
 test("a processor with no Transfers section passes", () => {
@@ -126,9 +131,9 @@ test("a Processors row naming a source fails, and does not resolve to the source
   assert.equal(failuresOf({ actSections: actSections("Local") }, "\"Local\"").length, 1);
 });
 
-test("a mechanism written as the code writes it fails, naming the value", () => {
+test("a mechanism written as the code writes it fails, naming the value and the permitted ones", () => {
   const item = swap(ITEM_FM, "mechanism: session-storage", "mechanism: sessionStorage");
-  assert.equal(failuresOf({ item }, "sessionStorage").length, 1);
+  assert.equal(failuresOf({ item }, "sessionStorage", "`local-storage`", "`session-storage`").length, 1);
 });
 
 test("a stored item without necessity fails", () => {

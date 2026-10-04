@@ -55,7 +55,7 @@ A processing activity is one thing the company does with personal data, for one 
 ## Writing rules
 
 - The tagline states one purpose, as the person whose data it is would understand it.
-- `legal-basis` names one ground; an activity that rests on two is two activities.
+- The page is one activity for one ground: processing that rests on two grounds in `legal-basis` is written as two activities.
 - Each item of `## Data subjects` names a category of people, never a person.
 - Each item of `## Personal data` names a category of data, not a field of a database, and says so where it is a special category (GDPR Art. 9; DSG Art. 5 lit. c).
 - Each row of `## Processors` says in `Receives` what reaches that processor and nothing more, so a processor that sees part of the data is never listed as seeing all of it.

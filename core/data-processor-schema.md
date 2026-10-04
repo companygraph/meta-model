@@ -19,7 +19,7 @@ Nothing owns a data processor and a data processor owns nothing: one vendor serv
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
-| `legal-name` | Yes | string | The legal entity the company's contract is with, which may differ from the H1 |
+| `legal-name` | Yes | string | The legal entity the company's contract is with, which may differ from the H1 and from one region to another |
 | `countries` | Yes | array | Where the processor processes and stores the data, each an ISO 3166-1 alpha-2 code |
 | `retention` | No | string | How long the processor keeps what it receives, under its own terms |
 | `sub-processor-authorization` | No | enum | `general` or `specific`. Whether the contract lets the processor add sub-processors after notice, or only with the company's approval of each (GDPR Art. 28(2); DSG Art. 9(3)). |
