@@ -328,6 +328,16 @@ test("measured, a verdict below the band is flagged and a rule near even for mos
   assert.match(r3, /asked of 1, median 0\.50, near even for 1 — cannot be judged as written; a finding against the schema$/);
 });
 
+test("given a hash, each verdict line carries it between the rule's number and its words, and a pick line does not", () => {
+  const hashOf = (r, q) => `${r.path[0]}${q.id}`.padEnd(16, "0");
+  const lines = reportOf(asked, answers, { band: { low: 0.4, high: 0.6, pick: 0.7 }, hashOf });
+  assert.ok(lines.some((l) => /^ {2}! 0\.20 {2}r2 {2}ar20{13} {2}Two\.$/.test(l)));
+  assert.ok(lines.some((l) => /^ {2}! 0\.80 {2}g1 {2}"Split a service\."/.test(l)), "a pick keeps its line, since no row covers a pick");
+  const unmeasured = reportOf(asked, answers, { band: null, hashOf });
+  assert.ok(unmeasured.some((l) => /^ {2}\? 0\.20 {2}r2 {2}ar20{13} {2}Two\.$/.test(l)));
+  assert.ok(reportOf(asked, answers, { band: { low: 0.4, high: 0.6, pick: 0.7 } }).some((l) => /^ {2}! 0\.20 {2}r2 {2}Two\.$/.test(l)), "without a hash the line is as before");
+});
+
 test("a rule's summary counts the pages it was left out of, and a rule asked of none still has its line", () => {
   const skipped = [
     { path: "x.md", type: "experience", id: "r1", rule: "One.", without: "without `## Ending`" },

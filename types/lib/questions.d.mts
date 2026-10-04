@@ -153,9 +153,10 @@ export declare const LOWEST = 3;
 /**
  * @param {Questions} questions
  * @param {Map<string, Answers | Failed>} answers
- * @param {{ band?: Band | null }} [options]
+ * @param {{ band?: Band | null; hashOf?: (request: Request, question: RuleQuestion) => string }} [options]
  * @returns {string[]}
  */
-export declare function reportOf({ asked, notAsked, skipped }: Questions, answers: Map<string, Answers | Failed>, { band }?: {
+export declare function reportOf({ asked, notAsked, skipped }: Questions, answers: Map<string, Answers | Failed>, { band, hashOf }?: {
     band?: Band | null;
+    hashOf?: (request: Request, question: RuleQuestion) => string;
 }): string[];
