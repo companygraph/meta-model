@@ -388,7 +388,7 @@ async function init(argv, { menu = false } = {}) {
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
-  console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company and -consent skills; export and surface need Python 3`);
+  console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company, -consent and -judge skills; export and surface need Python 3`);
   console.log(`  core ${JSON.parse(/** @type {string} */ (core.get("manifest.json"))).version}, vendored under ${given.schemas ?? "meta"}/core/`);
   if (packNames.length) console.log(`  packs: ${packNames.join(", ")}, vendored beside it`);
   const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);

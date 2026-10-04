@@ -27,7 +27,7 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
 4. Read each schema's `## Writing rules` and judge every entity of that type against them, one
    rule at a time. Nothing mechanical reaches these — they are written to be checkable by an
    agent reading an entity, and this pass is the only thing that checks them.
-   Where `companygraph judge` printed a report for this commit, read first the pages and rules
+   Where `companygraph-judge` produced a report for this commit, read first the pages and rules
    it lists — those it flags with `!`, or, while it says its probabilities are unmeasured, the
    lowest verdicts it marks with `?` — and then every other page as before. The report is
    advisory: it never stands in for this reading, and a page it does not list is still read.
