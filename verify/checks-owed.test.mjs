@@ -145,6 +145,19 @@ test("a table in the old three columns is one column finding and nothing more", 
   ]);
 });
 
+test("a table only partly moved to the new columns is one column finding and nothing more", () => {
+  const partly = "\n## Attributes\n\n| Attribute | Term | Type | Description |\n| --- | --- | --- | --- |\n| A0 | Invoice | string | |\n";
+  assert.deepEqual(typeCells(billing(design("billing", "Line", "value object", partly))), [
+    `${BC}/billing/concept-designs/line.md: "## Attributes" columns are Attribute|Term|Type|Description; the schema declares Attribute|Term|Type|Many|Description`,
+  ]);
+});
+
+test("an entity written in backticks is one finding, the reference that does not resolve as written", () => {
+  const f = typeCells(line([["`Invoice`"]]));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /says "`Invoice`", which names no entity in model\/; a declared reference must resolve, and the concept-design it matches here is "Invoice" \(R4\)$/);
+});
+
 test("a row filling both Term and Type fails, and so does one filling neither", () => {
   assert.deepEqual(typeCells(line([["Amount", "string"]])), [
     `${BC}/billing/concept-designs/line.md: the "## Attributes" row "A0" fills \`Term\` and \`Type\`; a row fills exactly one of them (R16)`,
