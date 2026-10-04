@@ -166,6 +166,12 @@ test("a Term naming a term of another context fails", () => {
   assert.match(f[0], /line\.md: `Term` in "## Attributes" says "Posting", which is not one of its bounded-context's own.*\(R5\)$/);
 });
 
+test("an attribute naming an entity of its own context fails, since an entity is a relation", () => {
+  assert.deepEqual(typeCells(line([["Invoice"]])), [
+    `${BC}/billing/concept-designs/line.md: \`Term\` in "## Attributes" names "Invoice", a concept-design of kind \`entity\`; it names one of kind \`value object\` (R16)`,
+  ]);
+});
+
 test("a Type off the list fails, and so does a Many other than yes", () => {
   assert.deepEqual(typeCells(line([["", "strng"]])), [
     `${BC}/billing/concept-designs/line.md: \`Type\` in "## Attributes" is "strng", and concept-design-schema.md permits \`string\`, \`number\`, \`boolean\`, \`date\`, \`timestamp\`, \`duration\`, \`version\`, \`hash\`, \`path\`, \`id\`, \`URL\`, \`file\`, \`language\`, \`map\` (R8)`,
