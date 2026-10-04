@@ -33,11 +33,11 @@ The two `Type` columns are the only holes. The remaining string fields that look
 | --- | --- | --- | --- |
 | `Attribute` | Yes | string | The value's name, as the context's people say it (unchanged) |
 | `Term` | No | ref → concept-design | A concept design of the same context, by its canonical name. In `## Attributes`, one of kind `value object`, since an entity is a relation. |
-| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `timestamp`, `duration`, `version`, `commit hash`, `path`, `id`, `URL` or `file`. A plain type, where the value is not a term: a `date` is a day, a `timestamp` a moment and a `duration` a length of time. |
+| `Type` | No | enum | `string`, `number`, `boolean`, `date`, `timestamp`, `duration`, `version`, `hash`, `path`, `id`, `URL`, `file`, `language` or `map`. A plain type, where the value is not a term: a `date` is a day, a `timestamp` a moment and a `duration` a length of time; a `language` is a language tag, and a `map` holds named values whose names are not fixed. |
 | `Many` | No | enum | `yes`. The value is a list of what `Term` or `Type` names; blank for one. |
 | `Description` | No | string | What the value says, and its unit where it has one (unchanged) |
 
-Exactly one of `Term` and `Type` is filled on a row. A unit is not a type: `input-equivalent tokens` becomes `number`, with "in input-equivalent tokens" in the Description. A `list of` prefix is no longer read anywhere; `Many` says it.
+Exactly one of `Term` and `Type` is filled on a row. A unit is not a type, and neither is what a value is of: `input-equivalent tokens` becomes `number` with "in input-equivalent tokens" in the Description, a `commit hash` becomes `hash` with the commit in the Description, `` `en` or `de` `` becomes `language` with the tags it may take in the Description, and `map of string` becomes `map` with what its values are in the Description. A `list of` prefix is no longer read anywhere; `Many` says it.
 
 The schemas' Purpose and writing-rule prose that speaks of "a payload type that names a term" is reworded for the two columns, with the meaning unchanged: a payload's term may be of either kind, and an attribute's term is a value object.
 
@@ -58,9 +58,9 @@ The plugin, the MCP server and the sites read the vendored schemas. Once an inst
 ## Rollout
 
 1. This spec, the plan and the build, in this repository: the two schemas, the checks and their tests, and a line in `packs/software/README.md`. A release follows, and it is the owner's.
-2. The companygraph instance takes the release with `companygraph upgrade`, and its rows are migrated in the same pull request by a script that writes each cell's value into its new column: a term to `Term`, a listed plain type to `Type`, `list of X` to `X` with `Many: yes`, and a unit to `number` with the unit moved into the Description. A value it cannot place stops the script, and is brought to the owner one at a time with a proposal: the plurals `checks`, `rules`, `schemas`, `entities` and `edges`, and `` `en` or `de` ``, `map of string`, `list` and `hash`. The plugin's completion on `Term` is confirmed in the scratch vault over CDP.
+2. The companygraph instance takes the release with `companygraph upgrade`, and its rows are migrated in the same pull request by a script that writes each cell's value into its new column: a term to `Term`, a listed plain type to `Type`, `list of X` to `X` with `Many: yes`, and a unit to `number` with the unit moved into the Description. A value it cannot place stops the script, and is brought to the owner one at a time with a proposal: the plurals `checks`, `rules`, `schemas`, `entities` and `edges`, and `list`. The plugin's completion on `Term` is confirmed in the scratch vault over CDP.
 3. robertblust and guestgraph hold no bounded contexts and have nothing to migrate. Each takes the release at its next re-pin.
 
 ## What it does not do
 
-It does not add plain types to the list beyond the twelve above, nor a unit vocabulary. It does not change `## Relations`, which already draws its edges, nor the free-text fields above. It does not touch an instance's own schemas.
+It does not add plain types to the list beyond the fourteen above, nor a unit vocabulary. It does not change `## Relations`, which already draws its edges, nor the free-text fields above. It does not touch an instance's own schemas.
