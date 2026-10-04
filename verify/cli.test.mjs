@@ -882,6 +882,8 @@ test("the judge skill writes its report and reading to dist/judge/, the reading 
   for (const part of ["## Findings", "## False flags", "## Not checked"]) assert.ok(skill.includes(part), `the report has ${part}`);
   assert.match(skill, /proposed fix/i);
   assert.match(skill, /Change no entry/);
+  assert.match(skill, /forecast cost/, "the question names what a run will cost");
+  assert.match(skill, /`sent:` line/, "the reading names what the run cost");
 });
 
 // A release walk ships what is in the package folder, and a package folder in the npx cache is

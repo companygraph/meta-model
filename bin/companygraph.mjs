@@ -896,10 +896,12 @@ async function judge(argv) {
   console.log(`judge: ${count} questions about ${questions.asked.length} pages of ${root}, from the writing rules of its vendored core ${instance.core ?? "at an unnamed version"}`);
   const key = process.env.TYPESAFE_API_KEY;
   const digest = judges.digestOf(questions.asked);
-  const size = questions.asked.reduce((n, r) => n + JSON.stringify(judges.toWire(r)).length, 0);
+  const forecast = judges.forecastOf(questions.asked);
+  /** @param {number} usd */
+  const dollars = (usd) => `USD ${usd.toFixed(3)}`;
   /** @param {string} verb */
   const files = (verb) => {
-    console.log(`\n${verb} these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().href}, ${judges.SERVICE.model}), about ${Math.ceil(size / 4)} tokens in all:`);
+    console.log(`\n${verb} these files of model/, whole, with the purposes of their schemas, to ${judges.SERVICE.name} (${judges.endpoint().href}, ${judges.SERVICE.model}), about ${forecast.tokens} input tokens in ${forecast.requests} requests, about ${dollars(forecast.usd)}:`);
     for (const r of questions.asked) console.log(`  model/${r.path}`);
     console.log(`digest: ${digest}`);
   };
@@ -938,12 +940,14 @@ async function judge(argv) {
   /** @type {Map<string, import("../lib/questions.mjs").Answers | { error: string }>} */
   const answers = new Map();
   let refused = false;
+  // What the service counted, request by request, against the forecast the question named.
+  const sent = { requests: 0, tokens: 0 };
   const queue = [...questions.asked];
   // Four at a time: well inside the service's request rate, and a few hundred pages in minutes.
   await Promise.all(Array.from({ length: 4 }, async () => {
     for (let r = queue.shift(); r && !refused; r = queue.shift()) {
       try {
-        answers.set(r.path, await judges.ask(r, { key }));
+        answers.set(r.path, await judges.ask(r, { key, onUsage: (u) => { sent.requests++; sent.tokens += u.input_tokens ?? 0; } }));
       } catch (error) {
         if (error instanceof judges.KeyRefused) refused = true;
         answers.set(r.path, { error: /** @type {Error} */ (error).message });
@@ -955,6 +959,7 @@ async function judge(argv) {
     return 1;
   }
   console.log("");
+  console.log(`sent: ${sent.requests} requests, ${sent.tokens} input tokens, ${dollars(judges.costOf(sent.tokens))}, against a forecast of ${dollars(forecast.usd)}`);
   for (const line of reportOf(questions, answers)) console.log(line);
   return 0;
 }
