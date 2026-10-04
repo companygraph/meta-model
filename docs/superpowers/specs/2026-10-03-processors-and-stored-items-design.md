@@ -56,7 +56,7 @@ Sections: `## Own purposes` (optional: what it does with the data for itself, wh
 
 `## Transfers` says, for each jurisdiction whose law asks, what makes the disclosure abroad lawful. Its columns are `Jurisdiction` (enum: `eu`, `ch` or `uk`) and `Safeguard` (string: the instrument as its law names it, such as "EU–US Data Privacy Framework" or "standard contractual clauses, module two, with the Swiss addendum"). A processor whose `countries` all lie where the company's law needs no safeguard has no rows.
 
-Writing rules. The `>` line says what the processor does for the company, not what the vendor sells. `countries` lists where the data is processed and stored, not where the vendor is incorporated. `## Own purposes` names each purpose the vendor decides for itself, in the words of its terms, because for that processing it is a controller and not the company's processor (GDPR Art. 28(10); EDPB 07/2020). `retention` is the vendor's figure in the vendor's words; the company's own retention is the activity's. The vendor's list of its sub-processors is a row of `## References`, never a page of the model: it is the vendor's to keep, and the vendor's duty to announce changes to it.
+Writing rules. The `>` line says what the processor does for the company, not what the vendor sells. `countries` lists where the data is processed and stored, not where the vendor is incorporated. `## Own purposes` names each purpose the vendor decides for itself, in the words of its terms, because for that processing it is a controller and not the company's processor (GDPR Art. 28(10); EDPB 07/2020). `retention` is the vendor's figure in the vendor's words; the company's own retention is the activity's. The vendor's list of its sub-processors is a row of `## References`, because it is the vendor's to keep, and the vendor's duty to announce changes to it.
 
 ### processing-activity
 
@@ -89,7 +89,7 @@ One thing a surface keeps on a visitor's device under one name (ePrivacy Directi
 
 Sections: `## References` (optional).
 
-Writing rules. The H1 is the key as the code writes it, character for character, so a check can compare the keys a surface sets with the model by name. The `>` line says what the item holds and why, in the words a privacy page would use. `duration` is absent for `session-storage`, which ends with the tab, and present for anything that outlives it, stated as the code sets it or as "until the visitor clears it". `set-by` is absent for an item the company's own code sets.
+Writing rules. The H1 is the key as the code writes it, character for character, so a check can compare the keys a surface sets with the model by name. The `>` line says what the item holds and why, in the words a privacy page would use. The page leaves `duration` out for `session-storage`, which ends with the tab, and states it for anything that outlives it, as the code sets it or as "until the visitor clears it". The page leaves `set-by` out for an item the company's own code sets.
 
 ## The decisions, and why
 
