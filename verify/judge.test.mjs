@@ -9,7 +9,7 @@ import path from "node:path";
 import http from "node:http";
 import { execFileSync, spawn } from "node:child_process";
 import { fileURLToPath } from "node:url";
-import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET } from "../bin/judges/typesafe.mjs";
+import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf } from "../bin/judges/typesafe.mjs";
 
 const request = {
   path: "a.md", type: "experience", name: "A", state: { purpose: "P.", entity: "# A\n" },
@@ -41,6 +41,19 @@ test("a rule is a noul carrying the rule verbatim, a bullet a choice over the op
 test("the answers come back in the module's own shape, and a missing one is refused", () => {
   assert.deepEqual(fromWire(request, body), { r1: { p: 0.83 }, g1: { pick: "Delivery", probabilities: { Delivery: 0.9, Results: 0.1 } } });
   assert.throws(() => fromWire(request, { answers: { r1: body.answers.r1 } }), /gave no choice for g1/);
+});
+
+test("the digest covers what would be sent and nothing else: the place, the model and every page's request", () => {
+  const other = { ...request, path: "b.md", state: { purpose: "P.", entity: "# B\n" } };
+  const at = { host: "api.example", model: "jev-x" };
+  const d = digestOf([request, other], at);
+  assert.match(d, /^[0-9a-f]{16}$/);
+  assert.equal(digestOf([other, request], at), d, "the order pages are read in does not move it");
+  assert.notEqual(digestOf([request, { ...other, state: { ...other.state, entity: "# B\nedited\n" } }], at), d, "an edited page moves it");
+  assert.notEqual(digestOf([request, { ...other, questions: [{ id: "r1", kind: "rule", rule: "Another rule." }] }], at), d, "a changed rule moves it");
+  assert.notEqual(digestOf([request], at), d, "a page left out moves it");
+  assert.notEqual(digestOf([request, other], { ...at, host: "elsewhere.example" }), d, "another place moves it");
+  assert.notEqual(digestOf([request, other], { ...at, model: "jev-y" }), d, "another model moves it");
 });
 
 test("a rate limit is retried after the time the service asks for, then answered", async () => {
@@ -79,8 +92,8 @@ const withoutKey = () => {
 };
 // Spawned, never execFileSync: the fake service below answers on this process's event loop,
 // which a synchronous child would block.
-const judge = (root, { input = "", env }) => new Promise((done, fail) => {
-  const child = spawn(process.execPath, [cli, "judge", root], { env });
+const judge = (root, { input = "", env, args = [] }) => new Promise((done, fail) => {
+  const child = spawn(process.execPath, [cli, "judge", root, ...args], { env });
   let out = "", err = "";
   child.stdout.on("data", (d) => (out += d));
   child.stderr.on("data", (d) => (err += d));
@@ -88,6 +101,7 @@ const judge = (root, { input = "", env }) => new Promise((done, fail) => {
   child.on("close", (code) => done({ code, out, err }));
   child.stdin.end(input);
 });
+const digestIn = (out) => out.match(/^digest: ([0-9a-f]{16})$/m)?.[1];
 // A fake TypeSafe: every noul answered 0.9, every choice its first option.
 const service = async (status = 200) => {
   const seen = [];
@@ -113,6 +127,9 @@ test("with no key, judge prints the questions and sends nothing", async () => {
   assert.match(out, /^judge: \d+ questions about \d+ pages of /m);
   assert.match(out, /^model\/identity\.md$/m);
   assert.match(out, /^ {2}r1 {2}\S/m);
+  assert.match(out, /^This would send these files of model\/, whole, with the purposes of their schemas, to TypeSafe \(api\.typesafe\.ai, jev-1\.13\.0\), about \d+ tokens in all:$/m);
+  assert.match(out, /^ {2}model\/identity\.md$/m);
+  assert.ok(digestIn(out), "the keyless run prints the digest");
   assert.match(out, /no TYPESAFE_API_KEY: nothing was sent/);
 });
 
@@ -236,6 +253,84 @@ test("a send to TypeSafe itself takes a yes typed at a terminal, never a piped o
   assert.match(out, /sends only on a yes typed at a terminal/);
   assert.match(out, /Nothing was sent\./);
   assert.doesNotMatch(out, /judge: advisory/);
+  assert.match(out, new RegExp(`^An agent that asked the owner passes their yes as --consent ${digestIn(out)}\\.$`, "m"));
+});
+
+test("the digest a run without a key prints is the one a run with a key accepts, and it sends with no terminal and no typed yes", async () => {
+  const fake = await service();
+  try {
+    const root = fresh();
+    const env = { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: fake.url };
+    const shown = digestIn((await judge(root, { env })).out);
+    assert.ok(shown);
+    const { code, out } = await judge(root, { args: ["--consent", shown], env: { ...env, TYPESAFE_API_KEY: "sk-secret" } });
+    assert.equal(code, 0, out);
+    assert.ok(fake.seen.length > 0);
+    assert.match(out, /^judge: advisory/m);
+    assert.doesNotMatch(out, /Send them\?/);
+  } finally {
+    fake.close();
+  }
+});
+
+test("a digest copied with a space or in capitals is the same consent", async () => {
+  const fake = await service();
+  try {
+    const root = fresh();
+    const env = { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: fake.url, TYPESAFE_API_KEY: "sk-secret" };
+    const shown = digestIn((await judge(root, { env })).out);
+    const { code, out } = await judge(root, { args: ["--consent", ` ${shown.toUpperCase()} `], env });
+    assert.equal(code, 0, out);
+    assert.ok(fake.seen.length > 0);
+  } finally {
+    fake.close();
+  }
+});
+
+test("a page edited after the digest was shown refuses, names the new digest and sends nothing", async () => {
+  const fake = await service();
+  try {
+    const root = fresh();
+    const env = { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: fake.url, TYPESAFE_API_KEY: "sk-secret" };
+    const shown = digestIn((await judge(root, { env })).out);
+    const page = path.join(root, "model", "identity.md");
+    fs.appendFileSync(page, "\nOne more line.\n");
+    const { code, out, err } = await judge(root, { args: ["--consent", shown], env });
+    assert.equal(code, 1);
+    const now = digestIn(out);
+    assert.ok(now && now !== shown);
+    assert.match(err, new RegExp(`^What would be sent has changed since the consent for ${shown}: its digest is now ${now}\\. Nothing was sent\\.$`, "m"));
+    assert.equal(fake.seen.length, 0);
+    assert.doesNotMatch(out, /judge: advisory/);
+  } finally {
+    fake.close();
+  }
+});
+
+test("a consent given for one endpoint does not send to another", async () => {
+  const one = await service();
+  const two = await service();
+  try {
+    const root = fresh();
+    const shown = digestIn((await judge(root, { env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: one.url } })).out);
+    const { code } = await judge(root, { args: ["--consent", shown], env: { ...withoutKey(), COMPANYGRAPH_TYPESAFE_URL: two.url, TYPESAFE_API_KEY: "sk-secret" } });
+    assert.equal(code, 1);
+    assert.equal(one.seen.length + two.seen.length, 0);
+  } finally {
+    one.close();
+    two.close();
+  }
+});
+
+test("--consent with no value refuses before anything is read, and with no key nothing is sent", async () => {
+  const bare = await judge(fresh(), { args: ["--consent"], env: withoutKey() });
+  assert.equal(bare.code, 1);
+  assert.match(bare.err, /--consent needs a value/);
+  const root = fresh();
+  const shown = digestIn((await judge(root, { env: withoutKey() })).out);
+  const keyless = await judge(root, { args: ["--consent", shown], env: withoutKey() });
+  assert.equal(keyless.code, 0);
+  assert.match(keyless.out, /no TYPESAFE_API_KEY: nothing was sent/);
 });
 
 const measure = fileURLToPath(new URL("../tools/measure-judge.mjs", import.meta.url));
