@@ -53,3 +53,25 @@ test("a payload's Term draws an edge to the term of its own context, and a plain
   const out = edges.filter((e) => e.from === issued.id && e.via === "Payload.Term");
   assert.deepEqual(out.map((e) => e.to), [billingInvoice.id], JSON.stringify(edges.filter((e) => e.from === issued.id)));
 });
+
+test("a handled command's Emits draws one edge per row with its Command and When, and a blank Emits none", () => {
+  const ev = (n, t) => [`bounded-contexts/billing/domain-events/${n}.md`, `---\nsource: Local\nemitted-by: Invoice\n---\n\n# ${t}\n\n> It happened.\n`];
+  const files = new Map([
+    ["identity.md", "---\nsource: Local\n---\n\n# Scratch\n\n> A company.\n"],
+    ["sources/local.md", "# Local\n\n> Here.\n"],
+    ["bounded-contexts/billing/billing.md", "---\nsource: Local\nclassification: core\n---\n\n# Billing\n\n> Issues invoices.\n\n## Responsibilities\n\n- Issue\n"],
+    ["bounded-contexts/billing/concept-designs/invoice.md", "---\nsource: Local\nkind: entity\n---\n\n# Invoice\n\n> Billing's invoice.\n"],
+    ["bounded-contexts/billing/aggregates/invoice.md", "---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Kept whole.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| INV-1 | A total never changes. |\n\n## Handled commands\n\n| Command | Emits | When | Description |\n| --- | --- | --- | --- |\n| Issue invoice | Invoice issued | The period is closed | |\n| Issue invoice | Invoice voided | The customer is unknown | |\n| Reopen invoice | | | |\n"],
+    ev("invoice-issued", "Invoice issued"),
+    ev("invoice-voided", "Invoice voided"),
+  ]);
+  const { entities, edges } = parseInstance(files, { schemas: schemas() });
+  const agg = entities.find((e) => e.address.startsWith("bounded-contexts/billing/aggregates/"));
+  const out = edges.filter((e) => e.from === agg.id && e.via === "Handled commands.Emits");
+  assert.equal(out.length, 2, JSON.stringify(out));
+  const to = (n) => entities.find((e) => e.name === n).id;
+  assert.deepEqual(out.map((e) => [e.to, e.attrs.Command, e.attrs.When]), [
+    [to("Invoice issued"), "Issue invoice", "The period is closed"],
+    [to("Invoice voided"), "Issue invoice", "The customer is unknown"],
+  ]);
+});
