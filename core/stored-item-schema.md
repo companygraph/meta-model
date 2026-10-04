@@ -49,8 +49,8 @@ A stored item is one thing a surface keeps on a visitor's device under one name:
 
 - The H1 is the key as the code writes it, character for character.
 - The tagline says what the item holds and why, in the words a privacy page would use.
-- `duration` is absent for `session-storage`, which ends with the tab, and present for any other mechanism, as the code sets it or as "until the visitor clears it".
+- The page leaves `duration` out for `session-storage`, which ends with the tab, and states it for any other mechanism, as the code sets it or as "until the visitor clears it".
 - `necessity` is `strictly-necessary` only where the service the visitor asked for fails without the item.
-- `set-by` is absent for an item the company's own code sets.
-- `activity` names a processing activity where what the item holds is personal data, and is absent otherwise.
+- The page leaves `set-by` out for an item the company's own code sets.
+- The page sets `activity` only where what the item holds is personal data.
 - The page writes names and prose in American English (R14).

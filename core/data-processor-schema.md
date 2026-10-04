@@ -59,6 +59,6 @@ A data processor is a party that processes personal data on the company's behalf
 - `countries` lists where the data is processed and stored, not where the vendor is incorporated.
 - `retention` is the vendor's period in the vendor's words; the company's own retention is the processing activity's.
 - `## Own purposes` names each purpose the vendor decides for itself, in the words of its terms.
-- `## Transfers` has a row for each jurisdiction whose law asks for a safeguard for one of `countries`, and names the instrument as that law names it.
-- `## References` carries the vendor's sub-processor list as a row, and no sub-processor is a page of the model: the list is the vendor's to keep and to announce changes to (GDPR Art. 28(2)).
+- Each row of `## Transfers` names the instrument as its jurisdiction's law names it.
+- `## References` carries the vendor's sub-processor list as a row, because the list is the vendor's to keep and to announce changes to (GDPR Art. 28(2)).
 - The page writes names and prose in American English (R14).
