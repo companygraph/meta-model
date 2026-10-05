@@ -403,3 +403,21 @@ test("a person's URL equal to identity's own or to one of its rows is noted, wit
 test("a person's mail equal to identity's is two facts and never noted, and an agent's page is not read", () => {
   assert.deepEqual(notesOf(people({ nature: "agent", location: "Rotterdam", urls: ["https://beacon.example"] })), []);
 });
+
+// --- Which checks note ----------------------------------------------------------------------
+
+// A caller that lists the checks, as the MCP server does, reads `notes` to say which never fail,
+// so the flag is held to what each check does: run alone over a tree where every note fires,
+// the checks that note are the flagged ones, and a flagged one fails nothing.
+test("a check is flagged `notes` exactly when it reports through note alone", () => {
+  const files = new Map([...objective("2026-09"), ...people({ location: "Rotterdam", urls: ["https://beacon.example"] })]);
+  const noted = new Set(), failed = new Set();
+  let current = "";
+  const checks = instanceChecks({ files, core: "meta/core", model: "model", packs: PACKS, today: "2026-10-03",
+    fail: () => failed.add(current), note: () => noted.add(current) });
+  for (const check of checks) { current = check.name; check.run(); }
+  const flagged = checks.filter((c) => c.notes).map((c) => c.name);
+  assert.equal(flagged.length, 3);
+  assert.deepEqual([...noted].sort(), [...flagged].sort());
+  for (const name of flagged) assert.ok(!failed.has(name), name);
+});

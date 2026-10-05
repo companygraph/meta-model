@@ -126,6 +126,7 @@ export type ImageInfo = {
 export type Check = {
     name: string;
     rule: string;
+    notes?: true;
     run: () => void;
 };
 /** @typedef {import("./instance.mjs").InstanceFiles} InstanceFiles */
@@ -177,10 +178,12 @@ export type Check = {
  * @property {number} height
  */
 /**
- * One check: what it holds, the rule it enforces, and the run that reports through `fail`.
+ * One check: what it holds, the rule it enforces, and the run that reports through `fail`, or
+ * through `note` alone where `notes` is set, so a caller listing the checks can say which never fail.
  * @typedef {object} Check
  * @property {string} name
  * @property {string} rule
+ * @property {true} [notes]
  * @property {() => void} run
  */
 /** @type {TypeEntry[]} */
