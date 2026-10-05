@@ -167,3 +167,12 @@ test("a key the slug changes keeps its H1 and passes in the slugged file", () =>
 function actSectionsWithout(heading) {
   return actSections("Lantern Mail").filter(([h]) => h !== heading);
 }
+
+test("a processor that may process in any country it chooses says processing any, and passes", () => {
+  assert.deepEqual(failuresOf({ proc: [...PROC_FM, "processing: any"] }), []);
+  assert.deepEqual(failuresOf({ proc: [...PROC_FM, "processing: fixed"] }), []);
+});
+
+test("a processing value outside fixed and any fails, naming the value and the permitted ones", () => {
+  assert.equal(failuresOf({ proc: [...PROC_FM, "processing: global"] }, "global", "`fixed`", "`any`").length, 1);
+});

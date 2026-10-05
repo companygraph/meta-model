@@ -20,7 +20,8 @@ Nothing owns a data processor and a data processor owns nothing: one vendor serv
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
 | `legal-name` | Yes | string | The legal entity the company's contract is with, which may differ from the H1 and from one region to another |
-| `countries` | Yes | array | Where the processor processes and stores the data, each an ISO 3166-1 alpha-2 code |
+| `countries` | Yes | array | Where the processor processes and stores the data, each an ISO 3166-1 alpha-2 code; where `processing` is `any`, where it stores what it keeps |
+| `processing` | No | enum | `fixed` or `any`. `fixed`, which an absent field means, says the processor processes the data where `countries` says; `any` says it may process a request in any country it chooses, and `countries` names where it stores what it keeps. |
 | `retention` | No | string | How long the processor keeps what it receives, under its own terms |
 | `sub-processor-authorization` | No | enum | `general` or `specific`. Whether the contract lets the processor add sub-processors after notice, or only with the company's approval of each (GDPR Art. 28(2); DSG Art. 9(3)). |
 
@@ -57,6 +58,7 @@ A data processor is a party that processes personal data on the company's behalf
 - The tagline says what the processor does for the company, not what the vendor sells.
 - `legal-name` is the entity the company's contract is with, as the contract writes it.
 - `countries` lists where the data is processed and stored, not where the vendor is incorporated.
+- `processing` is `any` only where the processor's own terms let it run a request in a country it chooses, and the tagline then says so in words.
 - `retention` is the vendor's period in the vendor's words; the company's own retention is the processing activity's.
 - `## Own purposes` names each purpose the vendor decides for itself, in the words of its terms.
 - Each row of `## Transfers` names the instrument as its jurisdiction's law names it.
