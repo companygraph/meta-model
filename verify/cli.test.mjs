@@ -1948,7 +1948,7 @@ test("upgrade --gate git moves an instance from the workflow to the hooks", () =
   execFileSync("git", ["init", "-q"], { cwd: root });
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
   const said = run(["upgrade", root, "--gate", "git"]);
-  assert.match(said, /remove\s+\.github\/workflows\/companygraph\.yml|removed/);
+  assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
   assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate, "git");
@@ -1975,6 +1975,8 @@ test("upgrade --gate moves an adopted repository to none and back to github, nam
   assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   run(["upgrade", root, "--gate", "github"]);
   assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
   // github is the default, and a manifest on it carries no gate at all.
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate ?? "github", "github");
 });
@@ -1989,7 +1991,41 @@ test("an edited gate hook stops a move by name, and --force removes it and says 
   assert.match(refused.stderr, /\.companygraph\/hooks\/pre-commit/);
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   const said = run(["upgrade", root, "--gate", "github", "--force"]);
-  assert.match(said, /removed, as --force asked: \.companygraph\/hooks\/pre-commit/);
+  assert.match(said, /removed, as --force asked: \.companygraph\/hooks\/pre-commit$/m);
+  // A forced hook is named once, under --force, and not again as an ordinary removal.
+  assert.match(said, /removed, since the gate moved: \.companygraph\/hooks\/pre-merge-commit$/m);
   assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+});
+
+// A move onto github from none writes the seat hook, which git ignores until it is executable and
+// core.hooksPath names its folder; the move does both, for an instance and an adopted repository.
+for (const [kind, make] of [
+  ["an instance", (root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "none"])],
+  ["an adopted repository", (root) => run(["adopt", root, "--gate", "none"])],
+]) {
+  test(`upgrade --gate github from none puts the seat hook in use, for ${kind}`, () => {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    make(root);
+    assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+    const said = run(["upgrade", root, "--gate", "github"]);
+    assert.match(said, /the commit-msg hook is in use/);
+    assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+    assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  });
+}
+
+test("init --gate git of a folder not made yet is in git when the folder above it is, and refused where it is not", () => {
+  const repository = temp();
+  execFileSync("git", ["init", "-q"], { cwd: repository });
+  const root = path.join(repository, "acme");
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repository, encoding: "utf8" }).trim(), "acme/.companygraph/hooks");
+  const outside = path.join(temp(), "acme");
+  const refused = spawnSync(process.execPath, [cli, "init", outside, "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /not a git repository/);
+  assert.ok(!fs.existsSync(outside));
 });

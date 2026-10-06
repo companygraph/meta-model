@@ -352,6 +352,15 @@ function useHook(root, names = ["commit-msg"]) {
   }
 }
 
+// Whether a folder is in a git repository, asked of the nearest folder that exists: init and adopt
+// make a folder that is not there yet, and one made inside a repository is in it.
+/** @param {string} root */
+function inGit(root) {
+  let at = resolve(root);
+  while (!existsSync(at) && dirname(at) !== at) at = dirname(at);
+  return existsSync(at) && Boolean(gitTop(at));
+}
+
 // The hooks a plan wrote put in use, and what the gate means said: git gates every commit on this
 // machine and writes no workflow, and none gates nothing, which is the level a folder without
 // git or GitHub stands at.
@@ -390,7 +399,7 @@ async function init(argv, { menu = false } = {}) {
   if (packNames.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
   const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
   const gate = given.gate ?? "github";
-  const repository = existsSync(root) && Boolean(gitTop(root));
+  const repository = inGit(root);
   const plan = initPlan({
     core,
     packs,
@@ -468,11 +477,17 @@ async function upgrade(argv) {
         throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
     }
   };
-  // On the git gate, after writing, its hooks are put in use as init puts them, and a hooks folder
-  // of the repository's own is left in charge and named. Only the hooks it holds are named: a
-  // plain upgrade never writes back one the repository chose to delete.
-  const useGateHooks = () => {
-    const names = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => existsSync(join(root, `.companygraph/hooks/${name}`)));
+  // After writing, the hooks the move wrote are put in use as init puts them: written alone they
+  // are not executable and git does not read their folder, so it would skip them without a word.
+  // On the git gate a move that wrote none still puts in use the ones the repository holds, and
+  // only those: a plain upgrade never writes back one the repository chose to delete. Either way a
+  // hooks folder of the repository's own is left in charge and named.
+  const HOOKS = ["commit-msg", "pre-commit", "pre-merge-commit"];
+  /** @param {Map<string, string>} writes */
+  const useHooks = (writes) => {
+    const wrote = HOOKS.filter((name) => writes.has(`.companygraph/hooks/${name}`));
+    const held = (given.gate ?? manifest.gate) === "git" ? HOOKS.filter((name) => existsSync(join(root, `.companygraph/hooks/${name}`))) : [];
+    const names = wrote.length ? wrote : held;
     if (names.length) useHook(root, names);
   };
   // A manifest with no core is a repository that took the machinery and holds no model; its
@@ -504,10 +519,11 @@ async function upgrade(argv) {
     const written = writePlan(root, adopted.writes);
     for (const path of adopted.removes) rmSync(join(root, path), { force: true });
     console.log(`tooling ${adopted.from} → ${adopted.to}: ${written.length} written, ${adopted.removes.length} removed`);
-    if (adopted.removes.length) console.log(`  removed, since the gate moved: ${adopted.removes.join(", ")}`);
+    const moved = adopted.removes.filter((path) => !adopted.forced.includes(path));
+    if (moved.length) console.log(`  removed, since the gate moved: ${moved.join(", ")}`);
     if (adopted.forced.length) console.log(`  removed, as --force asked: ${adopted.forced.join(", ")}`);
     if (adopted.given.length) console.log(`  written, since the repository had none, and its own from now on: ${adopted.given.join(", ")}`);
-    if ((given.gate ?? manifest.gate) === "git") useGateHooks();
+    useHooks(adopted.writes);
     return "done";
   }
   /** @type {Map<string, string>} */
@@ -599,7 +615,7 @@ async function upgrade(argv) {
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
   // said of a file it does not fit.
-  const gateRemoved = /** @type {string[]} */ (plan.removes).filter((path) => gatePaths.includes(path));
+  const gateRemoved = /** @type {string[]} */ (plan.removes).filter((path) => gatePaths.includes(path) && !/** @type {string[]} */ (plan.forced).includes(path));
   if (gateRemoved.length) console.log(`  removed, since the gate moved: ${gateRemoved.join(", ")}`);
   if (/** @type {string[]} */ (plan.forced).length) console.log(`  removed, as --force asked: ${/** @type {string[]} */ (plan.forced).join(", ")}`);
   if (/** @type {string[]} */ (plan.edited).length) console.log(`  overwritten, as --force asked: ${/** @type {string[]} */ (plan.edited).join(", ")}`);
@@ -610,7 +626,7 @@ async function upgrade(argv) {
   const dropped = /** @type {string[]} */ (plan.missing).filter((path) => !/** @type {Map<string, string>} */ (plan.writes).has(path));
   if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
-  if ((given.gate ?? manifest.gate) === "git") useGateHooks();
+  useHooks(/** @type {Map<string, string>} */ (plan.writes));
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
   // failed. The files are the release's; the work the check names is the owner's to do. checkPath
@@ -801,7 +817,7 @@ function adopt(argv) {
   const given = flags(argv);
   const root = given._[0] ?? ".";
   const gate = given.gate ?? "github";
-  const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root), gate, repository: existsSync(root) && Boolean(gitTop(root)) });
+  const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root), gate, repository: inGit(root) });
   if (plan.refused) throw new Error(`${root}: ${plan.refused}`);
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${shown(root)} adopted at ${PACKAGE.version}: ${written.join(", ")}`);
