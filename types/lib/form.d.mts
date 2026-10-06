@@ -15,6 +15,14 @@ export declare function linterOf(): {
     args: string[];
 };
 /**
+ * The environment the linter is started with: `env` without the variables an outer `npm exec`
+ * set for its own command, so a nested npx resolves the package it is given, whatever started
+ * the tooling. Names are matched without case, as Windows reads its environment.
+ * @param {NodeJS.ProcessEnv} [env]
+ * @returns {NodeJS.ProcessEnv}
+ */
+export declare function linterEnvOf(env?: NodeJS.ProcessEnv): NodeJS.ProcessEnv;
+/**
  * The form over a repository: the files it held, one hit per rule and line as `path:line: RULE`,
  * and `error` when the tool could not be run or failed without naming a file. With `fix`, every
  * hit markdownlint can write is written first, in three passes at most, since two fixes on one
