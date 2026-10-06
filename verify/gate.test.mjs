@@ -248,10 +248,18 @@ test("a verify command holding a line break refuses the commit with a sentence, 
   assert.ok(!fs.existsSync(path.join(dir, "second")));
 });
 
+// One folder however it is spelled: on Windows git hands the hook forward slashes and the long
+// name, where the test's temp path has backslashes and may carry an 8.3 short name, and the
+// drive's case can differ; the real path of each, normalized, names the folder itself.
+const folderOf = (p) => {
+  const real = path.normalize(fs.realpathSync.native(p));
+  return process.platform === "win32" ? real.toLowerCase() : real;
+};
+
 // The range ids was given, its two ends, and the commit its head names, read back from the stub.
 function idsRange(dir, argsFile) {
   const args = JSON.parse(fs.readFileSync(argsFile, "utf8"));
-  assert.equal(args[0], fs.realpathSync(dir));
+  assert.equal(folderOf(args[0]), folderOf(dir));
   assert.equal(args[1], "--range");
   const [base, head] = args[2].split("..");
   return { base, head };
