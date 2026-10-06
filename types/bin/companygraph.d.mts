@@ -8,6 +8,7 @@ export type UpgradeRead = UpgradeWrites | {
     missing?: undefined;
     given?: undefined;
     rewritten?: undefined;
+    forced?: undefined;
     from?: undefined;
     to?: undefined;
 };
@@ -30,6 +31,7 @@ export type Flags = {
     folders?: string;
     pack?: string;
     release?: string;
+    gate?: string;
     from?: string;
     range?: string;
     message?: string;

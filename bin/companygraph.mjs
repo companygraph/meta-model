@@ -4,13 +4,13 @@
 // exit 3 to refuse, so a caller such as a hook can tell a refusal from a run that could not
 // happen, and 1 for anything else:
 //
-//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>]
+//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>] [--gate <github|git|none>]
 //   companygraph check [<folder>]
 //   companygraph judge [<folder>]
 //   companygraph form [<folder>] [--fix]
 //   companygraph pins [<folder>]
-//   companygraph adopt [<folder>]
-//   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run]
+//   companygraph adopt [<folder>] [--gate <github|git|none>]
+//   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run] [--gate <github|git|none>]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
 //   companygraph seats [<folder>] [--since <date>] [--json]
@@ -49,7 +49,7 @@ import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabula
  * the fields of a plan.
  * @typedef {UpgradeWrites | {
  *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
- *   given?: undefined; rewritten?: undefined; from?: undefined; to?: undefined;
+ *   given?: undefined; rewritten?: undefined; forced?: undefined; from?: undefined; to?: undefined;
  * }} UpgradeRead
  */
 
@@ -60,7 +60,7 @@ import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabula
  *   _: string[];
  *   here?: boolean; force?: boolean; "dry-run"?: boolean; plugins?: boolean; "no-plugins"?: boolean;
  *   open?: boolean; json?: boolean; "no-hook"?: boolean; backfill?: boolean; fix?: boolean;
- *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string;
+ *   agent?: string; name?: string; core?: string; schemas?: string; folders?: string; pack?: string; release?: string; gate?: string;
  *   from?: string; range?: string; message?: string; since?: string; consent?: string;
  * }} Flags
  */
@@ -84,8 +84,9 @@ const USAGE = `companygraph [<command>]
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern, or a range that changed an id, rewrote or removed a decision, or moved or reused a label
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook
-upgrade: --core <tag>  --pack <a,b>  --force  --dry-run
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook  --gate <github|git|none>
+upgrade: --core <tag>  --pack <a,b>  --force  --dry-run  --gate <github|git|none>
+adopt: --gate <github|git|none>
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
@@ -309,11 +310,16 @@ function panel(label, ok, text) {
   ].join("\n");
 }
 
-// The seat hook made executable and, where git and the repository let it, put in use; what was
-// done or why not is said, as init always said it.
-/** @param {string} root */
-function useHook(root) {
-  chmodSync(join(root, ".companygraph/hooks/commit-msg"), 0o755);
+// The hooks named made executable and, where git and the repository let it, put in use; what was
+// done or why not is said, as init always said it. A core.hooksPath of the repository's own is
+// left as it is, whichever hooks are named.
+/**
+ * @param {string} root
+ * @param {string[]} [names]
+ */
+function useHook(root, names = ["commit-msg"]) {
+  for (const name of names) chmodSync(join(root, `.companygraph/hooks/${name}`), 0o755);
+  const which = `the ${names.join(", ")} hook${names.length > 1 ? "s are" : " is"}`;
   // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
   // instance's position under the repository's own top, whatever that top resolves to on this
   // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
@@ -337,13 +343,28 @@ function useHook(root) {
   const already = hooksDirAbs && existsSync(hooksDirAbs)
     ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
     : [];
-  if (!top) console.log(`  the commit-msg hook is written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
-  else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
-  else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so the seat check's hook is not in use; its file is ${hooks}/commit-msg`);
+  if (!top) console.log(`  ${which} written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
+  else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so ${which} not in use; ${names.length > 1 ? "their files are" : "its file is"} in ${hooks}/`);
+  else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so ${which} not in use; ${names.length > 1 ? "their files are" : "its file is"} in ${hooks}/`);
   else {
     spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
-    console.log(`  the commit-msg hook is in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
+    console.log(`  ${which} in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
   }
+}
+
+// The hooks a plan wrote put in use, and what the gate means said: git gates every commit on this
+// machine and writes no workflow, and none gates nothing, which is the level a folder without
+// git or GitHub stands at.
+/**
+ * @param {string} root
+ * @param {string} gate
+ * @param {Map<string, string>} writes
+ */
+function sayGate(root, gate, writes) {
+  const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
+  if (hooks.length) useHook(root, hooks);
+  if (gate === "git") console.log(`  every commit runs check and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
+  if (gate === "none") console.log(`  level 1: nothing gates this folder; run check by hand, or open it as a vault with the Obsidian plugin, which checks a page while it is edited`);
 }
 
 // `menu` is set when the menu calls it, which says what comes next itself.
@@ -368,6 +389,8 @@ async function init(argv, { menu = false } = {}) {
   const packNames = packNamesOf(given.pack);
   if (packNames.length && given.core) throw new Error("--pack takes this release's packs, and --core fetches another release's core; take them from one release");
   const packs = new Map(packNames.map((name) => [name, packOfThisRelease(name)]));
+  const gate = given.gate ?? "github";
+  const repository = existsSync(root) && Boolean(gitTop(root));
   const plan = initPlan({
     core,
     packs,
@@ -384,6 +407,8 @@ async function init(argv, { menu = false } = {}) {
     present: found,
     fetched: Boolean(given.core),
     hook: !given["no-hook"],
+    gate,
+    repository,
   });
   if (plan.refused) throw new Error(plan.refused);
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
@@ -394,7 +419,7 @@ async function init(argv, { menu = false } = {}) {
   const folders = [.../** @type {Map<string, string>} */ (plan.writes).keys()].filter((p) => /^model\/[^/]+\/README\.md$/.test(p)).map((p) => p.split("/")[1]);
   console.log(`  folders: ${folders.join(", ")}`);
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
-  if (/** @type {Map<string, string>} */ (plan.writes).has(".companygraph/hooks/commit-msg")) useHook(root);
+  sayGate(root, gate, /** @type {Map<string, string>} */ (plan.writes));
   if (menu) return;
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
@@ -425,29 +450,64 @@ async function upgrade(argv) {
       `The Markdown is not in the form ${PACKAGE.version} holds, so nothing was moved:\n${unformed.map((line) => `  ${line}`).join("\n")}\n` +
         `"companygraph form ${root} --fix" writes what it can into the form; pass --force to move anyway.`,
     );
+  // What the gates write, read where the repository holds it, since a move between gates removes
+  // what is there and not what the gate it leaves would have written. Whether the folder is a
+  // repository at all is asked of git, since the git gate refuses where it is not.
+  const gatePaths = [".github/workflows/companygraph.yml", ".companygraph/hooks/commit-msg", ".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"];
+  /** @type {Map<string, string>} */
+  const gateHeld = new Map(gatePaths.filter((p) => existsSync(join(root, p))).map((p) => [p, read(join(root, p))]));
+  const repository = Boolean(gitTop(root));
+  // A remove is a delete that cannot be undone, so each is checked against the root before a
+  // single file moves, beside the plan's own refusal of anything outside it: a plan is data.
+  const rootResolved = resolve(root);
+  /** @param {string[]} removes */
+  const inside = (removes) => {
+    for (const path of removes) {
+      const target = resolve(root, path);
+      if (target !== rootResolved && !target.startsWith(rootResolved + sep))
+        throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
+    }
+  };
+  // On the git gate, after writing, its hooks are put in use as init puts them, and a hooks folder
+  // of the repository's own is left in charge and named. Only the hooks it holds are named: a
+  // plain upgrade never writes back one the repository chose to delete.
+  const useGateHooks = () => {
+    const names = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => existsSync(join(root, `.companygraph/hooks/${name}`)));
+    if (names.length) useHook(root, names);
+  };
   // A manifest with no core is a repository that took the machinery and holds no model; its
-  // upgrade moves the release it runs and its workflow, and vendors nothing into it.
+  // upgrade moves the release it runs, its workflow and its gate, and vendors nothing into it.
   if (!manifest.core) {
-    const workflowPath = join(root, ".github/workflows/companygraph.yml");
     const adopted = adoptedUpgradePlan({
       tooling: PACKAGE.version,
       manifest,
-      workflow: existsSync(workflowPath) ? read(workflowPath) : null,
+      workflow: gateHeld.get(".github/workflows/companygraph.yml") ?? null,
       present: new Set(["pins.json"].filter((path) => existsSync(join(root, path)))),
+      // Absent keeps the manifest's gate; the plan's type has no room for an explicit undefined.
+      ...(given.gate !== undefined ? { gate: given.gate } : {}),
+      held: gateHeld,
+      force: Boolean(given.force),
+      repository,
     });
     if ("refused" in adopted) throw new Error(adopted.refused);
-    if (!adopted.writes.size) {
+    if (!adopted.writes.size && !adopted.removes.length) {
       console.log(`already on ${adopted.to}; nothing to do.`);
       return "nothing";
     }
     if (given["dry-run"]) {
       console.log(`tooling ${adopted.from} → ${adopted.to}, if this runs:`);
       for (const path of adopted.writes.keys()) console.log(`  write   ${path}`);
+      for (const path of adopted.removes) console.log(`  remove  ${path}`);
       return "planned";
     }
+    inside(adopted.removes);
     const written = writePlan(root, adopted.writes);
-    console.log(`tooling ${adopted.from} → ${adopted.to}: ${written.length} written`);
+    for (const path of adopted.removes) rmSync(join(root, path), { force: true });
+    console.log(`tooling ${adopted.from} → ${adopted.to}: ${written.length} written, ${adopted.removes.length} removed`);
+    if (adopted.removes.length) console.log(`  removed, since the gate moved: ${adopted.removes.join(", ")}`);
+    if (adopted.forced.length) console.log(`  removed, as --force asked: ${adopted.forced.join(", ")}`);
     if (adopted.given.length) console.log(`  written, since the repository had none, and its own from now on: ${adopted.given.join(", ")}`);
+    if ((given.gate ?? manifest.gate) === "git") useGateHooks();
     return "done";
   }
   /** @type {Map<string, string>} */
@@ -461,8 +521,9 @@ async function upgrade(argv) {
     const at = `${SKILLS}${path}`;
     if (!held.has(at) && existsSync(join(root, at))) held.set(at, read(join(root, at)));
   }
-  const workflowPath = join(root, ".github/workflows/companygraph.yml");
-  const workflow = existsSync(workflowPath) ? read(workflowPath) : null;
+  const workflow = gateHeld.get(".github/workflows/companygraph.yml") ?? null;
+  // The gate hooks are no file the manifest records, so the plan reads them as the gate's alone.
+  for (const [path, text] of gateHeld) if (!held.has(path)) held.set(path, text);
   // The export's inputs are the instance's own and only written where absent, so all the plan
   // needs is which of them are there, and the name its guide opens on: the identity's H1, or the
   // folder's name where the identity has none to read. The plan also reads model/identity.md's
@@ -507,6 +568,8 @@ async function upgrade(argv) {
     workflow,
     fetched: Boolean(given.core),
     force: Boolean(given.force),
+    gate: given.gate,
+    repository,
     name,
     present: new Set([...exportPaths, "pins.json"].filter((path) => existsSync(join(root, path)))),
   });
@@ -522,14 +585,9 @@ async function upgrade(argv) {
     return "planned";
   }
   // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
-  // core: a plan is data, a delete cannot be undone, and this is checked before a single file
-  // moves rather than trusting that the refusal above can never have a gap of its own.
-  const rootResolved = resolve(root);
-  for (const path of /** @type {string[]} */ (plan.removes)) {
-    const target = resolve(root, path);
-    if (target !== rootResolved && !target.startsWith(rootResolved + sep))
-      throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
-  }
+  // core: checked before a single file moves rather than trusting that the refusal above can
+  // never have a gap of its own.
+  inside(/** @type {string[]} */ (plan.removes));
 
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   for (const path of /** @type {string[]} */ (plan.removes)) rmSync(join(root, path), { force: true });
@@ -541,6 +599,9 @@ async function upgrade(argv) {
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
   // said of a file it does not fit.
+  const gateRemoved = /** @type {string[]} */ (plan.removes).filter((path) => gatePaths.includes(path));
+  if (gateRemoved.length) console.log(`  removed, since the gate moved: ${gateRemoved.join(", ")}`);
+  if (/** @type {string[]} */ (plan.forced).length) console.log(`  removed, as --force asked: ${/** @type {string[]} */ (plan.forced).join(", ")}`);
   if (/** @type {string[]} */ (plan.edited).length) console.log(`  overwritten, as --force asked: ${/** @type {string[]} */ (plan.edited).join(", ")}`);
   // A file the instance had deleted is written fresh only where the new core still ships it; one
   // the new core has dropped as well is not written at all, and saying so is the difference
@@ -549,6 +610,7 @@ async function upgrade(argv) {
   const dropped = /** @type {string[]} */ (plan.missing).filter((path) => !/** @type {Map<string, string>} */ (plan.writes).has(path));
   if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
+  if ((given.gate ?? manifest.gate) === "git") useGateHooks();
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
   // failed. The files are the release's; the work the check names is the owner's to do. checkPath
@@ -736,14 +798,16 @@ const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFo
 // and a pins.json that declares its tooling pin. A folder that is not there yet is made, as init makes one.
 /** @param {string[]} argv */
 function adopt(argv) {
-  const root = flags(argv)._[0] ?? ".";
-  const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root) });
+  const given = flags(argv);
+  const root = given._[0] ?? ".";
+  const gate = given.gate ?? "github";
+  const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root), gate, repository: existsSync(root) && Boolean(gitTop(root)) });
   if (plan.refused) throw new Error(`${root}: ${plan.refused}`);
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${shown(root)} adopted at ${PACKAGE.version}: ${written.join(", ")}`);
   console.log(`  its Markdown is held to the one form, leaving out dist/; list more paths under "exclude" in .companygraph/manifest.json`);
-  console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
-  useHook(root);
+  if (gate === "github") console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
+  sayGate(root, gate, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
 }
 
@@ -1269,6 +1333,9 @@ function ids(argv) {
   return 1;
 }
 
+// Asked by the menu where init and adopt would take --gate.
+const GATE_QUESTION = "How is every change checked? github: the workflow on GitHub; git: hooks on this machine; none: by hand";
+
 /** @returns {Promise<number>} */
 async function menu() {
   /** @type {[string, string, () => Promise<number>][]} */
@@ -1282,8 +1349,9 @@ async function menu() {
       }
       const name = await ask(prompt("What is the company called?"));
       if (!name) throw new Error("no name was given; nothing was written.");
+      const gate = (await ask(prompt(GATE_QUESTION, "github"))) || "github";
       console.log();
-      await init([...args, "--name", name], { menu: true });
+      await init([...args, "--name", name, "--gate", gate], { menu: true });
       console.log();
       if (yes(await ask(prompt("Make it a vault, to write it in Obsidian?", "y/N")))) {
         console.log();
@@ -1307,7 +1375,9 @@ async function menu() {
       return seats([root]);
     }],
     ["Hold a repository", "a site or service with no model: the form check, its workflow and the seat hook", async () => {
-      adopt([await folder("Which folder?", ".")]);
+      const root = await folder("Which folder?", ".");
+      const gate = (await ask(prompt(GATE_QUESTION, "github"))) || "github";
+      adopt([root, "--gate", gate]);
       return 0;
     }],
     ["Report pins", "which of a repository's pins are behind; nothing moves", async () => pins([await folder("Which folder?", ".")])],
