@@ -38,5 +38,5 @@
     "test:judge": "node --test verify/questions.test.mjs verify/judge.test.mjs verify/judge-faults.test.mjs verify/known.test.mjs",
     "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs"
   },
-  "devDependencies": { "@types/node": "22.20.4", "markdownlint-cli2": "0.23.2", "typescript": "7.0.2" }
+  "devDependencies": { "@types/node": "22.20.5", "markdownlint-cli2": "0.23.3", "typescript": "7.0.2" }
 }
