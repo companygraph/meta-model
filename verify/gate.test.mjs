@@ -414,3 +414,20 @@ test("a merge into the default branch runs ids from HEAD to the merge's tree", (
   assert.equal(git(dir, "rev-parse", `${range.head}^`).trim(), main);
   assert.equal(git(dir, "rev-parse", `${range.head}^{tree}`).trim(), git(dir, "rev-parse", "HEAD^{tree}").trim());
 });
+
+test("an init.defaultBranch that names no branch here falls through to main", () => {
+  const dir = gated();
+  git(dir, "config", "init.defaultBranch", "trunk");
+  const argsFile = path.join(temp(), "ids.json");
+  const env = { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile };
+  const fork = git(dir, "rev-parse", "main").trim();
+  git(dir, "checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  assert.equal(commit(dir, env, "-m", "a").status, 0);
+  fs.writeFileSync(path.join(dir, "b.md"), "# B\n");
+  git(dir, "add", "b.md");
+  const r = commit(dir, env, "-m", "b");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(idsRange(dir, argsFile).base, fork);
+});
