@@ -12,6 +12,8 @@ export type InitAsk = {
     present?: Set<string> | undefined;
     fetched?: boolean | undefined;
     hook?: boolean | undefined;
+    gate?: string | undefined;
+    repository?: boolean | undefined;
 };
 export type InitPlan = {
     refused: string;
@@ -84,6 +86,8 @@ export type BackfillAsk = {
  * @property {Set<string> | undefined} [present]
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [hook]
+ * @property {string | undefined} [gate]
+ * @property {boolean | undefined} [repository]
  */
 /**
  * A plan, or a refusal saying why nothing may be written. `writes` maps path → text.
@@ -135,19 +139,21 @@ export declare const SKILLS = ".claude/skills/";
  * @param {InitAsk} ask
  * @returns {InitPlan}
  */
-export declare function initPlan({ core, skills, packs, tooling, tag, name, agent, units, folders, present, fetched, hook }: InitAsk): InitPlan;
+export declare function initPlan({ core, skills, packs, tooling, tag, name, agent, units, folders, present, fetched, hook, gate, repository }: InitAsk): InitPlan;
 /**
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
 export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said }: UpgradeAsk): UpgradePlan;
 /**
- * @param {{ tooling: string; present: Set<string> }} ask
+ * @param {{ tooling: string; present: Set<string>; gate?: string; repository?: boolean }} ask
  * @returns {InitPlan}
  */
-export declare function adoptPlan({ tooling, present }: {
+export declare function adoptPlan({ tooling, present, gate, repository }: {
     tooling: string;
     present: Set<string>;
+    gate?: string;
+    repository?: boolean;
 }): InitPlan;
 /**
  * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[] }; workflow: string | null; present: Set<string> }} ask
