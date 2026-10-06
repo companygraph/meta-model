@@ -45,7 +45,7 @@ Every type's schema is the contract and nothing here restates it. Read `<units>/
 
 10. **Update merges.** On Update, read the profile and every experience it owns before writing, and hold every extracted fact against them before proposing anything. Each fact is one of four things: already held, and where; new; held differently, with both versions quoted; or left out by a decision the agent file records. Show that reconciliation to the operator first, because on a model that is already rich most of a folder is already held, and what is worth the operator's time is the new and the different. Keep every sentence already written. Add new periods; where a document extends an existing period, add to its file rather than writing a second one. A new fact under a skill already claimed adds an Evidence row under the existing claim. A level the new evidence would change is proposed to the operator with the rows behind it, never rewritten on the way past.
 
-11. **Validate.** Run the mechanical checks, `companygraph check`, or the checker at the release the instance's workflow names where the CLI is not installed; then run `companygraph-validate` for the writing rules no script reads. Repair what it finds, mechanical failures and writing-rule judgments both. Where a repair would change something the operator decided, ask instead.
+11. **Validate.** Run the mechanical checks, `companygraph check`, or the checker at the release `tooling` names in `.companygraph/manifest.json` where the CLI is not installed; then run `companygraph-validate` for the writing rules no script reads. Repair what it finds, mechanical failures and writing-rule judgments both. Where a repair would change something the operator decided, ask instead.
 
 ## Report
 

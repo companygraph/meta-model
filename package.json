@@ -36,7 +36,8 @@
     "test:fetch-core": "node --test verify/fetch-core.test.mjs",
     "test:obsidian": "node --test verify/obsidian.test.mjs",
     "test:judge": "node --test verify/questions.test.mjs verify/judge.test.mjs verify/judge-faults.test.mjs verify/known.test.mjs",
-    "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs"
+    "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs",
+    "test:gate": "node --test verify/gate.test.mjs"
   },
   "devDependencies": { "@types/node": "22.20.5", "markdownlint-cli2": "0.23.2", "typescript": "7.0.2" }
 }

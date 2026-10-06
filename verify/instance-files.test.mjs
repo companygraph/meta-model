@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import {
-  agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
+  GATES, adoptedManifestOf, agentFilesFor, excludeFor, exportFilesFor, hashOf, manifestOf, readmesFor, rootFolders, startingEntities, workflowFor, LOCALIZATION_PAGE, localizationPageFor,
 } from "../lib/instance-files.mjs";
 
 test("a hash is the sha256 of the bytes, as the manifest writes it", () => {
@@ -143,4 +143,27 @@ test("the localization page takes the form its core's schema declares", () => {
     "---\nid: x\nsource: Local\n---\n\n# Languages\n\n> Everyone who reads this model, people and agents alike, reads it in American English.\n\n" +
       "## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n",
   );
+});
+
+test("the gates are github, git and none, and a manifest records one only when it is not github", () => {
+  assert.deepEqual(GATES, ["github", "git", "none"]);
+  const base = { tooling: "1.0.0", core: { version: "1.0.0", shape: 3, source: "bundled" }, units: "meta", files: {} };
+  assert.equal(manifestOf(base), manifestOf({ ...base, gate: "github" }));
+  assert.equal(JSON.parse(manifestOf({ ...base, gate: "git" })).gate, "git");
+  assert.equal(JSON.parse(manifestOf({ ...base, gate: "none" })).gate, "none");
+  assert.equal(adoptedManifestOf({ tooling: "1.0.0", exclude: ["dist"] }), adoptedManifestOf({ tooling: "1.0.0", exclude: ["dist"], gate: "github" }));
+  assert.equal(JSON.parse(adoptedManifestOf({ tooling: "1.0.0", exclude: ["dist"], gate: "git" })).gate, "git");
+});
+
+test("the agent file says which gate holds the instance", () => {
+  const said = (gate) => agentFilesFor({ agent: "claude", name: "Acme", units: "meta", gate }).get("AGENTS.md");
+  assert.match(said(undefined), /checked by CI, and locally by/);
+  assert.match(said("github"), /checked by CI, and locally by/);
+  assert.match(said("git"), /checked on every commit by the pre-commit hook in `\.companygraph\/hooks\/`/);
+  assert.match(said("git"), /`git commit --no-verify` skips it and is not used here/);
+  assert.doesNotMatch(said("git"), /CI/);
+  assert.match(said("none"), /nothing gates this folder/);
+  assert.doesNotMatch(said("none"), /CI/);
+  // The rest of the paragraph is the same whatever the gate.
+  for (const gate of GATES) assert.match(said(gate), /What no check reads is each schema's `## Writing rules`/);
 });

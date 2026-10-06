@@ -370,7 +370,7 @@ test("a command it does not know, and no command at all, print what it can do", 
 
 test("the menu makes an instance from answers alone, and what it made passes the checks", () => {
   const root = path.join(temp(), "acme");
-  const said = run(["menu"], { input: `1\n${root}\nAcme\nn\n`, stdio: "pipe" });
+  const said = run(["menu"], { input: `1\n${root}\nAcme\n\nn\n`, stdio: "pipe" });
   assert.match(said, /1 {2}Make a model/);
   assert.match(said, /files written into/);
   const { failures } = checkInstance(filesOf(root), { core: "meta/core", model: "model" });
@@ -1919,4 +1919,230 @@ test("ids --range refuses a label reused after its page was renamed", () => {
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
   assert.equal(said.status, 3, said.stdout + said.stderr);
   assert.match(said.stderr, /✗ model\/bounded-contexts\/billing\/aggregates\/bill\.md: "INV-2" under ## Invariants was carried by this page before and removed/);
+});
+
+test("init --gate git writes the hooks, points git at them, and writes no workflow", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.match(said, /pre-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  // Windows has no execute bit to set.
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
+});
+
+test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
+  const refused = spawnSync(process.execPath, [cli, "init", temp(), "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /not a git repository/);
+  const root = temp();
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "none"]);
+  assert.match(said, /nothing gates this folder/);
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks")));
+  assert.ok(!fs.existsSync(path.join(root, ".github")));
+});
+
+test("upgrade --gate git moves an instance from the workflow to the hooks", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
+  assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate, "git");
+});
+
+test("upgrade --gate git leaves a hooks folder of the repository's own in charge, and says so", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["adopt", root]);
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /core\.hooksPath is hooks here/);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), "hooks");
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+});
+
+test("upgrade --gate moves an adopted repository to none and back to github, naming what it removed", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["adopt", root, "--gate", "git"]);
+  const none = run(["upgrade", root, "--gate", "none"]);
+  assert.match(none, /removed, since the gate moved: \.companygraph\/hooks\/pre-commit, \.companygraph\/hooks\/pre-merge-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  run(["upgrade", root, "--gate", "github"]);
+  assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  // github is the default, and a manifest on it carries no gate at all.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate ?? "github", "github");
+});
+
+test("an edited gate hook stops a move by name, and --force removes it and says so", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+  const refused = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "github"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /\.companygraph\/hooks\/pre-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  const said = run(["upgrade", root, "--gate", "github", "--force"]);
+  assert.match(said, /removed, as --force asked: \.companygraph\/hooks\/pre-commit$/m);
+  // A forced hook is named once, under --force, and not again as an ordinary removal.
+  assert.match(said, /removed, since the gate moved: \.companygraph\/hooks\/pre-merge-commit$/m);
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+});
+
+// A move onto github from none writes the seat hook, which git ignores until it is executable and
+// core.hooksPath names its folder; the move does both, for an instance and an adopted repository.
+for (const [kind, make] of [
+  ["an instance", (root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "none"])],
+  ["an adopted repository", (root) => run(["adopt", root, "--gate", "none"])],
+]) {
+  test(`upgrade --gate github from none puts the seat hook in use, for ${kind}`, () => {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    make(root);
+    assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+    const said = run(["upgrade", root, "--gate", "github"]);
+    assert.match(said, /the commit-msg hook is in use/);
+    if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+    assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  });
+}
+
+test("init --gate git of a folder not made yet is in git when the folder above it is, and refused where it is not", () => {
+  const repository = temp();
+  execFileSync("git", ["init", "-q"], { cwd: repository });
+  const root = path.join(repository, "acme");
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repository, encoding: "utf8" }).trim(), "acme/.companygraph/hooks");
+  const outside = path.join(temp(), "acme");
+  const refused = spawnSync(process.execPath, [cli, "init", outside, "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /not a git repository/);
+  assert.ok(!fs.existsSync(outside));
+});
+
+// AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
+// about what checks the repository still names the old gate; the move says so, and quotes the
+// sentence init writes for the new one, and a run that moves no gate says nothing of it.
+test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quoting the new gate's", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  const before = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /AGENTS\.md is this instance's own and was not rewritten/);
+  assert.ok(said.includes("checked on every commit by the pre-commit hook in `.companygraph/hooks/`"), said);
+  assert.equal(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
+  const again = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "git"], { encoding: "utf8" });
+  assert.doesNotMatch(again.stdout, /AGENTS\.md/);
+});
+
+test("init --gate git under a hooks folder of the repository's own does not claim every commit runs check", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.match(said, /core\.hooksPath is hooks here/);
+  assert.doesNotMatch(said, /every commit runs check/);
+});
+
+test("adopt says the seat hook lets every commit through on the git gate as on github, and not on none", () => {
+  for (const gate of ["github", "git"]) {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    assert.match(run(["adopt", root, "--gate", gate]), /lets every commit through/, gate);
+  }
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  assert.doesNotMatch(run(["adopt", root, "--gate", "none"]), /lets every commit through/);
+});
+
+// A move to the git gate removes the workflow, so where git does not read the hooks it wrote
+// nothing gates the repository at all, and saying only that the hooks are not in use undersells it.
+const UNGATED = /nothing gates this repository until git reads these hooks: point core\.hooksPath at \.companygraph\/hooks, or call them from the repository's own hooks/;
+
+test("init and adopt --gate git under a hooks folder of the repository's own warn that nothing gates it", () => {
+  for (const make of [(root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), (root) => run(["adopt", root, "--gate", "git"])]) {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+    assert.match(make(root), UNGATED);
+  }
+  // Where git reads them, there is nothing to warn of.
+  const read = temp();
+  execFileSync("git", ["init", "-q"], { cwd: read });
+  assert.doesNotMatch(run(["init", read, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /nothing gates/);
+});
+
+test("upgrade --gate git under a hooks folder of the repository's own warns that nothing gates it, since the workflow is gone", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
+  assert.match(said, UNGATED);
+  // Real hooks in the default folder keep git from reading these as well.
+  const other = temp();
+  execFileSync("git", ["init", "-q"], { cwd: other });
+  run(["adopt", other]);
+  execFileSync("git", ["config", "--unset", "core.hooksPath"], { cwd: other });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: other, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(other, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  assert.match(run(["upgrade", other, "--gate", "git"]), UNGATED);
+});
+
+test("upgrade --dry-run --force names the edited gate hooks --force would remove anyway", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+  const said = run(["upgrade", root, "--gate", "github", "--force", "--dry-run"]);
+  assert.match(said, /^ {2}remove {2}\.companygraph\/hooks\/pre-commit, edited since this tooling wrote it, which --force removes anyway$/m);
+  assert.match(said, /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit$/m);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  const adopted = temp();
+  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  run(["adopt", adopted, "--gate", "git"]);
+  fs.appendFileSync(path.join(adopted, ".companygraph/hooks/pre-merge-commit"), "# mine\n");
+  assert.match(run(["upgrade", adopted, "--gate", "none", "--force", "--dry-run"]), /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit, edited since this tooling wrote it, which --force removes anyway$/m);
+});
+
+test("upgrade's help says --force also removes edited gate hooks", () => {
+  assert.match(run(["--help"]), /--force[^\n]*removes edited gate hooks/);
+});
+
+test("check fails on a manifest gate that is no gate, naming it and the three, for an instance and an adopted repository", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "none"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), gate: "gti" }, null, 2) + "\n");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /\.companygraph\/manifest\.json: names gti as its gate, and the gates are github, git and none/);
+  const adopted = temp();
+  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  run(["adopt", adopted]);
+  const at = path.join(adopted, ".companygraph/manifest.json");
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), gate: "gti" }, null, 2) + "\n");
+  const said = spawnSync(process.execPath, [cli, "check", adopted], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names gti as its gate/);
+});
+
+test("the menu says Hold a repository writes what the chosen gate writes", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /Hold a repository\s+a site or service with no model: the form check, and the workflow or hooks the chosen gate writes/);
+  assert.doesNotMatch(listed, /its workflow and the seat hook/);
 });

@@ -33,7 +33,7 @@ import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "n
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, isNewer, MODEL, IMAGE_FILE, PACKS } from "../lib/checks.mjs";
-import { hashOf, unixLines } from "../lib/instance-files.mjs";
+import { gateFault, hashOf, unixLines } from "../lib/instance-files.mjs";
 import { instanceAt } from "../lib/history.mjs";
 import { KNOWN, checkKnown } from "../lib/known.mjs";
 /** @import { InstanceFiles } from "../lib/instance.mjs" */
@@ -109,6 +109,9 @@ export function checkPath(path) {
   for (const p of packs) walk(p.dir);
 
   const { failures, skipped, notes } = checkInstance(files, { core, model: MODEL, packs });
+  // The gate the manifest names, which upgrade reads to know what to move.
+  const gate = gateFault(manifest);
+  if (gate) failures.push(gate);
 
   // The manifest's per-file hashes, read on the one command every commit runs. What the tooling
   // wrote — the vendored core, and the skills where it installed them — is not the instance's to

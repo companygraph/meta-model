@@ -12,6 +12,8 @@ export type InitAsk = {
     present?: Set<string> | undefined;
     fetched?: boolean | undefined;
     hook?: boolean | undefined;
+    gate?: string | undefined;
+    repository?: boolean | undefined;
 };
 export type InitPlan = {
     refused: string;
@@ -35,12 +37,24 @@ export type UpgradeAsk = {
         tooling?: string;
         packs?: string[];
         exclude?: string[];
+        gate?: string;
     };
+    /**
+     * The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
+     */
     held: Map<string, string | undefined>;
+    /**
+     * Whether the folder is a git repository; the git gate refuses where it is not.
+     */
+    repository?: boolean | undefined;
     workflow: string | null;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
+    /**
+     * The gate to move to; absent keeps the one the manifest names.
+     */
+    gate?: string | undefined;
     /**
      * The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
      */
@@ -54,6 +68,7 @@ export type UpgradeWrites = {
     missing: string[];
     given: string[];
     rewritten: string[];
+    forced: string[];
     from: string;
     to: string;
 };
@@ -84,6 +99,8 @@ export type BackfillAsk = {
  * @property {Set<string> | undefined} [present]
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [hook]
+ * @property {string | undefined} [gate]
+ * @property {boolean | undefined} [repository]
  */
 /**
  * A plan, or a refusal saying why nothing may be written. `writes` maps path → text.
@@ -98,12 +115,14 @@ export type BackfillAsk = {
  * @property {Map<string, Files> | undefined} [packs]
  * @property {string} tooling
  * @property {string} tag
- * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[] }} manifest
- * @property {Map<string, string | undefined>} held
+ * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[]; gate?: string }} manifest
+ * @property {Map<string, string | undefined>} held The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
+ * @property {boolean | undefined} [repository] Whether the folder is a git repository; the git gate refuses where it is not.
  * @property {string | null} workflow
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
+ * @property {string | undefined} [gate] The gate to move to; absent keeps the one the manifest names.
  * @property {Set<string> | undefined} [present] The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
  */
 /**
@@ -117,6 +136,7 @@ export type BackfillAsk = {
  * @property {string[]} missing
  * @property {string[]} given
  * @property {string[]} rewritten
+ * @property {string[]} forced
  * @property {string} from
  * @property {string} to
  */
@@ -135,34 +155,64 @@ export declare const SKILLS = ".claude/skills/";
  * @param {InitAsk} ask
  * @returns {InitPlan}
  */
-export declare function initPlan({ core, skills, packs, tooling, tag, name, agent, units, folders, present, fetched, hook }: InitAsk): InitPlan;
+export declare function initPlan({ core, skills, packs, tooling, tag, name, agent, units, folders, present, fetched, hook, gate, repository }: InitAsk): InitPlan;
 /**
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate, repository }: UpgradeAsk): UpgradePlan;
 /**
- * @param {{ tooling: string; present: Set<string> }} ask
+ * @param {{ from: string; to: string; workflow: string; hasWorkflow: boolean; held: Map<string, string | undefined>; force?: boolean }} ask
+ * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[] }}
+ */
+export declare function gatePlan({ from, to, workflow, hasWorkflow, held, force }: {
+    from: string;
+    to: string;
+    workflow: string;
+    hasWorkflow: boolean;
+    held: Map<string, string | undefined>;
+    force?: boolean;
+}): {
+    refused: string;
+    writes?: undefined;
+} | {
+    refused?: undefined;
+    writes: Map<string, string>;
+    removes: string[];
+    forced: string[];
+};
+/**
+ * @param {{ tooling: string; present: Set<string>; gate?: string; repository?: boolean }} ask
  * @returns {InitPlan}
  */
-export declare function adoptPlan({ tooling, present }: {
+export declare function adoptPlan({ tooling, present, gate, repository }: {
     tooling: string;
     present: Set<string>;
+    gate?: string;
+    repository?: boolean;
 }): InitPlan;
 /**
- * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[] }; workflow: string | null; present: Set<string> }} ask
- * @returns {{ writes: Map<string, string>; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
+ * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[]; gate?: string }; workflow: string | null; present: Set<string>; gate?: string; held?: Map<string, string | undefined>; force?: boolean; repository?: boolean }} ask
+ * `held` must hold `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
+ * @returns {{ writes: Map<string, string>; removes: string[]; forced: string[]; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
  */
-export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present }: {
+export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present, gate, held, force, repository }: {
     tooling: string;
     manifest: {
         tooling?: string;
         exclude?: string[];
+        gate?: string;
     };
     workflow: string | null;
     present: Set<string>;
+    gate?: string;
+    held?: Map<string, string | undefined>;
+    force?: boolean;
+    repository?: boolean;
 }): {
     writes: Map<string, string>;
+    removes: string[];
+    forced: string[];
     given: string[];
     from: string;
     to: string;
