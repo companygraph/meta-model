@@ -55,6 +55,8 @@ jobs:
         run: npm run test:judge
       - name: A commit's seat, judged against what governs it
         run: npm run test:seats
+      - name: A commit and a merge, gated on the machine
+        run: npm run test:gate
       # `exports` is read by nothing in this repository, where every test imports a path. This one
       # packs the repository, installs the tarball into an empty project and loads each entry the
       # way a consumer does, then holds a graph written as beacon writes one to R1 to R18.
