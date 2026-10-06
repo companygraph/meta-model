@@ -37,12 +37,17 @@ export type UpgradeAsk = {
         tooling?: string;
         packs?: string[];
         exclude?: string[];
+        gate?: string;
     };
     held: Map<string, string | undefined>;
     workflow: string | null;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
+    /**
+     * The gate to move to; absent keeps the one the manifest names.
+     */
+    gate?: string | undefined;
     /**
      * The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
      */
@@ -56,6 +61,7 @@ export type UpgradeWrites = {
     missing: string[];
     given: string[];
     rewritten: string[];
+    forced: string[];
     from: string;
     to: string;
 };
@@ -102,12 +108,13 @@ export type BackfillAsk = {
  * @property {Map<string, Files> | undefined} [packs]
  * @property {string} tooling
  * @property {string} tag
- * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[] }} manifest
+ * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[]; gate?: string }} manifest
  * @property {Map<string, string | undefined>} held
  * @property {string | null} workflow
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
+ * @property {string | undefined} [gate] The gate to move to; absent keeps the one the manifest names.
  * @property {Set<string> | undefined} [present] The paths the repository holds; a caller that omits it has not said, so `pins.json` is never written for it.
  */
 /**
@@ -121,6 +128,7 @@ export type BackfillAsk = {
  * @property {string[]} missing
  * @property {string[]} given
  * @property {string[]} rewritten
+ * @property {string[]} forced
  * @property {string} from
  * @property {string} to
  */
@@ -144,7 +152,26 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate }: UpgradeAsk): UpgradePlan;
+/**
+ * @param {{ from: string; to: string; workflow: string; held: Map<string, string | undefined>; force?: boolean }} ask
+ * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[] }}
+ */
+export declare function gatePlan({ from, to, workflow, held, force }: {
+    from: string;
+    to: string;
+    workflow: string;
+    held: Map<string, string | undefined>;
+    force?: boolean;
+}): {
+    refused: string;
+    writes?: undefined;
+} | {
+    refused?: undefined;
+    writes: Map<string, string>;
+    removes: string[];
+    forced: string[];
+};
 /**
  * @param {{ tooling: string; present: Set<string>; gate?: string; repository?: boolean }} ask
  * @returns {InitPlan}
@@ -156,19 +183,25 @@ export declare function adoptPlan({ tooling, present, gate, repository }: {
     repository?: boolean;
 }): InitPlan;
 /**
- * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[] }; workflow: string | null; present: Set<string> }} ask
- * @returns {{ writes: Map<string, string>; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
+ * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[]; gate?: string }; workflow: string | null; present: Set<string>; gate?: string; held?: Map<string, string | undefined>; force?: boolean }} ask
+ * @returns {{ writes: Map<string, string>; removes: string[]; forced: string[]; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
  */
-export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present }: {
+export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present, gate, held, force }: {
     tooling: string;
     manifest: {
         tooling?: string;
         exclude?: string[];
+        gate?: string;
     };
     workflow: string | null;
     present: Set<string>;
+    gate?: string;
+    held?: Map<string, string | undefined>;
+    force?: boolean;
 }): {
     writes: Map<string, string>;
+    removes: string[];
+    forced: string[];
     given: string[];
     from: string;
     to: string;

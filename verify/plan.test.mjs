@@ -1,6 +1,6 @@
 import test from "node:test";
 import assert from "node:assert/strict";
-import { AGENTS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
+import { AGENTS, adoptPlan, gatePlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { GATE_HOOK, hashOf, HOOK, INSTANCE_PINS, MERGE_HOOK } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
 import { vocabularyOf } from "../lib/checks.mjs";
@@ -766,4 +766,50 @@ test("adopt writes what the gate names, and refuses as init does", () => {
   assert.deepEqual(gateWrites(adoptPlan({ ...at, gate: "none" }).writes), []);
   assert.match(adoptPlan({ ...at, gate: "git", repository: false }).refused, /not a git repository/);
   assert.match(adoptPlan({ ...at, gate: "gitlab" }).refused, /not a gate/);
+});
+
+const WF = "the workflow\n";
+const heldOf = (entries) => new Map(entries);
+
+test("a move between gates writes what the new one names and removes what the old one wrote", () => {
+  const toGit = gatePlan({ from: "github", to: "git", workflow: WF, held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
+  assert.deepEqual([...toGit.writes.keys()].sort(), [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
+  assert.deepEqual(toGit.removes, [".github/workflows/companygraph.yml"]);
+  const toGithub = gatePlan({ from: "git", to: "github", workflow: WF, held: heldOf([[".companygraph/hooks/commit-msg", HOOK], [".companygraph/hooks/pre-commit", GATE_HOOK], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]) });
+  assert.deepEqual([...toGithub.writes.keys()], [".github/workflows/companygraph.yml"]);
+  assert.deepEqual(toGithub.removes, [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
+  const toNone = gatePlan({ from: "git", to: "none", workflow: WF, held: heldOf([[".companygraph/hooks/commit-msg", HOOK], [".companygraph/hooks/pre-commit", GATE_HOOK], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]) });
+  assert.deepEqual(toNone.writes.size, 0);
+  assert.deepEqual(toNone.removes, [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
+  const fromNone = gatePlan({ from: "none", to: "git", workflow: WF, held: new Map() });
+  assert.deepEqual([...fromNone.writes.keys()].sort(), [".companygraph/hooks/commit-msg", ".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
+  assert.equal(gatePlan({ from: "git", to: "git", workflow: WF, held: new Map() }).writes.size, 0);
+});
+
+test("an edited gate hook stops the move by name, and --force removes it and says so", () => {
+  const held = heldOf([[".companygraph/hooks/pre-commit", `${GATE_HOOK}# mine\n`], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]);
+  assert.match(gatePlan({ from: "git", to: "github", workflow: WF, held }).refused, /\.companygraph\/hooks\/pre-commit/);
+  const forced = gatePlan({ from: "git", to: "github", workflow: WF, held, force: true });
+  assert.deepEqual(forced.forced, [".companygraph/hooks/pre-commit"]);
+  assert.ok(forced.removes.includes(".companygraph/hooks/pre-commit"));
+});
+
+test("an upgrade moves the gate when asked, records it, and keeps it when not asked", () => {
+  const manifest = { tooling: "0.31.2", core: { version: "0.31.1" }, units: "meta", files: {} };
+  const base = { core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: WF };
+  const moved = upgradePlan({ ...base, gate: "git", held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
+  assert.equal(JSON.parse(moved.writes.get(".companygraph/manifest.json")).gate, "git");
+  assert.ok(moved.writes.has(".companygraph/hooks/pre-commit"));
+  assert.ok(moved.removes.includes(".github/workflows/companygraph.yml"));
+  assert.ok(!moved.writes.has(".github/workflows/companygraph.yml"));
+  const kept = upgradePlan({ ...base, manifest: { ...manifest, tooling: "0.31.0", gate: "git" }, workflow: null });
+  assert.equal(JSON.parse(kept.writes.get(".companygraph/manifest.json")).gate, "git");
+  assert.ok(!kept.removes.some((p) => p.startsWith(".companygraph/hooks/")));
+});
+
+test("an adopted repository moves its gate as an instance does", () => {
+  const moved = adoptedUpgradePlan({ tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"] }, workflow: WF, present: new Set(["pins.json"]), gate: "git", held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
+  assert.equal(JSON.parse(moved.writes.get(".companygraph/manifest.json")).gate, "git");
+  assert.ok(moved.writes.has(".companygraph/hooks/pre-commit"));
+  assert.deepEqual(moved.removes, [".github/workflows/companygraph.yml"]);
 });
