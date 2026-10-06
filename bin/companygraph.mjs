@@ -381,7 +381,9 @@ const UNGATED = `  ! nothing gates this repository until git reads these hooks: 
 function sayGate(root, gate, writes) {
   const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
   const inUse = hooks.length > 0 && useHook(root, hooks);
-  if (gate === "git" && inUse) console.log(`  every commit runs check, ids --range and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
+  // ids holds a model, so a repository that took the machinery alone runs check and verify only.
+  const ids = existsSync(join(root, "model")) ? ", ids --range" : "";
+  if (gate === "git" && inUse) console.log(`  every commit runs check${ids} and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
   if (gate === "git" && !inUse) console.log(UNGATED);
   if (gate === "none") console.log(`  level 1: nothing gates this folder; run check by hand, or open it as a vault with the Obsidian plugin, which checks a page while it is edited`);
 }
@@ -538,6 +540,7 @@ async function upgrade(argv) {
       console.log(`tooling ${adopted.from} → ${adopted.to}, if this runs:`);
       for (const path of adopted.writes.keys()) console.log(`  write   ${path}`);
       for (const path of adopted.removes) console.log(`  remove  ${path}${adopted.forced.includes(path) ? FORCED : ""}`);
+      refreshedSaid([], adopted.unreplaced);
       return "planned";
     }
     inside(adopted.removes);
@@ -625,6 +628,7 @@ async function upgrade(argv) {
     console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
     for (const path of /** @type {Map<string, string>} */ (plan.writes).keys()) console.log(`  write   ${path}`);
     for (const path of /** @type {string[]} */ (plan.removes)) console.log(`  remove  ${path}${/** @type {string[]} */ (plan.forced).includes(path) ? FORCED : ""}`);
+    refreshedSaid([], /** @type {string[]} */ (plan.unreplaced));
     return "planned";
   }
   // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
