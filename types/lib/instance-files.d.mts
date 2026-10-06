@@ -100,6 +100,8 @@ export declare const localizationPageFor: (schema: string | undefined, page: {
     id: string;
     source: string;
 }) => string;
+/** @param {string} gate */
+export declare function checkedBy(gate: string): string;
 /**
  * @param {{ agent: string; name: string; units: string; gate?: string }} ask
  * @returns {Map<string, string>}

@@ -18,6 +18,11 @@ function stub() {
   return file;
 }
 
+// Git for Windows runs these hooks with its own sh, as it runs the seat hook commits.test.mjs drives,
+// so the file runs there; the two tests that put a stub of their own on PATH do not, as cli.test.mjs
+// says of the same case.
+const pathStub = process.platform === "win32" && "a shebang script with no .exe/.cmd extension, or a tool linked by its POSIX path, is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner";
+
 // A repository on the git gate: the manifest, the two gate hooks, core.hooksPath at them, and
 // a first commit made without the hooks so every test starts from a clean tree.
 function gated({ verify } = {}) {
@@ -99,7 +104,7 @@ test("a pins.json that is not JSON refuses the commit with a sentence", () => {
   assert.match(r.stderr, /pins\.json could not be read/);
 });
 
-test("a check that cannot run at all refuses the commit, since nothing runs it again", () => {
+test("a check that cannot run at all refuses the commit, since nothing runs it again", { skip: pathStub }, () => {
   const dir = gated();
   fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
   git(dir, "add", "a.md");
@@ -168,7 +173,7 @@ test("a commit in a linked worktree is gated, and the main index stays untouched
   assert.equal(git(dir, "log", "--format=%s", "-1"), "start\n");
 });
 
-test("an npx that fails refuses the commit", () => {
+test("an npx that fails refuses the commit", { skip: pathStub }, () => {
   const dir = gated();
   fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
   git(dir, "add", "a.md");

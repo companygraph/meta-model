@@ -1929,7 +1929,8 @@ test("init --gate git writes the hooks, points git at them, and writes no workfl
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
   assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
-  assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
+  // Windows has no execute bit to set.
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
 });
 
 test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
@@ -1975,7 +1976,7 @@ test("upgrade --gate moves an adopted repository to none and back to github, nam
   assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   run(["upgrade", root, "--gate", "github"]);
   assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
-  assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
   assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
   // github is the default, and a manifest on it carries no gate at all.
   assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate ?? "github", "github");
@@ -2011,7 +2012,7 @@ for (const [kind, make] of [
     assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
     const said = run(["upgrade", root, "--gate", "github"]);
     assert.match(said, /the commit-msg hook is in use/);
-    assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+    if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
     assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
   });
 }
@@ -2028,4 +2029,40 @@ test("init --gate git of a folder not made yet is in git when the folder above i
   assert.notEqual(refused.status, 0);
   assert.match(refused.stderr, /not a git repository/);
   assert.ok(!fs.existsSync(outside));
+});
+
+// AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
+// about what checks the repository still names the old gate; the move says so, and quotes the
+// sentence init writes for the new one, and a run that moves no gate says nothing of it.
+test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quoting the new gate's", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  const before = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /AGENTS\.md is this instance's own and was not rewritten/);
+  assert.ok(said.includes("checked on every commit by the pre-commit hook in `.companygraph/hooks/`"), said);
+  assert.equal(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
+  const again = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "git"], { encoding: "utf8" });
+  assert.doesNotMatch(again.stdout, /AGENTS\.md/);
+});
+
+test("init --gate git under a hooks folder of the repository's own does not claim every commit runs check", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.match(said, /core\.hooksPath is hooks here/);
+  assert.doesNotMatch(said, /every commit runs check/);
+});
+
+test("adopt says the seat hook lets every commit through on the git gate as on github, and not on none", () => {
+  for (const gate of ["github", "git"]) {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    assert.match(run(["adopt", root, "--gate", gate]), /lets every commit through/, gate);
+  }
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  assert.doesNotMatch(run(["adopt", root, "--gate", "none"]), /lets every commit through/);
 });

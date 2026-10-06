@@ -30,7 +30,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
-import { excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { checkedBy, excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
 import { formCheck, formattedOf } from "../lib/form.mjs";
 import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
@@ -312,10 +312,11 @@ function panel(label, ok, text) {
 
 // The hooks named made executable and, where git and the repository let it, put in use; what was
 // done or why not is said, as init always said it. A core.hooksPath of the repository's own is
-// left as it is, whichever hooks are named.
+// left as it is, whichever hooks are named. It answers whether git now reads them.
 /**
  * @param {string} root
  * @param {string[]} [names]
+ * @returns {boolean}
  */
 function useHook(root, names = ["commit-msg"]) {
   for (const name of names) chmodSync(join(root, `.companygraph/hooks/${name}`), 0o755);
@@ -349,7 +350,9 @@ function useHook(root, names = ["commit-msg"]) {
   else {
     spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
     console.log(`  ${which} in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
+    return true;
   }
+  return false;
 }
 
 // Whether a folder is in a git repository, asked of the nearest folder that exists: init and adopt
@@ -363,7 +366,8 @@ function inGit(root) {
 
 // The hooks a plan wrote put in use, and what the gate means said: git gates every commit on this
 // machine and writes no workflow, and none gates nothing, which is the level a folder without
-// git or GitHub stands at.
+// git or GitHub stands at. That every commit runs check is said only where git reads the hooks;
+// where it does not, useHook has said why, and the claim would be false.
 /**
  * @param {string} root
  * @param {string} gate
@@ -371,8 +375,8 @@ function inGit(root) {
  */
 function sayGate(root, gate, writes) {
   const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
-  if (hooks.length) useHook(root, hooks);
-  if (gate === "git") console.log(`  every commit runs check and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
+  const inUse = hooks.length > 0 && useHook(root, hooks);
+  if (gate === "git" && inUse) console.log(`  every commit runs check and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
   if (gate === "none") console.log(`  level 1: nothing gates this folder; run check by hand, or open it as a vault with the Obsidian plugin, which checks a page while it is edited`);
 }
 
@@ -627,6 +631,13 @@ async function upgrade(argv) {
   if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
   useHooks(/** @type {Map<string, string>} */ (plan.writes));
+  // AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
+  // about what checks the repository still names the gate it left. The move says so, and quotes
+  // the sentence init writes for the new gate, which the owner can take or put in their own words.
+  const gateFrom = manifest.gate ?? "github";
+  const gateTo = given.gate ?? gateFrom;
+  if (gateTo !== gateFrom && existsSync(join(root, "AGENTS.md")))
+    console.log(`  AGENTS.md is this instance's own and was not rewritten; its sentence about what checks this repository is yours to update, and for the ${gateTo} gate init writes: "${checkedBy(gateTo)}"`);
   // A release can make a valid instance invalid, so the instance is checked where it now stands
   // and told what it owes; the upgrade is not undone by it, and neither is it reported as having
   // failed. The files are the release's; the work the check names is the owner's to do. checkPath
@@ -822,7 +833,7 @@ function adopt(argv) {
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${shown(root)} adopted at ${PACKAGE.version}: ${written.join(", ")}`);
   console.log(`  its Markdown is held to the one form, leaving out dist/; list more paths under "exclude" in .companygraph/manifest.json`);
-  if (gate === "github") console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
+  if (gate !== "none") console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
   sayGate(root, gate, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
 }
