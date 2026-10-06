@@ -1,6 +1,7 @@
 import type { TypeEntry } from "./checks.mjs";
 export type Manifest = {
     tooling: string;
+    gate?: string;
     core: {
         version: string;
         shape: number;
@@ -18,6 +19,7 @@ export type Manifest = {
  * tooling wrote and owns.
  * @typedef {object} Manifest
  * @property {string} tooling
+ * @property {string} [gate]
  * @property {{ version: string; shape: number; source: string }} core
  * @property {string} units
  * @property {string[]} packs
@@ -31,10 +33,12 @@ export declare const unixLines: (text: string) => string;
 export declare const GITATTRIBUTES = "* text=auto eol=lf\n";
 export declare const GITIGNORE = "dist/\n.obsidian/\n";
 export declare const INSTANCE_PINS: string;
-/** @type {(manifest: { tooling: string; exclude: string[] }) => string} */
+export declare const GATES: string[];
+/** @type {(manifest: { tooling: string; exclude: string[]; gate?: string }) => string} */
 export declare const adoptedManifestOf: (manifest: {
     tooling: string;
     exclude: string[];
+    gate?: string;
 }) => string;
 /** @type {(tag: string) => string} */
 export declare const repositoryWorkflowFor: (tag: string) => string;
@@ -44,7 +48,7 @@ export declare const excludeFor: (units: string) => string[];
  * @param {Omit<Manifest, "packs" | "exclude"> & { packs?: string[]; exclude?: string[] }} manifest
  * @returns {string}
  */
-export declare function manifestOf({ tooling, core, units, packs, exclude, files }: Omit<Manifest, "packs" | "exclude"> & {
+export declare function manifestOf({ tooling, gate, core, units, packs, exclude, files }: Omit<Manifest, "packs" | "exclude"> & {
     packs?: string[];
     exclude?: string[];
 }): string;
@@ -95,11 +99,12 @@ export declare const localizationPageFor: (schema: string | undefined, page: {
     source: string;
 }) => string;
 /**
- * @param {{ agent: string; name: string; units: string }} ask
+ * @param {{ agent: string; name: string; units: string; gate?: string }} ask
  * @returns {Map<string, string>}
  */
-export declare function agentFilesFor({ agent, name, units }: {
+export declare function agentFilesFor({ agent, name, units, gate }: {
     agent: string;
     name: string;
     units: string;
+    gate?: string;
 }): Map<string, string>;
