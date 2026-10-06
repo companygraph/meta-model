@@ -161,6 +161,7 @@ test("the agent file says which gate holds the instance", () => {
   assert.match(said("github"), /checked by CI, and locally by/);
   assert.match(said("git"), /checked on every commit by the pre-commit hook in `\.companygraph\/hooks\/`/);
   assert.match(said("git"), /`git commit --no-verify` skips it and is not used here/);
+  assert.match(said("git"), /runs `npx github:companygraph\/meta-model#v<tooling> check`, then `ids --range` against the last commit, and then the `verify` commands in `pins\.json`/);
   assert.doesNotMatch(said("git"), /CI/);
   assert.match(said("none"), /nothing gates this folder/);
   assert.doesNotMatch(said("none"), /CI/);

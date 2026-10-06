@@ -69,6 +69,14 @@ export type UpgradeWrites = {
     given: string[];
     rewritten: string[];
     forced: string[];
+    /**
+     * Gate hooks in an earlier release's text, brought to this one.
+     */
+    refreshed: string[];
+    /**
+     * Gate hooks edited since the tooling wrote them, left as they are.
+     */
+    unreplaced: string[];
     from: string;
     to: string;
 };
@@ -137,6 +145,8 @@ export type BackfillAsk = {
  * @property {string[]} given
  * @property {string[]} rewritten
  * @property {string[]} forced
+ * @property {string[]} refreshed Gate hooks in an earlier release's text, brought to this one.
+ * @property {string[]} unreplaced Gate hooks edited since the tooling wrote them, left as they are.
  * @property {string} from
  * @property {string} to
  */
@@ -163,7 +173,7 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
 export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate, repository }: UpgradeAsk): UpgradePlan;
 /**
  * @param {{ from: string; to: string; workflow: string; hasWorkflow: boolean; held: Map<string, string | undefined>; force?: boolean }} ask
- * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[] }}
+ * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[]; refreshed: string[]; unreplaced: string[] }}
  */
 export declare function gatePlan({ from, to, workflow, hasWorkflow, held, force }: {
     from: string;
@@ -180,6 +190,8 @@ export declare function gatePlan({ from, to, workflow, hasWorkflow, held, force 
     writes: Map<string, string>;
     removes: string[];
     forced: string[];
+    refreshed: string[];
+    unreplaced: string[];
 };
 /**
  * @param {{ tooling: string; present: Set<string>; gate?: string; repository?: boolean }} ask
@@ -194,7 +206,7 @@ export declare function adoptPlan({ tooling, present, gate, repository }: {
 /**
  * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[]; gate?: string }; workflow: string | null; present: Set<string>; gate?: string; held?: Map<string, string | undefined>; force?: boolean; repository?: boolean }} ask
  * `held` must hold `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
- * @returns {{ writes: Map<string, string>; removes: string[]; forced: string[]; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
+ * @returns {{ writes: Map<string, string>; removes: string[]; forced: string[]; refreshed: string[]; unreplaced: string[]; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
  */
 export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present, gate, held, force, repository }: {
     tooling: string;
@@ -213,6 +225,8 @@ export declare function adoptedUpgradePlan({ tooling, manifest, workflow, presen
     writes: Map<string, string>;
     removes: string[];
     forced: string[];
+    refreshed: string[];
+    unreplaced: string[];
     given: string[];
     from: string;
     to: string;

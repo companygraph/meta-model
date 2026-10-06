@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
+import { GATE_HOOK, PAST_GATE_HOOKS } from "../lib/instance-files.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
@@ -1964,6 +1965,29 @@ test("on the git gate a commit that changes an id is refused, and a commit that 
   assert.equal(git("log", "--format=%s", "-1"), "A plainer vision\n");
 });
 
+test("a plain upgrade brings a pre-commit hook v0.83.0 wrote to this release", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, PAST_GATE_HOOKS[0]);
+  const said = run(["upgrade", root]);
+  assert.match(said, /brought to this release: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), GATE_HOOK);
+  if (process.platform !== "win32") assert.equal(fs.statSync(hook).mode & 0o111, 0o111);
+});
+
+test("a plain upgrade leaves an edited pre-commit hook as it is, and says why", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, `${PAST_GATE_HOOKS[0]}# mine\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /not replaced, since it was edited: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), `${PAST_GATE_HOOKS[0]}# mine\n`);
+});
+
 test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
   const refused = spawnSync(process.execPath, [cli, "init", temp(), "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
   assert.notEqual(refused.status, 0);
@@ -2073,6 +2097,7 @@ test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quo
   const said = run(["upgrade", root, "--gate", "git"]);
   assert.match(said, /AGENTS\.md is this instance's own and was not rewritten/);
   assert.ok(said.includes("checked on every commit by the pre-commit hook in `.companygraph/hooks/`"), said);
+  assert.ok(said.includes("then `ids --range` against the last commit"), said);
   assert.equal(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
   const again = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "git"], { encoding: "utf8" });
   assert.doesNotMatch(again.stdout, /AGENTS\.md/);

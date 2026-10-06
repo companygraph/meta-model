@@ -49,7 +49,7 @@ import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabula
  * the fields of a plan.
  * @typedef {UpgradeWrites | {
  *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
- *   given?: undefined; rewritten?: undefined; forced?: undefined; from?: undefined; to?: undefined;
+ *   given?: undefined; rewritten?: undefined; forced?: undefined; refreshed?: undefined; unreplaced?: undefined; from?: undefined; to?: undefined;
  * }} UpgradeRead
  */
 
@@ -490,6 +490,14 @@ async function upgrade(argv) {
   // A dry run under --force names each gate hook it removes only because --force says so, since
   // a hook is the repository's own once written and an edit to one is someone's work.
   const FORCED = ", edited since this tooling wrote it, which --force removes anyway";
+  // A gate hook in an earlier release's text is the tooling's and is brought to this release, which
+  // is how a repository on the git gate takes a step a release adds; an edited one is the
+  // repository's own and is left, and saying so is what tells its owner the new step is not there.
+  /** @param {string[]} refreshed @param {string[]} unreplaced */
+  const refreshedSaid = (refreshed, unreplaced) => {
+    if (refreshed.length) console.log(`  brought to this release: ${refreshed.join(", ")}`);
+    if (unreplaced.length) console.log(`  not replaced, since it was edited: ${unreplaced.join(", ")}; it is the repository's own, and what this release adds to it is not in it unless put there by hand`);
+  };
   // After writing, the hooks the move wrote are put in use as init puts them: written alone they
   // are not executable and git does not read their folder, so it would skip them without a word.
   // On the git gate a move that wrote none still puts in use the ones the repository holds, and
@@ -523,6 +531,7 @@ async function upgrade(argv) {
     if ("refused" in adopted) throw new Error(adopted.refused);
     if (!adopted.writes.size && !adopted.removes.length) {
       console.log(`already on ${adopted.to}; nothing to do.`);
+      refreshedSaid([], adopted.unreplaced);
       return "nothing";
     }
     if (given["dry-run"]) {
@@ -539,6 +548,7 @@ async function upgrade(argv) {
     if (moved.length) console.log(`  removed, since the gate moved: ${moved.join(", ")}`);
     if (adopted.forced.length) console.log(`  removed, as --force asked: ${adopted.forced.join(", ")}`);
     if (adopted.given.length) console.log(`  written, since the repository had none, and its own from now on: ${adopted.given.join(", ")}`);
+    refreshedSaid(adopted.refreshed, adopted.unreplaced);
     useHooks(adopted.writes);
     return "done";
   }
@@ -608,6 +618,7 @@ async function upgrade(argv) {
   if (plan.refused) throw new Error(plan.refused);
   if (/** @type {Map<string, string>} */ (plan.writes).size === 0 && /** @type {string[]} */ (plan.removes).length === 0) {
     console.log(`already on core ${plan.to}; nothing to do.`);
+    refreshedSaid([], /** @type {string[]} */ (plan.unreplaced));
     return "nothing";
   }
   if (given["dry-run"]) {
@@ -642,6 +653,7 @@ async function upgrade(argv) {
   const dropped = /** @type {string[]} */ (plan.missing).filter((path) => !/** @type {Map<string, string>} */ (plan.writes).has(path));
   if (rewritten.length) console.log(`  written fresh, as --force asked, though the instance no longer had them: ${rewritten.join(", ")}`);
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
+  refreshedSaid(/** @type {string[]} */ (plan.refreshed), /** @type {string[]} */ (plan.unreplaced));
   useHooks(/** @type {Map<string, string>} */ (plan.writes));
   // AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
   // about what checks the repository still names the gate it left. The move says so, and quotes
