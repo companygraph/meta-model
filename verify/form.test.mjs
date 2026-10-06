@@ -4,7 +4,7 @@ import { execFileSync } from "node:child_process";
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { FORM_VERSION, markdownFilesOf, formCheck, formattedOf } from "../lib/form.mjs";
+import { FORM_VERSION, markdownFilesOf, formCheck, formattedOf, linterEnvOf } from "../lib/form.mjs";
 
 // Each test's trees have a prefix of their own, apart from the copies formCheck makes, and are
 // removed when the test ends, so a run leaves nothing in the temporary folder.
@@ -168,4 +168,34 @@ test("formattedOf with nothing handed in runs nothing", () => {
   const { formatted, error } = formattedOf(new Map(), { linter: { command: path.join(os.tmpdir(), "no-such-markdownlint"), args: [] } });
   assert.equal(formatted.size, 0);
   assert.equal(error, undefined);
+});
+
+// The git gate's hooks start the tooling with `npx --package <meta-model> companygraph`, and npx
+// hands the command it starts its own --package and -c; a nested npx that inherits them runs a
+// command named markdownlint-cli2@<version> from meta-model and exits 127. The linter is started
+// without them, and with the configuration the person set.
+const OUTER = { npm_config_package: "github:companygraph/meta-model#v0.84.0", npm_config_call: "companygraph check .", npm_command: "exec" };
+
+test("the linter's environment leaves out what an outer npm exec set for its own command", () => {
+  const env = linterEnvOf({ ...OUTER, NPM_CONFIG_PACKAGE: "x", npm_config_prefer_offline: "true", npm_config_registry: "https://registry.example/", PATH: "/bin" });
+  assert.deepEqual(env, { npm_config_prefer_offline: "true", npm_config_registry: "https://registry.example/", PATH: "/bin" });
+});
+
+test("the linter is started without the outer npm exec's package, call and command", () => {
+  const saved = Object.fromEntries([...Object.keys(OUTER), "npm_config_prefer_offline"].map((name) => [name, process.env[name]]));
+  Object.assign(process.env, OUTER, { npm_config_prefer_offline: "true" });
+  try {
+    // The stand-in linter says the npm variables it was given and exits 1 naming no file, which
+    // formattedOf reports with what it said.
+    const said = "console.error(JSON.stringify(Object.fromEntries(Object.entries(process.env).filter(([n]) => /^npm_(config_|command)/i.test(n))))); process.exit(1)";
+    const { error } = formattedOf(new Map([["a.md", CLEAN]]), { linter: { command: process.execPath, args: ["-e", said, "--"] } });
+    const given = JSON.parse(/** @type {string} */ (/\{.*\}/.exec(error ?? "")?.[0]));
+    for (const name of Object.keys(OUTER)) assert.equal(given[name], undefined, `${name} was passed on`);
+    assert.equal(given.npm_config_prefer_offline, "true");
+  } finally {
+    for (const [name, value] of Object.entries(saved)) {
+      if (value === undefined) delete process.env[name];
+      else process.env[name] = value;
+    }
+  }
 });
