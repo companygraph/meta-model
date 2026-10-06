@@ -37,7 +37,7 @@ The agent file `init` writes says which gate holds the repository: the workflow 
 3. It runs every command in `pins.json`'s `verify`, in order, from the repository's root.
 4. It refuses the commit when any of them failed, and prints what the failing one said.
 
-`pre-merge-commit` runs `pre-commit`. Git runs it for a merge it can make alone; a merge with conflicts is finished with `git commit`, which runs `pre-commit` itself, so every way onto a branch passes the same gate.
+`pre-merge-commit` runs `pre-commit`. Git runs it for a merge it can make alone, and a merge with conflicts is finished with `git commit`, which runs `pre-commit` itself, so both ways a merge commit is made pass the same gate. Not every way onto a branch makes one: `git cherry-pick`, `git revert`, `git rebase` and `git am` write their commits without running `pre-commit`, and a fast-forward merge writes no commit at all, so what they bring is checked by the next commit that runs the gate, and not before it lands.
 
 Each hook unsets the variables git hands a hook before `npx` clones the tooling, for the reason the seat hook gives: a clone that inherits `GIT_INDEX_FILE` writes its own index over the repository's.
 
@@ -63,6 +63,12 @@ A repository without `pins.json`, or whose `pins.json` has no `verify`, runs `ch
 The workflow is the tooling's, since `upgrade` already moves its tag, so removing it is the tooling's to do, and the report names it. A gate hook is the repository's once written, so `upgrade` removes one only while its text is still the text the tooling wrote; an edited hook stops the move with its name, and `--force` removes it anyway and says so. `upgrade` without `--gate` keeps the gate the manifest names.
 
 A repository that keeps hooks of its own, with `core.hooksPath` pointing at a folder that is not `.companygraph/hooks`, is left as it is: `upgrade` says the tooling's hooks are not in use there, as `init` says of the seat hook today, and changes no git setting.
+
+## What the git gate does not hold
+
+The workflow does more on a pull request than `check` does, and the hooks do not repeat it. `instance-check.yml` runs `ids --range` over the pull request, which holds R18, that an id never changes, and that a decision is not rewritten or removed and a label not used again, and it runs `commits --range`, which judges every commit's seat. Both compare a branch with where it began, which a pull request names and a commit on one machine does not, so on the `git` gate neither runs; the seat hook judges each commit's message as it is made, and nothing compares a page with its earlier self. Running `ids --range` from the git gate is owed, and an issue is owed for it: which commit a hook compares against is the question that issue settles.
+
+The seat hook also lets a commit through when its own check cannot run, offline or without `npx`, and says that the pull request's check will run it. On the `git` gate there is no pull request, so that commit's seat is judged by nobody. The hook's text stays as it is, because it is the repository's own once written and is the same text on every gate; the gap is named here so that a repository choosing `git` knows it.
 
 ## Tests
 
