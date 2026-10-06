@@ -14,7 +14,7 @@ const commit = (cwd, env, ...args) => spawnSync("git", ["-c", "user.name=Robert"
 // It lives outside the repository, where an untracked file would be a change the commit leaves out.
 function stub() {
   const file = path.join(temp(), "stub.mjs");
-  fs.writeFileSync(file, 'if (process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }\n');
+  fs.writeFileSync(file, 'import { writeFileSync } from "node:fs";\nif (process.env.STUB_TRACE) writeFileSync(process.env.STUB_TRACE, "");\nif (process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }\n');
   return file;
 }
 
@@ -183,4 +183,50 @@ test("an npx that fails refuses the commit", { skip: pathStub }, () => {
   assert.notEqual(r.status, 0);
   assert.match(r.stderr, /offline/);
   assert.match(r.stderr, /nothing was committed/);
+});
+
+test("a passing merge goes through pre-merge-commit and lands the merge commit", () => {
+  const dir = gated();
+  const env = { COMPANYGRAPH_CLI: stub() };
+  git(dir, "checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  assert.equal(commit(dir, env, "-m", "a").status, 0);
+  git(dir, "checkout", "-q", "-");
+  // The hook leaves a trace, so the merge is shown to have run it and not only to have passed.
+  const trace = path.join(temp(), "ran");
+  const merged = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "merge", "--no-ff", "-m", "merge side", "side"],
+    { cwd: dir, encoding: "utf8", env: { ...process.env, ...env, STUB_TRACE: trace } });
+  assert.equal(merged.status, 0, merged.stderr);
+  assert.ok(fs.existsSync(trace), "pre-merge-commit ran the check");
+  assert.equal(git(dir, "log", "--format=%s", "-1"), "merge side\n");
+  assert.equal(git(dir, "rev-list", "--parents", "-n", "1", "HEAD").trim().split(" ").length, 3, "HEAD is a merge commit");
+});
+
+test("pins.json without node on PATH refuses the commit with a sentence that names node", { skip: pathStub }, () => {
+  const dir = gated({ verify: ["true"] });
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  // A PATH with the tools the hook needs and an npx that passes, but no node.
+  const bin = temp();
+  for (const tool of ["git", "sh", "sed", "head", "dirname"]) {
+    const found = spawnSync("sh", ["-c", `command -v ${tool}`], { encoding: "utf8" }).stdout.trim();
+    if (found) fs.symlinkSync(found, path.join(bin, tool));
+  }
+  fs.writeFileSync(path.join(bin, "npx"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const r = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", "a"], { cwd: dir, encoding: "utf8", env: { PATH: bin, HOME: process.env.HOME } });
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /node is not on PATH/);
+  assert.doesNotMatch(r.stderr, /could not be read as JSON/);
+});
+
+test("a verify command holding a line break refuses the commit with a sentence, and runs none of it", () => {
+  const dir = gated({ verify: ["touch first\ntouch second"] });
+  fs.writeFileSync(path.join(dir, ".gitignore"), "first\nsecond\n");
+  git(dir, "add", ".gitignore");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub() }, "-m", "a");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /holds a line break/);
+  assert.ok(!fs.existsSync(path.join(dir, "first")));
+  assert.ok(!fs.existsSync(path.join(dir, "second")));
 });

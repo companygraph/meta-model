@@ -30,7 +30,7 @@ import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
 import { AGENTS, SKILLS, adoptPlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
 import { writePlan } from "../lib/write.mjs";
-import { checkedBy, excludeFor, exportFilesFor, unixLines } from "../lib/instance-files.mjs";
+import { checkedBy, excludeFor, exportFilesFor, gateFault, unixLines } from "../lib/instance-files.mjs";
 import { formCheck, formattedOf } from "../lib/form.mjs";
 import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
@@ -76,7 +76,7 @@ const USAGE = `companygraph [<command>]
   judge [<folder>]    ask a decision model whether each page keeps its schema's writing rules; advisory, and it asks before sending anything
   form [<folder>]     the one Markdown form over a repository, or --fix to write it
   pins [<folder>]     which pins a repository's pins.json declares are behind; moves nothing
-  adopt [<folder>]    give a repository that is not an instance the form check, its workflow, the seat hook and a pins.json declaring its tooling pin
+  adopt [<folder>]    give a repository that is not an instance the form check, the workflow or hooks its gate writes, and a pins.json declaring its tooling pin
   upgrade [<folder>]  move an instance's vendored core, skills, manifest and workflow tag together
   obsidian [<vault>]  make a vault of an instance: the plugins, the graph, the panes, and Obsidian itself
   commits [<folder>]  refuse (exit 3) a commit whose seat the phase in its trailers does not list
@@ -86,6 +86,7 @@ const USAGE = `companygraph [<command>]
 
 init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook  --gate <github|git|none>
 upgrade: --core <tag>  --pack <a,b>  --force  --dry-run  --gate <github|git|none>
+  --force overwrites edited vendored files, moves past Markdown out of the form, and removes edited gate hooks
 adopt: --gate <github|git|none>
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
@@ -364,10 +365,14 @@ function inGit(root) {
   return existsSync(at) && Boolean(gitTop(at));
 }
 
+// The git gate writes no workflow, so where git does not read its hooks nothing gates the
+// repository at all. useHook has said the hooks are not in use; this says what that leaves.
+const UNGATED = `  ! nothing gates this repository until git reads these hooks: point core.hooksPath at .companygraph/hooks, or call them from the repository's own hooks`;
+
 // The hooks a plan wrote put in use, and what the gate means said: git gates every commit on this
 // machine and writes no workflow, and none gates nothing, which is the level a folder without
 // git or GitHub stands at. That every commit runs check is said only where git reads the hooks;
-// where it does not, useHook has said why, and the claim would be false.
+// where it does not, useHook has said why, the claim would be false, and the warning says so.
 /**
  * @param {string} root
  * @param {string} gate
@@ -377,6 +382,7 @@ function sayGate(root, gate, writes) {
   const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
   const inUse = hooks.length > 0 && useHook(root, hooks);
   if (gate === "git" && inUse) console.log(`  every commit runs check and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
+  if (gate === "git" && !inUse) console.log(UNGATED);
   if (gate === "none") console.log(`  level 1: nothing gates this folder; run check by hand, or open it as a vault with the Obsidian plugin, which checks a page while it is edited`);
 }
 
@@ -481,18 +487,24 @@ async function upgrade(argv) {
         throw new Error(`upgrade refuses to remove ${path}: it resolves outside ${root}, and nothing was written.`);
     }
   };
+  // A dry run under --force names each gate hook it removes only because --force says so, since
+  // a hook is the repository's own once written and an edit to one is someone's work.
+  const FORCED = ", edited since this tooling wrote it, which --force removes anyway";
   // After writing, the hooks the move wrote are put in use as init puts them: written alone they
   // are not executable and git does not read their folder, so it would skip them without a word.
   // On the git gate a move that wrote none still puts in use the ones the repository holds, and
   // only those: a plain upgrade never writes back one the repository chose to delete. Either way a
-  // hooks folder of the repository's own is left in charge and named.
+  // hooks folder of the repository's own is left in charge and named, and on the git gate, which
+  // has no workflow, the warning says that nothing then gates the repository.
   const HOOKS = ["commit-msg", "pre-commit", "pre-merge-commit"];
   /** @param {Map<string, string>} writes */
   const useHooks = (writes) => {
+    const onGit = (given.gate ?? manifest.gate) === "git";
     const wrote = HOOKS.filter((name) => writes.has(`.companygraph/hooks/${name}`));
-    const held = (given.gate ?? manifest.gate) === "git" ? HOOKS.filter((name) => existsSync(join(root, `.companygraph/hooks/${name}`))) : [];
+    const held = onGit ? HOOKS.filter((name) => existsSync(join(root, `.companygraph/hooks/${name}`))) : [];
     const names = wrote.length ? wrote : held;
-    if (names.length) useHook(root, names);
+    const inUse = names.length > 0 && useHook(root, names);
+    if (onGit && !inUse) console.log(UNGATED);
   };
   // A manifest with no core is a repository that took the machinery and holds no model; its
   // upgrade moves the release it runs, its workflow and its gate, and vendors nothing into it.
@@ -516,7 +528,7 @@ async function upgrade(argv) {
     if (given["dry-run"]) {
       console.log(`tooling ${adopted.from} → ${adopted.to}, if this runs:`);
       for (const path of adopted.writes.keys()) console.log(`  write   ${path}`);
-      for (const path of adopted.removes) console.log(`  remove  ${path}`);
+      for (const path of adopted.removes) console.log(`  remove  ${path}${adopted.forced.includes(path) ? FORCED : ""}`);
       return "planned";
     }
     inside(adopted.removes);
@@ -601,7 +613,7 @@ async function upgrade(argv) {
   if (given["dry-run"]) {
     console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
     for (const path of /** @type {Map<string, string>} */ (plan.writes).keys()) console.log(`  write   ${path}`);
-    for (const path of /** @type {string[]} */ (plan.removes)) console.log(`  remove  ${path}`);
+    for (const path of /** @type {string[]} */ (plan.removes)) console.log(`  remove  ${path}${/** @type {string[]} */ (plan.forced).includes(path) ? FORCED : ""}`);
     return "planned";
   }
   // Belt and braces, beside the plan's own refusal of anything a manifest names outside its own
@@ -821,7 +833,7 @@ function manifestAt(root) {
 /** @param {{ exclude?: string[]; units?: string; core?: unknown } | null} manifest */
 const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFor(manifest.units ?? "meta") : []);
 
-// The machinery for a repository that is not an instance: the form, its workflow, the seat hook
+// The machinery for a repository that is not an instance: the form, what its gate writes,
 // and a pins.json that declares its tooling pin. A folder that is not there yet is made, as init makes one.
 /** @param {string[]} argv */
 function adopt(argv) {
@@ -946,7 +958,12 @@ async function check(argv) {
   // A repository that took the machinery and holds no model is held to the form alone.
   const read = manifestSaid(root);
   if (!read) return 1;
-  if (read.manifest && !read.manifest.core) return form([root]);
+  if (read.manifest && !read.manifest.core) {
+    // Its gate too, as an instance's is, since upgrade reads it to know what to move.
+    const fault = gateFault(read.manifest);
+    if (fault) console.error(`✗ ${fault}`);
+    return Math.max(fault ? 1 : 0, form([root]));
+  }
   // A second door to the same code, so a guard failure must read exactly as it does through
   // check-instance.mjs's own direct run — the "✗ " prefix and all — not as a generic CLI error.
   const { checkPath } = await import("./check-instance.mjs");
@@ -1401,7 +1418,7 @@ async function menu() {
       const root = await folder("Which model?", ".");
       return seats([root]);
     }],
-    ["Hold a repository", "a site or service with no model: the form check, its workflow and the seat hook", async () => {
+    ["Hold a repository", "a site or service with no model: the form check, and the workflow or hooks the chosen gate writes", async () => {
       const root = await folder("Which folder?", ".");
       const gate = (await ask(prompt(GATE_QUESTION, "github"))) || "github";
       adopt([root, "--gate", gate]);

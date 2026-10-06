@@ -856,3 +856,16 @@ test("both upgrade plans carry an edited gate hook's refusal, and --force's repo
   assert.match(adoptedUpgradePlan(adopted).refused, /pre-commit/);
   assert.deepEqual(adoptedUpgradePlan({ ...adopted, force: true }).forced, [PRE]);
 });
+
+test("a plain upgrade of a folder outside git whose manifest names the git gate is refused in the manifest's words", () => {
+  const plain = upgradePlan({ ...upBase, manifest: { ...manifestOf0, gate: "git" }, repository: false }).refused;
+  assert.match(plain, /\.companygraph\/manifest\.json names the git gate, and this folder is not a git repository; run git init first, or move it with --gate none or --gate github\./);
+  assert.doesNotMatch(plain, /^--gate git/);
+  const adopted = { tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"], gate: "git" }, workflow: null, present: new Set(["pins.json"]), repository: false };
+  assert.match(adoptedUpgradePlan(adopted).refused, /\.companygraph\/manifest\.json names the git gate, and this folder is not a git repository/);
+  // Given, the refusal stays in the words of the flag.
+  assert.match(upgradePlan({ ...upBase, gate: "git", repository: false }).refused, /^--gate git needs git, and this folder is not a git repository/);
+  assert.match(adoptedUpgradePlan({ ...adopted, gate: "git" }).refused, /^--gate git needs git/);
+  // A manifest naming no gate there is is refused in its words too.
+  assert.match(upgradePlan({ ...upBase, manifest: { ...manifestOf0, gate: "gti" } }).refused, /\.companygraph\/manifest\.json names gti as its gate, which is not a gate; the gates are github, git, none\./);
+});
