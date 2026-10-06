@@ -30,16 +30,17 @@ The agent file `init` writes says which gate holds the repository: the workflow 
 
 ## The hooks
 
-`pre-commit` does four things in order:
+`pre-commit` does five things in order:
 
 1. It refuses when the working tree holds a change the commit leaves out, an unstaged edit or an untracked file git does not ignore, because the checks read the working tree, and a check of anything but what is being committed passes nothing.
 2. It runs `check` at the release the manifest's `tooling` names, through `npx --prefer-offline`, as the seat hook already runs `commits`.
-3. It runs every command in `pins.json`'s `verify`, in order, from the repository's root.
-4. It refuses the commit when any of them failed, and prints what the failing one said.
+3. It runs `ids --range` at the same release, from `HEAD` to a commit of the tree being committed, so a commit is held to what a pull request's `ids --range` holds on the `github` gate: an id already committed does not change, a decision is not rewritten or removed, and a label is not moved or used again. `ids` compares commits and not a working tree, so the hook writes the tree with `git write-tree`, makes it a commit on `HEAD` with `git commit-tree`, and compares `HEAD` with that commit. Nothing references the commit, and git's gc removes it. A first commit has no `HEAD` and nothing to compare, so the step is left out without a word.
+4. It runs every command in `pins.json`'s `verify`, in order, from the repository's root.
+5. It refuses the commit when any of them failed, and prints what the failing one said.
 
 `pre-merge-commit` runs `pre-commit`. Git runs it for a merge it can make alone, and a merge with conflicts is finished with `git commit`, which runs `pre-commit` itself, so both ways a merge commit is made pass the same gate. Not every way onto a branch makes one: `git cherry-pick`, `git revert`, `git rebase` and `git am` write their commits without running `pre-commit`, and a fast-forward merge writes no commit at all, so what they bring is checked by the next commit that runs the gate, and not before it lands.
 
-Each hook unsets the variables git hands a hook before `npx` clones the tooling, for the reason the seat hook gives: a clone that inherits `GIT_INDEX_FILE` writes its own index over the repository's.
+Each hook unsets the variables git hands a hook before `npx` clones the tooling, for the reason the seat hook gives: a clone that inherits `GIT_INDEX_FILE` writes its own index over the repository's. `pre-commit` writes the tree for `ids` before it unsets them, because that variable is also how git hands the hook what is being committed: `git commit -a` and a commit in a linked worktree each pass an index of their own, and a tree written after the unset would be the repository's index on disk and not the commit's.
 
 A hook is the repository's own once it is written, as the seat hook is: not in `files`, held to no hash, and never replaced by `upgrade`. It can be, because it reads everything that moves at run time, the release from the manifest and the commands from `pins.json`, so its text has nothing to move with. `git commit --no-verify` skips it, which is git's own and cannot be taken away; the agent file `init` writes says it is not used.
 
@@ -66,7 +67,7 @@ A repository that keeps hooks of its own, with `core.hooksPath` pointing at a fo
 
 ## What the git gate does not hold
 
-The workflow does more on a pull request than `check` does, and the hooks do not repeat it. `instance-check.yml` runs `ids --range` over the pull request, which holds R18, that an id never changes, and that a decision is not rewritten or removed and a label not used again, and it runs `commits --range`, which judges every commit's seat. Both compare a branch with where it began, which a pull request names and a commit on one machine does not, so on the `git` gate neither runs; the seat hook judges each commit's message as it is made, and nothing compares a page with its earlier self. Running `ids --range` from the git gate is owed, and an issue is owed for it: which commit a hook compares against is the question that issue settles.
+The workflow runs `commits --range` over a pull request, which judges every commit's seat, and the hooks do not repeat it. The seat hook already judges each commit's message as it is made, so on the `git` gate a range of them has nothing left to judge that the hook did not, except where the hook could not run, which the next paragraph names.
 
 The seat hook also lets a commit through when its own check cannot run, offline or without `npx`, and says that the pull request's check will run it. On the `git` gate there is no pull request, so that commit's seat is judged by nobody. The hook's text stays as it is, because it is the repository's own once written and is the same text on every gate; the gap is named here so that a repository choosing `git` knows it.
 
@@ -74,9 +75,9 @@ The seat hook also lets a commit through when its own check cannot run, offline 
 
 `plan.test.mjs`: for each value of `--gate`, `init` and `adopt` write exactly the files the first table names; an absent `gate` reads as `github`; `--gate git` in a folder without git is refused.
 
-A new `gate.test.mjs` runs the hooks in a temporary git repository with `npx` replaced by a stub that answers pass or fail, as `commits.test.mjs` stubs the seat check: an unstaged change and an untracked file are refused; a failing `check` and a failing `verify` command are refused, each with its output; a clean commit passes; a merge is gated by `pre-merge-commit`. Every exit code is read on its own, never through a pipe.
+A new `gate.test.mjs` runs the hooks in a temporary git repository with `npx` replaced by a stub that answers pass or fail, as `commits.test.mjs` stubs the seat check: an unstaged change and an untracked file are refused; a failing `check` and a failing `verify` command are refused, each with its output; a clean commit passes; a merge is gated by `pre-merge-commit`. The stub answers `ids` too: it is given a range from `HEAD` to a commit whose tree is what is staged, under `git commit -a` as well; a refusing `ids` refuses the commit with its output; a first commit does not run it. Every exit code is read on its own, never through a pipe.
 
-`cli.test.mjs`: `upgrade --gate` moves a repository each way the table names; an edited gate hook stops the move, and `--force` takes it.
+`cli.test.mjs`: `upgrade --gate` moves a repository each way the table names; an edited gate hook stops the move, and `--force` takes it. With the real CLI and no network, an instance `init --gate git` wrote refuses a commit that changes an entity's id, naming it, and takes a commit that leaves ids alone.
 
 ## Release
 
