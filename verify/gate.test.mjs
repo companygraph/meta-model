@@ -126,3 +126,56 @@ test("a merge is gated as a commit is", () => {
   assert.notEqual(refused.status, 0);
   assert.match(refused.stderr, /the model fails/);
 });
+
+test("a verify command that reads stdin does not eat the commands after it", () => {
+  const dir = gated({ verify: ["cat > /dev/null; touch ran1", "touch ran2; exit 1"] });
+  fs.writeFileSync(path.join(dir, ".gitignore"), "ran1\nran2\n");
+  git(dir, "add", ".gitignore");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub() }, "-m", "ignore");
+  assert.notEqual(r.status, 0);
+  assert.ok(fs.existsSync(path.join(dir, "ran1")));
+  assert.ok(fs.existsSync(path.join(dir, "ran2")), "the second command ran");
+});
+
+test("a verify that is not a list refuses the commit with a sentence", () => {
+  const dir = gated({ verify: JSON.stringify({ pins: [], verify: "exit 1" }) });
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub() }, "-m", "a");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /pins\.json could not be read/);
+});
+
+test("a commit in a linked worktree is gated, and the main index stays untouched", () => {
+  const dir = gated();
+  const env = { COMPANYGRAPH_CLI: stub() };
+  const tree = path.join(temp(), "wt");
+  git(dir, "worktree", "add", "-q", "-b", "wt", tree);
+  const before = git(dir, "status", "--porcelain");
+  fs.writeFileSync(path.join(tree, "a.md"), "# A\n");
+  git(tree, "add", "a.md");
+  fs.writeFileSync(path.join(tree, "b.md"), "# B\n");
+  const refused = commit(tree, env, "-m", "a");
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /leaves out/);
+  fs.rmSync(path.join(tree, "b.md"));
+  const passed = commit(tree, env, "-m", "a");
+  assert.equal(passed.status, 0, passed.stderr);
+  fs.writeFileSync(path.join(tree, "c.md"), "# C\n");
+  const all = commit(tree, env, "-a", "-m", "c");
+  assert.notEqual(all.status, 0, "an untracked file is still left out");
+  assert.equal(git(dir, "status", "--porcelain"), before);
+  assert.equal(git(dir, "log", "--format=%s", "-1"), "start\n");
+});
+
+test("an npx that fails refuses the commit", () => {
+  const dir = gated();
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const bin = temp();
+  fs.writeFileSync(path.join(bin, "npx"), "#!/bin/sh\necho 'npx: offline, nothing in the cache' >&2\nexit 1\n", { mode: 0o755 });
+  const r = commit(dir, { PATH: `${bin}${path.delimiter}${process.env.PATH}`, COMPANYGRAPH_CLI: "" }, "-m", "a");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /offline/);
+  assert.match(r.stderr, /nothing was committed/);
+});
