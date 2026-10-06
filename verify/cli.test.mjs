@@ -1933,6 +1933,37 @@ test("init --gate git writes the hooks, points git at them, and writes no workfl
   if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
 });
 
+// The real hooks with the real CLI, end to end and offline: COMPANYGRAPH_CLI points the hooks at
+// this checkout, so no npx is asked for the release the manifest names.
+test("on the git gate a commit that changes an id is refused, and a commit that leaves ids alone goes through", () => {
+  const root = temp();
+  const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
+  const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
+    { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
+  git("init", "-q");
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  git("add", "-A");
+  const first = commit("The instance");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  const vision = path.join(root, "model/vision.md");
+  const before = fs.readFileSync(vision, "utf8");
+  const id = before.match(/^id: (\S+)$/m)[1];
+  const moved = id.slice(0, -1) + (id.endsWith("0") ? "1" : "0");
+  fs.writeFileSync(vision, before.replace(`id: ${id}`, `id: ${moved}`));
+  git("add", "model/vision.md");
+  const refused = commit("A new id");
+  assert.notEqual(refused.status, 0, refused.stdout + refused.stderr);
+  assert.match(refused.stderr, /model\/vision\.md/);
+  assert.ok(refused.stderr.includes(id), refused.stderr);
+  assert.match(refused.stderr, /nothing was committed/);
+  assert.equal(git("log", "--format=%s", "-1"), "The instance\n");
+  fs.writeFileSync(vision, before.replace("One paragraph stating", "A paragraph stating"));
+  git("add", "model/vision.md");
+  const passed = commit("A plainer vision");
+  assert.equal(passed.status, 0, passed.stdout + passed.stderr);
+  assert.equal(git("log", "--format=%s", "-1"), "A plainer vision\n");
+});
+
 test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
   const refused = spawnSync(process.execPath, [cli, "init", temp(), "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
   assert.notEqual(refused.status, 0);

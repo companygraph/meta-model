@@ -10,11 +10,21 @@ const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-gate-"));
 const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", ...args], { cwd, encoding: "utf8", stdio: "pipe" });
 const commit = (cwd, env, ...args) => spawnSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", "commit", "-q", ...args], { cwd, encoding: "utf8", env: { ...process.env, ...env } });
 
-// A stub for the checker the hook runs: it passes, or fails with a sentence, as STUB_CHECK says.
-// It lives outside the repository, where an untracked file would be a change the commit leaves out.
+// A stub for the checker the hook runs. check passes, or fails with a sentence, as STUB_CHECK
+// says; ids writes its arguments to STUB_IDS_ARGS when that is set, and refuses with exit 3 and a
+// sentence on stdout when STUB_IDS says fail. It lives outside the repository, where an untracked
+// file would be a change the commit leaves out.
 function stub() {
   const file = path.join(temp(), "stub.mjs");
-  fs.writeFileSync(file, 'import { writeFileSync } from "node:fs";\nif (process.env.STUB_TRACE) writeFileSync(process.env.STUB_TRACE, "");\nif (process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }\n');
+  fs.writeFileSync(file, [
+    'import { writeFileSync } from "node:fs";',
+    "const [command, ...args] = process.argv.slice(2);",
+    'if (process.env.STUB_TRACE) writeFileSync(process.env.STUB_TRACE, "");',
+    'if (command === "check" && process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }',
+    'if (command === "ids" && process.env.STUB_IDS_ARGS) writeFileSync(process.env.STUB_IDS_ARGS, JSON.stringify(args));',
+    'if (command === "ids" && process.env.STUB_IDS === "fail") { console.log("✗ model/a.md: the id changed"); process.exit(3); }',
+    "",
+  ].join("\n"));
   return file;
 }
 
@@ -229,4 +239,67 @@ test("a verify command holding a line break refuses the commit with a sentence, 
   assert.match(r.stderr, /holds a line break/);
   assert.ok(!fs.existsSync(path.join(dir, "first")));
   assert.ok(!fs.existsSync(path.join(dir, "second")));
+});
+
+// The range ids was given, its two ends, and the commit its head names, read back from the stub.
+function idsRange(dir, argsFile) {
+  const args = JSON.parse(fs.readFileSync(argsFile, "utf8"));
+  assert.equal(args[0], fs.realpathSync(dir));
+  assert.equal(args[1], "--range");
+  const [base, head] = args[2].split("..");
+  return { base, head };
+}
+
+test("ids runs over HEAD to a commit of the tree being committed", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const staged = git(dir, "write-tree").trim();
+  const head = git(dir, "rev-parse", "HEAD").trim();
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile }, "-m", "a");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(dir, argsFile);
+  assert.equal(range.base, "HEAD");
+  assert.equal(git(dir, "rev-parse", `${range.head}^{tree}`).trim(), staged);
+  assert.equal(git(dir, "rev-parse", `${range.head}^`).trim(), head);
+});
+
+test("under commit -a, ids reads the tree commit -a commits, not the index on disk", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git",\n  "exclude": ["dist", "x"]\n}\n');
+  const before = git(dir, "write-tree").trim();
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile }, "-a", "-m", "all");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(dir, argsFile);
+  const tree = git(dir, "rev-parse", `${range.head}^{tree}`).trim();
+  assert.notEqual(tree, before);
+  assert.equal(tree, git(dir, "rev-parse", "HEAD^{tree}").trim());
+});
+
+test("an ids that refuses refuses the commit and shows what ids said", () => {
+  const dir = gated();
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS: "fail" }, "-m", "a");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /the id changed/);
+  assert.match(r.stderr, /nothing was committed/);
+  assert.equal(git(dir, "log", "--format=%s", "-1"), "start\n");
+});
+
+test("the first commit has nothing to compare, so ids does not run and nothing is said of it", () => {
+  const dir = temp();
+  git(dir, "init", "-q");
+  fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git"\n}\n');
+  fs.writeFileSync(path.join(dir, ".companygraph/hooks/pre-commit"), GATE_HOOK, { mode: 0o755 });
+  git(dir, "config", "core.hooksPath", ".companygraph/hooks");
+  git(dir, "add", "-A");
+  const argsFile = path.join(temp(), "ids.json");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile, STUB_IDS: "fail" }, "-m", "first");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.ok(!fs.existsSync(argsFile), "ids did not run");
 });

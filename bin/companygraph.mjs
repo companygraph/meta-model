@@ -381,7 +381,7 @@ const UNGATED = `  ! nothing gates this repository until git reads these hooks: 
 function sayGate(root, gate, writes) {
   const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
   const inUse = hooks.length > 0 && useHook(root, hooks);
-  if (gate === "git" && inUse) console.log(`  every commit runs check and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
+  if (gate === "git" && inUse) console.log(`  every commit runs check, ids --range and pins.json's verify first, in .companygraph/hooks/pre-commit; there is no workflow, since this repository is gated on this machine`);
   if (gate === "git" && !inUse) console.log(UNGATED);
   if (gate === "none") console.log(`  level 1: nothing gates this folder; run check by hand, or open it as a vault with the Obsidian plugin, which checks a page while it is edited`);
 }
