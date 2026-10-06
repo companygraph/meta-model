@@ -39,7 +39,14 @@ export type UpgradeAsk = {
         exclude?: string[];
         gate?: string;
     };
+    /**
+     * The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
+     */
     held: Map<string, string | undefined>;
+    /**
+     * Whether the folder is a git repository; the git gate refuses where it is not.
+     */
+    repository?: boolean | undefined;
     workflow: string | null;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
@@ -109,7 +116,8 @@ export type BackfillAsk = {
  * @property {string} tooling
  * @property {string} tag
  * @property {{ files?: Record<string, string>; units?: string; core?: { version?: string }; tooling?: string; packs?: string[]; exclude?: string[]; gate?: string }} manifest
- * @property {Map<string, string | undefined>} held
+ * @property {Map<string, string | undefined>} held The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
+ * @property {boolean | undefined} [repository] Whether the folder is a git repository; the git gate refuses where it is not.
  * @property {string | null} workflow
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
@@ -152,15 +160,16 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate, repository }: UpgradeAsk): UpgradePlan;
 /**
- * @param {{ from: string; to: string; workflow: string; held: Map<string, string | undefined>; force?: boolean }} ask
+ * @param {{ from: string; to: string; workflow: string; hasWorkflow: boolean; held: Map<string, string | undefined>; force?: boolean }} ask
  * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[] }}
  */
-export declare function gatePlan({ from, to, workflow, held, force }: {
+export declare function gatePlan({ from, to, workflow, hasWorkflow, held, force }: {
     from: string;
     to: string;
     workflow: string;
+    hasWorkflow: boolean;
     held: Map<string, string | undefined>;
     force?: boolean;
 }): {
@@ -183,10 +192,11 @@ export declare function adoptPlan({ tooling, present, gate, repository }: {
     repository?: boolean;
 }): InitPlan;
 /**
- * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[]; gate?: string }; workflow: string | null; present: Set<string>; gate?: string; held?: Map<string, string | undefined>; force?: boolean }} ask
+ * @param {{ tooling: string; manifest: { tooling?: string; exclude?: string[]; gate?: string }; workflow: string | null; present: Set<string>; gate?: string; held?: Map<string, string | undefined>; force?: boolean; repository?: boolean }} ask
+ * `held` must hold `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
  * @returns {{ writes: Map<string, string>; removes: string[]; forced: string[]; given: string[]; from: string; to: string } | { refused: string; writes?: undefined }}
  */
-export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present, gate, held, force }: {
+export declare function adoptedUpgradePlan({ tooling, manifest, workflow, present, gate, held, force, repository }: {
     tooling: string;
     manifest: {
         tooling?: string;
@@ -198,6 +208,7 @@ export declare function adoptedUpgradePlan({ tooling, manifest, workflow, presen
     gate?: string;
     held?: Map<string, string | undefined>;
     force?: boolean;
+    repository?: boolean;
 }): {
     writes: Map<string, string>;
     removes: string[];

@@ -770,46 +770,89 @@ test("adopt writes what the gate names, and refuses as init does", () => {
 
 const WF = "the workflow\n";
 const heldOf = (entries) => new Map(entries);
+const WFP = ".github/workflows/companygraph.yml";
+const SEAT = ".companygraph/hooks/commit-msg";
+const PRE = ".companygraph/hooks/pre-commit";
+const MERGE = ".companygraph/hooks/pre-merge-commit";
+const gateHooks = [[SEAT, HOOK], [PRE, GATE_HOOK], [MERGE, MERGE_HOOK]];
 
-test("a move between gates writes what the new one names and removes what the old one wrote", () => {
-  const toGit = gatePlan({ from: "github", to: "git", workflow: WF, held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
-  assert.deepEqual([...toGit.writes.keys()].sort(), [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
-  assert.deepEqual(toGit.removes, [".github/workflows/companygraph.yml"]);
-  const toGithub = gatePlan({ from: "git", to: "github", workflow: WF, held: heldOf([[".companygraph/hooks/commit-msg", HOOK], [".companygraph/hooks/pre-commit", GATE_HOOK], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]) });
-  assert.deepEqual([...toGithub.writes.keys()], [".github/workflows/companygraph.yml"]);
-  assert.deepEqual(toGithub.removes, [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
-  const toNone = gatePlan({ from: "git", to: "none", workflow: WF, held: heldOf([[".companygraph/hooks/commit-msg", HOOK], [".companygraph/hooks/pre-commit", GATE_HOOK], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]) });
-  assert.deepEqual(toNone.writes.size, 0);
-  assert.deepEqual(toNone.removes, [".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
-  const fromNone = gatePlan({ from: "none", to: "git", workflow: WF, held: new Map() });
-  assert.deepEqual([...fromNone.writes.keys()].sort(), [".companygraph/hooks/commit-msg", ".companygraph/hooks/pre-commit", ".companygraph/hooks/pre-merge-commit"]);
-  assert.equal(gatePlan({ from: "git", to: "git", workflow: WF, held: new Map() }).writes.size, 0);
+test("a move between gates writes what the new one names and removes what the repository holds that it does not", () => {
+  const toGit = gatePlan({ from: "github", to: "git", workflow: WF, hasWorkflow: true, held: heldOf([[SEAT, HOOK]]) });
+  assert.deepEqual([...toGit.writes.keys()].sort(), [PRE, MERGE]);
+  assert.deepEqual(toGit.removes, [WFP]);
+  const toGithub = gatePlan({ from: "git", to: "github", workflow: WF, hasWorkflow: false, held: heldOf(gateHooks) });
+  assert.deepEqual([...toGithub.writes.keys()], [WFP]);
+  assert.deepEqual(toGithub.removes, [PRE, MERGE]);
+  const toNone = gatePlan({ from: "git", to: "none", workflow: WF, hasWorkflow: false, held: heldOf(gateHooks) });
+  assert.equal(toNone.writes.size, 0);
+  assert.deepEqual(toNone.removes, [PRE, MERGE]);
+  const fromNone = gatePlan({ from: "none", to: "git", workflow: WF, hasWorkflow: false, held: new Map() });
+  assert.deepEqual([...fromNone.writes.keys()].sort(), [SEAT, PRE, MERGE]);
+  assert.equal(gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: new Map() }).writes.size, 0);
+});
+
+test("leaving for none removes what is held, whichever gate the manifest named", () => {
+  const gitToNone = gatePlan({ from: "git", to: "none", workflow: WF, hasWorkflow: true, held: heldOf(gateHooks) });
+  assert.deepEqual(gitToNone.removes.sort(), [WFP, PRE, MERGE].sort());
+  const githubToNone = gatePlan({ from: "github", to: "none", workflow: WF, hasWorkflow: true, held: heldOf(gateHooks) });
+  assert.deepEqual(githubToNone.removes.sort(), [WFP, PRE, MERGE].sort());
+  assert.equal(githubToNone.writes.size, 0);
+});
+
+test("none to github writes the workflow, and the seat hook only where there is none", () => {
+  const bare = gatePlan({ from: "none", to: "github", workflow: WF, hasWorkflow: false, held: new Map() });
+  assert.deepEqual([...bare.writes.keys()].sort(), [SEAT, WFP]);
+  const seated = gatePlan({ from: "none", to: "github", workflow: WF, hasWorkflow: false, held: heldOf([[SEAT, HOOK]]) });
+  assert.deepEqual([...seated.writes.keys()], [WFP]);
 });
 
 test("an edited gate hook stops the move by name, and --force removes it and says so", () => {
-  const held = heldOf([[".companygraph/hooks/pre-commit", `${GATE_HOOK}# mine\n`], [".companygraph/hooks/pre-merge-commit", MERGE_HOOK]]);
-  assert.match(gatePlan({ from: "git", to: "github", workflow: WF, held }).refused, /\.companygraph\/hooks\/pre-commit/);
-  const forced = gatePlan({ from: "git", to: "github", workflow: WF, held, force: true });
-  assert.deepEqual(forced.forced, [".companygraph/hooks/pre-commit"]);
-  assert.ok(forced.removes.includes(".companygraph/hooks/pre-commit"));
+  const held = heldOf([[PRE, `${GATE_HOOK}# mine\n`], [MERGE, MERGE_HOOK]]);
+  const refused = gatePlan({ from: "git", to: "github", workflow: WF, hasWorkflow: false, held }).refused;
+  assert.match(refused, /\.companygraph\/hooks\/pre-commit/);
+  assert.doesNotMatch(refused, /pre-merge-commit/);
+  const forced = gatePlan({ from: "git", to: "github", workflow: WF, hasWorkflow: false, held, force: true });
+  assert.deepEqual(forced.forced, [PRE]);
+  assert.deepEqual(forced.removes, [PRE, MERGE]);
 });
 
+const manifestOf0 = { tooling: "0.31.2", core: { version: "0.31.1" }, units: "meta", files: {} };
+const upBase = { core, tooling: "0.31.2", tag: "v0.31.2", manifest: manifestOf0, held: new Map(), workflow: WF };
+
 test("an upgrade moves the gate when asked, records it, and keeps it when not asked", () => {
-  const manifest = { tooling: "0.31.2", core: { version: "0.31.1" }, units: "meta", files: {} };
-  const base = { core, tooling: "0.31.2", tag: "v0.31.2", manifest, held: new Map(), workflow: WF };
-  const moved = upgradePlan({ ...base, gate: "git", held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
+  const manifest = manifestOf0;
+  const moved = upgradePlan({ ...upBase, gate: "git", held: heldOf([[WFP, WF], [SEAT, HOOK]]) });
   assert.equal(JSON.parse(moved.writes.get(".companygraph/manifest.json")).gate, "git");
-  assert.ok(moved.writes.has(".companygraph/hooks/pre-commit"));
-  assert.ok(moved.removes.includes(".github/workflows/companygraph.yml"));
-  assert.ok(!moved.writes.has(".github/workflows/companygraph.yml"));
-  const kept = upgradePlan({ ...base, manifest: { ...manifest, tooling: "0.31.0", gate: "git" }, workflow: null });
+  assert.ok(moved.writes.has(PRE));
+  assert.ok(moved.removes.includes(WFP));
+  assert.ok(!moved.writes.has(WFP));
+  assert.deepEqual(moved.removes, [...moved.removes].sort());
+  const kept = upgradePlan({ ...upBase, manifest: { ...manifest, tooling: "0.31.0", gate: "git" }, workflow: null });
   assert.equal(JSON.parse(kept.writes.get(".companygraph/manifest.json")).gate, "git");
   assert.ok(!kept.removes.some((p) => p.startsWith(".companygraph/hooks/")));
 });
 
 test("an adopted repository moves its gate as an instance does", () => {
-  const moved = adoptedUpgradePlan({ tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"] }, workflow: WF, present: new Set(["pins.json"]), gate: "git", held: heldOf([[".github/workflows/companygraph.yml", WF], [".companygraph/hooks/commit-msg", HOOK]]) });
+  const moved = adoptedUpgradePlan({ tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"] }, workflow: WF, present: new Set(["pins.json"]), gate: "git", held: heldOf([[WFP, WF], [SEAT, HOOK]]) });
   assert.equal(JSON.parse(moved.writes.get(".companygraph/manifest.json")).gate, "git");
-  assert.ok(moved.writes.has(".companygraph/hooks/pre-commit"));
-  assert.deepEqual(moved.removes, [".github/workflows/companygraph.yml"]);
+  assert.ok(moved.writes.has(PRE));
+  assert.deepEqual(moved.removes, [WFP]);
+});
+
+test("both upgrade plans refuse a gate that is none, or git where git is not", () => {
+  assert.match(upgradePlan({ ...upBase, gate: "git", repository: false }).refused, /git/);
+  assert.match(upgradePlan({ ...upBase, gate: "bogus" }).refused, /not a gate/);
+  const adopted = { tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"] }, workflow: WF, present: new Set(["pins.json"]) };
+  assert.match(adoptedUpgradePlan({ ...adopted, gate: "git", repository: false }).refused, /git/);
+  assert.match(adoptedUpgradePlan({ ...adopted, gate: "bogus" }).refused, /not a gate/);
+});
+
+test("both upgrade plans carry an edited gate hook's refusal, and --force's report", () => {
+  const held = heldOf([[SEAT, HOOK], [PRE, `${GATE_HOOK}# mine\n`], [MERGE, MERGE_HOOK]]);
+  const manifest = { ...manifestOf0, gate: "git" };
+  assert.match(upgradePlan({ ...upBase, manifest, gate: "github", held, workflow: null }).refused, /pre-commit/);
+  assert.deepEqual(upgradePlan({ ...upBase, manifest, gate: "github", held, workflow: null, force: true }).forced, [PRE]);
+  const adopted = { tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"], gate: "git" }, workflow: null, present: new Set(["pins.json"]), gate: "github", held };
+  assert.match(adoptedUpgradePlan(adopted).refused, /pre-commit/);
+  assert.deepEqual(adoptedUpgradePlan({ ...adopted, force: true }).forced, [PRE]);
 });
