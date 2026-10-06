@@ -5,7 +5,7 @@ description: Validate this CompanyGraph instance — run the mechanical checks, 
 
 # companygraph-validate
 
-The R0 agent pass. R0 has two halves and this skill runs both: the mechanical half is `companygraph check`, which this instance's CI also runs on every commit, and the other half is reading, which nothing mechanical reaches.
+The R0 agent pass. R0 has two halves and this skill runs both: the mechanical half is `companygraph check`, which also runs on every commit where the gate `.companygraph/manifest.json` names runs it, the workflow on `github` and the hooks on `git`, and only when a person runs it on `none`; the other half is reading, which nothing mechanical reaches.
 
 ## Procedure
 
