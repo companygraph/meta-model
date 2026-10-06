@@ -42,7 +42,7 @@ The agent file `init` writes says which gate holds the repository: the workflow 
 
 Each hook unsets the variables git hands a hook before `npx` clones the tooling, for the reason the seat hook gives: a clone that inherits `GIT_INDEX_FILE` writes its own index over the repository's. `pre-commit` writes the tree for `ids` before it unsets them, because that variable is also how git hands the hook what is being committed: `git commit -a` and a commit in a linked worktree each pass an index of their own, and a tree written after the unset would be the repository's index on disk and not the commit's.
 
-A hook is the repository's own once it is written, as the seat hook is: not in `files`, held to no hash, and never replaced by `upgrade`. It can be, because it reads everything that moves at run time, the release from the manifest and the commands from `pins.json`, so its text has nothing to move with. `git commit --no-verify` skips it, which is git's own and cannot be taken away; the agent file `init` writes says it is not used.
+A gate hook is not in `files` and is held to no hash, and `upgrade` never replaces one while it is edited: an edited hook is the repository's own, and `upgrade` leaves it and says so. A hook whose text is a release's own, this release's or one an earlier release wrote, is the tooling's, and `upgrade` brings it to the current release; that is how a repository on the `git` gate takes a new step such as `ids`. The release and the commands are read at run time, from the manifest and from `pins.json`, so only a step the hook itself runs needs its text to move, and a hook the repository deleted is not written back by a plain upgrade. `git commit --no-verify` skips it, which is git's own and cannot be taken away; the agent file `init` writes says it is not used.
 
 ## Checks of the repository's own
 
@@ -61,7 +61,7 @@ A repository without `pins.json`, or whose `pins.json` has no `verify`, runs `ch
 | any → `none` | removes the workflow and the two gate hooks; the seat hook stays, since the folder may still be a repository |
 | `none` → `git` or `github` | writes what the table above names, and the seat hook where there is none |
 
-The workflow is the tooling's, since `upgrade` already moves its tag, so removing it is the tooling's to do, and the report names it. A gate hook is the repository's once written, so `upgrade` removes one only while its text is still the text the tooling wrote; an edited hook stops the move with its name, and `--force` removes it anyway and says so. `upgrade` without `--gate` keeps the gate the manifest names.
+The workflow is the tooling's, since `upgrade` already moves its tag, so removing it is the tooling's to do, and the report names it. A gate hook is the tooling's while its text is a release's own, so `upgrade` removes one only while it is; an edited hook stops the move with its name, and `--force` removes it anyway and says so. `upgrade` without `--gate` keeps the gate the manifest names.
 
 A repository that keeps hooks of its own, with `core.hooksPath` pointing at a folder that is not `.companygraph/hooks`, is left as it is: `upgrade` says the tooling's hooks are not in use there, as `init` says of the seat hook today, and changes no git setting.
 
@@ -77,7 +77,9 @@ The seat hook also lets a commit through when its own check cannot run, offline 
 
 A new `gate.test.mjs` runs the hooks in a temporary git repository with `npx` replaced by a stub that answers pass or fail, as `commits.test.mjs` stubs the seat check: an unstaged change and an untracked file are refused; a failing `check` and a failing `verify` command are refused, each with its output; a clean commit passes; a merge is gated by `pre-merge-commit`. The stub answers `ids` too: it is given a range from `HEAD` to a commit whose tree is what is staged, under `git commit -a` as well; a refusing `ids` refuses the commit with its output; a first commit does not run it. Every exit code is read on its own, never through a pipe.
 
-`cli.test.mjs`: `upgrade --gate` moves a repository each way the table names; an edited gate hook stops the move, and `--force` takes it. With the real CLI and no network, an instance `init --gate git` wrote refuses a commit that changes an entity's id, naming it, and takes a commit that leaves ids alone.
+`plan.test.mjs` also holds the past text to the hash of the text v0.83.0 shipped; a move removes a hook in it without `--force`; and, staying on the `git` gate, both upgrade plans replace it with the current text, leave an edited hook and name it, and write no hook that is missing.
+
+`cli.test.mjs`: `upgrade --gate` moves a repository each way the table names; an edited gate hook stops the move, and `--force` takes it. An instance whose `pre-commit` holds v0.83.0's text holds the current text after a plain `upgrade`, and an edited one is left and named. With the real CLI and no network, an instance `init --gate git` wrote refuses a commit that changes an entity's id, naming it, and takes a commit that leaves ids alone.
 
 ## Release
 
