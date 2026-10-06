@@ -9,6 +9,8 @@ export type UpgradeRead = UpgradeWrites | {
     given?: undefined;
     rewritten?: undefined;
     forced?: undefined;
+    refreshed?: undefined;
+    unreplaced?: undefined;
     from?: undefined;
     to?: undefined;
 };

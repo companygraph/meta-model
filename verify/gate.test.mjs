@@ -10,11 +10,21 @@ const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-gate-"));
 const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", ...args], { cwd, encoding: "utf8", stdio: "pipe" });
 const commit = (cwd, env, ...args) => spawnSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", "commit", "-q", ...args], { cwd, encoding: "utf8", env: { ...process.env, ...env } });
 
-// A stub for the checker the hook runs: it passes, or fails with a sentence, as STUB_CHECK says.
-// It lives outside the repository, where an untracked file would be a change the commit leaves out.
+// A stub for the checker the hook runs. check passes, or fails with a sentence, as STUB_CHECK
+// says; ids writes its arguments to STUB_IDS_ARGS when that is set, and refuses with exit 3 and a
+// sentence on stdout when STUB_IDS says fail. It lives outside the repository, where an untracked
+// file would be a change the commit leaves out.
 function stub() {
   const file = path.join(temp(), "stub.mjs");
-  fs.writeFileSync(file, 'import { writeFileSync } from "node:fs";\nif (process.env.STUB_TRACE) writeFileSync(process.env.STUB_TRACE, "");\nif (process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }\n');
+  fs.writeFileSync(file, [
+    'import { writeFileSync } from "node:fs";',
+    "const [command, ...args] = process.argv.slice(2);",
+    'if (process.env.STUB_TRACE) writeFileSync(process.env.STUB_TRACE, "");',
+    'if (command === "check" && process.env.STUB_CHECK === "fail") { console.error("✗ stub: the model fails"); process.exit(1); }',
+    'if (command === "ids" && process.env.STUB_IDS_ARGS) writeFileSync(process.env.STUB_IDS_ARGS, JSON.stringify(args));',
+    'if (command === "ids" && process.env.STUB_IDS === "fail") { console.log("✗ model/a.md: the id changed"); process.exit(3); }',
+    "",
+  ].join("\n"));
   return file;
 }
 
@@ -23,11 +33,18 @@ function stub() {
 // says of the same case.
 const pathStub = process.platform === "win32" && "a shebang script with no .exe/.cmd extension, or a tool linked by its POSIX path, is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner";
 
-// A repository on the git gate: the manifest, the two gate hooks, core.hooksPath at them, and
-// a first commit made without the hooks so every test starts from a clean tree.
-function gated({ verify } = {}) {
+// A repository on the git gate: the manifest, a model folder unless `model` is false, the two
+// gate hooks, core.hooksPath at them, and a first commit made without the hooks so every test
+// starts from a clean tree. Its default branch is main, set in its own config, so the ids step
+// finds it whatever the global config says.
+function gated({ verify, model = true } = {}) {
   const dir = temp();
-  git(dir, "init", "-q");
+  git(dir, "init", "-q", "-b", "main");
+  git(dir, "config", "init.defaultBranch", "main");
+  if (model) {
+    fs.mkdirSync(path.join(dir, "model"));
+    fs.writeFileSync(path.join(dir, "model/README.md"), "# Model\n");
+  }
   fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });
   fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git",\n  "exclude": ["dist"]\n}\n');
   fs.writeFileSync(path.join(dir, ".companygraph/hooks/pre-commit"), GATE_HOOK, { mode: 0o755 });
@@ -229,4 +246,196 @@ test("a verify command holding a line break refuses the commit with a sentence, 
   assert.match(r.stderr, /holds a line break/);
   assert.ok(!fs.existsSync(path.join(dir, "first")));
   assert.ok(!fs.existsSync(path.join(dir, "second")));
+});
+
+// One folder however it is spelled: on Windows git hands the hook forward slashes and the long
+// name, where the test's temp path has backslashes and may carry an 8.3 short name, and the
+// drive's case can differ; the real path of each, normalized, names the folder itself.
+const folderOf = (p) => {
+  const real = path.normalize(fs.realpathSync.native(p));
+  return process.platform === "win32" ? real.toLowerCase() : real;
+};
+
+// The range ids was given, its two ends, and the commit its head names, read back from the stub.
+function idsRange(dir, argsFile) {
+  const args = JSON.parse(fs.readFileSync(argsFile, "utf8"));
+  assert.equal(folderOf(args[0]), folderOf(dir));
+  assert.equal(args[1], "--range");
+  const [base, head] = args[2].split("..");
+  return { base, head };
+}
+
+test("ids runs over HEAD to a commit of the tree being committed", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const staged = git(dir, "write-tree").trim();
+  const head = git(dir, "rev-parse", "HEAD").trim();
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile }, "-m", "a");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(dir, argsFile);
+  assert.equal(range.base, "HEAD");
+  assert.equal(git(dir, "rev-parse", `${range.head}^{tree}`).trim(), staged);
+  assert.equal(git(dir, "rev-parse", `${range.head}^`).trim(), head);
+});
+
+test("under commit -a, ids reads the tree commit -a commits, not the index on disk", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git",\n  "exclude": ["dist", "x"]\n}\n');
+  const before = git(dir, "write-tree").trim();
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile }, "-a", "-m", "all");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(dir, argsFile);
+  const tree = git(dir, "rev-parse", `${range.head}^{tree}`).trim();
+  assert.notEqual(tree, before);
+  assert.equal(tree, git(dir, "rev-parse", "HEAD^{tree}").trim());
+});
+
+test("an ids that refuses refuses the commit and shows what ids said", () => {
+  const dir = gated();
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS: "fail" }, "-m", "a");
+  assert.notEqual(r.status, 0);
+  assert.match(r.stderr, /the id changed/);
+  assert.match(r.stderr, /nothing was committed/);
+  assert.equal(git(dir, "log", "--format=%s", "-1"), "start\n");
+});
+
+test("the first commit has nothing to compare, so ids does not run and nothing is said of it", () => {
+  const dir = temp();
+  git(dir, "init", "-q");
+  fs.mkdirSync(path.join(dir, "model"));
+  fs.writeFileSync(path.join(dir, "model/README.md"), "# Model\n");
+  fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git"\n}\n');
+  fs.writeFileSync(path.join(dir, ".companygraph/hooks/pre-commit"), GATE_HOOK, { mode: 0o755 });
+  git(dir, "config", "core.hooksPath", ".companygraph/hooks");
+  git(dir, "add", "-A");
+  const argsFile = path.join(temp(), "ids.json");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile, STUB_IDS: "fail" }, "-m", "first");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(r.stderr, "");
+  assert.ok(!fs.existsSync(argsFile), "ids did not run");
+});
+
+test("a repository with no model and no core, one that took the machinery alone, does not run ids", () => {
+  const dir = gated({ model: false });
+  const argsFile = path.join(temp(), "ids.json");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  const r = commit(dir, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile, STUB_IDS: "fail" }, "-m", "a");
+  assert.equal(r.status, 0, r.stderr);
+  assert.ok(!fs.existsSync(argsFile), "ids did not run");
+});
+
+test("on a branch that is not the default, ids compares from where the branch left it", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  const env = { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile };
+  git(dir, "checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  assert.equal(commit(dir, env, "-m", "a").status, 0);
+  // main moves on after the branch left it, so the merge base is neither tip.
+  git(dir, "checkout", "-q", "main");
+  fs.writeFileSync(path.join(dir, "m.md"), "# M\n");
+  git(dir, "add", "m.md");
+  assert.equal(commit(dir, env, "-m", "m").status, 0);
+  git(dir, "checkout", "-q", "side");
+  const fork = git(dir, "merge-base", "main", "side").trim();
+  fs.writeFileSync(path.join(dir, "b.md"), "# B\n");
+  git(dir, "add", "b.md");
+  const head = git(dir, "rev-parse", "HEAD").trim();
+  const r = commit(dir, env, "-m", "b");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(dir, argsFile);
+  assert.equal(range.base, fork);
+  assert.equal(git(dir, "rev-parse", `${range.head}^`).trim(), head);
+});
+
+test("without init.defaultBranch, master is the default where there is no main", () => {
+  const dir = temp();
+  const global = path.join(temp(), "gitconfig");
+  fs.writeFileSync(global, "");
+  const env = { COMPANYGRAPH_CLI: stub(), GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: "1" };
+  const g = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
+  g("init", "-q", "-b", "master");
+  fs.mkdirSync(path.join(dir, "model"));
+  fs.writeFileSync(path.join(dir, "model/README.md"), "# Model\n");
+  fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });
+  fs.writeFileSync(path.join(dir, ".companygraph/manifest.json"), '{\n  "tooling": "0.0.0",\n  "gate": "git"\n}\n');
+  fs.writeFileSync(path.join(dir, ".companygraph/hooks/pre-commit"), GATE_HOOK, { mode: 0o755 });
+  g("add", "-A");
+  g("commit", "-q", "-m", "start");
+  g("config", "core.hooksPath", ".companygraph/hooks");
+  const start = g("rev-parse", "HEAD").trim();
+  g("checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  g("add", "a.md");
+  g("commit", "-q", "-m", "a");
+  fs.writeFileSync(path.join(dir, "b.md"), "# B\n");
+  g("add", "b.md");
+  const argsFile = path.join(temp(), "ids.json");
+  const r = commit(dir, { ...env, STUB_IDS_ARGS: argsFile }, "-m", "b");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(idsRange(dir, argsFile).base, start);
+});
+
+test("a commit in a linked worktree runs ids from where its branch left the default", () => {
+  const dir = gated();
+  const argsFile = path.join(temp(), "ids.json");
+  const tree = path.join(temp(), "wt");
+  git(dir, "worktree", "add", "-q", "-b", "wt", tree);
+  const fork = git(dir, "rev-parse", "main").trim();
+  fs.writeFileSync(path.join(tree, "a.md"), "# A\n");
+  git(tree, "add", "a.md");
+  const staged = git(tree, "write-tree").trim();
+  const r = commit(tree, { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile }, "-m", "a");
+  assert.equal(r.status, 0, r.stderr);
+  const range = idsRange(tree, argsFile);
+  assert.equal(range.base, fork);
+  assert.equal(git(tree, "rev-parse", `${range.head}^{tree}`).trim(), staged);
+  assert.equal(git(tree, "rev-parse", `${range.head}^`).trim(), fork);
+});
+
+test("a merge into the default branch runs ids from HEAD to the merge's tree", () => {
+  const dir = gated();
+  const env = { COMPANYGRAPH_CLI: stub() };
+  git(dir, "checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  assert.equal(commit(dir, env, "-m", "a").status, 0);
+  git(dir, "checkout", "-q", "main");
+  fs.writeFileSync(path.join(dir, "m.md"), "# M\n");
+  git(dir, "add", "m.md");
+  assert.equal(commit(dir, env, "-m", "m").status, 0);
+  const main = git(dir, "rev-parse", "HEAD").trim();
+  const argsFile = path.join(temp(), "ids.json");
+  const merged = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "merge", "--no-ff", "-m", "merge side", "side"],
+    { cwd: dir, encoding: "utf8", env: { ...process.env, ...env, STUB_IDS_ARGS: argsFile } });
+  assert.equal(merged.status, 0, merged.stderr);
+  const range = idsRange(dir, argsFile);
+  assert.equal(range.base, "HEAD");
+  assert.equal(git(dir, "rev-parse", `${range.head}^`).trim(), main);
+  assert.equal(git(dir, "rev-parse", `${range.head}^{tree}`).trim(), git(dir, "rev-parse", "HEAD^{tree}").trim());
+});
+
+test("an init.defaultBranch that names no branch here falls through to main", () => {
+  const dir = gated();
+  git(dir, "config", "init.defaultBranch", "trunk");
+  const argsFile = path.join(temp(), "ids.json");
+  const env = { COMPANYGRAPH_CLI: stub(), STUB_IDS_ARGS: argsFile };
+  const fork = git(dir, "rev-parse", "main").trim();
+  git(dir, "checkout", "-q", "-b", "side");
+  fs.writeFileSync(path.join(dir, "a.md"), "# A\n");
+  git(dir, "add", "a.md");
+  assert.equal(commit(dir, env, "-m", "a").status, 0);
+  fs.writeFileSync(path.join(dir, "b.md"), "# B\n");
+  git(dir, "add", "b.md");
+  const r = commit(dir, env, "-m", "b");
+  assert.equal(r.status, 0, r.stderr);
+  assert.equal(idsRange(dir, argsFile).base, fork);
 });

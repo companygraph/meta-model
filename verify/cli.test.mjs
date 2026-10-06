@@ -7,6 +7,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
+import { GATE_HOOK, PAST_GATE_HOOKS } from "../lib/instance-files.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
@@ -1933,6 +1934,134 @@ test("init --gate git writes the hooks, points git at them, and writes no workfl
   if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
 });
 
+// The real hooks with the real CLI, end to end and offline: COMPANYGRAPH_CLI points the hooks at
+// this checkout, so no npx is asked for the release the manifest names.
+test("on the git gate a commit that changes an id is refused, and a commit that leaves ids alone goes through", () => {
+  const root = temp();
+  const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
+  const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
+    { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
+  git("init", "-q", "-b", "main");
+  git("config", "init.defaultBranch", "main");
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  git("add", "-A");
+  const first = commit("The instance");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  const vision = path.join(root, "model/vision.md");
+  const before = fs.readFileSync(vision, "utf8");
+  const id = before.match(/^id: (\S+)$/m)[1];
+  const moved = id.slice(0, -1) + (id.endsWith("0") ? "1" : "0");
+  fs.writeFileSync(vision, before.replace(`id: ${id}`, `id: ${moved}`));
+  git("add", "model/vision.md");
+  const refused = commit("A new id");
+  assert.notEqual(refused.status, 0, refused.stdout + refused.stderr);
+  assert.match(refused.stderr, /model\/vision\.md/);
+  assert.ok(refused.stderr.includes(id), refused.stderr);
+  assert.match(refused.stderr, /nothing was committed/);
+  assert.equal(git("log", "--format=%s", "-1"), "The instance\n");
+  fs.writeFileSync(vision, before.replace("One paragraph stating", "A paragraph stating"));
+  git("add", "model/vision.md");
+  const passed = commit("A plainer vision");
+  assert.equal(passed.status, 0, passed.stdout + passed.stderr);
+  assert.equal(git("log", "--format=%s", "-1"), "A plainer vision\n");
+});
+
+// A repository on the git gate with the real hooks and the real CLI, offline: its default branch
+// is main, set in its own config, and every commit runs the hooks through COMPANYGRAPH_CLI.
+function gatedRepository(make) {
+  const root = temp();
+  const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
+  const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
+    { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
+  git("init", "-q", "-b", "main");
+  git("config", "init.defaultBranch", "main");
+  run(make(root));
+  git("add", "-A");
+  const first = commit("The start");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  return { root, git, commit };
+}
+
+test("an adopted repository on the git gate, with no model for ids to hold, commits a second time", () => {
+  const { root, git, commit } = gatedRepository((root) => ["adopt", root, "--gate", "git"]);
+  fs.writeFileSync(path.join(root, "notes.md"), "# Notes\n");
+  git("add", "notes.md");
+  const second = commit("Some notes");
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.equal(git("log", "--format=%s", "-1"), "Some notes\n");
+});
+
+test("adopt on the git gate does not say ids runs, and init does", () => {
+  const adopted = temp();
+  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  const said = run(["adopt", adopted, "--gate", "git"]);
+  assert.match(said, /every commit runs check and pins\.json's verify first/);
+  const instance = temp();
+  execFileSync("git", ["init", "-q"], { cwd: instance });
+  assert.match(run(["init", instance, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /every commit runs check, ids --range and pins\.json's verify first/);
+});
+
+test("on a feature branch an id the branch introduced can still be fixed, and on main a committed id cannot change", () => {
+  const { root, git, commit } = gatedRepository((root) => ["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const page = path.join(root, "model/values/candor.md");
+  const value = (id) => `---\nid: ${id}\nsource: Local\n---\n\n# Candor\n\n> We say what we see.\n\n## In practice\n\nA review names the fault it found.\n`;
+  const first = run(["id"]).trim(), second = run(["id"]).trim();
+  git("checkout", "-q", "-b", "candor");
+  fs.writeFileSync(page, value(first));
+  git("add", "model/values/candor.md");
+  const added = commit("Candor");
+  assert.equal(added.status, 0, added.stdout + added.stderr);
+  fs.writeFileSync(page, value(second));
+  git("add", "model/values/candor.md");
+  const fixed = commit("Candor's id fixed before it lands");
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  git("checkout", "-q", "main");
+  git("merge", "-q", "--ff-only", "candor");
+  fs.writeFileSync(page, value(first));
+  git("add", "model/values/candor.md");
+  const refused = commit("Candor's id moved after it landed");
+  assert.notEqual(refused.status, 0, refused.stdout + refused.stderr);
+  assert.ok(refused.stderr.includes(second), refused.stderr);
+  assert.match(refused.stderr, /nothing was committed/);
+});
+
+test("upgrade --dry-run names a gate hook it leaves because it was edited, for an instance and an adopted repository", () => {
+  for (const make of [(root) => ["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"], (root) => ["adopt", root, "--gate", "git"]]) {
+    const root = temp();
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    run(make(root));
+    fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+    // Something for the dry run to plan, so it does not stop at nothing to do.
+    fs.rmSync(path.join(root, "pins.json"));
+    const said = run(["upgrade", root, "--dry-run"]);
+    assert.match(said, /write {3}pins\.json/);
+    assert.match(said, /not replaced, since it was edited: \.companygraph\/hooks\/pre-commit/);
+  }
+});
+
+test("a plain upgrade brings a pre-commit hook v0.83.0 wrote to this release", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, PAST_GATE_HOOKS[0]);
+  const said = run(["upgrade", root]);
+  assert.match(said, /brought to this release: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), GATE_HOOK);
+  if (process.platform !== "win32") assert.equal(fs.statSync(hook).mode & 0o111, 0o111);
+});
+
+test("a plain upgrade leaves an edited pre-commit hook as it is, and says why", () => {
+  const root = temp();
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, `${PAST_GATE_HOOKS[0]}# mine\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /not replaced, since it was edited: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), `${PAST_GATE_HOOKS[0]}# mine\n`);
+});
+
 test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
   const refused = spawnSync(process.execPath, [cli, "init", temp(), "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
   assert.notEqual(refused.status, 0);
@@ -2042,6 +2171,7 @@ test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quo
   const said = run(["upgrade", root, "--gate", "git"]);
   assert.match(said, /AGENTS\.md is this instance's own and was not rewritten/);
   assert.ok(said.includes("checked on every commit by the pre-commit hook in `.companygraph/hooks/`"), said);
+  assert.ok(said.includes("then `ids --range` from where the branch left the default branch"), said);
   assert.equal(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
   const again = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "git"], { encoding: "utf8" });
   assert.doesNotMatch(again.stdout, /AGENTS\.md/);

@@ -1,7 +1,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { AGENTS, adoptPlan, gatePlan, adoptedUpgradePlan, initPlan, upgradePlan, backfillPlan, schemaBackfillPlan } from "../lib/plan.mjs";
-import { GATE_HOOK, hashOf, HOOK, INSTANCE_PINS, MERGE_HOOK } from "../lib/instance-files.mjs";
+import { GATE_HOOK, hashOf, HOOK, INSTANCE_PINS, MERGE_HOOK, PAST_GATE_HOOKS } from "../lib/instance-files.mjs";
 import { msOf, UUIDV7 } from "../lib/ids.mjs";
 import { vocabularyOf } from "../lib/checks.mjs";
 
@@ -814,6 +814,55 @@ test("an edited gate hook stops the move by name, and --force removes it and say
   const forced = gatePlan({ from: "git", to: "github", workflow: WF, hasWorkflow: false, held, force: true });
   assert.deepEqual(forced.forced, [PRE]);
   assert.deepEqual(forced.removes, [PRE, MERGE]);
+});
+
+// The text v0.83.0 wrote, by its hash, so the past text cannot drift from what that release shipped.
+test("the past gate hook is v0.83.0's text exactly, and differs from this release's", () => {
+  assert.equal(hashOf(PAST_GATE_HOOKS[0]), "sha256:82bdd114235da35807af71eb0c17cc1f26106de9feb8b8589a96ee441663497b");
+  assert.ok(!PAST_GATE_HOOKS.includes(GATE_HOOK));
+});
+
+test("a gate hook in a past release's text is the tooling's, so a move removes it without --force", () => {
+  const held = heldOf([[PRE, PAST_GATE_HOOKS[0]], [MERGE, MERGE_HOOK]]);
+  const moved = gatePlan({ from: "git", to: "github", workflow: WF, hasWorkflow: false, held });
+  assert.equal(moved.refused, undefined);
+  assert.deepEqual(moved.removes, [PRE, MERGE]);
+  assert.deepEqual(moved.forced, []);
+});
+
+test("staying on the git gate, a past release's hook is brought to this one, an edited one is left and named, a missing one stays missing", () => {
+  const past = gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: heldOf([[SEAT, HOOK], [PRE, PAST_GATE_HOOKS[0]], [MERGE, MERGE_HOOK]]) });
+  assert.deepEqual([...past.writes], [[PRE, GATE_HOOK]]);
+  assert.deepEqual(past.refreshed, [PRE]);
+  assert.deepEqual(past.unreplaced, []);
+  const edited = gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: heldOf([[PRE, `${PAST_GATE_HOOKS[0]}# mine\n`], [MERGE, MERGE_HOOK]]) });
+  assert.equal(edited.writes.size, 0);
+  assert.deepEqual(edited.unreplaced, [PRE]);
+  const missing = gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: heldOf([[MERGE, MERGE_HOOK]]) });
+  assert.equal(missing.writes.size, 0);
+  assert.deepEqual(missing.refreshed, []);
+  assert.deepEqual(missing.unreplaced, []);
+  const current = gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: heldOf(gateHooks) });
+  assert.equal(current.writes.size, 0);
+});
+
+test("both upgrade plans bring a past release's gate hook to this one and name an edited one", () => {
+  const pastHeld = heldOf([[SEAT, HOOK], [PRE, PAST_GATE_HOOKS[0]], [MERGE, MERGE_HOOK]]);
+  const editedHeld = heldOf([[SEAT, HOOK], [PRE, `${GATE_HOOK}# mine\n`], [MERGE, MERGE_HOOK]]);
+  const missingHeld = heldOf([[SEAT, HOOK], [MERGE, MERGE_HOOK]]);
+  const manifest = { ...manifestOf0, tooling: "0.31.2", gate: "git" };
+  const up = (held) => upgradePlan({ ...upBase, manifest, held, workflow: null });
+  assert.equal(up(pastHeld).writes.get(PRE), GATE_HOOK);
+  assert.deepEqual(up(pastHeld).refreshed, [PRE]);
+  assert.ok(!up(editedHeld).writes.has(PRE));
+  assert.deepEqual(up(editedHeld).unreplaced, [PRE]);
+  assert.ok(!up(missingHeld).writes.has(PRE));
+  const adopted = (held) => adoptedUpgradePlan({ tooling: "0.31.2", manifest: { tooling: "0.31.2", exclude: ["dist"], gate: "git" }, workflow: null, present: new Set(["pins.json"]), held });
+  assert.equal(adopted(pastHeld).writes.get(PRE), GATE_HOOK);
+  assert.deepEqual(adopted(pastHeld).refreshed, [PRE]);
+  assert.ok(!adopted(editedHeld).writes.has(PRE));
+  assert.deepEqual(adopted(editedHeld).unreplaced, [PRE]);
+  assert.ok(!adopted(missingHeld).writes.has(PRE));
 });
 
 const manifestOf0 = { tooling: "0.31.2", core: { version: "0.31.1" }, units: "meta", files: {} };
