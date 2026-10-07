@@ -4,7 +4,7 @@ A company of more than one person has units, and two lines run through them: the
 
 Status: decided by the owner on October 7, 2026: a pack named `organization` and not core, departing on purpose from the rule that one company is a wait, because public practice shows units in every company of more than one person; a group at the top level with its tree drawn by a field, never by nesting folders; the second line professional, beside the disciplinary one, and the phrase "functional line" used for neither; the professional line written on the guiding unit as the seats it guides; the kind a type of its own; core's `role` as the seat and core's `profile` as the holder, with no position type; the edges below, each written once; three instance checks that hold the lines to a tree, from which a kind outside the line opts out; and the eight departures listed below.
 
-Amended by the owner on October 7, 2026, while the plan was written: a `## People` row's seat is a qualifier with no `lists` join, since core's grammar puts the joined field on the qualifier's entity and a role has no `roles` field, and a fourth instance check holds that the row's profile holds the seat.
+Amended by the owner on October 7, 2026, while the plan was written: a `## People` row's seat is a qualifier with no `lists` join, since core's grammar puts the joined field on the qualifier's entity and a role has no `roles` field, and a fourth instance check holds that the row's profile holds the seat. After the build's review, a group whose `end` has passed is not counted as a seat's unit or guide, so a disbanded unit keeps its page and its history; and a fifth check holds that `part-of` runs only from and to a group whose kind is in the line.
 
 ## Where this comes from
 
@@ -83,8 +83,9 @@ Sections: `# [Label]`; `> [Summary]`; `## What it means`, which groups belong to
 A line draws a tree only if each seat has one disciplinary unit and no unit sits inside itself, and a team says who sits in it truly only if each person holds the seat they sit in it as. Each is a norm across pages, so each is an instance check shipped in the change that adds the pack, not a writing rule:
 
 - `part-of` forms no cycle.
-- A role is in the `members` of at most one group whose kind is `in-line: yes`.
-- A role is in the `guides` of at most one group.
+- A role is in the `members` of at most one group whose kind is `in-line: yes`, not counting a group whose `end` has passed.
+- A role is in the `guides` of at most one group, not counting a group whose `end` has passed.
+- `part-of` is written only on a group whose kind is in the line, and names only such a group.
 - A `## People` row's profile lists the row's role in its `roles`, so a person sits in a group only as a seat they hold.
 
 A board or a cross-functional team is a kind with `in-line: no`, so its seats, which already sit in a unit, are not counted twice.
@@ -122,4 +123,4 @@ A rendered org chart on a site or in a tool: the edges are what a renderer draws
 
 ## What it costs
 
-A second folder under `packs/` with a manifest, a README and two schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Four instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, so it is a minor release; an instance that takes it adds two folders and declares the pack in its manifest.
+A second folder under `packs/` with a manifest, a README and two schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Five instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, so it is a minor release; an instance that takes it adds two folders and declares the pack in its manifest.
