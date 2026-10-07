@@ -218,6 +218,31 @@ test("a target both ended and outside the line is one finding", () => {
   assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
 });
 
+test("a live group and a group that has ended naming each other is one finding, the ended target's", () => {
+  const f = failures(tree((m) => edit(`${G}/management.md`, "kind: Department\n", "kind: Department\npart-of: Engineering\n")(ending(`${G}/management.md`, "2025-12")(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Management", which has ended (R16)`]);
+});
+
+test("a group that has ended is still held to the line: a team naming a part-of fails once, at the page", () => {
+  const f = failures(tree((m) => edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Engineering\n")(ending(TEAM, "2026-06")(m))));
+  assert.deepEqual(f, [`${TEAM}: \`part-of\` is written on a page whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
+});
+
+test("a group that has ended naming a board fails once, at the target's kind", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "part-of: Management", "part-of: Review Board")(ending(`${G}/engineering.md`, "2025-06")(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
+});
+
+test("a department that has ended naming a department that has ended passes", () => {
+  assert.deepEqual(failures(tree((m) => ending(`${G}/engineering.md`, "2025-06")(ending(`${G}/management.md`, "2025-12")(m)))), []);
+});
+
+test("a circle of groups that have ended is still a circle", () => {
+  const f = failures(tree((m) => edit(`${G}/management.md`, "kind: Department\n", "kind: Department\npart-of: Engineering\n")(ending(`${G}/engineering.md`, "2025-06")(ending(`${G}/management.md`, "2025-12")(m)))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /`part-of` runs in a circle.*\(R16\)$/);
+});
+
 // --- a fault in the set's own field is reported at the kind, once ---------------------------------
 
 const DEPARTMENT = "model/group-kinds/department.md";

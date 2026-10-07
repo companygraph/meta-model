@@ -42,7 +42,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Profile` | Yes | ref → profile | The person, the H1 of a profile |
-| `Role` | Yes | qualifier → role | The seat the person sits in the group as, one their profile lists in `roles` |
+| `Role` | Yes | qualifier → role | The seat the person sits in the group as, one their profile lists in `roles`, or listed there while the group existed, for a group whose `end` has passed |
 | `As` | Yes | enum | `Lead`, `Deputy` or `Member`. The person's place in the group: the one who leads it, one who stands in for the lead, or one who sits in it. |
 
 `## References` is a table with these columns:
