@@ -119,3 +119,22 @@ test("a seat guided by two groups fails once, whatever their kind", () => {
   const f = failures(tree(edit(`${G}/review-board.md`, "kind: Board\n", "kind: Board\nguides:\n  - Backend Engineer\n")));
   assert.deepEqual(f, [`"Backend Engineer" is in \`guides\` of ${G}/engineering.md and ${G}/review-board.md; a role is in \`guides\` of one group at most (R16)`]);
 });
+
+// --- a person sits in a group as a seat they hold -----------------------------------------------
+
+const TEAM = `${G}/checkout-team.md`;
+
+test("a People row seating a person as a seat they do not hold fails once", () => {
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | |", "| Jon | Backend Engineer | |")));
+  assert.deepEqual(f, [`${TEAM}: the "## People" row "Jon" sits as "Backend Engineer", and Jon does not list it in \`roles\` (R16)`]);
+});
+
+test("a People row whose seat is no role fails as R4 alone", () => {
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | |", "| Jon | Ghost | |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
+});
+
+test("two people sitting as one seat pass without an As", () => {
+  assert.deepEqual(failures(tree()), []);
+});
