@@ -64,3 +64,31 @@ test("a group naming a seat no role is fails as R4", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /engineering\.md.*Ghost.*\(R4\)/);
 });
+
+// --- part-of never runs in a circle ---------------------------------------------------------
+
+test("a group whose part-of names itself fails once, as a circle of one", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "part-of: Management", "part-of: Engineering")));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` runs in a circle, "Engineering" → "Engineering"; a line never returns to where it starts (R16)`]);
+});
+
+test("a circle of two fails once, at the page whose path sorts first, naming both", () => {
+  const f = failures(tree((m) => m.set(`${G}/management.md`, m.get(`${G}/management.md`).replace("kind: Department\n", "kind: Department\npart-of: Engineering\n"))));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` runs in a circle, "Engineering" → "Management" → "Engineering"; a line never returns to where it starts (R16)`]);
+});
+
+test("a group leading into a circle without being on it is not reported, and the circle is reported once", () => {
+  const f = failures(tree((m) => {
+    m.set(`${G}/management.md`, m.get(`${G}/management.md`).replace("kind: Department\n", "kind: Department\npart-of: Engineering\n"));
+    return m.set(`${G}/platform.md`, group({ kind: "Department", partOf: "Engineering", body: "# Platform\n\n> Runs the platform.\n" }));
+  }));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/groups\/engineering\.md: `part-of` runs in a circle/);
+});
+
+test("a part-of naming no group fails as R4 alone, and a chain three deep passes", () => {
+  const ghost = failures(tree(edit(`${G}/engineering.md`, "part-of: Management", "part-of: Ghost")));
+  assert.equal(ghost.length, 1, ghost.join("\n"));
+  assert.match(ghost[0], /\(R4\)/);
+  assert.deepEqual(failures(tree((m) => m.set(`${G}/platform.md`, group({ kind: "Department", partOf: "Engineering", body: "# Platform\n\n> Runs the platform.\n" })))), []);
+});

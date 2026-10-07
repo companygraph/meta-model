@@ -119,6 +119,19 @@ test("an entity carries a stamp of its kind and period, and one without either c
   assert.equal("stamp" in entities.find((e) => e.id === "skills/java-programming"), false);
 });
 
+// A temporary group carries a kind and a start too, and its kind is a group kind: a renderer
+// that translates a stamp's kind against the experience kinds must never meet one.
+test("a period stamp carries a kind only for an experience", () => {
+  const s = new Map(schemas);
+  s.set("group-kind-schema.md", schema("group-kind"));
+  s.set("group-schema.md", schema("group", { fields: [["kind", "ref → group-kind"], ["start", "date"], ["end", "date"]] }));
+  const files = new Map(valid);
+  files.set("group-kinds/team.md", "# Team\n\n> A team.\n");
+  files.set("groups/checkout.md", "---\nkind: Team\nstart: 2026-03\n---\n\n# Checkout\n\n> Ships the checkout.\n");
+  const g = parseInstance(files, { schemas: s }).entities.find((e) => e.type === "group");
+  assert.deepEqual(g.stamp, { kind: null, start: "2026-03", end: null });
+});
+
 test("an open period stamps a null end, and a one-off stamps end equal to start", () => {
   const files = new Map(valid);
   files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
