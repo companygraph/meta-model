@@ -2,6 +2,10 @@
 id: 01a1152c-3800-7600-a961-2992dc0f3e2d
 source: Local
 kind: Department
+lead: Managing Director
+members:
+  - Engineering Lead
+  - Head of Product
 ---
 
 # Management

@@ -15,8 +15,11 @@ strategies/                      invoicing-strategy.md
 kpis/                            change-lead-time.md, change-fail-rate.md,
                                  review-escapes.md
 group-kinds/                     department.md, team.md
-groups/                          management.md, engineering.md, billing-run-team.md
-roles/                           backend-engineer.md, reviewer.md
+groups/                          management.md, engineering.md, product.md,
+                                 billing-run-team.md
+roles/                           managing-director.md, engineering-lead.md,
+                                 head-of-product.md, backend-engineer.md,
+                                 product-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 features/                        billing-run.md, charge-explanation.md, credit-notes.md,
                                  invoice-download.md, pricing-rules.md, usage-reporting.md

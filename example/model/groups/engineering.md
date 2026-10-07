@@ -3,11 +3,13 @@ id: 01a1152c-3830-7c3f-b3ad-3761dc40528c
 source: Local
 kind: Department
 part-of: Management
+lead: Engineering Lead
 members:
   - Backend Engineer
   - Reviewer
 guides:
   - Backend Engineer
+  - Product Engineer
 ---
 
 # Engineering
