@@ -7,11 +7,11 @@ requires:
 
 # Engineering Lead
 
-> The seat that leads Engineering and sets the standard every engineering seat works to, wherever it sits.
+> The seat that leads Engineering and sets the standard every engineer works to, wherever they sit.
 
 ## What it takes
 
-The work of the seats in Engineering and the changes the other departments' engineers ship, read against the standard the seat has set.
+The work of the people in Engineering and the changes the other departments' engineers ship, read against the standard the seat has set.
 
 ## What it produces
 

@@ -6,8 +6,8 @@ in-line: yes
 
 # Department
 
-> A standing unit of the company that hires, appraises and sets objectives for the seats in it.
+> A standing unit of the company that hires, appraises and sets objectives for the people in it.
 
 ## What it means
 
-A department is a standing unit that seats belong to, and it lasts as long as the company has the work. A team gathered for a piece of work is not one.
+A department is a standing unit that people belong to, and it lasts as long as the company has the work. A team gathered for a piece of work is not one.

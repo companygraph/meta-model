@@ -13,6 +13,7 @@ const page = (fm, body) => `---\nid: ${uuidv7()}\nsource: Local\n${fm}---\n\n${b
 const PACKS = [{ name: "organization", dir: "meta/organization" }];
 const G = "model/groups";
 const TEAM = `${G}/checkout-team.md`;
+const ANA = "| Ana | Backend Engineer | Member |";
 const role = (name) => page("", `# ${name}\n\n> A job.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
@@ -108,10 +109,8 @@ test("a part-of naming no group fails as R4 alone, and a chain three deep passes
 
 // --- one disciplinary unit per person, one guiding unit per job -------------------------------
 
-const SUPPORT = "| Ana | Backend Engineer | Member |";
-
 test("a person in the People of two units in the line fails once, naming both", () => {
-  const f = failures(tree(edit(`${G}/design.md`, "| Jon | Designer | Lead |", `| Jon | Designer | Lead |\n${SUPPORT}`)));
+  const f = failures(tree(edit(`${G}/design.md`, "| Jon | Designer | Lead |", `| Jon | Designer | Lead |\n${ANA}`)));
   assert.deepEqual(f, [`"Ana" is in the "## People" Profile of ${G}/design.md and ${G}/engineering.md; a profile is in the "## People" Profile of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
 });
 
@@ -128,7 +127,7 @@ test("a person in a department and in a board outside the line passes", () => {
 });
 
 test("two departments holding the same job, with different people, pass", () => {
-  const f = failures(tree((m) => edit(`${G}/design.md`, "| Jon | Designer | Lead |", "| Jon | Designer | Lead |\n| Kim | Backend Engineer | Member |")(m.set(...profile("Kim", ["Backend Engineer"])[0]).set(...profile("Kim", ["Backend Engineer"])[1]))));
+  const f = failures(tree((m) => edit(`${G}/design.md`, "| Jon | Designer | Lead |", "| Jon | Designer | Lead |\n| Kim | Backend Engineer | Member |")(profile("Kim", ["Backend Engineer"]).reduce((t, [path, text]) => t.set(path, text), m))));
   assert.deepEqual(f, []);
 });
 
@@ -312,8 +311,6 @@ test("an agent as Deputy fails once", () => {
 test("an agent as a Member of a team passes", () => {
   assert.deepEqual(failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Bot | Designer | Member |")(withBot(m)))), []);
 });
-
-const ANA = "| Ana | Backend Engineer | Member |";
 
 test("an agent in the People of a department fails once", () => {
   const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Member |")(withBot(m))));

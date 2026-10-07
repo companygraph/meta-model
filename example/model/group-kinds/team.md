@@ -6,8 +6,8 @@ in-line: no
 
 # Team
 
-> A group gathered for a piece of work from seats that already sit in a department.
+> A group gathered for a piece of work from people who already sit in a department.
 
 ## What it means
 
-A team is formed for work and disbanded after it, and its seats keep the department they already sit in. A standing unit is not one.
+A team is formed for work and disbanded after it, and the people in it keep the department they already sit in. A standing unit is not one.
