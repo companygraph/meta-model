@@ -272,7 +272,7 @@ test("a blank required column enum is named with its permitted values", () => {
 
   const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
-  const hit = failures.find((f) => f.includes("has no confidence"));
+  const hit = failures.find((f) => f.includes("has no Confidence"));
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /one of `high`, `low`/);
 });
@@ -1334,7 +1334,7 @@ test("a blank required reference column is named the same way a blank required e
 
   const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
-  const hit = failures.find((f) => f.includes("has no skill"));
+  const hit = failures.find((f) => f.includes("has no Skill"));
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /## Relations/);
 });

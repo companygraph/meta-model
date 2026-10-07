@@ -117,7 +117,7 @@ test("a value whose References row names its document passes", () => {
 test("a References row with no URL fails once", () => {
   const f = failuresOf("model/values/candor.md", "value", value(refs("| What | URL |", ["| Code of conduct |  |"])));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /"## References" row has no url/);
+  assert.match(f[0], /"## References" row has no URL/);
 });
 
 test("a References table with Also at's columns fails once, on the columns", () => {

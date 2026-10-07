@@ -876,7 +876,7 @@ test("a blank qualifier cell is not resolved, and keeps its empty value", () => 
 // The reference column reads a blank cell the same way: nothing to resolve, so the row draws
 // no edge, and a row beside it that does fill the column still does. Whether the column was
 // allowed to be blank at all is the checker's Required rule, not the parser's — a blank cell
-// in a column the schema requires is `lib/checks.mjs`'s "row has no skill" (see verify/
+// in a column the schema requires is `lib/checks.mjs`'s "row has no Skill" (see verify/
 // instance-checks.test.mjs), never this R4. A cell that is not blank and still names nothing
 // is R4 as it always was, whatever the column's Required says ("a row whose reference column
 // names nothing is an R4 error", above, and "a Phases row that names no phase…", below).

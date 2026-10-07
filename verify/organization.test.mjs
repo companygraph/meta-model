@@ -12,6 +12,7 @@ const pack = (n) => fs.readFileSync(new URL(`../packs/organization/${n}-schema.m
 const page = (fm, body) => `---\nid: ${uuidv7()}\nsource: Local\n${fm}---\n\n${body}`;
 const PACKS = [{ name: "organization", dir: "meta/organization" }];
 const G = "model/groups";
+const TEAM = `${G}/checkout-team.md`;
 const role = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
@@ -77,6 +78,14 @@ test("a circle of two fails once, at the page whose path sorts first, naming bot
   assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` runs in a circle, "Engineering" → "Management" → "Engineering"; a line never returns to where it starts (R16)`]);
 });
 
+test("a circle through a group outside the line is reported by within alone, once per page", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "part-of: Management", "part-of: Checkout Team")(edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Engineering\n")(m))));
+  assert.deepEqual(f, [
+    `${G}/engineering.md: \`part-of\` names "Checkout Team", whose \`kind\` does not carry \`in-line: yes\` (R16)`,
+    `${TEAM}: \`part-of\` is written on a page whose \`kind\` does not carry \`in-line: yes\` (R16)`,
+  ].sort());
+});
+
 test("a group leading into a circle without being on it is not reported, and the circle is reported once", () => {
   const f = failures(tree((m) => {
     m.set(`${G}/management.md`, m.get(`${G}/management.md`).replace("kind: Department\n", "kind: Department\npart-of: Engineering\n"));
@@ -121,8 +130,6 @@ test("a seat guided by two groups fails once, whatever their kind", () => {
 });
 
 // --- a person sits in a group as a seat they hold -----------------------------------------------
-
-const TEAM = `${G}/checkout-team.md`;
 
 test("a People row seating a person as a seat they do not hold fails once", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")));
@@ -284,7 +291,7 @@ test("an As outside the tokens fails as R8 alone", () => {
 test("a People row with a blank As fails as the required column alone", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | |")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.equal(f[0], `${TEAM}: a "## People" row has no as — one of \`Lead\`, \`Deputy\`, \`Member\``);
+  assert.equal(f[0], `${TEAM}: a "## People" row has no As — one of \`Lead\`, \`Deputy\`, \`Member\``);
 });
 
 test("a People profile that resolves to nothing fails as R4 alone", () => {
