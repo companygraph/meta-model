@@ -19,7 +19,7 @@ const group = ({ kind: k, partOf, lead, members = [], guides = [], start, end, b
   `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${lead ? `lead: ${lead}\n` : ""}${list("members", members)}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
   body,
 );
-const person = (name, roles) => page(`nature: human\n${list("roles", roles)}`, `# ${name}\n\n> A person.\n`);
+const person = (name, roles, nature = "human") => page(`nature: ${nature}\n${list("roles", roles)}`, `# ${name}\n\n> A person.\n`);
 
 const tree = (change = (m) => m) => change(new Map([
   ...["source", "identifier", "role", "profile", "experience"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
@@ -33,7 +33,7 @@ const tree = (change = (m) => m) => change(new Map([
   [`${G}/management.md`, group({ kind: "Department", lead: "Managing Director", members: ["Engineering Lead", "Designer"], body: "# Management\n\n> Sets the direction.\n" })],
   [`${G}/engineering.md`, group({ kind: "Department", partOf: "Management", lead: "Engineering Lead", members: ["Backend Engineer"], guides: ["Backend Engineer"], body: "# Engineering\n\n> Builds the product.\n\n## Responsibilities\n\n- Code quality\n" })],
   [`${G}/review-board.md`, group({ kind: "Board", lead: "Managing Director", members: ["Engineering Lead", "Designer"], body: "# Review Board\n\n> Approves risky changes.\n" })],
-  [`${G}/checkout-team.md`, group({ kind: "Team", members: ["Backend Engineer", "Designer"], start: "2026-03", body: "# Checkout Team\n\n> Ships the new checkout.\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n| Jon | Designer | |\n| Ana | Backend Engineer | |\n" })],
+  [`${G}/checkout-team.md`, group({ kind: "Team", members: ["Backend Engineer", "Designer"], start: "2026-03", body: "# Checkout Team\n\n> Ships the new checkout.\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n| Jon | Designer | Member |\n| Ana | Backend Engineer | Member |\n" })],
   ["model/profiles/mira/mira.md", person("Mira", ["Backend Engineer"])],
   ["model/profiles/mira/experiences/README.md", "# Experiences\n\n> Nothing yet.\n"],
   ["model/profiles/jon/jon.md", person("Jon", ["Designer"])],
@@ -125,17 +125,17 @@ test("a seat guided by two groups fails once, whatever their kind", () => {
 const TEAM = `${G}/checkout-team.md`;
 
 test("a People row seating a person as a seat they do not hold fails once", () => {
-  const f = failures(tree(edit(TEAM, "| Jon | Designer | |", "| Jon | Backend Engineer | |")));
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")));
   assert.deepEqual(f, [`${TEAM}: the "## People" row "Jon" sits as "Backend Engineer", and Jon does not list it in \`roles\` (R16)`]);
 });
 
 test("a People row whose seat is no role fails as R4 alone", () => {
-  const f = failures(tree(edit(TEAM, "| Jon | Designer | |", "| Jon | Ghost | |")));
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Ghost | Member |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
 });
 
-test("two people sitting as one seat pass without an As", () => {
+test("two people sitting as one seat pass", () => {
   assert.deepEqual(failures(tree()), []);
 });
 
@@ -200,4 +200,58 @@ test("a kind whose in-line is missing fails once, at the kind", () => {
 test("a team naming a board as its part-of fails once, at the page", () => {
   const f = failures(tree(edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Review Board\n")));
   assert.deepEqual(f, [`${TEAM}: \`part-of\` is written on a page whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
+});
+
+// --- a person's place is an enum, and only a human leads ------------------------------------------
+
+const withBot = (m) => m
+  .set("model/profiles/bot/bot.md", person("Bot", ["Designer"], "agent"))
+  .set("model/profiles/bot/experiences/README.md", "# Experiences\n\n> Nothing yet.\n");
+const MIRA = "| Mira | Backend Engineer | Lead |";
+const asBot = (as) => (m) => edit(TEAM, MIRA, `| Bot | Designer | ${as} |`)(withBot(m));
+
+test("an agent as Lead fails once", () => {
+  const f = failures(tree(asBot("Lead")));
+  assert.deepEqual(f, [`${TEAM}: the "## People" row "Bot" has \`As\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);
+});
+
+test("an agent as Deputy fails once", () => {
+  const f = failures(tree(asBot("Deputy")));
+  assert.deepEqual(f, [`${TEAM}: the "## People" row "Bot" has \`As\` "Deputy", and Bot's profile does not carry \`nature: human\` (R16)`]);
+});
+
+test("an agent as a Member of a team passes", () => {
+  assert.deepEqual(failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Bot | Designer | Member |")(withBot(m)))), []);
+});
+
+test("an agent in the People of a department fails once", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Bot | Designer | Member |\n")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
+});
+
+test("a human in the People of a department passes", () => {
+  assert.deepEqual(failures(tree(edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n"))), []);
+});
+
+test("two Lead rows fail once, naming the page", () => {
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | Lead |")));
+  assert.deepEqual(f, [`${TEAM}: the "## People" table has 2 rows whose \`As\` is "Lead"; a group has one (R16)`]);
+});
+
+test("an As outside the tokens fails as R8 alone", () => {
+  const f = failures(tree(edit(TEAM, MIRA, "| Mira | Backend Engineer | Boss |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /checkout-team\.md.*Boss.*\(R8\)/);
+});
+
+test("a People row with a blank As fails as the required column alone", () => {
+  const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.equal(f[0], `${TEAM}: a "## People" row has no as — one of \`Lead\`, \`Deputy\`, \`Member\``);
+});
+
+test("a People profile that resolves to nothing fails as R4 alone", () => {
+  const f = failures(tree(edit(TEAM, MIRA, "| Ghost | Backend Engineer | Lead |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
 });

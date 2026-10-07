@@ -43,7 +43,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | --- | --- | --- | --- |
 | `Profile` | Yes | ref → profile | The person, the H1 of a profile |
 | `Role` | Yes | qualifier → role | The seat the person sits in the group as, one their profile lists in `roles` |
-| `As` | No | string | The person's place in the group, such as lead |
+| `As` | Yes | enum | `Lead`, `Deputy` or `Member`. The person's place in the group: the one who leads it, one who stands in for the lead, or one who sits in it. |
 
 `## References` is a table with these columns:
 
@@ -63,5 +63,6 @@ A group is a unit of the company, or a team drawn from its units, and answers "w
 - `members` never names the seat in `lead`; the lead's own unit is the one whose `members` list its seat.
 - `guides` names only seats whose discipline the group sets, not seats that merely work with it.
 - `## People` is written only for a group made of named people; a unit of seats lists them in `members`.
+- `## People` seats the person whose `As` is `Lead` as the seat in `lead`, where `lead` is written.
 - Each `## People` row's `Role` is one of the seats in `members`, where `members` is written.
 - `end` is written once the group is disbanded, and the page is kept.

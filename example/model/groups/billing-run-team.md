@@ -17,4 +17,4 @@ start: 2026-09
 | Profile | Role | As |
 | --- | --- | --- |
 | Mira Halvorsen | Backend Engineer | Lead |
-| AI Agent | Reviewer | |
+| AI Agent | Reviewer | Member |
