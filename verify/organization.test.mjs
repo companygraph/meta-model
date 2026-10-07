@@ -135,6 +135,16 @@ test("a People row whose seat is no role fails as R4 alone", () => {
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
 });
 
+test("a disbanded team's row keeps a seat its person no longer holds", () => {
+  const f = failures(tree((m) => edit(TEAM, "start: 2026-03\n", "start: 2026-03\nend: 2026-06\n")(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")(m))));
+  assert.deepEqual(f, []);
+});
+
+test("the same row fails while the team's end is still to come", () => {
+  const f = failures(tree((m) => edit(TEAM, "start: 2026-03\n", "start: 2026-03\nend: 2999-12\n")(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")(m))));
+  assert.deepEqual(f, [`${TEAM}: the "## People" row "Jon" sits as "Backend Engineer", and Jon does not list it in \`roles\` (R16)`]);
+});
+
 test("two people sitting as one seat pass", () => {
   assert.deepEqual(failures(tree()), []);
 });

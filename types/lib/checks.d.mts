@@ -75,13 +75,14 @@ export type TypeEntry = {
         };
     };
     /**
-     * A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names.
+     * A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names; with `until`, a page whose date field of that name has passed, read as for `once`, is a group disbanded and kept, and its rows are history that holds nothing.
      */
     holds?: {
         section: string;
         column: string;
         qualifier: string;
         field: string;
+        until?: string;
     };
     /**
      * Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
@@ -212,7 +213,7 @@ export type Check = {
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it.
  * @property {{ field: string, when?: { via: string, field: string, is: string }, until?: string }[]} [once] List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
  * @property {{ field: string, when: { via: string, field: string, is: string } }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`.
- * @property {{ section: string, column: string, qualifier: string, field: string }} [holds] A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names.
+ * @property {{ section: string, column: string, qualifier: string, field: string, until?: string }} [holds] A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names; with `until`, a page whose date field of that name has passed, read as for `once`, is a group disbanded and kept, and its rows are history that holds nothing.
  * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
  * @property {{ section: string, column: string, value: string }} [oneRow] A table in which at most one row holds `value` in `column`.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
