@@ -9,7 +9,7 @@ An instance takes it with `companygraph init --pack organization`. Every edge fr
 | `group` | A unit of the company, or a team drawn from its units | nothing |
 | `group-kind` | What kind of group a company has, and whether it stands in the disciplinary line | nothing |
 
-The disciplinary line is a group's `members` and `part-of`: a seat answers to the lead of the unit that lists it. The professional line is a group's `guides`: the unit that sets a discipline's standard lists that discipline's seats wherever they sit. A person stands on either line through the seat they hold.
+The disciplinary line runs through the people a group's `## People` names, each answering to the row whose `As` is `Lead`, and up through `part-of`. The professional line is a group's `guides`, set on jobs wherever their holders sit.
 
 ## Sources
 
@@ -28,10 +28,11 @@ The disciplinary line is a group's `members` and `part-of`: a seat answers to th
 
 - The two lines are named by the right each carries, disciplinary and professional, and the phrase "functional line", which practice uses for both, is used for neither.
 - Two lines where the Organization Ontology has one `reportsTo`, as SAP, HR-XML and German practice keep the primary line apart from the one beside it.
-- The lines run between units and the seats they list, never between people, and a seat carries no field naming its superior.
+- The lines run through the people a unit names and the units they sit in, and a person carries no field naming their superior.
+- A position is a row of a group's `## People`, not a type: core's role is the job.
 - A temporary group has `start` and `end`, not a status.
 - The type is `group` rather than organizational unit, because a team drawn across units is a group and not a unit; its kind tells the two apart.
 
 ## Left for later
 
-A position or job type beside core's role; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.
+A position type beside core's role, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.

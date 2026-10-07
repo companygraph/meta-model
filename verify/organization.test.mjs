@@ -13,39 +13,43 @@ const page = (fm, body) => `---\nid: ${uuidv7()}\nsource: Local\n${fm}---\n\n${b
 const PACKS = [{ name: "organization", dir: "meta/organization" }];
 const G = "model/groups";
 const TEAM = `${G}/checkout-team.md`;
-const role = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
+const role = (name) => page("", `# ${name}\n\n> A job.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
-const group = ({ kind: k, partOf, lead, members = [], guides = [], start, end, body = "" }) => page(
-  `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${lead ? `lead: ${lead}\n` : ""}${list("members", members)}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
+const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
+  `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
   body,
 );
+// A group's `## People`: one row per person, as the schema's columns have it.
+const people = (rows) => `\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 const person = (name, roles, nature = "human") => page(`nature: ${nature}\n${list("roles", roles)}`, `# ${name}\n\n> A person.\n`);
+const profile = (name, roles, nature) => [
+  [`model/profiles/${name.toLowerCase()}/${name.toLowerCase()}.md`, person(name, roles, nature)],
+  [`model/profiles/${name.toLowerCase()}/experiences/README.md`, "# Experiences\n\n> Nothing yet.\n"],
+];
 
 const tree = (change = (m) => m) => change(new Map([
   ...["source", "identifier", "role", "profile", "experience"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
   ...["group", "group-kind"].map((n) => [`meta/organization/${n}-schema.md`, pack(n)]),
   ["model/identifier.md", page("format: uuidv7\n", "# Entity id\n\n> What an id is for.\n")],
   ["model/sources/local.md", `---\nid: ${uuidv7()}\n---\n\n# Local\n\n> Here.\n`],
-  ...["Managing Director", "Engineering Lead", "Backend Engineer", "Designer"].map((n) => [`model/roles/${n.toLowerCase().replace(/ /g, "-")}.md`, role(n)]),
+  ...["Backend Engineer", "Designer"].map((n) => [`model/roles/${n.toLowerCase().replace(/ /g, "-")}.md`, role(n)]),
   ["model/group-kinds/department.md", kind("Department", "yes")],
   ["model/group-kinds/board.md", kind("Board", "no")],
   ["model/group-kinds/team.md", kind("Team", "no")],
-  [`${G}/management.md`, group({ kind: "Department", lead: "Managing Director", members: ["Engineering Lead", "Designer"], body: "# Management\n\n> Sets the direction.\n" })],
-  [`${G}/engineering.md`, group({ kind: "Department", partOf: "Management", lead: "Engineering Lead", members: ["Backend Engineer"], guides: ["Backend Engineer"], body: "# Engineering\n\n> Builds the product.\n\n## Responsibilities\n\n- Code quality\n" })],
-  [`${G}/review-board.md`, group({ kind: "Board", lead: "Managing Director", members: ["Engineering Lead", "Designer"], body: "# Review Board\n\n> Approves risky changes.\n" })],
-  [`${G}/checkout-team.md`, group({ kind: "Team", members: ["Backend Engineer", "Designer"], start: "2026-03", body: "# Checkout Team\n\n> Ships the new checkout.\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n| Jon | Designer | Member |\n| Ana | Backend Engineer | Member |\n" })],
-  ["model/profiles/mira/mira.md", person("Mira", ["Backend Engineer"])],
-  ["model/profiles/mira/experiences/README.md", "# Experiences\n\n> Nothing yet.\n"],
-  ["model/profiles/jon/jon.md", person("Jon", ["Designer"])],
-  ["model/profiles/jon/experiences/README.md", "# Experiences\n\n> Nothing yet.\n"],
-  ["model/profiles/ana/ana.md", person("Ana", ["Backend Engineer"])],
-  ["model/profiles/ana/experiences/README.md", "# Experiences\n\n> Nothing yet.\n"],
+  [`${G}/management.md`, group({ kind: "Department", body: "# Management\n\n> Sets the direction.\n" })],
+  [`${G}/engineering.md`, group({ kind: "Department", partOf: "Management", guides: ["Backend Engineer"], body: `# Engineering\n\n> Builds the product.\n\n## Responsibilities\n\n- Code quality\n${people([["Mira", "Backend Engineer", "Lead"], ["Ana", "Backend Engineer", "Member"]])}` })],
+  [`${G}/design.md`, group({ kind: "Department", body: `# Design\n\n> Shapes how the product looks.\n${people([["Jon", "Designer", "Lead"]])}` })],
+  [`${G}/review-board.md`, group({ kind: "Board", body: `# Review Board\n\n> Approves risky changes.\n${people([["Mira", "Backend Engineer", "Lead"], ["Jon", "Designer", "Member"]])}` })],
+  [`${G}/checkout-team.md`, group({ kind: "Team", start: "2026-03", body: `# Checkout Team\n\n> Ships the new checkout.\n${people([["Mira", "Backend Engineer", "Lead"], ["Jon", "Designer", "Member"], ["Ana", "Backend Engineer", "Member"]])}` })],
+  ...profile("Mira", ["Backend Engineer"]),
+  ...profile("Jon", ["Designer"]),
+  ...profile("Ana", ["Backend Engineer"]),
 ]));
 const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
 const edit = (path, from, to) => (m) => m.set(path, m.get(path).replace(from, to));
 
-test("a small instance written in the pack passes, a board and a team over seats already in units included", () => {
+test("a small instance written in the pack passes, a board and a team over people already in units included", () => {
   assert.deepEqual(failures(tree()), []);
 });
 
@@ -60,8 +64,8 @@ test("a group without a kind fails", () => {
   assert.ok(f.some((x) => x.includes("engineering.md") && x.includes("kind")), f.join("\n"));
 });
 
-test("a group naming a seat no role is fails as R4", () => {
-  const f = failures(tree(edit(`${G}/engineering.md`, "lead: Engineering Lead", "lead: Ghost")));
+test("a group guiding a job no role is fails as R4", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "guides:\n  - Backend Engineer", "guides:\n  - Ghost")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /engineering\.md.*Ghost.*\(R4\)/);
 });
@@ -102,47 +106,68 @@ test("a part-of naming no group fails as R4 alone, and a chain three deep passes
   assert.deepEqual(failures(tree((m) => m.set(`${G}/platform.md`, group({ kind: "Department", partOf: "Engineering", body: "# Platform\n\n> Runs the platform.\n" })))), []);
 });
 
-// --- one disciplinary unit and one guiding unit per seat -------------------------------------
+// --- one disciplinary unit per person, one guiding unit per job -------------------------------
 
-test("a seat in the members of two units in the line fails once, naming both", () => {
-  const f = failures(tree(edit(`${G}/engineering.md`, "  - Backend Engineer\nguides", "  - Backend Engineer\n  - Designer\nguides")));
-  assert.deepEqual(f, [`"Designer" is in \`members\` of ${G}/engineering.md and ${G}/management.md; a role is in \`members\` of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
+const SUPPORT = "| Ana | Backend Engineer | Member |";
+
+test("a person in the People of two units in the line fails once, naming both", () => {
+  const f = failures(tree(edit(`${G}/design.md`, "| Jon | Designer | Lead |", `| Jon | Designer | Lead |\n${SUPPORT}`)));
+  assert.deepEqual(f, [`"Ana" is in the "## People" Profile of ${G}/design.md and ${G}/engineering.md; a profile is in the "## People" Profile of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
 });
 
-test("a seat in a unit and in a board or a team outside the line passes", () => {
-  assert.deepEqual(failures(tree()), []);
+test("a person in a department and in a team passes", () => {
+  const t = tree();
+  assert.ok(t.get(`${G}/engineering.md`).includes("| Mira |") && t.get(TEAM).includes("| Mira |"));
+  assert.deepEqual(failures(t), []);
 });
 
-test("a seat listed twice in one group's members is in one group", () => {
-  const f = failures(tree(edit(`${G}/engineering.md`, "  - Backend Engineer\nguides", "  - Backend Engineer\n  - Backend Engineer\nguides")));
-  assert.ok(!f.some((x) => x.includes("is in `members` of")), f.join("\n"));
+test("a person in a department and in a board outside the line passes", () => {
+  const t = tree();
+  assert.ok(t.get(`${G}/design.md`).includes("| Jon |") && t.get(`${G}/review-board.md`).includes("| Jon |"));
+  assert.deepEqual(failures(t), []);
+});
+
+test("two departments holding the same job, with different people, pass", () => {
+  const f = failures(tree((m) => edit(`${G}/design.md`, "| Jon | Designer | Lead |", "| Jon | Designer | Lead |\n| Kim | Backend Engineer | Member |")(m.set(...profile("Kim", ["Backend Engineer"])[0]).set(...profile("Kim", ["Backend Engineer"])[1]))));
+  assert.deepEqual(f, []);
+});
+
+test("two departments each with their own Lead pass", () => {
+  const t = tree();
+  for (const d of ["engineering", "design"]) assert.equal((t.get(`${G}/${d}.md`).match(/\| Lead \|/g) ?? []).length, 1);
+  assert.deepEqual(failures(t), []);
+});
+
+test("a person listed twice in one group's People is in one group", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "| Ana | Backend Engineer | Member |", "| Ana | Backend Engineer | Member |\n| Ana | Backend Engineer | Member |")));
+  assert.ok(!f.some((x) => x.includes("is in the \"## People\"")), f.join("\n"));
 });
 
 test("a group whose kind resolves to nothing fails as R4 and is not counted in the line", () => {
-  const f = failures(tree((m) => m.set(`${G}/design.md`, group({ kind: "Ghost", members: ["Designer"], body: "# Design\n\n> Designs.\n" }))));
+  const f = failures(tree((m) => m.set(`${G}/support.md`, group({ kind: "Ghost", body: `# Support\n\n> Supports.\n${people([["Jon", "Designer", "Member"]])}` }))));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /design\.md.*Ghost.*\(R4\)/);
+  assert.match(f[0], /support\.md.*Ghost.*\(R4\)/);
 });
 
-test("a seat guided by two groups fails once, whatever their kind", () => {
+test("a job guided by two groups fails once, whatever their kind", () => {
   const f = failures(tree(edit(`${G}/review-board.md`, "kind: Board\n", "kind: Board\nguides:\n  - Backend Engineer\n")));
   assert.deepEqual(f, [`"Backend Engineer" is in \`guides\` of ${G}/engineering.md and ${G}/review-board.md; a role is in \`guides\` of one group at most (R16)`]);
 });
 
-// --- a person sits in a group as a seat they hold -----------------------------------------------
+// --- a person sits in a group as a job they hold -----------------------------------------------
 
-test("a People row seating a person as a seat they do not hold fails once", () => {
+test("a People row seating a person as a job they do not hold fails once", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")));
   assert.deepEqual(f, [`${TEAM}: the "## People" row "Jon" sits as "Backend Engineer", and Jon does not list it in \`roles\` (R16)`]);
 });
 
-test("a People row whose seat is no role fails as R4 alone", () => {
+test("a People row whose job is no role fails as R4 alone", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Ghost | Member |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
 });
 
-test("a disbanded team's row keeps a seat its person no longer holds", () => {
+test("a disbanded team's row keeps a job its person no longer holds", () => {
   const f = failures(tree((m) => edit(TEAM, "start: 2026-03\n", "start: 2026-03\nend: 2026-06\n")(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Backend Engineer | Member |")(m))));
   assert.deepEqual(f, []);
 });
@@ -152,22 +177,22 @@ test("the same row fails while the team's end is still to come", () => {
   assert.deepEqual(f, [`${TEAM}: the "## People" row "Jon" sits as "Backend Engineer", and Jon does not list it in \`roles\` (R16)`]);
 });
 
-test("two people sitting as one seat pass", () => {
+test("two people doing one job in one group pass", () => {
   assert.deepEqual(failures(tree()), []);
 });
 
-// --- a disbanded group is not counted as a seat's unit or guide ---------------------------------
+// --- a disbanded group is not counted as a person's unit or a job's guide ---------------------------------
 
-const PLATFORM = group({ kind: "Department", partOf: "Management", members: ["Backend Engineer"], body: "# Platform\n\n> Runs the platform.\n" });
+const PLATFORM = group({ kind: "Department", partOf: "Management", body: `# Platform\n\n> Runs the platform.\n${people([["Ana", "Backend Engineer", "Member"]])}` });
 
-test("a seat moved to a new unit passes once the old unit's end has passed", () => {
+test("a person moved to a new unit passes once the old unit's end has passed", () => {
   const f = failures(tree((m) => edit(`${G}/engineering.md`, "kind: Department\n", "kind: Department\nend: 2025-12\n")(m.set(`${G}/platform.md`, PLATFORM))));
   assert.deepEqual(f, []);
 });
 
 test("the same move fails while the old unit's end is still to come", () => {
   const f = failures(tree((m) => edit(`${G}/engineering.md`, "kind: Department\n", "kind: Department\nend: 2999-12\n")(m.set(`${G}/platform.md`, PLATFORM))));
-  assert.deepEqual(f, [`"Backend Engineer" is in \`members\` of ${G}/engineering.md and ${G}/platform.md; a role is in \`members\` of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
+  assert.deepEqual(f, [`"Ana" is in the "## People" Profile of ${G}/engineering.md and ${G}/platform.md; a profile is in the "## People" Profile of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
 });
 
 test("a guides overlap passes once one of the groups has ended", () => {
@@ -288,18 +313,21 @@ test("an agent as a Member of a team passes", () => {
   assert.deepEqual(failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Bot | Designer | Member |")(withBot(m)))), []);
 });
 
+const ANA = "| Ana | Backend Engineer | Member |";
+
 test("an agent in the People of a department fails once", () => {
-  const f = failures(tree((m) => edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Bot | Designer | Member |\n")(withBot(m))));
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Member |")(withBot(m))));
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
 });
 
 test("an agent as Lead in a department fails exactly once", () => {
-  const f = failures(tree((m) => edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Bot | Designer | Lead |\n")(withBot(m))));
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, MIRA, "| Bot | Designer | Lead |")(withBot(m))));
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" has \`As\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);
 });
 
 test("a human in the People of a department passes", () => {
-  assert.deepEqual(failures(tree(edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n"))), []);
+  assert.ok(tree().get(`${G}/engineering.md`).includes("## People"));
+  assert.deepEqual(failures(tree()), []);
 });
 
 test("two Lead rows fail once, naming the page", () => {
