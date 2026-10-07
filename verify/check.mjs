@@ -29,6 +29,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
+import { examplePacks, exampleSchemas } from "./example.mjs";
 import { TYPES, PACKS, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 import { subjectsOf, writingRulesOf, openingOf } from "../lib/questions.mjs";
@@ -523,13 +524,12 @@ const CHECKS = [
       }
     },
   },
-    // The example takes every pack this package ships, so each pack's checks hold it too; the
-    // packs come from PACKS and their schemas from the folders beside core, never by name here.
+    // The packs the example takes are named once, in example.mjs, so each pack's checks hold it.
     ...instanceChecks({
-      files: filesUnder(EX, `core`, ...Object.keys(PACKS).map((name) => `packs/${name}`)),
+      files: filesUnder(EX, `core`, ...examplePacks.map((p) => p.dir)),
       core: `core`,
       model: EX,
-      packs: Object.keys(PACKS).map((name) => ({ name, dir: `packs/${name}` })),
+      packs: examplePacks,
       fail,
       note,
       requireSchemaIds: true,
@@ -660,12 +660,7 @@ const CHECKS = [
       const files = new Map();
       for (const [path, text] of filesUnder(EX))
         if (path.endsWith(".md")) files.set(path.slice(EX.length + 1), text);
-      const schemas = new Map();
-      for (const [path, text] of filesUnder("core"))
-        if (path.endsWith("-schema.md")) schemas.set(path.split("/").pop(), text);
-      for (const name of Object.keys(PACKS))
-        for (const [path, text] of filesUnder(`packs/${name}`))
-          if (path.endsWith("-schema.md")) schemas.set(`${name}/${path.split("/").pop()}`, text);
+      const schemas = exampleSchemas();
       try {
         const { entities } = parseInstance(files, { sub: `${EX}/`, schemas });
         if (!entities.length) fail("the example parsed to no entities");

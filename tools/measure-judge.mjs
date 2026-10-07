@@ -21,6 +21,7 @@ import { sectionsOf } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 import { questionsOf, bulletsOf, writingRulesOf } from "../lib/questions.mjs";
 import { instanceAt } from "../lib/history.mjs";
+import { exampleSchemas } from "../verify/example.mjs";
 import { ask, SERVICE } from "../bin/judges/typesafe.mjs";
 import { FAULTS } from "./judge-faults.mjs";
 
@@ -41,10 +42,7 @@ const example = () => {
     }
   };
   walk("");
-  const schemas = new Map(fs.readdirSync(new URL("../core/", import.meta.url)).filter((f) => f.endsWith("-schema.md")).map((f) => [f, read(`core/${f}`)]));
-  // The example takes the organization pack, whose schemas the parser keys under the pack's name.
-  for (const f of fs.readdirSync(new URL("../packs/organization/", import.meta.url)).filter((f) => f.endsWith("-schema.md")))
-    schemas.set(`organization/${f}`, read(`packs/organization/${f}`));
+  const schemas = exampleSchemas();
   return { graph: parseInstance(files, { schemas }), files, schemas };
 };
 const sources = process.argv.slice(2);

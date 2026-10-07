@@ -27,9 +27,10 @@ const CAPTION = "`## References` is a table with these columns:";
 function findings(change) {
   const tmp = mkdtempSync(join(tmpdir(), "meta-model-references-"));
   try {
-    for (const dir of ["core", "example", "lib"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    for (const dir of ["core", "example", "lib", "packs"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const path = join(tmp, "core", `${SCHEMA}-schema.md`);
     const before = readFileSync(path, "utf8");
     for (const line of [ROW, WHAT, URL_ROW, CAPTION])

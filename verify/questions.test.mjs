@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
 import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, openingOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
 
@@ -172,16 +173,7 @@ const exampleFiles = () => {
   walk("");
   return files;
 };
-// Core's schemas, and beside them the organization pack's, which the example takes and the parser
-// keys under the pack's name.
-const coreSchemas = () => {
-  const schemas = new Map(fs.readdirSync(new URL("../core/", import.meta.url))
-    .filter((f) => f.endsWith("-schema.md") || f === "manifest.json")
-    .map((f) => [f, fs.readFileSync(new URL(`../core/${f}`, import.meta.url), "utf8")]));
-  for (const f of fs.readdirSync(new URL("../packs/organization/", import.meta.url)).filter((f) => f.endsWith("-schema.md")))
-    schemas.set(`organization/${f}`, fs.readFileSync(new URL(`../packs/organization/${f}`, import.meta.url), "utf8"));
-  return schemas;
-};
+const coreSchemas = exampleSchemas;
 const example = () => {
   const files = exampleFiles(), schemas = coreSchemas();
   return { graph: parseInstance(files, { schemas }), files, schemas };

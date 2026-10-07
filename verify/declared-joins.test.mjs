@@ -10,6 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
+import { examplePacks } from "./example.mjs";
 
 const head = (type, owner) => [
   `# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "",
@@ -155,7 +156,6 @@ test("a declaration that names nothing fails by name, in the schema, and never i
 // on, so nothing else would notice the profile schema losing one: this reads the schemas this
 // repository ships and the example beside them, breaks the example both ways in memory, and
 // expects both checks to say so. It is the positive control the green example cannot be.
-const PACKS = [{ name: "organization", dir: "packs/organization" }];
 test("core's profile schema declares both joins, and the example breaks them when broken", async () => {
   const fs = await import("node:fs");
   const path = await import("node:path");
@@ -167,9 +167,9 @@ test("core's profile schema declares both joins, and the example breaks them whe
       else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
-  walk(path.join(root, "packs", "organization"), "packs/organization/");
+  for (const { dir } of examplePacks) walk(path.join(root, dir), `${dir}/`);
   walk(path.join(root, "example", "model"), "model/");
-  assert.deepEqual(checkInstance(files, { core: "core", model: "model", packs: PACKS }).failures, [], "the example as shipped passes");
+  assert.deepEqual(checkInstance(files, { core: "core", model: "model", packs: examplePacks }).failures, [], "the example as shipped passes");
 
   const profile = [...files.keys()].find((k) => /^model\/profiles\/[^/]+\/[^/]+\.md$/.test(k) && files.get(k).includes("## Evidence"));
   const rows = files.get(profile).split("## Evidence")[1].split("\n").filter((l) => l.startsWith("| ") && !l.startsWith("| Skill") && !l.startsWith("| ---"));

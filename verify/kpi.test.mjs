@@ -9,6 +9,7 @@ import { readdirSync, statSync } from "node:fs";
 import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const KPI_SCHEMA = fs.readFileSync(new URL("../core/kpi-schema.md", import.meta.url), "utf8");
 const bare = (type, location) => [`# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "",
@@ -109,16 +110,9 @@ const folder = (rel) => {
   walk("");
   return out;
 };
-// What the example is read against: core's schemas and the organization pack's, which the
-// parser keys as `organization/<type>-schema.md`.
-const schemasOfExample = () => {
-  const out = folder("core");
-  for (const [k, v] of folder("packs/organization")) if (k.endsWith("-schema.md")) out.set(`organization/${k}`, v);
-  return out;
-};
 
 test("the example's Change Lead Time names Craftsmanship, and the parser draws the edge", () => {
-  const { entities, edges } = parseInstance(folder("example/model"), { sub: "model/", schemas: schemasOfExample() });
+  const { entities, edges } = parseInstance(folder("example/model"), { sub: "model/", schemas: exampleSchemas() });
   // The example's pages carry ids (R18), so an edge names its ends by them; found by address.
   const at = (address) => entities.find((e) => e.address === address).id;
   const costs = edges.filter((e) => e.via === "can-cost").map(({ from, to }) => ({ from, to }));
@@ -129,7 +123,7 @@ test("two values under can-cost draw two edges", () => {
   const files = folder("example/model");
   const page = files.get("kpis/change-lead-time.md");
   files.set("kpis/change-lead-time.md", page.replace("  - Craftsmanship\n", "  - Craftsmanship\n  - Say The Hard Thing\n"));
-  const { entities, edges } = parseInstance(files, { sub: "model/", schemas: schemasOfExample() });
+  const { entities, edges } = parseInstance(files, { sub: "model/", schemas: exampleSchemas() });
   const at = (address) => entities.find((e) => e.address === address).id;
   assert.deepEqual(edges.filter((e) => e.via === "can-cost").map((e) => e.to).sort(), [at("values/craftsmanship"), at("values/say-the-hard-thing")].sort());
 });

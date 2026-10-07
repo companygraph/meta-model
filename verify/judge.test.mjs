@@ -12,6 +12,7 @@ import { fileURLToPath } from "node:url";
 import { knownHashOf } from "../lib/known.mjs";
 import { writingRulesOf } from "../lib/questions.mjs";
 import { unixLines } from "../lib/instance-files.mjs";
+import { EXAMPLE_PACKS } from "./example.mjs";
 import { SERVICE, toWire, fromWire, ask, KeyRefused, REQUEST_BUDGET, digestOf, forecastOf, costOf, CHARS_PER_TOKEN } from "../bin/judges/typesafe.mjs";
 
 const request = {
@@ -443,7 +444,7 @@ test("a failing request is counted and the measuring still prints what it has", 
 
 test("the measuring reads the instances it is named, and says per fault how often the judge caught it", async () => {
   // An instance holding the example's model, with one tagline marked, so what was sent can be traced to it.
-  const root = fresh({ pack: ["organization"] });
+  const root = fresh({ pack: EXAMPLE_PACKS });
   fs.rmSync(path.join(root, "model"), { recursive: true });
   fs.cpSync(fileURLToPath(new URL("../example/model", import.meta.url)), path.join(root, "model"), { recursive: true });
   const page = path.join(root, "model/profiles/mira-halvorsen/experiences/2022-beacon-systems.md");

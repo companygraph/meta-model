@@ -8,6 +8,7 @@ import { join } from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, imageInfoOf, IMAGE_FILE } from "../lib/checks.mjs";
 import { parseInstance, imagesOf } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const png = (w, h, length = 64) => {
   const b = new Uint8Array(Math.max(length, 24));
@@ -170,13 +171,6 @@ const tree = (rel, { asText = false } = {}) => {
     }
   };
   walk("");
-  return out;
-};
-// What the example is read against: core's schemas and the organization pack's, which the
-// parser keys as `organization/<type>-schema.md`.
-const exampleSchemas = () => {
-  const out = tree("core");
-  for (const [k, v] of tree("packs/organization")) if (k.endsWith("-schema.md")) out.set(`organization/${k}`, v);
   return out;
 };
 
