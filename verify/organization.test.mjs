@@ -92,3 +92,30 @@ test("a part-of naming no group fails as R4 alone, and a chain three deep passes
   assert.match(ghost[0], /\(R4\)/);
   assert.deepEqual(failures(tree((m) => m.set(`${G}/platform.md`, group({ kind: "Department", partOf: "Engineering", body: "# Platform\n\n> Runs the platform.\n" })))), []);
 });
+
+// --- one disciplinary unit and one guiding unit per seat -------------------------------------
+
+test("a seat in the members of two units in the line fails once, naming both", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "  - Backend Engineer\nguides", "  - Backend Engineer\n  - Designer\nguides")));
+  assert.deepEqual(f, [`"Designer" is in \`members\` of ${G}/engineering.md and ${G}/management.md; a role is in \`members\` of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
+});
+
+test("a seat in a unit and in a board or a team outside the line passes", () => {
+  assert.deepEqual(failures(tree()), []);
+});
+
+test("a seat listed twice in one group's members is in one group", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "  - Backend Engineer\nguides", "  - Backend Engineer\n  - Backend Engineer\nguides")));
+  assert.ok(!f.some((x) => x.includes("is in `members` of")), f.join("\n"));
+});
+
+test("a group whose kind resolves to nothing fails as R4 and is not counted in the line", () => {
+  const f = failures(tree((m) => m.set(`${G}/design.md`, group({ kind: "Ghost", members: ["Designer"], body: "# Design\n\n> Designs.\n" }))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /design\.md.*Ghost.*\(R4\)/);
+});
+
+test("a seat guided by two groups fails once, whatever their kind", () => {
+  const f = failures(tree(edit(`${G}/review-board.md`, "kind: Board\n", "kind: Board\nguides:\n  - Backend Engineer\n")));
+  assert.deepEqual(f, [`"Backend Engineer" is in \`guides\` of ${G}/engineering.md and ${G}/review-board.md; a role is in \`guides\` of one group at most (R16)`]);
+});

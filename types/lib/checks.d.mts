@@ -52,6 +52,17 @@ export type TypeEntry = {
      */
     acyclic?: string;
     /**
+     * List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count.
+     */
+    once?: {
+        field: string;
+        when?: {
+            via: string;
+            field: string;
+            is: string;
+        };
+    }[];
+    /**
      * An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
      */
     gathers?: {
@@ -153,6 +164,7 @@ export type Check = {
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it.
+ * @property {{ field: string, when?: { via: string, field: string, is: string } }[]} [once] List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
