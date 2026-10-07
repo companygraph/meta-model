@@ -25,7 +25,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | `members` | No | array of ref → role | The seats that sit in the group. In a group whose kind is in the line, this is each seat's disciplinary unit. |
 | `guides` | No | array of ref → role | The seats whose discipline this group sets wherever they sit: the professional line |
 | `start` | No | date | When the group was formed, for a group that is not standing |
-| `end` | No | date | When the group was disbanded. Absent while it exists. |
+| `end` | No | date | When the group was disbanded: the last day it existed, as R9 reads an `end`. A seat that moves to another unit is in the new one from the next day, so the old unit's `end` is the day before the move. Absent while it exists. |
 
 ## Sections
 
