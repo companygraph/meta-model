@@ -22,7 +22,7 @@
     "typecheck": "tsc --noEmit",
     "verify": "node verify/check.mjs",
     "test:instance": "node --test verify/instance.test.mjs verify/constraints.test.mjs verify/pack-parse.test.mjs",
-    "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs verify/image.test.mjs verify/ref-by.test.mjs verify/kpi.test.mjs verify/brand.test.mjs verify/decision.test.mjs verify/question-kind.test.mjs verify/references.test.mjs verify/identifier.test.mjs verify/localization-file.test.mjs verify/packs.test.mjs verify/software.test.mjs verify/rule-risk-control.test.mjs verify/checks-owed.test.mjs verify/processors-and-stored-items.test.mjs",
+    "test:instance-checks": "node --test verify/instance-checks.test.mjs verify/declared-joins.test.mjs verify/list-kind.test.mjs verify/image.test.mjs verify/ref-by.test.mjs verify/kpi.test.mjs verify/brand.test.mjs verify/decision.test.mjs verify/question-kind.test.mjs verify/references.test.mjs verify/identifier.test.mjs verify/localization-file.test.mjs verify/packs.test.mjs verify/software.test.mjs verify/rule-risk-control.test.mjs verify/checks-owed.test.mjs verify/processors-and-stored-items.test.mjs verify/organization.test.mjs",
     "test:instance-files": "node --test verify/instance-files.test.mjs",
     "test:form": "node --test verify/form.test.mjs",
     "test:pins": "node --test verify/pins.test.mjs",

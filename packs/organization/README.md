@@ -1,0 +1,36 @@
+# CompanyGraph — the organization pack
+
+> Vocabulary for a company of more than one person: its units, the teams it draws from them, and the two lines that run through them. Level 1, refining core's level 0 for that kind of company.
+
+An instance takes it with `companygraph init --pack organization`. Every edge from these types to core's is optional, and no core type names one of these (R20).
+
+| Type | What it is | Owned by |
+| --- | --- | --- |
+| `group` | A unit of the company, or a team drawn from its units | nothing |
+| `group-kind` | What kind of group a company has, and whether it stands in the disciplinary line | nothing |
+
+The disciplinary line is a group's `members` and `part-of`: a seat answers to the lead of the unit that lists it. The professional line is a group's `guides`: the unit that sets a discipline's standard lists that discipline's seats wherever they sit. A person stands on either line through the seat they hold.
+
+## Sources
+
+| What | URL |
+| --- | --- |
+| W3C, The Organization Ontology | https://www.w3.org/TR/vocab-org/ |
+| schema.org, department | https://schema.org/department |
+| SAP, Organizational Management in SAP HCM | https://learning.sap.com/courses/organizational-management-in-sap-hcm-for-s-4hana/finding-object-relationships |
+| HR-XML 3.1, ReportsToPositionType | https://schemas.liquid-technologies.com/HR-XML/3.1/reportstopositiontype.html |
+| Gabler Wirtschaftslexikon, Mehrliniensystem | https://wirtschaftslexikon.gabler.de/definition/mehrliniensystem-41223 |
+| Gabler Wirtschaftslexikon, Stelle | https://wirtschaftslexikon.gabler.de/definition/stelle-42791 |
+| Kliemt, Der Betrieb in der Matrix-Struktur | https://kliemt.blog/2016/07/06/der-betrieb-in-der-matrix-struktur/ |
+
+## Where it departs from its sources
+
+- The two lines are named by the right each carries, disciplinary and professional, and the phrase "functional line", which practice uses for both, is used for neither.
+- Two lines where the Organization Ontology has one `reportsTo`, as SAP, HR-XML and German practice keep the primary line apart from the one beside it.
+- The lines run between units and the seats they list, never between people, and a seat carries no field naming its superior.
+- A temporary group has `start` and `end`, not a status.
+- The type is `group` rather than organizational unit, because a team drawn across units is a group and not a unit; its kind tells the two apart.
+
+## Left for later
+
+A position or job type beside core's role; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.
