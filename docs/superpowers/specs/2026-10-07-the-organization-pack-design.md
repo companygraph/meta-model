@@ -60,7 +60,7 @@ A unit of the company, or a team drawn from its units: a department, a team, a b
 | `members` | No | array of ref → role | The seats that sit in the group. In a group whose kind is in the line, this is each seat's disciplinary unit. |
 | `guides` | No | array of ref → role | The seats whose discipline this group sets, wherever they sit: the professional line |
 | `start` | No | date | When the group was formed, for a group that is not standing |
-| `end` | No | date | When it was disbanded. Absent while it exists. |
+| `end` | No | date | When it was disbanded: the last day it existed, as R9 reads an `end`, so a seat that moves is in the new unit from the next day and the old unit's `end` is the day before the move. Absent while it exists. |
 
 Sections: `# [Name]`; `> [Purpose]`; `## Responsibilities`, optional and bulleted, what the group answers for; `## People`, optional, a table for a group whose members are named people rather than seats; `## References`, optional.
 
