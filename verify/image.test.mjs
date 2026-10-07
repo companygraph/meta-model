@@ -172,10 +172,17 @@ const tree = (rel, { asText = false } = {}) => {
   walk("");
   return out;
 };
+// What the example is read against: core's schemas and the organization pack's, which the
+// parser keys as `organization/<type>-schema.md`.
+const exampleSchemas = () => {
+  const out = tree("core");
+  for (const [k, v] of tree("packs/organization")) if (k.endsWith("-schema.md")) out.set(`organization/${k}`, v);
+  return out;
+};
 
 test("imagesOf names each image a page carries, where it came from and where a site puts it", () => {
   const files = tree("example/model");
-  const schemas = tree("core");
+  const schemas = exampleSchemas();
   const data = parseInstance(files, { sub: "model/", schemas });
   const images = imagesOf(files, data, { sub: "model/", schemas });
   // The example's pages carry ids (R18): the image names its entity by that id, and is put where
@@ -189,7 +196,7 @@ test("imagesOf names each image a page carries, where it came from and where a s
 
 test("imagesOf refuses an image read as text, rather than publish a corrupted file", () => {
   const files = tree("example/model", { asText: true });
-  const schemas = tree("core");
+  const schemas = exampleSchemas();
   const data = parseInstance(files, { sub: "model/", schemas });
   assert.throws(() => imagesOf(files, data, { sub: "model/", schemas }), /ai-agent\.png.*read as text/);
 });
@@ -234,7 +241,7 @@ test("an ArrayBuffer is bytes, and an image read as text is reported as the read
 
 test("imagesOf takes an ArrayBuffer, hands back a Uint8Array, and names a missing file as missing", () => {
   const files = tree("example/model");
-  const schemas = tree("core");
+  const schemas = exampleSchemas();
   const data = parseInstance(files, { sub: "model/", schemas });
   const at = "profiles/ai-agent/ai-agent.png";
   const u8 = files.get(at);

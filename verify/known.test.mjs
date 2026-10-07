@@ -119,7 +119,7 @@ const checker = fileURLToPath(new URL("../bin/check-instance.mjs", import.meta.u
 const VERSION = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const checkable = () => {
   const dir = fixture();
-  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: VERSION, units: "meta" }));
+  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: VERSION, units: "meta", packs: ["organization"] }));
   return dir;
 };
 const run = (dir) => spawnSync(process.execPath, [checker, dir], { encoding: "utf8" });

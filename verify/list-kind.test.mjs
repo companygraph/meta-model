@@ -93,10 +93,12 @@ const shipped = () => {
       else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
+  walk(path.join(root, "packs", "organization"), "packs/organization/");
   walk(path.join(root, "example", "model"), "model/");
   return files;
 };
-const run = (files) => checkInstance(files, { core: "core", model: "model" }).failures;
+const PACKS = [{ name: "organization", dir: "packs/organization" }];
+const run = (files) => checkInstance(files, { core: "core", model: "model", packs: PACKS }).failures;
 const rewriteSection = (text, heading, fn) => {
   const parts = text.split(new RegExp(`^(## ${heading}\\n)`, "m"));
   const [body, ...rest] = parts[2].split(/^(?=## )/m);

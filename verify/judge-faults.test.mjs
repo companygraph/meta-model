@@ -20,6 +20,9 @@ const walk = (rel) => {
 };
 walk("");
 const schemas = new Map(fs.readdirSync(new URL("../core/", import.meta.url)).filter((f) => f.endsWith("-schema.md")).map((f) => [f, read(`core/${f}`)]));
+// The example takes the organization pack, whose schemas the parser keys under the pack's name.
+for (const f of fs.readdirSync(new URL("../packs/organization/", import.meta.url)).filter((f) => f.endsWith("-schema.md")))
+  schemas.set(`organization/${f}`, read(`packs/organization/${f}`));
 const graph = parseInstance(files, { schemas });
 const skills = graph.entities.filter((e) => e.type === "skill").map((e) => e.name);
 const entries = graph.entities.filter((e) => e.type === "experience").map((e) => e.path);

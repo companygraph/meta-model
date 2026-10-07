@@ -1301,7 +1301,10 @@ const mdFiles = (root) => {
 
 test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
   const here = path.dirname(fileURLToPath(import.meta.url));
-  const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: mdFiles(path.join(here, "../core")) });
+  // The example takes the organization pack, so its schemas are read beside core's, keyed as a pack's are.
+  const schemas = mdFiles(path.join(here, "../core"));
+  for (const [k, v] of mdFiles(path.join(here, "../packs/organization"))) if (k.endsWith("-schema.md")) schemas.set(`organization/${k}`, v);
+  const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas });
   // The example's pages carry ids (R18), so an edge names its ends by them; the phases are found
   // by their address, the path a reader knows them by.
   const at = (address) => inst.entities.find((e) => e.address === address).id;

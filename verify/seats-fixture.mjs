@@ -15,8 +15,10 @@ export function modelAt(dir) {
   fs.mkdirSync(dir, { recursive: true });
   fs.cpSync(path.join(here, "..", "example", "model"), path.join(dir, "model"), { recursive: true });
   fs.cpSync(path.join(here, "..", "core"), path.join(dir, "meta", "core"), { recursive: true });
+  // The example takes the organization pack, so the instance vendors it as init --pack would.
+  fs.cpSync(path.join(here, "..", "packs", "organization"), path.join(dir, "meta", "organization"), { recursive: true });
   fs.mkdirSync(path.join(dir, ".companygraph"), { recursive: true });
-  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: "0.0.0", units: "meta" }));
+  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: "0.0.0", units: "meta", packs: ["organization"] }));
   return dir;
 }
 

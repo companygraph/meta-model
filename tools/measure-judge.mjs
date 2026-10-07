@@ -42,6 +42,9 @@ const example = () => {
   };
   walk("");
   const schemas = new Map(fs.readdirSync(new URL("../core/", import.meta.url)).filter((f) => f.endsWith("-schema.md")).map((f) => [f, read(`core/${f}`)]));
+  // The example takes the organization pack, whose schemas the parser keys under the pack's name.
+  for (const f of fs.readdirSync(new URL("../packs/organization/", import.meta.url)).filter((f) => f.endsWith("-schema.md")))
+    schemas.set(`organization/${f}`, read(`packs/organization/${f}`));
   return { graph: parseInstance(files, { schemas }), files, schemas };
 };
 const sources = process.argv.slice(2);

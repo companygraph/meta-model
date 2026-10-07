@@ -523,7 +523,17 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, note, requireSchemaIds: true }),
+    // The example takes every pack this package ships, so each pack's checks hold it too; the
+    // packs come from PACKS and their schemas from the folders beside core, never by name here.
+    ...instanceChecks({
+      files: filesUnder(EX, `core`, ...Object.keys(PACKS).map((name) => `packs/${name}`)),
+      core: `core`,
+      model: EX,
+      packs: Object.keys(PACKS).map((name) => ({ name, dir: `packs/${name}` })),
+      fail,
+      note,
+      requireSchemaIds: true,
+    }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at
@@ -653,6 +663,9 @@ const CHECKS = [
       const schemas = new Map();
       for (const [path, text] of filesUnder("core"))
         if (path.endsWith("-schema.md")) schemas.set(path.split("/").pop(), text);
+      for (const name of Object.keys(PACKS))
+        for (const [path, text] of filesUnder(`packs/${name}`))
+          if (path.endsWith("-schema.md")) schemas.set(`${name}/${path.split("/").pop()}`, text);
       try {
         const { entities } = parseInstance(files, { sub: `${EX}/`, schemas });
         if (!entities.length) fail("the example parsed to no entities");
