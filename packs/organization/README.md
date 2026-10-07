@@ -19,6 +19,7 @@ The disciplinary line is a group's `members` and `part-of`: a seat answers to th
 | schema.org, department | https://schema.org/department |
 | SAP, Organizational Management in SAP HCM | https://learning.sap.com/courses/organizational-management-in-sap-hcm-for-s-4hana/finding-object-relationships |
 | HR-XML 3.1, ReportsToPositionType | https://schemas.liquid-technologies.com/HR-XML/3.1/reportstopositiontype.html |
+| Gabler Wirtschaftslexikon, Einliniensystem | https://wirtschaftslexikon.gabler.de/definition/einliniensystem-32337 |
 | Gabler Wirtschaftslexikon, Mehrliniensystem | https://wirtschaftslexikon.gabler.de/definition/mehrliniensystem-41223 |
 | Gabler Wirtschaftslexikon, Stelle | https://wirtschaftslexikon.gabler.de/definition/stelle-42791 |
 | Kliemt, Der Betrieb in der Matrix-Struktur | https://kliemt.blog/2016/07/06/der-betrieb-in-der-matrix-struktur/ |

@@ -54,7 +54,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 
 ## Purpose
 
-A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `members` and `part-of` are the disciplinary line: a seat answers to the lead of the unit that lists it, and that lead to the lead of the unit above, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the fachliche Weisungsrecht of a matrix: the unit that sets a discipline's standard lists that discipline's seats wherever they sit. A person stands on either line only through the seat they hold, as in the W3C Organization Ontology's posts.
+A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `members` and `part-of` are the disciplinary line: a seat answers to the lead of the unit that lists it, and that lead to the lead of the unit above, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the professional right to direct of a matrix, the fachliches Weisungsrecht: the unit that sets a discipline's standard lists that discipline's seats wherever they sit. A person stands on either line only through the seat they hold, as in the W3C Organization Ontology's posts.
 
 ## Writing rules
 
@@ -63,4 +63,5 @@ A group is a unit of the company, or a team drawn from its units, and answers "w
 - `members` never names the seat in `lead`; the lead's own unit is the one whose `members` list its seat.
 - `guides` names only seats whose discipline the group sets, not seats that merely work with it.
 - `## People` is written only for a group made of named people; a unit of seats lists them in `members`.
+- Each `## People` row's `Role` is one of the seats in `members`, where `members` is written.
 - `end` is written once the group is disbanded, and the page is kept.

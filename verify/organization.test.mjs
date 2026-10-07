@@ -15,8 +15,8 @@ const G = "model/groups";
 const role = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
-const group = ({ kind: k, partOf, lead, members = [], guides = [], start, body = "" }) => page(
-  `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${lead ? `lead: ${lead}\n` : ""}${list("members", members)}${list("guides", guides)}${start ? `start: ${start}\n` : ""}`,
+const group = ({ kind: k, partOf, lead, members = [], guides = [], start, end, body = "" }) => page(
+  `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${lead ? `lead: ${lead}\n` : ""}${list("members", members)}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
   body,
 );
 const person = (name, roles) => page(`nature: human\n${list("roles", roles)}`, `# ${name}\n\n> A person.\n`);
@@ -137,4 +137,44 @@ test("a People row whose seat is no role fails as R4 alone", () => {
 
 test("two people sitting as one seat pass without an As", () => {
   assert.deepEqual(failures(tree()), []);
+});
+
+// --- a disbanded group is not counted as a seat's unit or guide ---------------------------------
+
+const PLATFORM = group({ kind: "Department", partOf: "Management", members: ["Backend Engineer"], body: "# Platform\n\n> Runs the platform.\n" });
+
+test("a seat moved to a new unit passes once the old unit's end has passed", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "kind: Department\n", "kind: Department\nend: 2025-12\n")(m.set(`${G}/platform.md`, PLATFORM))));
+  assert.deepEqual(f, []);
+});
+
+test("the same move fails while the old unit's end is still to come", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "kind: Department\n", "kind: Department\nend: 2999-12\n")(m.set(`${G}/platform.md`, PLATFORM))));
+  assert.deepEqual(f, [`"Backend Engineer" is in \`members\` of ${G}/engineering.md and ${G}/platform.md; a role is in \`members\` of one group whose \`kind\` carries \`in-line: yes\` at most (R16)`]);
+});
+
+test("a guides overlap passes once one of the groups has ended", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "kind: Department\n", "kind: Department\nend: 2025-12\n")(edit(`${G}/review-board.md`, "kind: Board\n", "kind: Board\nguides:\n  - Backend Engineer\n")(m))));
+  assert.deepEqual(f, []);
+});
+
+// --- part-of runs only from and to a group in the line ------------------------------------------
+
+test("a team outside the line naming a part-of fails once", () => {
+  const f = failures(tree(edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Engineering\n")));
+  assert.deepEqual(f, [`${TEAM}: \`part-of\` is written, and its \`kind\` does not carry \`in-line: yes\`; a group outside it has no place in it (R16)`]);
+});
+
+test("a department naming a board as its part-of fails once", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "part-of: Management", "part-of: Review Board")));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\`; a group runs only to one in it (R16)`]);
+});
+
+test("a part-of whose kind is a ghost fails as R4 alone", () => {
+  const f = failures(tree(edit(`${G}/engineering.md`, "part-of: Management", "part-of: Ghost")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R4\)/);
+  const k = failures(tree(edit(`${G}/management.md`, "kind: Department", "kind: Ghost")));
+  assert.equal(k.length, 1, k.join("\n"));
+  assert.match(k[0], /\(R4\)/);
 });

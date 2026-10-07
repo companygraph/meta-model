@@ -52,7 +52,7 @@ export type TypeEntry = {
      */
     acyclic?: string;
     /**
-     * List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count.
+     * List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
      */
     once?: {
         field: string;
@@ -61,7 +61,19 @@ export type TypeEntry = {
             field: string;
             is: string;
         };
+        until?: string;
     }[];
+    /**
+     * A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`.
+     */
+    within?: {
+        field: string;
+        when: {
+            via: string;
+            field: string;
+            is: string;
+        };
+    };
     /**
      * A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names.
      */
@@ -173,7 +185,8 @@ export type Check = {
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it.
- * @property {{ field: string, when?: { via: string, field: string, is: string } }[]} [once] List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count.
+ * @property {{ field: string, when?: { via: string, field: string, is: string }, until?: string }[]} [once] List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
+ * @property {{ field: string, when: { via: string, field: string, is: string } }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`.
  * @property {{ section: string, column: string, qualifier: string, field: string }} [holds] A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
