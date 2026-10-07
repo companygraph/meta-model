@@ -189,6 +189,28 @@ test("a part-of whose kind is a ghost fails as R4 alone", () => {
   assert.match(k[0], /\(R4\)/);
 });
 
+// --- a live group's part-of never names a group that has ended ---------------------------------
+
+const ending = (path, end) => edit(path, "kind: ", `end: ${end}\nkind: `);
+
+test("a part-of naming a group that has ended fails once", () => {
+  const f = failures(tree(ending(`${G}/management.md`, "2025-12")));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Management", which has ended (R16)`]);
+});
+
+test("a part-of naming a group whose end is still to come passes", () => {
+  assert.deepEqual(failures(tree(ending(`${G}/management.md`, "2999-12"))), []);
+});
+
+test("a group that has itself ended keeps a part-of naming a group that has ended", () => {
+  assert.deepEqual(failures(tree((m) => ending(`${G}/engineering.md`, "2025-06")(ending(`${G}/management.md`, "2025-12")(m)))), []);
+});
+
+test("a target both ended and outside the line is one finding", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "part-of: Management", "part-of: Review Board")(ending(`${G}/review-board.md`, "2025-12")(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
+});
+
 // --- a fault in the set's own field is reported at the kind, once ---------------------------------
 
 const DEPARTMENT = "model/group-kinds/department.md";
