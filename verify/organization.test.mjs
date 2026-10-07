@@ -162,12 +162,12 @@ test("a guides overlap passes once one of the groups has ended", () => {
 
 test("a team outside the line naming a part-of fails once", () => {
   const f = failures(tree(edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Engineering\n")));
-  assert.deepEqual(f, [`${TEAM}: \`part-of\` is written, and its \`kind\` does not carry \`in-line: yes\`; a group outside it has no place in it (R16)`]);
+  assert.deepEqual(f, [`${TEAM}: \`part-of\` is written on a page whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
 });
 
 test("a department naming a board as its part-of fails once", () => {
   const f = failures(tree(edit(`${G}/engineering.md`, "part-of: Management", "part-of: Review Board")));
-  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\`; a group runs only to one in it (R16)`]);
+  assert.deepEqual(f, [`${G}/engineering.md: \`part-of\` names "Review Board", whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
 });
 
 test("a part-of whose kind is a ghost fails as R4 alone", () => {
@@ -177,4 +177,27 @@ test("a part-of whose kind is a ghost fails as R4 alone", () => {
   const k = failures(tree(edit(`${G}/management.md`, "kind: Department", "kind: Ghost")));
   assert.equal(k.length, 1, k.join("\n"));
   assert.match(k[0], /\(R4\)/);
+});
+
+// --- a fault in the set's own field is reported at the kind, once ---------------------------------
+
+const DEPARTMENT = "model/group-kinds/department.md";
+
+test("a kind whose in-line is not an enum token fails once, at the kind", () => {
+  const f = failures(tree(edit(DEPARTMENT, "in-line: yes", "in-line: maybe")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/group-kinds\/department\.md: .*\(R8\)/);
+  assert.ok(!f.some((x) => x.startsWith(G)), f.join("\n"));
+});
+
+test("a kind whose in-line is missing fails once, at the kind", () => {
+  const f = failures(tree(edit(DEPARTMENT, "in-line: yes\n", "")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/group-kinds\/department\.md: /);
+  assert.ok(!f.some((x) => x.startsWith(G)), f.join("\n"));
+});
+
+test("a team naming a board as its part-of fails once, at the page", () => {
+  const f = failures(tree(edit(TEAM, "kind: Team\n", "kind: Team\npart-of: Review Board\n")));
+  assert.deepEqual(f, [`${TEAM}: \`part-of\` is written on a page whose \`kind\` does not carry \`in-line: yes\` (R16)`]);
 });

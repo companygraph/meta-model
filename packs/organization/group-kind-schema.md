@@ -39,7 +39,7 @@ A group kind owns nothing and nothing owns it, so it is a file. A company names 
 
 ## Purpose
 
-A group kind says what kind of group a company has, and whether groups of it stand in the disciplinary line. A standing unit does; a board, a cross-functional team or an initiative team does not, and the seats it gathers keep the unit they already sit in. That one fact is what lets a board and a team list seats that are already in a unit without giving any seat a second disciplinary line.
+A group kind says what kind of group a company has, and whether groups of it stand in the disciplinary line. A standing unit does; a board, a cross-functional team or an initiative team does not, and the seats it gathers keep the unit they already sit in. That one fact is what lets a board and a team list seats that are already in a unit without giving any seat a second disciplinary line. It also decides where a group stands in the tree: only a group of a kind in the line has a `part-of`, and only such a group is named in one.
 
 ## Writing rules
 
