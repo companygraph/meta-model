@@ -63,6 +63,6 @@ A group is a unit of the company, or a team drawn from its units, and answers "w
 - `members` never names the seat in `lead`; the lead's own unit is the one whose `members` list its seat.
 - `guides` names only seats whose discipline the group sets, not seats that merely work with it.
 - `## People` is written only for a group made of named people; a unit of seats lists them in `members`.
-- `## People` seats the person whose `As` is `Lead` as the seat in `lead`, where `lead` is written.
+- `## People` names the seat in `lead` as the `Role` of the row whose `As` is `Lead`, where `lead` is written.
 - Each `## People` row's `Role` is one of the seats in `members`, where `members` is written.
 - `end` is written once the group is disbanded, and the page is kept.

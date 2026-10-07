@@ -229,6 +229,11 @@ test("an agent in the People of a department fails once", () => {
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
 });
 
+test("an agent as Lead in a department fails exactly once", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Bot | Designer | Lead |\n")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" has \`As\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);
+});
+
 test("a human in the People of a department passes", () => {
   assert.deepEqual(failures(tree(edit(`${G}/engineering.md`, "- Code quality\n", "- Code quality\n\n## People\n\n| Profile | Role | As |\n| --- | --- | --- |\n| Mira | Backend Engineer | Lead |\n"))), []);
 });

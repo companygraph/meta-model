@@ -86,7 +86,7 @@ export type TypeEntry = {
     /**
      * Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
      */
-    requires?: {
+    carries?: {
         section: string;
         column: string;
         field: string;
@@ -103,7 +103,7 @@ export type TypeEntry = {
     /**
      * A table in which at most one row holds `value` in `column`.
      */
-    single?: {
+    oneRow?: {
         section: string;
         column: string;
         value: string;
@@ -213,8 +213,8 @@ export type Check = {
  * @property {{ field: string, when?: { via: string, field: string, is: string }, until?: string }[]} [once] List fields whose every entity is named by one page of the type at most; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
  * @property {{ field: string, when: { via: string, field: string, is: string } }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`.
  * @property {{ section: string, column: string, qualifier: string, field: string }} [holds] A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names.
- * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [requires] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
- * @property {{ section: string, column: string, value: string }} [single] A table in which at most one row holds `value` in `column`.
+ * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
+ * @property {{ section: string, column: string, value: string }} [oneRow] A table in which at most one row holds `value` in `column`.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
