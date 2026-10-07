@@ -118,7 +118,7 @@ The grammar needs no change.
 
 ## What was left out
 
-A position type, and with it a vacant position: a row needs a person, so a unit cannot say it has an open seat for a backend engineer until a position is a type of its own, which waits for an instance that needs one. Staff units beside a line (Gabler's Stablinienorganisation), which a group of a kind outside the line can hold for now. A group's meetings, its KPIs and its part in a process: core's `kpi` and `process` can name what they need, and an edge from a group to them waits for an instance that writes one. A transitive form of `part-of`, which a reader computes.
+A position type, and with it a vacant position: a row needs a person, so a unit cannot say it has an open seat for a backend engineer until a position is a type of its own, which waits for an instance that needs one. How a person's time is split: a person sits in one unit in the line and in any number of groups outside it, and a `Share` column that says how much of their time each takes waits for an instance that needs it. Staff units beside a line (Gabler's Stablinienorganisation), which a group of a kind outside the line can hold for now. A group's meetings, its KPIs and its part in a process: core's `kpi` and `process` can name what they need, and an edge from a group to them waits for an instance that writes one. A transitive form of `part-of`, which a reader computes.
 
 ## Out of scope
 
