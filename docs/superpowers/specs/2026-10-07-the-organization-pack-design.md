@@ -4,6 +4,8 @@ A company of more than one person has units, and two lines run through them: the
 
 Status: decided by the owner on October 7, 2026: a pack named `organization` and not core, departing on purpose from the rule that one company is a wait, because public practice shows units in every company of more than one person; a group at the top level with its tree drawn by a field, never by nesting folders; the second line professional, beside the disciplinary one, and the phrase "functional line" used for neither; the professional line written on the guiding unit as the seats it guides; the kind a type of its own; core's `role` as the seat and core's `profile` as the holder, with no position type; the edges below, each written once; three instance checks that hold the lines to a tree, from which a kind outside the line opts out; and the eight departures listed below.
 
+Amended by the owner on October 7, 2026, while the plan was written: a `## People` row's seat is a qualifier with no `lists` join, since core's grammar puts the joined field on the qualifier's entity and a role has no `roles` field, and a fourth instance check holds that the row's profile holds the seat.
+
 ## Where this comes from
 
 The run followed `companygraph-vocabulary`. Its sources:
@@ -62,7 +64,7 @@ A unit of the company, or a team drawn from its units: a department, a team, a b
 
 Sections: `# [Name]`; `> [Purpose]`; `## Responsibilities`, optional and bulleted, what the group answers for; `## People`, optional, a table for a group whose members are named people rather than seats; `## References`, optional.
 
-`## People` has the columns `Profile` (required, `ref → profile`), `Role` (required, `qualifier → role`, `` `roles` lists `Role`. ``, so the person holds the seat they sit in the group as) and `As` (optional, `string`, the person's place in the group, such as lead).
+`## People` has the columns `Profile` (required, `ref → profile`), `Role` (required, `qualifier → role`, the seat the person sits in the group as) and `As` (optional, `string`, the person's place in the group, such as lead).
 
 A seat's disciplinary line is read off the group whose `members` list it, then that group's `part-of`, each step's `lead` naming the seat a person answers to. A lead's own unit is the one whose `members` list the lead's seat, which is how a unit's lead answers to the lead of the unit above. A seat's professional line is the group whose `guides` list it, and that group's `lead`.
 
@@ -78,11 +80,12 @@ Sections: `# [Label]`; `> [Summary]`; `## What it means`, which groups belong to
 
 ## The checks it owes
 
-A line draws a tree only if each seat has one disciplinary unit and no unit sits inside itself. Each is a norm across pages, so each is an instance check shipped in the change that adds the pack, not a writing rule:
+A line draws a tree only if each seat has one disciplinary unit and no unit sits inside itself, and a team says who sits in it truly only if each person holds the seat they sit in it as. Each is a norm across pages, so each is an instance check shipped in the change that adds the pack, not a writing rule:
 
 - `part-of` forms no cycle.
 - A role is in the `members` of at most one group whose kind is `in-line: yes`.
 - A role is in the `guides` of at most one group.
+- A `## People` row's profile lists the row's role in its `roles`, so a person sits in a group only as a seat they hold.
 
 A board or a cross-functional team is a kind with `in-line: no`, so its seats, which already sit in a unit, are not counted twice.
 
@@ -94,7 +97,7 @@ A board or a cross-functional team is a kind with `in-line: no`, so its seats, w
 - **The professional line is written on the guiding unit.** A discipline's seats sit in several units; the one unit that sets their standard lists them once, and the line holds wherever a seat moves. Written on the guided unit, it would put a whole cross-functional team under one discipline; written per person, the grammar would make it a qualifier, which draws no edge, and the line could not be drawn.
 - **A kind is a type.** Each kind carries a definition and a fact the checks read, which R8 says makes it a type rather than an enum, as `decision-kind` and `question-kind` are in core.
 - **Core's role is the seat, core's profile the holder.** The Organization Ontology's post and Gabler's Stelle are what core already calls a role: a seat that exists whoever fills it. A position type would be a second word for it.
-- **People are a table on the group.** A team made of named people needs to say who sits in it as what, and the pack cannot add a field to core's profile (R15, R20); one reference and one qualifier, joined by `lists`, is a shape the grammar already has.
+- **People are a table on the group.** A team made of named people needs to say who sits in it as what, and the pack cannot add a field to core's profile (R15, R20); one reference and one qualifier is a shape the grammar already has. The grammar's `lists` join cannot say the person holds the seat, because it puts the joined field on the qualifier's entity, and a role lists no holders; a check says it instead. With the person as the reference, two people sitting in one seat are two rows that need no `As` to tell them apart.
 
 The grammar needs no change.
 
@@ -119,4 +122,4 @@ A rendered org chart on a site or in a tool: the edges are what a renderer draws
 
 ## What it costs
 
-A second folder under `packs/` with a manifest, a README and two schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Three instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, so it is a minor release; an instance that takes it adds two folders and declares the pack in its manifest.
+A second folder under `packs/` with a manifest, a README and two schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Four instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, so it is a minor release; an instance that takes it adds two folders and declares the pack in its manifest.
