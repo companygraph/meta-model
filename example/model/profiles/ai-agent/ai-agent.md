@@ -2,7 +2,7 @@
 id: 01a0a6b8-7e80-78af-b202-d3733bdd650c
 source: Local
 nature: agent
-roles:
+seats:
   - Reviewer
 image: ai-agent.png
 ---

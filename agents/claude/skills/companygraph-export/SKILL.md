@@ -70,7 +70,7 @@ Each source is then written as:
   fence, the entity's own H1 and the body, nothing dropped, reordered, demoted or rewritten. The
   marker is the separator; nothing else goes between two entities.
 
-Verbatim because every rewriting loses something a reader could have been answered from, and the frontmatter loses the most. Prose made from it drops fields on the way out, and a role's list of skills becomes one long sentence where the file has a list a reader can follow, entry by entry, to the skill that holds each claim. This reader handles Markdown; it does not need the model translated for it, and the model is the thing the bundle is for.
+Verbatim because every rewriting loses something a reader could have been answered from, and the frontmatter loses the most. Prose made from it drops fields on the way out, and a seat's list of skills becomes one long sentence where the file has a list a reader can follow, entry by entry, to the skill that holds each claim. This reader handles Markdown; it does not need the model translated for it, and the model is the thing the bundle is for.
 
 Entities are ordered shallowest first and then by path, so a profile leads the experiences it owns rather than arriving after every one of them. The zip orders a folder by path alone, because a source is read front to back where a consolidated file is grepped.
 

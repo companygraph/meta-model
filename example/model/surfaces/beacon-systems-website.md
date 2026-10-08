@@ -15,5 +15,5 @@ url: https://beacon.example
 
 - **Home** — the identity's tagline and `## What it is`.
 - **Principles** — the vision and the values.
-- **Team** — the profiles, each with the roles it holds.
+- **Team** — the profiles, each with the seats it holds.
 - **How we deliver** — the process and its phases, in order.

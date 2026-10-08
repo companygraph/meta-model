@@ -7,8 +7,8 @@ const entities = [
   { id: "identity", type: "identity", name: "Beacon Systems", fields: { url: "https://www.Beacon.example/about", email: "Hello@beacon.example" }, owner: null },
   { id: "profiles/mira-halvorsen", type: "profile", name: "Mira Halvorsen", fields: { nature: "human", email: " Mira@Example.invalid " }, owner: null },
   { id: "profiles/ai-agent", type: "profile", name: "AI Agent", fields: { nature: "agent", email: "agent@example.invalid" }, owner: null },
-  { id: "roles/backend-engineer", type: "role", name: "Backend Engineer", fields: {}, owner: null },
-  { id: "roles/reviewer", type: "role", name: "Reviewer", fields: {}, owner: null },
+  { id: "seats/backend-engineer", type: "seat", name: "Backend Engineer", fields: {}, owner: null },
+  { id: "seats/reviewer", type: "seat", name: "Reviewer", fields: {}, owner: null },
   { id: "processes/delivery", type: "process", name: "Delivery", fields: {}, owner: null },
   { id: "processes/delivery/phases/specify", type: "phase", name: "Specify", fields: { "executed-by": ["Backend Engineer"] }, owner: "processes/delivery" },
   { id: "processes/delivery/phases/build", type: "phase", name: "Build", fields: { "executed-by": ["Backend Engineer", "Reviewer"] }, owner: "processes/delivery" },
@@ -19,9 +19,15 @@ const entities = [
 const governing = governingOf({ entities });
 const t = (process, phase, track) => ({ process: process ? [process] : [], phase: phase ? [phase] : [], track: track ? [track] : [] });
 
-test("a seat's address is its role in lower case, hyphenated, at the domain", () => {
+test("a seat's address is its name in lower case, hyphenated, at the domain", () => {
   assert.equal(seatAddress("Backend Engineer", "beacon.example"), "backend-engineer@beacon.example");
   assert.equal(seatAddress("  Quality   Lead ", "x.io"), "quality-lead@x.io");
+});
+
+test("a commit authored Reviewer resolves to the seat Reviewer", () => {
+  assert.deepEqual([...governing.seats], [["backend-engineer@beacon.example", "Backend Engineer"], ["reviewer@beacon.example", "Reviewer"]]);
+  const j = judgeCommit(governing, { email: "reviewer@beacon.example", trailers: t("Support", "Answer") });
+  assert.deepEqual([j.kind, j.seat, j.failures], ["seat", "Reviewer", []]);
 });
 
 test("the domain is the url's host, lower-cased, without www", () => {
@@ -53,7 +59,7 @@ test("the identity's email and an agent's are no one's own address", () => {
   assert.deepEqual([...governing.people], ["mira@example.invalid"]);
   assert.equal(judgeCommit(governing, { email: "agent@example.invalid", trailers: t() }).kind, "outside");
   assert.deepEqual(judgeCommit(governing, { email: "hello@beacon.example", trailers: t() }).failures,
-    ["hello@beacon.example is at beacon.example and names no role of Beacon Systems"]);
+    ["hello@beacon.example is at beacon.example and names no seat of Beacon Systems"]);
 });
 
 test("the owner passes without trailers, and so does any other domain", () => {
@@ -67,9 +73,9 @@ test("a seat the phase does not list is refused, naming who does", () => {
   assert.deepEqual(j.failures, ["Reviewer does not execute Specify in Delivery; its executed-by is Backend Engineer"]);
 });
 
-test("an address at the domain that is no role is refused", () => {
+test("an address at the domain that is no seat is refused", () => {
   assert.deepEqual(judgeCommit(governing, { email: "intern@beacon.example", trailers: t("Delivery", "Build", "Code") }).failures,
-    ["intern@beacon.example is at beacon.example and names no role of Beacon Systems"]);
+    ["intern@beacon.example is at beacon.example and names no seat of Beacon Systems"]);
 });
 
 test("missing trailers are refused, and the refusal says where git reads them", () => {
@@ -103,7 +109,7 @@ test("the tally counts seats by where they worked, and the rest by kind", () => 
     { repo: "a/b", email: "backend-engineer@beacon.example", judgement: seat("Specify") },
     { repo: "a/b", email: "mira@example.invalid", judgement: { kind: "owner", failures: [] } },
     { repo: "a/b", email: "x@y.z", judgement: { kind: "outside", failures: [] } },
-    { repo: "a/b", email: "intern@beacon.example", judgement: { kind: "seat", seat: null, failures: ["no role"] } },
+    { repo: "a/b", email: "intern@beacon.example", judgement: { kind: "seat", seat: null, failures: ["no seat"] } },
   ];
   const r = tally(judged);
   assert.deepEqual(r.seats, [{ seat: "Backend Engineer", email: "backend-engineer@beacon.example", commits: 3,
@@ -117,7 +123,7 @@ test("the tally counts seats by where they worked, and the rest by kind", () => 
 // hook or CI would still refuse it were it made now.
 test("the tally counts a commit by the identity's own name as the owner's, whatever kind judgeCommit gave it", () => {
   const outside = { kind: "outside", failures: [] };
-  const refused = { kind: "seat", seat: null, failures: ["no role"] };
+  const refused = { kind: "seat", seat: null, failures: ["no seat"] };
   const judged = [
     { email: "robert@personal.example", name: "Beacon Systems", ownerName: "Beacon Systems", judgement: outside },
     { email: "intern@beacon.example", name: "  beacon SYSTEMS  ", ownerName: "Beacon Systems", judgement: refused },
@@ -137,7 +143,7 @@ test("the tally counts a commit by the identity's own name as the owner's, whate
 // nothing extra applies.
 test("the tally also counts a commit as the owner's by the reporting instance's own name or address", () => {
   const outside = { kind: "outside", failures: [] };
-  const refused = { kind: "seat", seat: null, failures: ["no role"] };
+  const refused = { kind: "seat", seat: null, failures: ["no seat"] };
   const reporting = { name: "Beacon Systems", people: new Set(["mira@example.invalid"]) };
   const judged = [
     { email: "mira@example.invalid", name: "Robert", ownerName: "Acme Tools", judgement: outside },

@@ -28,7 +28,7 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
   ["meta/core/decision-kind-schema.md", real("decision-kind")],
   ["meta/core/decision-status-schema.md", real("decision-status")],
   ["meta/core/source-schema.md", bare("source", null, "model/sources/*.md")],
-  ["meta/core/role-schema.md", bare("role", null, "model/roles/*.md")],
+  ["meta/core/seat-schema.md", bare("seat", null, "model/seats/*.md")],
   ["meta/core/value-schema.md", bare("value", null, "model/values/*.md")],
   ["meta/core/strategic-objective-schema.md", bare("strategic-objective", null, "model/strategic-objectives/*.md")],
   ["meta/core/concept-schema.md", bare("concept", null, "model/concepts/*.md")],
@@ -40,7 +40,7 @@ const tree = (fm, opts, filename = "2026-vendored-core.md") => new Map([
     "| `start` | Yes | date | When it began. |", "",
     "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ""].join("\n")],
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
-  ["model/roles/owner.md", "# Owner\n\n> The seat.\n"],
+  ["model/seats/owner.md", "# Owner\n\n> The seat.\n"],
   ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
   ["model/strategic-objectives/every-model-is-served.md", "# Every model is served\n\n> What must become true.\n"],
   ["model/concepts/core.md", "# Core\n\n> The shipped unit.\n"],
@@ -95,7 +95,7 @@ test("a status naming no decision status fails", () => {
   assert.equal(about(GOOD.map((l) => l.replace("status: Standing", "status: Taken")), undefined, undefined, "\"Taken\"").length, 1);
 });
 
-test("a by naming no role fails", () => {
+test("a by naming no seat fails", () => {
   assert.equal(about(GOOD.map((l) => l.replace("by: Owner", "by: Mira Halvorsen")), undefined, undefined, "\"Mira Halvorsen\"").length, 1);
 });
 

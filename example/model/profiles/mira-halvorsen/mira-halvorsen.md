@@ -3,7 +3,7 @@ id: 01a02f53-2408-7291-ac16-087fcdee4d71
 source: Google Workspace
 source-id: 104857613902
 nature: human
-roles:
+seats:
   - Backend Engineer
 email: mira@example.invalid
 location: Bergen

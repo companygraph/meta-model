@@ -15,8 +15,8 @@ const G = "model/groups";
 const TEAM = `${G}/checkout-team.md`;
 const ANA = "| Ana | Backend Engineer | Member |";
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
-// A role is a seat in a process; a job is what a person is employed as.
-const role = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
+// A seat is held in a process; a job is what a person is employed as.
+const seat = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const job = (name, seats = []) => page(list("seats", seats), `# ${name}\n\n> A job.\n\n## Responsibilities\n\n- Does the work.\n`);
 const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
@@ -25,18 +25,18 @@ const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
 );
 // A group's `## People`: one row per person, as the schema's columns have it.
 const people = (rows) => `\n## People\n\n| Profile | Job | Place |\n| --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
-const person = (name, roles = [], nature = "human") => page(`nature: ${nature}\n${list("roles", roles)}`, `# ${name}\n\n> A person.\n`);
-const profile = (name, roles = [], nature) => [
-  [`model/profiles/${name.toLowerCase()}/${name.toLowerCase()}.md`, person(name, roles, nature)],
+const person = (name, seats = [], nature = "human") => page(`nature: ${nature}\n${list("seats", seats)}`, `# ${name}\n\n> A person.\n`);
+const profile = (name, seats = [], nature) => [
+  [`model/profiles/${name.toLowerCase()}/${name.toLowerCase()}.md`, person(name, seats, nature)],
   [`model/profiles/${name.toLowerCase()}/experiences/README.md`, "# Experiences\n\n> Nothing yet.\n"],
 ];
 
 const tree = (change = (m) => m) => change(new Map([
-  ...["source", "identifier", "role", "profile", "experience"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
+  ...["source", "identifier", "seat", "profile", "experience"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
   ...["group", "group-kind", "job"].map((n) => [`meta/organization/${n}-schema.md`, pack(n)]),
   ["model/identifier.md", page("format: uuidv7\n", "# Entity id\n\n> What an id is for.\n")],
   ["model/sources/local.md", `---\nid: ${uuidv7()}\n---\n\n# Local\n\n> Here.\n`],
-  ...["Backend Engineer", "Reviewer"].map((n) => [`model/roles/${n.toLowerCase().replace(/ /g, "-")}.md`, role(n)]),
+  ...["Backend Engineer", "Reviewer"].map((n) => [`model/seats/${n.toLowerCase().replace(/ /g, "-")}.md`, seat(n)]),
   ["model/jobs/backend-engineer.md", job("Backend Engineer", ["Backend Engineer"])],
   ["model/jobs/designer.md", job("Designer")],
   ["model/group-kinds/department.md", kind("Department", "yes")],
@@ -75,13 +75,13 @@ test("a group guiding a job no job is fails as R4", () => {
   assert.match(f[0], /engineering\.md.*Ghost.*\(R4\)/);
 });
 
-test("a group guiding a role, which is a seat and not a job, fails as R4 alone", () => {
+test("a group guiding a seat, which is not a job, fails as R4 alone", () => {
   const f = failures(tree(edit(`${G}/engineering.md`, "guides:\n  - Backend Engineer", "guides:\n  - Reviewer")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /engineering\.md.*Reviewer.*\(R4\)/);
 });
 
-test("a job whose seats name no role fails as R4 alone, and one naming a role passes", () => {
+test("a job whose seats name no seat fails as R4 alone, and one naming a seat passes", () => {
   assert.ok(tree().get("model/jobs/backend-engineer.md").includes("seats:"));
   assert.deepEqual(failures(tree()), []);
   const f = failures(tree(edit("model/jobs/designer.md", "---\n\n#", "seats:\n  - Ghost\n---\n\n#")));
@@ -179,7 +179,7 @@ test("a People row whose job is no job fails as R4 alone", () => {
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
 });
 
-test("a People row whose job is a role, a seat and not a job, fails as R4 alone", () => {
+test("a People row whose job is a seat, not a job, fails as R4 alone", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Reviewer | Member |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*Reviewer.*\(R4\)/);
@@ -187,7 +187,7 @@ test("a People row whose job is a role, a seat and not a job, fails as R4 alone"
 
 test("a person need not hold a seat to sit in a job", () => {
   const t = tree();
-  assert.ok(!t.get("model/profiles/jon/jon.md").includes("roles:"));
+  assert.ok(!t.get("model/profiles/jon/jon.md").includes("seats:"));
   assert.deepEqual(failures(t), []);
 });
 

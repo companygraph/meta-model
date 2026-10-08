@@ -48,6 +48,10 @@ export type UpgradeAsk = {
      */
     repository?: boolean | undefined;
     workflow: string | null;
+    /**
+     * Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a core with `seat-schema.md` refuses an ask that omits it, because a caller that has not read the model cannot say what to carry across.
+     */
+    model: Map<string, string | Uint8Array>;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
@@ -62,12 +66,16 @@ export type UpgradeAsk = {
 };
 export type UpgradeWrites = {
     refused?: undefined;
-    writes: Map<string, string>;
+    writes: Map<string, string | Uint8Array>;
     removes: string[];
     edited: string[];
     missing: string[];
     given: string[];
     rewritten: string[];
+    /**
+     * The files an upgrade moves, as `[from, to]`, each page keeping its id.
+     */
+    moved: [string, string][];
     forced: string[];
     /**
      * Gate hooks in an earlier release's text, brought to this one.
@@ -127,6 +135,7 @@ export type BackfillAsk = {
  * @property {Map<string, string | undefined>} held The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
  * @property {boolean | undefined} [repository] Whether the folder is a git repository; the git gate refuses where it is not.
  * @property {string | null} workflow
+ * @property {Map<string, string | Uint8Array>} model Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a core with `seat-schema.md` refuses an ask that omits it, because a caller that has not read the model cannot say what to carry across.
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
@@ -138,12 +147,13 @@ export type BackfillAsk = {
  * inputs it gave, and the core versions it moves between; or a refusal, which carries nothing else.
  * @typedef {object} UpgradeWrites
  * @property {undefined} [refused]
- * @property {Map<string, string>} writes
+ * @property {Map<string, string | Uint8Array>} writes
  * @property {string[]} removes
  * @property {string[]} edited
  * @property {string[]} missing
  * @property {string[]} given
  * @property {string[]} rewritten
+ * @property {[string, string][]} moved The files an upgrade moves, as `[from, to]`, each page keeping its id.
  * @property {string[]} forced
  * @property {string[]} refreshed Gate hooks in an earlier release's text, brought to this one.
  * @property {string[]} unreplaced Gate hooks edited since the tooling wrote them, left as they are.
@@ -170,7 +180,7 @@ export declare function initPlan({ core, skills, packs, tooling, tag, name, agen
  * @param {UpgradeAsk} ask
  * @returns {UpgradePlan}
  */
-export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate, repository }: UpgradeAsk): UpgradePlan;
+export declare function upgradePlan({ core, skills, packs, tooling, tag, manifest, held, workflow, fetched, force, name, present: said, gate, repository, model }: UpgradeAsk): UpgradePlan;
 /**
  * @param {{ from: string; to: string; workflow: string; hasWorkflow: boolean; held: Map<string, string | undefined>; force?: boolean }} ask
  * @returns {{ refused: string; writes?: undefined } | { refused?: undefined; writes: Map<string, string>; removes: string[]; forced: string[]; refreshed: string[]; unreplaced: string[] }}

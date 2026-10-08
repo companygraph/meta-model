@@ -30,10 +30,10 @@ test("constraintsOf gives every type its references with how many a page may hol
   const c = constraintsOf(core);
   const ref = (type, via) => c[type].references.find((r) => r.via === via);
   // A frontmatter field: required or not, one value or a list. R9 holds a required list to one entry.
-  assert.deepEqual(ref("phase", "gate-approvers"), { via: "gate-approvers", form: "ref", target: "role", by: null, in: null, array: true, required: true, min: 1, max: null });
-  assert.deepEqual(ref("phase", "owner"), { via: "owner", form: "ref", target: "role", by: null, in: null, array: false, required: true, min: 1, max: 1 });
+  assert.deepEqual(ref("phase", "gate-approvers"), { via: "gate-approvers", form: "ref", target: "seat", by: null, in: null, array: true, required: true, min: 1, max: null });
+  assert.deepEqual(ref("phase", "owner"), { via: "owner", form: "ref", target: "seat", by: null, in: null, array: false, required: true, min: 1, max: 1 });
   assert.deepEqual(ref("experience", "organization"), { via: "organization", form: "ref?", target: "identity", by: null, in: null, array: false, required: false, min: 0, max: 1 });
-  assert.deepEqual(ref("role", "requires"), { via: "requires", form: "ref", target: "skill", by: null, in: null, array: true, required: false, min: 0, max: null });
+  assert.deepEqual(ref("seat", "requires"), { via: "requires", form: "ref", target: "skill", by: null, in: null, array: true, required: false, min: 0, max: null });
   // A column or a grouped heading: `required` is of each row, and nothing bounds the rows.
   assert.deepEqual(ref("profile", "Skills.Level"), { via: "Skills.Level", form: "qualifier", target: "proficiency-level", by: null, in: null, array: false, required: true, min: 0, max: null });
   assert.deepEqual(ref("experience", "Achievements.Kind"), { via: "Achievements.Kind", form: "ref", target: "achievement-kind", by: null, in: null, array: false, required: false, min: 0, max: null });
@@ -84,9 +84,9 @@ test("constraintsOf gives every enum its permitted values, a field's and a colum
 });
 
 // R16: where a table's reference stands beside a column named `As`, two rows naming one entity
-// carry roles of their own. Found by shape, as the check finds it, so the join names no type.
-test("constraintsOf names the table whose repeated references carry distinct roles", () => {
+// carry an `As` of their own. Found by shape, as the check finds it, so the join names no type.
+test("constraintsOf names the table whose repeated references carry distinct As values", () => {
   const c = constraintsOf(core);
-  assert.deepEqual(c.concept.joins.filter((j) => j.kind === "roles"), [{ kind: "roles", section: "Relations", column: "As", by: "Concept" }]);
-  assert.equal(Object.values(c).flatMap((t) => t.joins).filter((j) => j.kind === "roles").length, 1, "no other core table has the shape");
+  assert.deepEqual(c.concept.joins.filter((j) => j.kind === "as"), [{ kind: "as", section: "Relations", column: "As", by: "Concept" }]);
+  assert.equal(Object.values(c).flatMap((t) => t.joins).filter((j) => j.kind === "as").length, 1, "no other core table has the shape");
 });

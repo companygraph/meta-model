@@ -10,7 +10,7 @@ export type Governing = {
     name: string;
     domain: string | null;
     people: Set<string>;
-    roles: Map<string, string>;
+    seats: Map<string, string>;
     processes: Map<string, {
         phases: Map<string, string[]>;
         tracks: Set<string>;
@@ -58,13 +58,13 @@ export type Tally = {
  */
 /**
  * The governing instance as the judge reads it: whose seats these are, the domain their addresses
- * sit at, the people who commit as themselves, every role by its address, and every process with
+ * sit at, the people who commit as themselves, every seat by its address, and every process with
  * its phases' `executed-by` and its tracks.
  * @typedef {object} Governing
  * @property {string} name
  * @property {string | null} domain
  * @property {Set<string>} people
- * @property {Map<string, string>} roles
+ * @property {Map<string, string>} seats
  * @property {Map<string, { phases: Map<string, string[]>; tracks: Set<string> }>} processes
  */
 /**
@@ -96,8 +96,8 @@ export type Tally = {
  * @property {number} outside
  * @property {number} refused
  */
-/** @type {(role: string, domain: string) => string} */
-export declare const seatAddress: (role: string, domain: string) => string;
+/** @type {(seat: string, domain: string) => string} */
+export declare const seatAddress: (seat: string, domain: string) => string;
 /**
  * @param {string} url
  * @returns {string | null}

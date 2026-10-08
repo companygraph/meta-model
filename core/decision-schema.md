@@ -22,7 +22,7 @@ Nothing owns a decision and a decision owns nothing: a call bears on entities of
 | `decided` | Yes | date | When the call was made, not when it was carried out. For a call still proposed, when it was put forward. |
 | `kind` | Yes | ref → decision-kind | What sort of call this is, the H1 of a file in `decision-kinds/` |
 | `status` | Yes | ref → decision-status | Whether the call is made and still holds, the H1 of a file in `decision-statuses/` |
-| `by` | Yes | ref → role | The seat that made the call, the H1 of a file in `roles/`. Never the person: who held the seat on that date is the profile's. |
+| `by` | Yes | ref → seat | The seat that made the call, the H1 of a file in `seats/`. Never the person: who held the seat on that date is the profile's. |
 | `serves` | No | array of ref → strategic-objective | The objectives this call was made for, each the H1 of a file in `strategic-objectives/` |
 | `upholds` | No | array of ref → value | The values the call was weighed against, each the H1 of a file in `values/` |
 | `supersedes` | No | array of ref → decision | Earlier calls this one replaces, each the H1 of a file in `decisions/` |
@@ -86,7 +86,7 @@ A decision is a call the company made on a date, written with the options that l
   it was carried out. A call still proposed carries the date it was put forward, and takes the
   date of the call when its status leaves the proposed state, the file renamed where the year
   moved.
-- `by` names the seat, never the person, as a role is person-neutral. In a company of one that
+- `by` names the seat, never the person, as a seat is person-neutral. In a company of one that
   is one seat; in a company of more it is the seat that answered for the call, and a call that
   several seats made names the one that would have had the last word.
 - `upholds` names a value only where it actually turned the call. A value that would be cited

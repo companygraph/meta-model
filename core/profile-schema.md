@@ -20,7 +20,7 @@ A profile owns experiences, so it is a folder rather than a file: `profiles/<pro
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `nature` | Yes | enum | `human` or `agent`. What holds this profile: a person, or an agent that runs under rulebooks and stands for whichever model runs it. |
-| `roles` | No | array of ref → role | The seats this profile holds, each the H1 of a file in `roles/`. Absent for a profile without a seat. |
+| `seats` | No | array of ref → seat | The seats this profile holds, each the H1 of a file in `seats/`. Absent for a profile without a seat. |
 | `email` | No | string | Contact address. On a profile whose `nature` is `human`, also the address the person's own commits are authored under: a commit from it is that person's, whatever seats the profile holds, and passes without trailers. |
 | `location` | No | string | Where the person works from |
 | `image` | No | image | The person's picture, a file in this profile's folder — square, 512×512 recommended, 256–1024 pixels on a side, at most 300 KB |
@@ -78,7 +78,7 @@ A presence is a place the person maintains a page on, named by the place and add
 
 ## Purpose
 
-A profile is the one page that says who a person or an agent is and what they claim — the entity every experience is owned by, every skill claim is made from and every role is held by. It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with them. It is not a curriculum vitae: what happened, when and where lives in the experiences the profile owns, and what a capability *is* lives in the skill. What only the profile can hold is the claim — this person, this skill, at this level, on this evidence. A person who holds a role claims the skills the role requires in their Skills table, with evidence, and where they cannot the gap stays visible as a finding the validation pass reports, never an error and never an invented row, while an agent claims nothing, so a seat it holds reports no gap.
+A profile is the one page that says who a person or an agent is and what they claim — the entity every experience is owned by, every skill claim is made from and every seat is held by. It answers "who is this, what can they do, and what is that judgment resting on?" for someone deciding whether to work with them. It is not a curriculum vitae: what happened, when and where lives in the experiences the profile owns, and what a capability *is* lives in the skill. What only the profile can hold is the claim — this person, this skill, at this level, on this evidence. A person who holds a seat claims the skills the seat requires in their Skills table, with evidence, and where they cannot the gap stays visible as a finding the validation pass reports, never an error and never an invented row, while an agent claims nothing, so a seat it holds reports no gap.
 
 ## Writing rules
 

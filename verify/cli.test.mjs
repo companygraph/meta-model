@@ -197,7 +197,7 @@ test("the hook refuses only on the checker's refusal, and lets the commit throug
   // Run against the real CLI, not a stub, this passed vacuously without an identity `url`: with
   // no domain every author is outside the model (governingOf), so nothing the real checker could
   // ever refuse was exercised. An `r@x.io` commit stays outside once a `url` is there too, which
-  // this keeps proving; a `--author` at the instance's own domain naming no role is what proves
+  // this keeps proving; a `--author` at the instance's own domain naming no seat is what proves
   // the real CLI, reached through the hook's own `$here` resolution (also on the Windows job),
   // actually refuses.
   assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
@@ -205,7 +205,7 @@ test("the hook refuses only on the checker's refusal, and lets the commit throug
   fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
   const refused = commit({ COMPANYGRAPH_CLI: cli }, ["--author", "Ghost <ghost@acme.example>"]);
   assert.notEqual(refused.status, 0);
-  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
 });
 
 // The hook's other branch, taken with no COMPANYGRAPH_CLI set: `npx` at the manifest's own
@@ -355,7 +355,7 @@ test("the hook runs the checker in a git-dependency layout whose bin lost its ex
 
     const refused = commit(["--author", "Ghost <ghost@acme.example>"]);
     assert.notEqual(refused.status, 0, refused.stderr);
-    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
     const through = commit();
     assert.equal(through.status, 0, through.stderr);
     assert.doesNotMatch(through.stderr, /seat check did not run/);
@@ -633,6 +633,127 @@ test("upgrade rewrites a localization page in the earlier form, says so, and a s
   assert.doesNotThrow(() => run(["check", root]));
   // The page now names its locale, so the plan writes nothing and upgrade says it has nothing to do.
   assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+// Core 0.63.0 renamed the type role to seat. An instance written before it holds its seats in
+// model/roles/, a profile's roles: and a Type cell naming role. The earlier pages are built here
+// from the example's current ones, put back into the earlier form, so the move is tested on
+// pages the checks accept in either.
+test("upgrade carries an instance's roles across to seats, keeping every id, and a second upgrade has nothing to do", () => {
+  const example = path.join(here, "..", "example", "model");
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // The two seats without their skills, which this instance does not hold.
+  const seat = (name) => fs.readFileSync(path.join(example, `seats/${name}.md`), "utf8").replace(/requires:\n {2}- .*\n/, "");
+  const reviewer = seat("reviewer");
+  const id = reviewer.match(/^id: (\S+)$/m)[1];
+  // An instance made before the rename has no model/seats/; this release's init wrote one.
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), reviewer);
+  fs.writeFileSync(path.join(root, "model/roles/backend-engineer.md"), seat("backend-engineer"));
+  fs.writeFileSync(path.join(root, "model/roles/README.md"), "# Roles\n\nOne file per role, written against `meta/core/role-schema.md`.\n\nThe owner reads these on Mondays.\n");
+  // Whatever else the folder holds moves with it, byte for byte: an image, an editor's leftover.
+  const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 255, 13, 10, 26, 10]);
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.png"), image);
+  fs.writeFileSync(path.join(root, "model/roles/.DS_Store"), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
+  const agent = path.join(root, "model/profiles/ai-agent");
+  fs.cpSync(path.join(example, "profiles/ai-agent"), agent, { recursive: true });
+  const profile = path.join(agent, "ai-agent.md");
+  fs.writeFileSync(profile, fs.readFileSync(profile, "utf8").replace("\nseats:\n", "\nroles:\n"));
+  fs.writeFileSync(
+    path.join(root, "model/rules/a-change-is-reviewed.md"),
+    "---\nid: 01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f\nsource: Local\nmodality: must\n---\n\n# A change is reviewed\n\n> A change ships only after a second person has read it.\n\n## Why\n\nThe author is the person least able to see what they missed.\n\n## Applies to\n\n| Type | Entity | Owner |\n| --- | --- | --- |\n| role | Reviewer | |\n| `role` | Backend Engineer | |\n",
+  );
+
+  // The instance's own files that still say roles are named after the move and never rewritten;
+  // what the vendored units folder, git and a build hold is not the instance's to edit.
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/notes.md"), "see model/roles/\n");
+
+  const planned = run(["upgrade", root, "--dry-run"]);
+  assert.doesNotMatch(planned, /still name roles/);
+  assert.match(planned, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.ok(fs.existsSync(path.join(root, "model/roles/reviewer.md")));
+
+  const said = run(["upgrade", root]);
+  assert.match(said, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.match(said, /moved {3}model\/roles\/backend-engineer\.md → model\/seats\/backend-engineer\.md/);
+  assert.match(said, /rewritten in this core's form: .*model\/profiles\/ai-agent\/ai-agent\.md/);
+  // The owner's README keeps its word role, so it is named beside the instance's README.md; the
+  // build's folder and the vendored units are not looked in.
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}model\/seats\/README\.md\n/);
+  assert.doesNotMatch(said, /dist\/notes\.md/);
+  assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  assert.equal(fs.readFileSync(path.join(root, "model/seats/reviewer.md"), "utf8").match(/^id: (\S+)$/m)[1], id);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.equal(
+    fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"),
+    "# Seats\n\nOne file per role, written against `meta/core/seat-schema.md`.\n\nThe owner reads these on Mondays.\n",
+  );
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/reviewer.png")), image);
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/.DS_Store")), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
+  assert.match(fs.readFileSync(profile, "utf8"), /\nseats:\n {2}- Reviewer\n/);
+  assert.match(fs.readFileSync(path.join(root, "model/rules/a-change-is-reviewed.md"), "utf8"), /\| seat \| Reviewer \| \|\n\| `seat` \| Backend Engineer \| \|/);
+  // The check holds them as it holds any such file in a seat's folder, and says so where they are
+  // now, not that model/roles/ is no type's folder; with them gone the instance checks clean.
+  const refused = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr + refused.stdout, /model\/seats\/\.DS_Store should be a \.md file/);
+  assert.doesNotMatch(refused.stderr + refused.stdout, /model\/roles/);
+  fs.rmSync(path.join(root, "model/seats/.DS_Store"));
+  fs.rmSync(path.join(root, "model/seats/reviewer.png"));
+  assert.doesNotThrow(() => run(["check", root]));
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+test("upgrade writes a README for model/seats/ when the old model/roles/ had none", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  const said = run(["upgrade", root]);
+  assert.doesNotMatch(said, /still name roles/);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade names only the owner's own files that still say roles, and never what git ignores", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  fs.writeFileSync(path.join(root, ".gitignore"), ".obsidian/\n.claudian/\n");
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.mkdirSync(path.join(root, ".claudian"));
+  fs.writeFileSync(path.join(root, ".claudian/a.meta.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "docs"));
+  fs.writeFileSync(path.join(root, "docs/notes.md"), "see model/roles/\n");
+  execFileSync("git", ["add", "docs/notes.md"], { cwd: root });
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}docs\/notes\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian|\.claudian/);
+});
+
+test("upgrade outside a git repository skips dot-directories when it names the files that still say roles", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian/);
 });
 
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;

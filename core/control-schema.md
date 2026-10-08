@@ -23,7 +23,7 @@ Nothing owns a control and a control owns nothing: it reaches across the process
 | `mode` | Yes | enum | `automated` or `manual`. Whether a machine or a person carries it out (COSO). |
 | `mitigates` | No | array of ref → risk | The risks it makes less likely or less harmful, each the H1 of a file in `risks/` |
 | `enforces` | No | array of ref → rule | The rules it holds a change or an action to, each the H1 of a file in `rules/` |
-| `performed-by` | No | ref → role | The seat that carries it out, for a manual control, the H1 of a file in `roles/` |
+| `performed-by` | No | ref → seat | The seat that carries it out, for a manual control, the H1 of a file in `seats/` |
 
 ## Sections
 
@@ -39,7 +39,7 @@ Nothing owns a control and a control owns nothing: it reaches across the process
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Type` | Yes | string | The type of the entity this row names, as its schema is named: `role`, `process` or `phase` |
+| `Type` | Yes | string | The type of the entity this row names, as its schema is named: `seat`, `process` or `phase` |
 | `Entity` | Yes | ref → by Type in Owner | The seat, process or phase, by its canonical name |
 | `Owner` | No | string | For a phase, the process that owns it, by its canonical name; blank otherwise |
 
@@ -60,5 +60,5 @@ A control is what the company does, or has a machine do, so that a risk is less 
 - `## How it is carried out` says what does the work and when, as a reader could check: "the seat check, run by the commit hook and again by the instance check on every pull request, refuses a commit whose seat the named phase does not list". The hook, the workflow or the command it names goes in `## References`.
 - `## Applies to`, on a control that is a phase's gate, names that phase, and the gate's criteria stay the phase's bullets.
 - `mode` decides `performed-by`: a manual control names a seat there, never a person, and an automated control names none.
-- An `## Applies to` row names a role, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
+- An `## Applies to` row names a seat, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
 - The page writes names and prose in American English (R14).

@@ -19,6 +19,11 @@ export declare function gitTop(dir: string): string | null;
 /** @type {(dir: string) => boolean} */
 export declare const isInstance: (dir: string) => boolean;
 /**
+ * @param {string} base
+ * @returns {InstanceFiles}
+ */
+export declare function filesUnder(base: string): InstanceFiles;
+/**
  * @param {string} dir
  * @returns {{ graph: InstanceGraph; files: InstanceFiles; schemas: Map<string, string>; core: string | null }}
  */

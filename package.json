@@ -28,7 +28,7 @@
     "test:pins": "node --test verify/pins.test.mjs",
     "test:ids": "node --test verify/ids.test.mjs verify/change-checks.test.mjs",
     "test:localization": "node --test verify/localization.test.mjs",
-    "test:plan": "node --test verify/plan.test.mjs",
+    "test:plan": "node --test verify/plan.test.mjs verify/seat-migration.test.mjs",
     "test:rules": "node --test verify/rule-citations.test.mjs",
     "test:cli": "node --test verify/cli.test.mjs",
     "test:consumer": "node --test verify/consumer.test.mjs",

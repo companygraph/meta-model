@@ -146,8 +146,8 @@ test("a rule with no subject at its opening, as an instance's own schema may hav
 test("a schema whose rules do not all open with their subject keeps fields out of the skip, as cores before #254 do", () => {
   const old = KPI_LIKE.replace("- The page is kept in mind", "- Kept in mind");
   assert.deepEqual(kpiLike({ id: "x" }, old).asked[0].questions.map((q) => q.id), ["r1", "r2", "r3"], "a rule opening with a field may judge its absence there");
-  const before = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `role` | No | string | The part. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n\n## Writing rules\n\n- `role` is filled where the H1 does not already name the part, and left absent where it does.\n- A list of tools is not an achievement.\n";
-  assert.ok(kpiLike({ id: "x" }, before).asked[0].questions.some((q) => q.id === "r1"), "the old experience r1 is asked of a page without `role`");
+  const before = "# Thing Schema\n\n> A thing.\n\n## Frontmatter\n\n| Field | Required | Type | Description |\n| --- | --- | --- | --- |\n| `id` | Yes | string | Its id. |\n| `capacity` | No | string | The part. |\n\n## Sections\n\n| Section | Required | Description |\n| --- | --- | --- |\n| `# [Thing]` | Yes | Its name. |\n\n## Writing rules\n\n- `capacity` is filled where the H1 does not already name the part, and left absent where it does.\n- A list of tools is not an achievement.\n";
+  assert.ok(kpiLike({ id: "x" }, before).asked[0].questions.some((q) => q.id === "r1"), "the old experience r1 is asked of a page without `capacity`");
 });
 
 test("a bullet carries the heading it stands under, or none when it stands before every heading", () => {

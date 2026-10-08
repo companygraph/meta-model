@@ -1,11 +1,11 @@
 // A required section declared Table. carries at least one row, as a required list section carries
-// at least one item (R16). Fed fixture maps: the schema is a role's only because a schema has to
+// at least one item (R16). Fed fixture maps: the schema is a seat's only because a schema has to
 // be of a type the checks know; what is declared is what is held, and no check names the type.
 import test from "node:test";
 import assert from "node:assert/strict";
 import { checkInstance } from "../lib/checks.mjs";
 
-const roleSchema = (rows, tables = []) => ["# Role Schema", "", "> A seat.", "", "## File Location", "", "`model/roles/*.md`", "",
+const seatSchema = (rows, tables = []) => ["# Seat Schema", "", "> A seat.", "", "## File Location", "", "`model/seats/*.md`", "",
   "## Frontmatter", "", "No YAML frontmatter.", "",
   "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ...rows, "", ...tables, ""].join("\n");
 
@@ -13,39 +13,39 @@ const columns = (section) => [`\`## ${section}\` is a table with these columns:`
   "| Column | Required | Type | Description |", "| --- | --- | --- | --- |",
   "| `Outcome` | Yes | string | What is decided. |", ""];
 
-const SCHEMA = roleSchema(
+const SCHEMA = seatSchema(
   ["| `## If not met` | Yes | Table. What is decided. |", "| `## Notes` | No | Table. Anything. |"],
   [...columns("If not met"), ...columns("Notes")],
 );
 
-const role = (sections) => ["# Reviewer", "", "> Reads what was built.", "", ...Object.entries(sections).flatMap(([h, body]) => [`## ${h}`, "", body, ""])].join("\n");
+const seat = (sections) => ["# Reviewer", "", "> Reads what was built.", "", ...Object.entries(sections).flatMap(([h, body]) => [`## ${h}`, "", body, ""])].join("\n");
 const failuresOf = (page, schema = SCHEMA) =>
-  checkInstance(new Map([["meta/core/role-schema.md", schema], ["model/roles/reviewer.md", page]]), { core: "meta/core", model: "model" }).failures;
+  checkInstance(new Map([["meta/core/seat-schema.md", schema], ["model/seats/reviewer.md", page]]), { core: "meta/core", model: "model" }).failures;
 const about = (failures, ...words) => failures.filter((f) => words.every((w) => f.includes(w)));
 
 const HEADER = "| Outcome |\n| --- |";
 
 test("a required table section with one row reports nothing", () => {
-  assert.deepEqual(about(failuresOf(role({ "If not met": `${HEADER}\n| dropped |` })), "has no row"), []);
+  assert.deepEqual(about(failuresOf(seat({ "If not met": `${HEADER}\n| dropped |` })), "has no row"), []);
 });
 
 test("a required table section with its header and no row fails once, naming the page, the section and R16", () => {
-  const hit = about(failuresOf(role({ "If not met": HEADER })), "## If not met", "has no row");
+  const hit = about(failuresOf(seat({ "If not met": HEADER })), "## If not met", "has no row");
   assert.equal(hit.length, 1, hit.join("\n"));
-  assert.match(hit[0], /^model\/roles\/reviewer\.md: /);
+  assert.match(hit[0], /^model\/seats\/reviewer\.md: /);
   assert.match(hit[0], /\(R16\)/);
 });
 
 test("a required table section holding prose and no table fails the same way", () => {
-  assert.equal(about(failuresOf(role({ "If not met": "The Owner decides." })), "## If not met", "has no row").length, 1);
+  assert.equal(about(failuresOf(seat({ "If not met": "The Owner decides." })), "## If not met", "has no row").length, 1);
 });
 
 test("an optional table section may be present with no row", () => {
-  assert.deepEqual(about(failuresOf(role({ "If not met": `${HEADER}\n| dropped |`, Notes: HEADER })), "## Notes"), []);
+  assert.deepEqual(about(failuresOf(seat({ "If not met": `${HEADER}\n| dropped |`, Notes: HEADER })), "## Notes"), []);
 });
 
 test("an absent required section is the required-sections check's single finding, not this one's", () => {
-  const failures = failuresOf(role({}));
+  const failures = failuresOf(seat({}));
   assert.deepEqual(about(failures, "has no row"), []);
   assert.equal(about(failures, "no `## If not met`").length, 1);
 });

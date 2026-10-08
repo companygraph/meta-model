@@ -22,5 +22,5 @@ A billing change is cheap to read and expensive to get wrong, and the author is 
 
 | Type | Entity | Owner |
 | --- | --- | --- |
-| role | Reviewer | |
+| seat | Reviewer | |
 | phase | Release | Delivery |
