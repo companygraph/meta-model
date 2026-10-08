@@ -49,9 +49,9 @@ export type UpgradeAsk = {
     repository?: boolean | undefined;
     workflow: string | null;
     /**
-     * Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a caller that omits it has not read the model, so nothing is moved or rewritten.
+     * Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a core with `seat-schema.md` refuses an ask that omits it, because a caller that has not read the model cannot say what to carry across.
      */
-    model?: Map<string, string | Buffer> | undefined;
+    model: Map<string, string | Uint8Array>;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
@@ -66,7 +66,7 @@ export type UpgradeAsk = {
 };
 export type UpgradeWrites = {
     refused?: undefined;
-    writes: Map<string, string | Buffer>;
+    writes: Map<string, string | Uint8Array>;
     removes: string[];
     edited: string[];
     missing: string[];
@@ -135,7 +135,7 @@ export type BackfillAsk = {
  * @property {Map<string, string | undefined>} held The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
  * @property {boolean | undefined} [repository] Whether the folder is a git repository; the git gate refuses where it is not.
  * @property {string | null} workflow
- * @property {Map<string, string | Buffer> | undefined} [model] Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a caller that omits it has not read the model, so nothing is moved or rewritten.
+ * @property {Map<string, string | Uint8Array>} model Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a core with `seat-schema.md` refuses an ask that omits it, because a caller that has not read the model cannot say what to carry across.
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
@@ -147,7 +147,7 @@ export type BackfillAsk = {
  * inputs it gave, and the core versions it moves between; or a refusal, which carries nothing else.
  * @typedef {object} UpgradeWrites
  * @property {undefined} [refused]
- * @property {Map<string, string | Buffer>} writes
+ * @property {Map<string, string | Uint8Array>} writes
  * @property {string[]} removes
  * @property {string[]} edited
  * @property {string[]} missing

@@ -446,6 +446,39 @@ async function init(argv, { menu = false } = {}) {
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
 }
 
+// After the roles moved to seats, the instance's own files that still say roles: the paths a text
+// names (`roles/`, `roles.md`) and the count a page draws (`{{count:Roles}}`), found anywhere but
+// the vendored units folder, git, installed packages and a build; and the seats README, which the
+// owner wrote about roles, where it still uses the word. Named and never rewritten, since each is
+// the owner's own text.
+/**
+ * @param {string} root
+ * @param {string} units
+ * @returns {string[]}
+ */
+function stillNamingRoles(root, units) {
+  /** @type {string[]} */
+  const found = [];
+  /** @param {string} dir @param {string} rest */
+  const walk = (dir, rest) => {
+    for (const entry of readdirSync(dir, { withFileTypes: true })) {
+      const at = rest ? `${rest}/${entry.name}` : entry.name;
+      if (entry.isDirectory()) {
+        if (!rest && [".git", "node_modules", "dist", units].includes(entry.name)) continue;
+        walk(join(dir, entry.name), at);
+      } else if (entry.isFile()) {
+        const bytes = readFileSync(join(dir, entry.name));
+        if (bytes.includes(0)) continue;
+        if (/roles\/|roles\.md|\{\{count:Roles\}\}/.test(bytes.toString("utf8"))) found.push(at);
+      }
+    }
+  };
+  walk(root, "");
+  const seats = join(root, "model/seats/README.md");
+  if (existsSync(seats) && /\brole\b/i.test(readFileSync(seats, "utf8")) && !found.includes("model/seats/README.md")) found.push("model/seats/README.md");
+  return found.sort();
+}
+
 /** @param {string[]} argv */
 async function upgrade(argv) {
   const given = flags(argv);
@@ -604,7 +637,7 @@ async function upgrade(argv) {
   // The files an upgrade may move or rewrite when the instance is in an earlier form, keyed from
   // the instance root: every page as the checks read it, and every other file under model/roles/
   // as its bytes, since it moves with the folder and is written back exactly as it was.
-  /** @type {Map<string, string | Buffer>} */
+  /** @type {Map<string, string | Uint8Array>} */
   const model = new Map();
   if (existsSync(join(root, "model")))
     for (const [rest, text] of filesUnder(join(root, "model"))) {
@@ -676,6 +709,10 @@ async function upgrade(argv) {
   if (dropped.length) console.log(`  gone from the instance already, and gone from this core too: ${dropped.join(", ")}`);
   refreshedSaid(/** @type {string[]} */ (plan.refreshed), /** @type {string[]} */ (plan.unreplaced));
   useHooks(/** @type {Map<string, string>} */ (plan.writes));
+  if (/** @type {[string, string][]} */ (plan.moved).some(([, to]) => to.startsWith("model/seats/"))) {
+    const still = stillNamingRoles(root, manifest.units ?? "meta");
+    if (still.length) console.log(`  still name roles; yours to edit:\n${still.map((path) => `    ${path}`).join("\n")}`);
+  }
   // AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
   // about what checks the repository still names the gate it left. The move says so, and quotes
   // the sentence init writes for the new gate, which the owner can take or put in their own words.

@@ -666,7 +666,14 @@ test("upgrade carries an instance's roles across to seats, keeping every id, and
     "---\nid: 01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f\nsource: Local\nmodality: must\n---\n\n# A change is reviewed\n\n> A change ships only after a second person has read it.\n\n## Why\n\nThe author is the person least able to see what they missed.\n\n## Applies to\n\n| Type | Entity | Owner |\n| --- | --- | --- |\n| role | Reviewer | |\n| `role` | Backend Engineer | |\n",
   );
 
+  // The instance's own files that still say roles are named after the move and never rewritten;
+  // what the vendored units folder, git and a build hold is not the instance's to edit.
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/notes.md"), "see model/roles/\n");
+
   const planned = run(["upgrade", root, "--dry-run"]);
+  assert.doesNotMatch(planned, /still name roles/);
   assert.match(planned, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
   assert.ok(fs.existsSync(path.join(root, "model/roles/reviewer.md")));
 
@@ -674,6 +681,11 @@ test("upgrade carries an instance's roles across to seats, keeping every id, and
   assert.match(said, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
   assert.match(said, /moved {3}model\/roles\/backend-engineer\.md → model\/seats\/backend-engineer\.md/);
   assert.match(said, /rewritten in this core's form: .*model\/profiles\/ai-agent\/ai-agent\.md/);
+  // The owner's README keeps its word role, so it is named beside the instance's README.md; the
+  // build's folder and the vendored units are not looked in.
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}model\/seats\/README\.md\n/);
+  assert.doesNotMatch(said, /dist\/notes\.md/);
+  assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Acme\n\nOur seats are kept in model/roles/.\n");
   assert.equal(fs.readFileSync(path.join(root, "model/seats/reviewer.md"), "utf8").match(/^id: (\S+)$/m)[1], id);
   assert.ok(!fs.existsSync(path.join(root, "model/roles")));
   assert.equal(
@@ -702,7 +714,8 @@ test("upgrade writes a README for model/seats/ when the old model/roles/ had non
   fs.rmSync(path.join(root, "model/seats"), { recursive: true });
   fs.mkdirSync(path.join(root, "model/roles"));
   fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
-  run(["upgrade", root]);
+  const said = run(["upgrade", root]);
+  assert.doesNotMatch(said, /still name roles/);
   assert.ok(!fs.existsSync(path.join(root, "model/roles")));
   assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
   assert.doesNotThrow(() => run(["check", root]));

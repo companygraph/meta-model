@@ -3,6 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { migratedSeats } from "../lib/seat-migration.mjs";
+import { initPlan, upgradePlan } from "../lib/plan.mjs";
 
 const page = (fm, body) => `---\n${fm}---\n\n${body}`;
 const old = () => new Map([
@@ -108,4 +109,29 @@ test("a row keeps the pipes it was written with", () => {
   assert.match(m.writes.get("model/rules/r.md"), /\| seat \| Reviewer\n$/);
   const open = migratedSeats(rule("| Entity | Type\n| --- | ---\n| Reviewer | role\n"));
   assert.match(open.writes.get("model/rules/r.md"), /\| Reviewer \| seat\n$/);
+});
+
+// upgradePlan carries the roles across only from the model it is handed. A caller that omits it
+// has not read the model, and an upgrade that says nothing about the roles it left would leave an
+// instance half moved without a word.
+const before = new Map([["CONVENTIONS.md", "# Conventions\n"], ["manifest.json", '{ "version": "0.31.1", "shape": 3 }\n']]);
+const withSeats = new Map([["CONVENTIONS.md", "# Conventions, moved on\n"], ["manifest.json", '{ "version": "0.32.0", "shape": 3 }\n'], ["seat-schema.md", "# Seat Schema\n"]]);
+const instanceBefore = () => {
+  const { writes } = initPlan({ core: before, tooling: "0.31.2", tag: "v0.31.2", name: "Acme", agent: "claude", units: "meta", present: new Set() });
+  const manifest = JSON.parse(writes.get(".companygraph/manifest.json"));
+  return { manifest, held: new Map([...writes].filter(([p]) => manifest.files[p])), workflow: writes.get(".github/workflows/companygraph.yml") };
+};
+
+test("an upgrade to a core with seats and no model is refused, and an empty model proceeds", () => {
+  const { manifest, held, workflow } = instanceBefore();
+  const ask = { core: withSeats, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow };
+  const refused = upgradePlan(ask);
+  assert.equal(refused.refused, "upgrade needs the instance's model/ to carry its roles across to seats; nothing was written.");
+  assert.equal(refused.writes, undefined);
+  const plan = upgradePlan({ ...ask, model: new Map() });
+  assert.equal(plan.refused, undefined);
+  assert.ok(plan.writes.has("meta/core/seat-schema.md"));
+  // A core with no seat schema has nothing to carry, so it asks for no model.
+  const older = upgradePlan({ ...ask, core: new Map([...withSeats].filter(([p]) => p !== "seat-schema.md")) });
+  assert.equal(older.refused, undefined);
 });

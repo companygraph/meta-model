@@ -24,7 +24,7 @@ test("a seat's address is its name in lower case, hyphenated, at the domain", ()
   assert.equal(seatAddress("  Quality   Lead ", "x.io"), "quality-lead@x.io");
 });
 
-test("a commit authored Reviewer resolves to the seat Reviewer of a model whose seats live in model/seats/", () => {
+test("a commit authored Reviewer resolves to the seat Reviewer", () => {
   assert.deepEqual([...governing.seats], [["backend-engineer@beacon.example", "Backend Engineer"], ["reviewer@beacon.example", "Reviewer"]]);
   const j = judgeCommit(governing, { email: "reviewer@beacon.example", trailers: t("Support", "Answer") });
   assert.deepEqual([j.kind, j.seat, j.failures], ["seat", "Reviewer", []]);
