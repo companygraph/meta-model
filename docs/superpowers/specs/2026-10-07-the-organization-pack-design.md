@@ -1,12 +1,14 @@
 # The organization pack
 
-A company of more than one person has units, and two lines run through them: the disciplinary line, along which a unit's lead hires, appraises and sets objectives, and the professional line, along which one unit sets the standard of a discipline for the people who do that work wherever they sit. Core has a `role` for a job and a `profile` for its holder, and nothing that says who sits together, which unit sits in which, or who answers to whom. The role spec of September 15 dropped a hierarchy of roles as "a fact about a company with more than one" and left `group` out of scope; nothing has taken either up since. This spec adds the second pack, `organization`, with two types: `group`, a unit or a team, and `group-kind`, what kind of group it is and whether it stands in the line.
+A company of more than one person has units, and two lines run through them: the disciplinary line, along which a unit's lead hires, appraises and sets objectives, and the professional line, along which one unit sets the standard of a discipline for the people who do that work wherever they sit. Core has a `role` for a seat in a process and a `profile` for its holder, and nothing that says who sits together, which unit sits in which, or who answers to whom. The role spec of September 15 dropped a hierarchy of roles as "a fact about a company with more than one" and left `group` out of scope; nothing has taken either up since. This spec adds the second pack, `organization`, with three types: `group`, a unit or a team; `group-kind`, what kind of group it is and whether it stands in the line; and `job`, what a person is employed as.
 
 Status: decided by the owner on October 7, 2026: a pack named `organization` and not core, departing on purpose from the rule that one company is a wait, because public practice shows units in every company of more than one person; a group at the top level with its tree drawn by a field, never by nesting folders; the second line professional, beside the disciplinary one, and the phrase "functional line" used for neither; the professional line written on the guiding unit as the seats it guides; the kind a type of its own; core's `role` as the seat and core's `profile` as the holder, with no position type; the edges below, each written once; three instance checks that hold the lines to a tree, from which a kind outside the line opts out; and the eight departures listed below.
 
 Amended by the owner on October 7, 2026, while the plan was written: a `## People` row's seat is a qualifier with no `lists` join, since core's grammar puts the joined field on the qualifier's entity and a role has no `roles` field, and a fourth instance check holds that the row's profile holds the seat. After the build's review, a group whose `end` has passed is not counted as a seat's unit or guide, so a disbanded unit keeps its page and its history; and a fifth check holds that `part-of` runs only from and to a group whose kind is in the line. Before merge, a `## People` row's `As` became a required enum, `Lead`, `Deputy` or `Member`, because a free-text place could be read by nothing; only a human leads or deputizes in a group, every person named in a group whose kind is in the line is human, and a group has one lead. Before merge, a group's `part-of` may not name a group that has ended, so an org chart never leaves a group without the unit above it. A group's kind is a fact time does not change, so an ended group is still held to the line, and only its reference to a group that has since ended is history.
 
 Amended by the owner on October 8, 2026, before merge: a line runs through people sitting in units, not through seats. Core's `role` is a job, one page held by everyone who does that work, while the seats public practice draws lines through are positions, one place in one unit; read as jobs, two engineering departments could not both hold backend engineers, and two holders of one lead seat could not say which unit each leads. So a group says who sits in it, as what and in which place, in its `## People` table, a department as much as a team; `lead` and `members` leave the group; a person sits in at most one unit in the line; and the leader of any group is the person whose `As` is `Lead`. `guides` stays on roles, because a discipline's standard is set for the job wherever its holders sit.
+
+Amended by the owner on October 8, 2026, after a night's thought: core's `role` is not the job but a seat. Its schema says so, every reference to it in core says "the seat", and it is what a process names per phase: a responsibility in a process, ArchiMate's business role, independent of how a company is structured. The job, what the standards build an organization around, is missing from core, so the pack adds it as a type of its own, `job`. A `## People` row is `Profile | Job | Place`: the position is a person in a job in a unit; `Place` replaces `As`, because R16 gives a column named `As` a meaning of its own, and one person may hold two jobs in one group with one place in it. `guides` names jobs. A job may name the seats it usually holds, which is where the structure meets the processes. Renaming core's `role` to `seat` is a separate, breaking change with its own spec; this pack names `role` only from that one optional field.
 
 ## Where this comes from
 
@@ -20,33 +22,35 @@ ArchiMate's own pages and SAP's relationship tables sit behind logins and were r
 
 The count. One company of one kind shows units, and shows the disciplinary line thinly, drawn through the seats its units list and never as an edge of its own. None shows the professional line. The company of one has neither, because one person holds every seat. The skill this run follows makes one company a wait for the second; this spec departs from it because public practice, not a second instance, shows that every company of more than one person has units and a line, and a pack is the commitment that costs least to move. The evidence the next change should ask for is a second multi-person company whose model writes either line.
 
-Every source that draws a line draws it between positions or units: SAP's position, the Organization Ontology's post and Gabler's Stelle are each one place in one unit, held by whoever fills it. Core's `role` is not that. It is the job, SAP's other object: one description held by everyone who does that work, in whatever unit. The pack therefore draws the position where core has none, as a row of a unit's `## People`: one person, the job they hold there, and their place in the unit. A line runs from that row to the unit's lead and up through the units above. That is the finding the shape below is built on.
+Every source that draws a line draws it between positions or units: SAP's position, the Organization Ontology's post and Gabler's Stelle are each one place in one unit, held by whoever fills it, and each is a job in a unit. SAP keeps the job, what a person is employed as, as an object of its own. Core has neither. Its `role` is a third thing: a seat in a process, what ArchiMate calls a business role, the responsibility someone takes in a phase whatever unit they sit in. The pack therefore adds the job as a type, and draws the position as a row of a unit's `## People`: one person, in one job, in one unit, in one place. A line runs from that row to the unit's lead and up through the units above. That is the finding the shape below is built on.
 
-## The two types
+## The three types
 
 ```text
 model/
   groups/<group>.md
   group-kinds/<group-kind>.md
+  jobs/<job>.md
 ```
 
-Neither is owned. A group's place in the tree is a field, so a reorganization edits one line instead of moving a folder, a team outside the tree stands beside the units it draws from, and a name is unique within its type (R2). Both schemas carry core's `id`, `source` and `source-id` and a `## References` table. They are a pack's, so R20 lets them name core's types and their own; they name `role` and `profile`, every edge to core is optional, and no core type names them back.
+None is owned. A group's place in the tree is a field, so a reorganization edits one line instead of moving a folder, a team outside the tree stands beside the units it draws from, and a name is unique within its type (R2). Every schema carries core's `id`, `source` and `source-id` and a `## References` table. They are a pack's, so R20 lets them name core's types and their own; they name `profile` and `role`, every edge to core is optional, and no core type names them back.
 
 ```mermaid
 flowchart TB
   subgraph L1["Level 1 · organization pack"]
     G["group"]
     GK["group-kind"]
+    J["job"]
   end
   subgraph L0["Level 0 · core"]
-    R["role"]
+    R["role (a seat)"]
     P["profile"]
   end
   G -- kind --> GK
   G -- "part-of" --> G
-  G -. guides .-> R
-  G -. "People.Role" .-> R
+  G -- guides --> J
   G -. "People.Profile" .-> P
+  J -. seats .-> R
 ```
 
 ### group
@@ -57,15 +61,25 @@ A unit of the company, or a team drawn from its units: a department, a team, a b
 | --- | --- | --- | --- |
 | `kind` | Yes | ref → group-kind | What kind of group this is, and so whether it stands in the line |
 | `part-of` | No | ref → group | The unit this one sits in: one step up the disciplinary line. Absent at the top and for a group outside the line. |
-| `guides` | No | array of ref → role | The jobs whose discipline this group sets, wherever their holders sit: the professional line |
+| `guides` | No | array of ref → job | The jobs whose discipline this group sets, wherever the people who do them sit: the professional line |
 | `start` | No | date | When the group was formed, for a group that is not standing |
 | `end` | No | date | When it was disbanded: the last day it existed, as R9 reads an `end`, so a person who moves is in the new unit from the next day and the old unit's `end` is the day before the move. Absent while it exists. |
 
 Sections: `# [Name]`; `> [Purpose]`; `## Responsibilities`, optional and bulleted, what the group answers for; `## People`, optional, a table of the people who sit in the group; `## References`, optional.
 
-`## People` has the columns `Profile` (required, `ref → profile`), `Role` (required, `qualifier → role`, the job the person does in the group, one their profile holds) and `As` (required, `enum`, `Lead`, `Deputy` or `Member`, the person's place in the group). A row is a position: one person, in one unit, doing one job.
+`## People` has the columns `Profile` (required, `ref → profile`), `Job` (required, `qualifier → job`, what the person does in the group) and `Place` (required, `enum`, `Lead`, `Deputy` or `Member`, the person's place in the group). A row is a position: one person, in one job, in one group. A person who does two jobs in one group has two rows with one place.
 
-A person's disciplinary line is read off the unit in the line whose `## People` names them: they answer to that unit's `Lead`, and a `Lead` answers to the `Lead` of the unit its `part-of` names, and so up the tree. A person's professional line is read off their job: the group whose `guides` lists the `Role` of their row, and that group's `Lead`. Two engineering departments each name their own lead and their own backend engineers, and nothing is ambiguous, because what is unique is the person, not the job.
+A person's disciplinary line is read off the unit in the line whose `## People` names them: they answer to that unit's `Lead`, and a `Lead` answers to the `Lead` of the unit its `part-of` names, and so up the tree. A person's professional line is read off their job: the group whose `guides` names the `Job` of their row, and that group's `Lead`. Two engineering departments each name their own lead and their own backend engineers, and nothing is ambiguous, because what is unique is the person, not the job.
+
+### job
+
+What a person is employed as: Backend Engineer, Head of Product. A job is the same wherever its holders sit; a position is a job in a unit, and is a group's `## People` row, not a page. The tagline says what the job is.
+
+| Field | Required | Type | Description |
+| --- | --- | --- | --- |
+| `seats` | No | array of ref → role | The seats in the company's processes that a person in this job usually holds |
+
+Sections: `# [Job]`; `> [Summary]`; `## Responsibilities`, optional and bulleted, what the job answers for; `## References`, optional.
 
 ### group-kind
 
@@ -79,16 +93,16 @@ Sections: `# [Label]`; `> [Summary]`; `## What it means`, which groups belong to
 
 ## The checks it owes
 
-A line draws a tree only if each person has one disciplinary unit and no unit sits inside itself, a group says who sits in it truly only if each person holds the job they sit in it as, and a group says truly who leads it only if a human does. Each is a norm across pages, so each is an instance check shipped in the change that adds the pack, not a writing rule:
+A line draws a tree only if each person has one disciplinary unit and no unit sits inside itself, a group says truly who leads it only if one human does, and a person's place in a group is one fact. Each is a norm across pages or a mechanical one a script can see, so each is an instance check shipped in the change that adds the pack, not a writing rule:
 
 - `part-of` forms no cycle.
 - A profile is named in the `## People` of at most one group whose kind is `in-line: yes`, not counting a group whose `end` has passed.
-- A role is in the `guides` of at most one group, not counting a group whose `end` has passed.
+- A job is in the `guides` of at most one group, not counting a group whose `end` has passed.
 - `part-of` is written only on a group whose kind is in the line, and names only such a group; a group that has not ended names only one that has not ended.
-- A `## People` row's profile lists the row's role in its `roles`, so a person sits in a group only as a job they hold, not counting a group whose `end` has passed.
-- A `## People` row whose `As` is `Lead` or `Deputy` names a profile whose `nature` is `human`.
+- A `## People` row whose `Place` is `Lead` or `Deputy` names a profile whose `nature` is `human`.
 - In a group whose kind is `in-line: yes`, every `## People` row names a profile whose `nature` is `human`.
-- A group's `## People` has at most one row whose `As` is `Lead`.
+- A group's `## People` names at most one profile whose `Place` is `Lead`.
+- A profile's rows in one group's `## People` carry one `Place`.
 
 A board or a cross-functional team is a kind with `in-line: no`, so the people it gathers, who already sit in a unit, are not counted twice. Since every person named in a unit in the line is human, an agent sits in teams and boards and never in the disciplinary line, which is where hiring and appraisal happen.
 
@@ -99,8 +113,8 @@ A board or a cross-functional team is a kind with `in-line: no`, so the people i
 - **The second line is professional.** Line one carries the disciplinary right: hiring, appraisal, objectives. Line two carries the professional one: what good work in a discipline is, across the units its holders sit in. That is the pair German practice names, and what SAP's dotted line and SuccessFactors' matrix manager stand for.
 - **The professional line is written on the guiding unit, on jobs.** A discipline's holders sit in several units; the one unit that sets their standard lists the job once, and the line holds wherever a holder moves. Written on the guided unit, it would put a whole cross-functional team under one discipline; written per person, the grammar would make it a qualifier, which draws no edge, and the line could not be drawn.
 - **A kind is a type.** Each kind carries a definition and a fact the checks read, which R8 says makes it a type rather than an enum, as `decision-kind` and `question-kind` are in core.
-- **Core's role is the job; a `## People` row is the position.** SAP keeps the job and the position apart, and core's role is the job, held by everyone who does that work. A line drawn through jobs cannot tell two units with the same jobs apart, so the pack draws the position as the row that puts one person in one unit, and runs the line through it. A position type of its own would be a page per person per unit, written twice: once as the type and once as the row.
-- **People are a table on the group, in every kind of group.** A group says who sits in it as what, and the pack cannot add a field to core's profile (R15, R20); one reference and one qualifier is a shape the grammar already has. The leader is the row whose `As` is `Lead`, in a department as in a team, so there is one way to say who leads. The grammar's `lists` join cannot say the person holds the job, because it puts the joined field on the qualifier's entity, and a role lists no holders; a check says it instead. With the person as the reference, two people doing one job in one unit are two rows, each with a place of its own.
+- **A seat, a job and a position are three things.** Core's role is the seat: a responsibility in a process, held by whoever takes it, independent of structure. The job is what a person is employed as, the same in every unit, and a pack type because only a company of more than one person is structured around jobs. The position is a job in a unit, and is the `## People` row that puts one person there; a position type of its own would be a page per person per unit, written twice. A job names the seats it usually holds, which is the one place the structure meets the processes, written on the pack's side because core never names a pack (R20).
+- **People are a table on the group, in every kind of group.** A group says who sits in it, in which job and in which place, and the pack cannot add a field to core's profile (R15, R20); one reference and one qualifier is a shape the grammar already has. The leader is the person whose `Place` is `Lead`, in a department as in a team, so there is one way to say who leads. A person's job is read off their rows, not their profile, because a profile lists seats. The place column is `Place`, not `As`: R16 makes a column named `As` tell apart two rows naming one entity, which would force a person doing two jobs in one group into two places.
 
 The grammar needs no change.
 
@@ -108,9 +122,10 @@ The grammar needs no change.
 
 1. **No "functional line".** In English the phrase often names a structure of units by discipline, which is a disciplinary line, while the German fachliche Linie is the professional one, so the same words point at opposite lines. The spec names each line by the right it carries.
 2. **Two lines where the Organization Ontology has one.** Its `reportsTo` covers both on purpose; the pack follows SAP, HR-XML and German practice, which keep the primary line apart from the one typed beside it, because the two answer different questions.
-3. **No `reports-to` on `role`.** The role spec deferred one, and a pack cannot add it. A role is a job, and a job answers to no one; a person in a unit does.
+3. **No `reports-to` on `role`.** The role spec deferred one, and a pack cannot add it. A role is a seat in a process, and a seat answers to no one; a person in a unit does.
 4. **A person carries no field naming their superior.** The line is written once, on the units and their `Lead` rows; a second copy on the profile would drift from the first.
-9. **The position is a row, not a type.** SAP and the Organization Ontology keep a position or post as an object of its own; the pack reads it off the `## People` row, because core's role already is the job and a position page would repeat what the row says.
+9. **The position is a row, not a type.** SAP and the Organization Ontology keep a position or post as an object of its own; the pack reads it off the `## People` row, because a position page would repeat what the row says.
+10. **The job is the pack's, not core's.** SAP's job is an object every structured company has, but a company of one is not structured around jobs, and core's role is a seat in a process, which the standards keep apart from the job; so the job is a pack type, and core is untouched by it.
 5. **A temporary group has dates, not a status.** `start` and `end`, as an experience has them, say both whether it exists and when.
 6. **The kind is a type,** not a part of a filename or a word in a table cell.
 7. **The type is `group`,** the design spec's word, rather than the Organization Ontology's organizational unit, because a team drawn across units is a group and not a unit; the kind tells the two apart.
@@ -118,7 +133,7 @@ The grammar needs no change.
 
 ## What was left out
 
-A position type, and with it a vacant position: a row needs a person, so a unit cannot say it has an open seat for a backend engineer until a position is a type of its own, which waits for an instance that needs one. How a person's time is split: a person sits in one unit in the line and in any number of groups outside it, and a `Share` column that says how much of their time each takes waits for an instance that needs it. Staff units beside a line (Gabler's Stablinienorganisation), which a group of a kind outside the line can hold for now. A group's meetings, its KPIs and its part in a process: core's `kpi` and `process` can name what they need, and an edge from a group to them waits for an instance that writes one. A transitive form of `part-of`, which a reader computes.
+A check that a person in a job holds the seats the job names, which waits for an instance that wants it. Renaming core's `role` to `seat`, a separate and breaking change with its own spec. A position type, and with it a vacant position: a row needs a person, so a unit cannot say it has an open seat for a backend engineer until a position is a type of its own, which waits for an instance that needs one. How a person's time is split: a person sits in one unit in the line and in any number of groups outside it, and a `Share` column that says how much of their time each takes waits for an instance that needs it. Staff units beside a line (Gabler's Stablinienorganisation), which a group of a kind outside the line can hold for now. A group's meetings, its KPIs and its part in a process: core's `kpi` and `process` can name what they need, and an edge from a group to them waits for an instance that writes one. A transitive form of `part-of`, which a reader computes.
 
 ## Out of scope
 
@@ -126,4 +141,4 @@ A rendered org chart on a site or in a tool: the edges are what a renderer draws
 
 ## What it costs
 
-A second folder under `packs/` with a manifest, a README and two schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Eight instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, except that a blank required cell is now reported with its column's name as the schema writes it, `URL` and not `url`, so it is a minor release; an instance that takes it adds two folders and declares the pack in its manifest.
+A second folder under `packs/` with a manifest, a README and three schemas, released with core under one tag; `companygraph init --pack organization` and `upgrade --pack`, which the software pack built. Eight instance checks, each with a fixture that breaks it. No change to core and none to any instance that does not take the pack, except that a blank required cell is now reported with its column's name as the schema writes it, `URL` and not `url`, so it is a minor release; an instance that takes it adds three folders and declares the pack in its manifest.
