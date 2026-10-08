@@ -635,6 +635,50 @@ test("upgrade rewrites a localization page in the earlier form, says so, and a s
   assert.match(run(["upgrade", root]), /already on core/i);
 });
 
+// Core 0.63.0 renamed the type role to seat. An instance written before it holds its seats in
+// model/roles/, a profile's roles: and a Type cell naming role. The earlier pages are built here
+// from the example's current ones, put back into the earlier form, so the move is tested on
+// pages the checks accept in either.
+test("upgrade carries an instance's roles across to seats, keeping every id, and a second upgrade has nothing to do", () => {
+  const example = path.join(here, "..", "example", "model");
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // The two seats without their skills, which this instance does not hold.
+  const seat = (name) => fs.readFileSync(path.join(example, `seats/${name}.md`), "utf8").replace(/requires:\n {2}- .*\n/, "");
+  const reviewer = seat("reviewer");
+  const id = reviewer.match(/^id: (\S+)$/m)[1];
+  // An instance made before the rename has no model/seats/; this release's init wrote one.
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), reviewer);
+  fs.writeFileSync(path.join(root, "model/roles/backend-engineer.md"), seat("backend-engineer"));
+  fs.writeFileSync(path.join(root, "model/roles/README.md"), "# Roles\n\nOne file per role, written against `meta/core/role-schema.md`.\n");
+  const agent = path.join(root, "model/profiles/ai-agent");
+  fs.cpSync(path.join(example, "profiles/ai-agent"), agent, { recursive: true });
+  const profile = path.join(agent, "ai-agent.md");
+  fs.writeFileSync(profile, fs.readFileSync(profile, "utf8").replace("\nseats:\n", "\nroles:\n"));
+  fs.writeFileSync(
+    path.join(root, "model/rules/a-change-is-reviewed.md"),
+    "---\nid: 01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f\nsource: Local\nmodality: must\n---\n\n# A change is reviewed\n\n> A change ships only after a second person has read it.\n\n## Why\n\nThe author is the person least able to see what they missed.\n\n## Applies to\n\n| Type | Entity | Owner |\n| --- | --- | --- |\n| role | Reviewer | |\n| `role` | Backend Engineer | |\n",
+  );
+
+  const planned = run(["upgrade", root, "--dry-run"]);
+  assert.match(planned, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.ok(fs.existsSync(path.join(root, "model/roles/reviewer.md")));
+
+  const said = run(["upgrade", root]);
+  assert.match(said, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.match(said, /moved {3}model\/roles\/backend-engineer\.md → model\/seats\/backend-engineer\.md/);
+  assert.match(said, /rewritten in this core's form: .*model\/profiles\/ai-agent\/ai-agent\.md/);
+  assert.equal(fs.readFileSync(path.join(root, "model/seats/reviewer.md"), "utf8").match(/^id: (\S+)$/m)[1], id);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
+  assert.match(fs.readFileSync(profile, "utf8"), /\nseats:\n {2}- Reviewer\n/);
+  assert.match(fs.readFileSync(path.join(root, "model/rules/a-change-is-reviewed.md"), "utf8"), /\| seat \| Reviewer \| \|\n\| `seat` \| Backend Engineer \| \|/);
+  assert.doesNotThrow(() => run(["check", root]));
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested

@@ -24,7 +24,7 @@
 // `bin/check-instance.mjs` keeps its own path, because the reusable workflow and every
 // instance's CI call it there; `check` is a second door to the same code.
 import { createInterface } from "node:readline/promises";
-import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, statSync, chmodSync, realpathSync } from "node:fs";
+import { readdirSync, readFileSync, existsSync, mkdirSync, rmSync, rmdirSync, statSync, chmodSync, realpathSync } from "node:fs";
 import { homedir } from "node:os";
 import { basename, dirname, join, relative, resolve, sep } from "node:path";
 import { fileURLToPath } from "node:url";
@@ -36,7 +36,7 @@ import { pinReport, lsRemote, validatePins, SCANNED } from "../lib/pins.mjs";
 import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
-import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
+import { filesUnder, gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
@@ -49,7 +49,7 @@ import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabula
  * the fields of a plan.
  * @typedef {UpgradeWrites | {
  *   refused: string; writes?: undefined; removes?: undefined; edited?: undefined; missing?: undefined;
- *   given?: undefined; rewritten?: undefined; forced?: undefined; refreshed?: undefined; unreplaced?: undefined; from?: undefined; to?: undefined;
+ *   given?: undefined; rewritten?: undefined; moved?: undefined; forced?: undefined; refreshed?: undefined; unreplaced?: undefined; from?: undefined; to?: undefined;
  * }} UpgradeRead
  */
 
@@ -601,6 +601,12 @@ async function upgrade(argv) {
       const at = `${manifest.units ?? "meta"}/${name}/${path}`;
       if (!held.has(at) && existsSync(join(root, at))) held.set(at, read(join(root, at)));
     }
+  // The pages an upgrade may move or rewrite when the instance is in an earlier form, read as the
+  // checks read them and keyed from the instance root. Text only: an image is never rewritten.
+  /** @type {Map<string, string>} */
+  const model = new Map();
+  if (existsSync(join(root, "model")))
+    for (const [rest, text] of filesUnder(join(root, "model"))) if (typeof text === "string") model.set(`model/${rest}`, text);
   /** @type {UpgradeRead} */
   const plan = upgradePlan({
     core,
@@ -615,6 +621,7 @@ async function upgrade(argv) {
     force: Boolean(given.force),
     gate: given.gate,
     repository,
+    model,
     name,
     present: new Set([...exportPaths, "pins.json"].filter((path) => existsSync(join(root, path)))),
   });
@@ -628,6 +635,7 @@ async function upgrade(argv) {
     console.log(`core ${plan.from} → ${plan.to}, if this runs:`);
     for (const path of /** @type {Map<string, string>} */ (plan.writes).keys()) console.log(`  write   ${path}`);
     for (const path of /** @type {string[]} */ (plan.removes)) console.log(`  remove  ${path}${/** @type {string[]} */ (plan.forced).includes(path) ? FORCED : ""}`);
+    for (const [from, to] of /** @type {[string, string][]} */ (plan.moved)) console.log(`  moved   ${from} → ${to}`);
     refreshedSaid([], /** @type {string[]} */ (plan.unreplaced));
     return "planned";
   }
@@ -638,10 +646,15 @@ async function upgrade(argv) {
 
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   for (const path of /** @type {string[]} */ (plan.removes)) rmSync(join(root, path), { force: true });
+  // A page that moved leaves its folder behind empty, and an empty folder is a place the next
+  // reader has to wonder about; only a folder under model/ is tidied, and only while it is empty.
+  for (const path of /** @type {string[]} */ (plan.removes).filter((p) => p.startsWith("model/")))
+    for (let dir = dirname(join(root, path)); dir.startsWith(join(root, "model") + sep) && existsSync(dir) && readdirSync(dir).length === 0; dir = dirname(dir)) rmdirSync(dir);
   console.log(`core ${plan.from} → ${plan.to}: ${written.length} written, ${/** @type {string[]} */ (plan.removes).length} removed`);
   if (added.length) console.log(`  packs: ${added.join(", ")}, vendored beside core`);
   if (/** @type {string[]} */ (plan.given).length) console.log(`  written, since the instance had none, and its own from now on: ${/** @type {string[]} */ (plan.given).join(", ")}`);
   if (/** @type {string[]} */ (plan.rewritten).length) console.log(`  rewritten in this core's form: ${/** @type {string[]} */ (plan.rewritten).join(", ")}`);
+  for (const [from, to] of /** @type {[string, string][]} */ (plan.moved)) console.log(`  moved   ${from} → ${to}`);
   // Edited and missing are both --force taking a vendored file the instance no longer held as
   // this tooling wrote it, but only the first was a file to overwrite; the second was not there
   // to overwrite, so it is written fresh instead, and the two are named apart so neither claim is
