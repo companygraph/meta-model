@@ -37,6 +37,7 @@ import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
 import { filesUnder, gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
+import { isInstancesOwn } from "../lib/seat-migration.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
@@ -448,9 +449,11 @@ async function init(argv, { menu = false } = {}) {
 
 // After the roles moved to seats, the instance's own files that still say roles: the paths a text
 // names (`roles/`, `roles.md`) and the count a page draws (`{{count:Roles}}`), found anywhere but
-// the vendored units folder, git, installed packages and a build; and the seats README, which the
-// owner wrote about roles, where it still uses the word. Named and never rewritten, since each is
-// the owner's own text.
+// the vendored units folder, installed packages and a build; and the seats README, which the
+// owner wrote about roles, where it still uses the word. Inside a git repository the files are the
+// ones git lists, tracked or not yet but never ignored, so an editor's state and an installed
+// plugin are not the owner's text; outside one, every folder but a dot-directory is walked. Named
+// and never rewritten, since each is the owner's own text.
 /**
  * @param {string} root
  * @param {string} units
@@ -459,21 +462,31 @@ async function init(argv, { menu = false } = {}) {
 function stillNamingRoles(root, units) {
   /** @type {string[]} */
   const found = [];
-  /** @param {string} dir @param {string} rest */
-  const walk = (dir, rest) => {
-    for (const entry of readdirSync(dir, { withFileTypes: true })) {
-      const at = rest ? `${rest}/${entry.name}` : entry.name;
-      if (entry.isDirectory()) {
-        if (!rest && [".git", "node_modules", "dist", units].includes(entry.name)) continue;
-        walk(join(dir, entry.name), at);
-      } else if (entry.isFile()) {
-        const bytes = readFileSync(join(dir, entry.name));
-        if (bytes.includes(0)) continue;
-        if (/roles\/|roles\.md|\{\{count:Roles\}\}/.test(bytes.toString("utf8"))) found.push(at);
+  /** @type {string[]} */
+  let candidates = [];
+  const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 1 << 28 });
+  if (listed.status === 0 && gitTop(root) !== null) {
+    candidates = listed.stdout.split("\0").filter(Boolean);
+  } else {
+    /** @param {string} dir @param {string} rest */
+    const walk = (dir, rest) => {
+      for (const entry of readdirSync(dir, { withFileTypes: true })) {
+        const at = rest ? `${rest}/${entry.name}` : entry.name;
+        if (entry.isDirectory()) {
+          if (entry.name.startsWith(".") || !isInstancesOwn(`${at}/`, units)) continue;
+          walk(join(dir, entry.name), at);
+        } else if (entry.isFile()) candidates.push(at);
       }
-    }
-  };
-  walk(root, "");
+    };
+    walk(root, "");
+  }
+  for (const at of candidates.filter((path) => isInstancesOwn(path, units))) {
+    // A listed path may be deleted, a submodule or a link to a folder.
+    if (!existsSync(join(root, at)) || !statSync(join(root, at)).isFile()) continue;
+    const bytes = readFileSync(join(root, at));
+    if (bytes.includes(0)) continue;
+    if (/roles\/|roles\.md|\{\{count:Roles\}\}/.test(bytes.toString("utf8"))) found.push(at);
+  }
   const seats = join(root, "model/seats/README.md");
   if (existsSync(seats) && /\brole\b/i.test(readFileSync(seats, "utf8")) && !found.includes("model/seats/README.md")) found.push("model/seats/README.md");
   return found.sort();

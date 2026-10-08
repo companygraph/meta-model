@@ -721,6 +721,41 @@ test("upgrade writes a README for model/seats/ when the old model/roles/ had non
   assert.doesNotThrow(() => run(["check", root]));
 });
 
+test("upgrade names only the owner's own files that still say roles, and never what git ignores", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  execFileSync("git", ["init", "-q"], { cwd: root });
+  fs.writeFileSync(path.join(root, ".gitignore"), ".obsidian/\n.claudian/\n");
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.mkdirSync(path.join(root, ".claudian"));
+  fs.writeFileSync(path.join(root, ".claudian/a.meta.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "docs"));
+  fs.writeFileSync(path.join(root, "docs/notes.md"), "see model/roles/\n");
+  execFileSync("git", ["add", "docs/notes.md"], { cwd: root });
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}docs\/notes\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian|\.claudian/);
+});
+
+test("upgrade outside a git repository skips dot-directories when it names the files that still say roles", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian/);
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested

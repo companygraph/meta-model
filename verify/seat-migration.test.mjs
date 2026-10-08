@@ -2,7 +2,7 @@
 // an experience's role:, and names the type role in a Type cell. upgrade carries it across.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { migratedSeats } from "../lib/seat-migration.mjs";
+import { migratedSeats, isInstancesOwn } from "../lib/seat-migration.mjs";
 import { initPlan, upgradePlan } from "../lib/plan.mjs";
 
 const page = (fm, body) => `---\n${fm}---\n\n${body}`;
@@ -134,4 +134,15 @@ test("an upgrade to a core with seats and no model is refused, and an empty mode
   // A core with no seat schema has nothing to carry, so it asks for no model.
   const older = upgradePlan({ ...ask, core: new Map([...withSeats].filter(([p]) => p !== "seat-schema.md")) });
   assert.equal(older.refused, undefined);
+});
+
+test("a path is the instance's own unless the units folder, dist or node_modules holds it, however the units folder is nested", () => {
+  assert.equal(isInstancesOwn("README.md", "meta"), true);
+  assert.equal(isInstancesOwn("meta/core/role-schema.md", "meta"), false);
+  assert.equal(isInstancesOwn("meta-notes/a.md", "meta"), true);
+  assert.equal(isInstancesOwn("vendor/meta/core/role-schema.md", "vendor/meta"), false);
+  assert.equal(isInstancesOwn("vendor/other.md", "vendor/meta"), true);
+  assert.equal(isInstancesOwn("dist/notes.md", "meta"), false);
+  assert.equal(isInstancesOwn("node_modules/x/index.js", "meta"), false);
+  assert.equal(isInstancesOwn("docs/dist/notes.md", "meta"), true);
 });
