@@ -1355,7 +1355,7 @@ test("init --pack organization vendors the pack, and the instance it writes pass
   run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization"]);
   const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
   assert.deepEqual(manifest.packs, ["organization"]);
-  for (const n of ["group", "group-kind"]) assert.ok(fs.existsSync(path.join(root, "meta/organization", `${n}-schema.md`)), n);
+  for (const n of ["group", "group-kind", "job"]) assert.ok(fs.existsSync(path.join(root, "meta/organization", `${n}-schema.md`)), n);
   assert.doesNotThrow(() => run(["check", root]));
 });
 

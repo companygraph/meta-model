@@ -17,6 +17,6 @@ part-of: Management
 
 ## People
 
-| Profile | Role | As |
+| Profile | Job | Place |
 | --- | --- | --- |
 | Tomas Reyes | Head of Product | Lead |

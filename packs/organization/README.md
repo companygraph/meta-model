@@ -8,8 +8,9 @@ An instance takes it with `companygraph init --pack organization`. Every edge fr
 | --- | --- | --- |
 | `group` | A unit of the company, or a team drawn from its units | nothing |
 | `group-kind` | What kind of group a company has, and whether it stands in the disciplinary line | nothing |
+| `job` | What a person is employed as, the same wherever they sit, and the seats a person in it usually holds | nothing |
 
-The disciplinary line runs through the people a group's `## People` names, each answering to the row whose `As` is `Lead`, and up through `part-of`. The professional line is a group's `guides`, set on jobs wherever their holders sit.
+A person sits in a unit in a job, in a row of the unit's `## People`, and the disciplinary line runs through those people: each answers to the person whose `Place` is `Lead`, and up through `part-of`. The professional line is a group's `guides`, which names jobs wherever the people who do them sit.
 
 ## Sources
 
@@ -29,10 +30,10 @@ The disciplinary line runs through the people a group's `## People` names, each 
 - The two lines are named by the right each carries, disciplinary and professional, and the phrase "functional line", which practice uses for both, is used for neither.
 - Two lines where the Organization Ontology has one `reportsTo`, as SAP, HR-XML and German practice keep the primary line apart from the one beside it.
 - The lines run through the people a unit names and the units they sit in, and a person carries no field naming their superior.
-- A position is a row of a group's `## People`, not a type: core's role is the job.
+- Core's role is a seat, a responsibility in a process; the job is the pack's, because only a company of more than one person is structured around jobs. A position is a job in a group, and is a row of the group's `## People`, not a type.
 - A temporary group has `start` and `end`, not a status.
 - The type is `group` rather than organizational unit, because a team drawn across units is a group and not a unit; its kind tells the two apart.
 
 ## Left for later
 
-A position type beside core's role, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.
+Renaming core's `role` to `seat`, a separate and breaking change; a position type, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.

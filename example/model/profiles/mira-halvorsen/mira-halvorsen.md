@@ -5,7 +5,6 @@ source-id: 104857613902
 nature: human
 roles:
   - Backend Engineer
-  - Engineering Lead
 email: mira@example.invalid
 location: Bergen
 ---

@@ -85,16 +85,6 @@ export type TypeEntry = {
         until?: string;
     };
     /**
-     * A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names; with `until`, a page whose date field of that name has passed, read as for `once`, is not held, and its rows are history that holds nothing.
-     */
-    holds?: {
-        section: string;
-        column: string;
-        qualifier: string;
-        field: string;
-        until?: string;
-    };
-    /**
      * Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
      */
     carries?: {
@@ -112,12 +102,21 @@ export type TypeEntry = {
         };
     }[];
     /**
-     * A table in which at most one row holds `value` in `column`.
+     * A table in which at most one row holds `value` in `column`; with `by`, at most one distinct entity of that column does, so one entity on several rows holding it counts once.
      */
     atMostOneRow?: {
         section: string;
         column: string;
         value: string;
+        by?: string;
+    };
+    /**
+     * A table whose rows sharing a value in `by` carry one value in `column`.
+     */
+    samePer?: {
+        section: string;
+        by: string;
+        column: string;
     };
     /**
      * An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
@@ -223,9 +222,9 @@ export type Check = {
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it; an edge the type's `within` does not admit is that check's and is not followed.
  * @property {({ field: string, when?: { via: string, field: string, is: string }, until?: string } | { section: string, column: string, when?: { via: string, field: string, is: string }, until?: string })[]} [once] Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
  * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
- * @property {{ section: string, column: string, qualifier: string, field: string, until?: string }} [holds] A table whose every row's `column` entity lists, in its own `field`, the entity the row's `qualifier` names; with `until`, a page whose date field of that name has passed, read as for `once`, is not held, and its rows are history that holds nothing.
  * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
- * @property {{ section: string, column: string, value: string }} [atMostOneRow] A table in which at most one row holds `value` in `column`.
+ * @property {{ section: string, column: string, value: string, by?: string }} [atMostOneRow] A table in which at most one row holds `value` in `column`; with `by`, at most one distinct entity of that column does, so one entity on several rows holding it counts once.
+ * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.

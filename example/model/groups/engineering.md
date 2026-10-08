@@ -20,6 +20,6 @@ guides:
 
 ## People
 
-| Profile | Role | As |
+| Profile | Job | Place |
 | --- | --- | --- |
 | Mira Halvorsen | Engineering Lead | Lead |

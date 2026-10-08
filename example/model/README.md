@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group` and `group-kind`. That is what core and the pack ship, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `role`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`. That is what core and the pack ship, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -17,9 +17,10 @@ kpis/                            change-lead-time.md, change-fail-rate.md,
 group-kinds/                     department.md, team.md
 groups/                          management.md, engineering.md, product.md,
                                  billing-run-team.md
-roles/                           managing-director.md, engineering-lead.md,
+jobs/                            managing-director.md, engineering-lead.md,
                                  head-of-product.md, backend-engineer.md,
-                                 product-engineer.md, reviewer.md
+                                 product-engineer.md
+roles/                           backend-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 features/                        billing-run.md, charge-explanation.md, credit-notes.md,
                                  invoice-download.md, pricing-rules.md, usage-reporting.md
