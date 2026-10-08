@@ -367,6 +367,16 @@ test("an agent in the People of a department fails once", () => {
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
 });
 
+test("an agent on two rows of a department, two jobs, fails once", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Member |\n| Bot | Backend Engineer | Member |")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
+});
+
+test("an agent as Lead on two rows of a team fails once", () => {
+  const f = failures(tree((m) => edit(TEAM, MIRA, "| Bot | Designer | Lead |\n| Bot | Backend Engineer | Lead |")(withBot(m))));
+  assert.deepEqual(f, [`${TEAM}: the "## People" row "Bot" has \`Place\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);
+});
+
 test("an agent as Lead in a department fails exactly once", () => {
   const f = failures(tree((m) => edit(`${G}/engineering.md`, MIRA, "| Bot | Designer | Lead |")(withBot(m))));
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" has \`Place\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);

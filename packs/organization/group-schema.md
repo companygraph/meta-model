@@ -23,7 +23,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | `part-of` | No | ref → group | The unit this one sits in, one step up the disciplinary line. Absent at the top and for a group outside the line. |
 | `guides` | No | array of ref → job | The jobs whose discipline this group sets, wherever the people who do them sit, each the H1 of a file in `jobs/`: the professional line |
 | `start` | No | date | When the group was formed, for a group that is not standing |
-| `end` | No | date | When the group was disbanded: the last day it existed, as R9 reads an `end`. A person who moves to another unit is in the new one from the next day, so the old unit's `end` is the day before the move. Absent while it exists. |
+| `end` | No | date | When the group was disbanded: the last day it existed, as R9 reads an `end`. A person who moves to another unit is in the new one from the next day, so the old unit's `end` is the day before the move. Absent while it exists. A disbanded group keeps its page. |
 
 ## Sections
 
@@ -40,7 +40,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Profile` | Yes | ref → profile | The person, the H1 of a profile |
-| `Job` | No | qualifier → job | What the person does in the group, the H1 of a file in `jobs/`; blank where the person is not employed in a job here, as an agent is not |
+| `Job` | No | qualifier → job | What the person does in the group, the H1 of a file in `jobs/`. In the person's unit in the line it is the job they are employed as; in a group outside the line, the job they do there. A person who does two jobs in a group has a row for each. Blank where the person is not employed in a job here, as an agent is not. |
 | `Place` | Yes | enum | `Lead`, `Deputy` or `Member`. The person's place in the group: the one who leads it, one who stands in for the lead, or one who sits in it. |
 
 `## References` is a table with these columns:
@@ -52,12 +52,10 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 
 ## Purpose
 
-A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `## People` rows are its positions, each one person in one job in one place; a position is a job in a group, and a row, not a page. In a group whose kind is in the line, a person answers to the person whose `Place` is `Lead`, and that lead to the lead of the unit its `part-of` names, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the professional right to direct of a matrix, the fachliches Weisungsrecht: the unit that sets a discipline's standard lists that discipline's jobs, and the standard holds wherever the people who do them sit.
+A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `## People` rows are its positions, each one person in one job in one place; a position is a job in a group, and a row, not a page. In a group whose kind is in the line, a person answers to the person whose `Place` is `Lead`, and that lead to the lead of the unit its `part-of` names, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the professional right to direct of a matrix, the fachliches Weisungsrecht: the unit that sets a discipline's standard lists that discipline's jobs, and the standard holds wherever the people who do them sit. The checks hold the norms that follow from this: a person sits in at most one unit in the line, only a human sits in one, only a human leads or deputizes, a group has one lead, and a person has one place in a group.
 
 ## Writing rules
 
 - The H1 names the group as the company calls it, without its kind: `Engineering`, not `Engineering department`.
 - The tagline says what the group is for, not who sits in it.
 - `guides` names only jobs whose discipline the group sets, not jobs that merely work with it.
-- `## People` gives a person who does two jobs in the group a row for each.
-- `end` is written once the group is disbanded, and the page is kept.
