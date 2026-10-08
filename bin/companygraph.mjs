@@ -37,7 +37,7 @@ import { fetchCore } from "../lib/fetch-core.mjs";
 import { download, graphOf, installed, knownVault, newestRelease, obsidianRunning, openVault, place, PLUGINS, quitObsidian, readLocal, registerVault, settle, vaultUrl, whereObsidian, workspaceOf } from "../lib/obsidian.mjs";
 import { spawnSync } from "node:child_process";
 import { filesUnder, gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, firstCommitMsOf, changedPagesOf, deletedPagesOf, pageHistoryOf, mergeBaseOf, treeAt, changedFilesOf, versionAt } from "../lib/history.mjs";
-import { isInstancesOwn } from "../lib/seat-migration.mjs";
+import { isInstancesOwn, stillNamingRoles } from "../lib/seat-migration.mjs";
 import { SEATS_SINCE, governingOf, judgeCommit, tally, renderReport } from "../lib/seats.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
 import { idChangesOf, keptChangesOf, labelChangesOf, PACKS, typeOfPath, vocabularyOf } from "../lib/checks.mjs";
@@ -447,21 +447,17 @@ async function init(argv, { menu = false } = {}) {
   console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
 }
 
-// After the roles moved to seats, the instance's own files that still say roles: the paths a text
-// names (`roles/`, `roles.md`) and the count a page draws (`{{count:Roles}}`), found anywhere but
-// the vendored units folder, installed packages and a build; and the seats README, which the
-// owner wrote about roles, where it still uses the word. Inside a git repository the files are the
-// ones git lists, tracked or not yet but never ignored, so an editor's state and an installed
-// plugin are not the owner's text; outside one, every folder but a dot-directory is walked. Named
-// and never rewritten, since each is the owner's own text.
+// After the roles moved to seats, the instance's own files that still say roles. Which files are
+// read is this command's: inside a git repository the ones git lists, tracked or not yet but never
+// ignored, so an editor's state and an installed plugin are not the owner's text; outside one,
+// every folder but a dot-directory is walked. What a text says is `stillNamingRoles`, which
+// `./plan` exports, so another tool names the same files.
 /**
  * @param {string} root
  * @param {string} units
  * @returns {string[]}
  */
-function stillNamingRoles(root, units) {
-  /** @type {string[]} */
-  const found = [];
+function namedAsStillRoles(root, units) {
   /** @type {string[]} */
   let candidates = [];
   const listed = spawnSync("git", ["ls-files", "--cached", "--others", "--exclude-standard", "-z"], { cwd: root, encoding: "utf8", maxBuffer: 1 << 28 });
@@ -480,16 +476,17 @@ function stillNamingRoles(root, units) {
     };
     walk(root, "");
   }
-  for (const at of candidates.filter((path) => isInstancesOwn(path, units))) {
+  /** @type {Map<string, string>} */
+  const texts = new Map();
+  // The seats README is looked at wherever it is, since the owner wrote it about roles.
+  for (const at of [...candidates.filter((path) => isInstancesOwn(path, units)), "model/seats/README.md"]) {
     // A listed path may be deleted, a submodule or a link to a folder.
-    if (!existsSync(join(root, at)) || !statSync(join(root, at)).isFile()) continue;
+    if (texts.has(at) || !existsSync(join(root, at)) || !statSync(join(root, at)).isFile()) continue;
     const bytes = readFileSync(join(root, at));
     if (bytes.includes(0)) continue;
-    if (/roles\/|roles\.md|\{\{count:Roles\}\}/.test(bytes.toString("utf8"))) found.push(at);
+    texts.set(at, bytes.toString("utf8"));
   }
-  const seats = join(root, "model/seats/README.md");
-  if (existsSync(seats) && /\brole\b/i.test(readFileSync(seats, "utf8")) && !found.includes("model/seats/README.md")) found.push("model/seats/README.md");
-  return found.sort();
+  return stillNamingRoles(texts, units);
 }
 
 /** @param {string[]} argv */
@@ -723,7 +720,7 @@ async function upgrade(argv) {
   refreshedSaid(/** @type {string[]} */ (plan.refreshed), /** @type {string[]} */ (plan.unreplaced));
   useHooks(/** @type {Map<string, string>} */ (plan.writes));
   if (/** @type {[string, string][]} */ (plan.moved).some(([, to]) => to.startsWith("model/seats/"))) {
-    const still = stillNamingRoles(root, manifest.units ?? "meta");
+    const still = namedAsStillRoles(root, manifest.units ?? "meta");
     if (still.length) console.log(`  still name roles; yours to edit:\n${still.map((path) => `    ${path}`).join("\n")}`);
   }
   // AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
