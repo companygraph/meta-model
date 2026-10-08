@@ -5,7 +5,7 @@ kind: Community
 start: 2021-09
 end: 2021-09
 url: https://orbit.example/2021/talks/the-speed-up
-role: Speaker
+capacity: Speaker
 organization: Orbit Conference
 skills:
   - Product Discovery
