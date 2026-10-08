@@ -84,9 +84,9 @@ test("constraintsOf gives every enum its permitted values, a field's and a colum
 });
 
 // R16: where a table's reference stands beside a column named `As`, two rows naming one entity
-// carry roles of their own. Found by shape, as the check finds it, so the join names no type.
-test("constraintsOf names the table whose repeated references carry distinct roles", () => {
+// carry an `As` of their own. Found by shape, as the check finds it, so the join names no type.
+test("constraintsOf names the table whose repeated references carry distinct As values", () => {
   const c = constraintsOf(core);
-  assert.deepEqual(c.concept.joins.filter((j) => j.kind === "roles"), [{ kind: "roles", section: "Relations", column: "As", by: "Concept" }]);
-  assert.equal(Object.values(c).flatMap((t) => t.joins).filter((j) => j.kind === "roles").length, 1, "no other core table has the shape");
+  assert.deepEqual(c.concept.joins.filter((j) => j.kind === "as"), [{ kind: "as", section: "Relations", column: "As", by: "Concept" }]);
+  assert.equal(Object.values(c).flatMap((t) => t.joins).filter((j) => j.kind === "as").length, 1, "no other core table has the shape");
 });

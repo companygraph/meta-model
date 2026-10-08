@@ -123,7 +123,7 @@ export type Constraints = {
         field: string;
         by: string;
     } | {
-        kind: "roles";
+        kind: "as";
         section: string;
         column: string;
         by: string;
@@ -268,7 +268,7 @@ export type Constraints = {
  * @property {(
  *   | { kind: "under"; section: string; under: string }
  *   | { kind: "lists"; section: string; column: string; field: string; by: string }
- *   | { kind: "roles"; section: string; column: string; by: string }
+ *   | { kind: "as"; section: string; column: string; by: string }
  * )[]} joins
  * @property {{ section: string; kind: "Bulleted" | "Numbered"; required: boolean; min: number }[]} lists
  */
