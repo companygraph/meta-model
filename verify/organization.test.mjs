@@ -218,7 +218,7 @@ test("two rows of one person, both Lead, are one lead and pass", () => {
 
 test("two different people as Lead fail once", () => {
   const f = failures(tree(edit(`${G}/engineering.md`, "| Ana | Backend Engineer | Member |", "| Ana | Backend Engineer | Lead |")));
-  assert.deepEqual(f, [`${G}/engineering.md: the "## People" table names 2 profiles whose \`Place\` is "Lead"; a group has one (R16)`]);
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" table names 2 different \`Profile\` entities whose \`Place\` is "Lead": "Mira" and "Ana"; a group has one (R16)`]);
 });
 
 test("two people doing one job in one group pass", () => {
@@ -379,7 +379,7 @@ test("a human in the People of a department passes", () => {
 
 test("two people as Lead fail once, naming the page", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | Lead |")));
-  assert.deepEqual(f, [`${TEAM}: the "## People" table names 2 profiles whose \`Place\` is "Lead"; a group has one (R16)`]);
+  assert.deepEqual(f, [`${TEAM}: the "## People" table names 2 different \`Profile\` entities whose \`Place\` is "Lead": "Mira" and "Jon"; a group has one (R16)`]);
 });
 
 test("a Place outside the tokens fails as R8 alone", () => {

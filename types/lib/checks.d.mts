@@ -111,7 +111,7 @@ export type TypeEntry = {
         by?: string;
     };
     /**
-     * A table whose rows sharing a value in `by` carry one value in `column`.
+     * A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
      */
     samePer?: {
         section: string;
@@ -224,7 +224,7 @@ export type Check = {
  * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
  * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
  * @property {{ section: string, column: string, value: string, by?: string }} [atMostOneRow] A table in which at most one row holds `value` in `column`; with `by`, at most one distinct entity of that column does, so one entity on several rows holding it counts once.
- * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`.
+ * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.

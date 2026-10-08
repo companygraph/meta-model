@@ -59,6 +59,5 @@ A group is a unit of the company, or a team drawn from its units, and answers "w
 - The H1 names the group as the company calls it, without its kind: `Engineering`, not `Engineering department`.
 - The tagline says what the group is for, not who sits in it.
 - `guides` names only jobs whose discipline the group sets, not jobs that merely work with it.
-- `## People` gives a person who does two jobs in the group two rows with one `Place`.
-- `## People` leaves `Job` blank only for a person who is not employed in a job in the group, as an agent is not.
+- `## People` gives a person who does two jobs in the group a row for each.
 - `end` is written once the group is disbanded, and the page is kept.

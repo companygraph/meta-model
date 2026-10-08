@@ -36,4 +36,4 @@ A person sits in a unit in a job, in a row of the unit's `## People`, and the di
 
 ## Left for later
 
-Renaming core's `role` to `seat`, a separate and breaking change; a position type, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a rendered org chart.
+Renaming core's `role` to `seat`, a separate and breaking change; a position type, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a check that a person in a job holds the seats the job names; a rendered org chart.
