@@ -353,7 +353,7 @@ def render(path):
     """One entity, ready to be inlined: its marker, then the page exactly as it is on disk.
 
     Verbatim because every rewriting loses something a reader could have been answered from,
-    and the frontmatter loses the most: a role naming its skills carries them as a YAML list one
+    and the frontmatter loses the most: a seat naming its skills carries them as a YAML list one
     entry per line, which is a list a reader can follow to the skills that hold each claim, and
     prose made from it is a thousand characters nobody reads to the end of. The reader here
     handles Markdown; it does not need the model translated for it.

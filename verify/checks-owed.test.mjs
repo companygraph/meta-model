@@ -285,24 +285,24 @@ const rules = (rows, enforced = false) => new Map([
 const binds = (files) => run(files).failures.filter((f) => f.includes("binds more than one"));
 
 test("a rule naming one entity and enforced by no control fails, naming the section and the control type", () => {
-  assert.deepEqual(binds(rules(["role | Reviewer | "])), [
+  assert.deepEqual(binds(rules(["seat | Reviewer | "])), [
     'model/rules/a-change-is-reviewed.md: "## Applies to" names one entity and no control names this rule in `enforces`; a rule binds more than one or is enforced, and a refusal only one makes stays on that one\'s page (R16)',
   ]);
 });
 
 test("a rule naming one entity twice is still one entity, and fails", () => {
-  assert.equal(binds(rules(["role | Reviewer | ", "role | Reviewer | "])).length, 1);
+  assert.equal(binds(rules(["seat | Reviewer | ", "seat | Reviewer | "])).length, 1);
 });
 
 test("a rule naming one entity twice, its type written in another case, is still one entity, and fails", () => {
-  assert.equal(binds(rules(["role | Reviewer | ", "Role | Reviewer | "])).length, 1);
+  assert.equal(binds(rules(["seat | Reviewer | ", "Seat | Reviewer | "])).length, 1);
 });
 
-// A role is owned by nothing, so an Owner cell on its row is R4's finding and names no other
-// entity: a row with a stray owner and the same row without one are one role.
+// A seat is owned by nothing, so an Owner cell on its row is R4's finding and names no other
+// entity: a row with a stray owner and the same row without one are one seat.
 test("a stray owner on a row of an unowned type does not make it a second entity", () => {
-  assert.equal(binds(rules(["role | Reviewer | Delivery", "role | Reviewer | "])).length, 1);
-  assert.deepEqual(binds(rules(["role | Reviewer | Delivery", "role | Reviewer | "], true)), []);
+  assert.equal(binds(rules(["seat | Reviewer | Delivery", "seat | Reviewer | "])).length, 1);
+  assert.deepEqual(binds(rules(["seat | Reviewer | Delivery", "seat | Reviewer | "], true)), []);
 });
 
 test("two rows differing only by their owner name two entities, and pass", () => {
@@ -318,8 +318,8 @@ test("two rows naming same-named aggregates of two contexts name two entities, a
 });
 
 test("a rule naming two entities, one a control enforces, and one with no rows all pass", () => {
-  assert.deepEqual(binds(rules(["role | Reviewer | ", "process | Delivery | "])), []);
-  assert.deepEqual(binds(rules(["role | Reviewer | "], true)), []);
+  assert.deepEqual(binds(rules(["seat | Reviewer | ", "process | Delivery | "])), []);
+  assert.deepEqual(binds(rules(["seat | Reviewer | "], true)), []);
   assert.deepEqual(binds(rules([])), []);
 });
 
@@ -355,14 +355,14 @@ test("dropped and replaced calls may share one status while most calls stand", (
 
 const skills = (names) => names.length ? `\n## Skills\n\n| Skill | Level |\n| --- | --- |\n${names.map((n) => `| ${n} | Proficient |\n`).join("")}` : "";
 const alsoAt = (urls) => urls.length ? `\n## Also at\n\n| Where | URL |\n| --- | --- |\n${urls.map((u) => `| Somewhere | ${u} |\n`).join("")}` : "";
-const people = ({ nature = "human", roles = ["Backend Engineer"], claims = [], location = null, urls = [] } = {}) => new Map([
+const people = ({ nature = "human", seats = ["Backend Engineer"], claims = [], location = null, urls = [] } = {}) => new Map([
   ["meta/core/profile-schema.md", core("profile")],
-  ["meta/core/role-schema.md", core("role")],
+  ["meta/core/seat-schema.md", core("seat")],
   ["meta/core/identity-schema.md", core("identity")],
   ["model/identity.md", page(["email: hello@beacon.example", "location: Rotterdam", "url: https://beacon.example"], "Beacon Systems", alsoAt(["https://github.example/beacon"]))],
-  ["model/roles/backend-engineer.md", page(["requires:", "  - Java", "  - Testing"], "Backend Engineer")],
-  ["model/roles/reviewer.md", page(["requires:", "  - Testing"], "Reviewer")],
-  ["model/profiles/mira/mira.md", page([`nature: ${nature}`, ...(roles.length ? ["roles:", ...roles.map((r) => `  - ${r}`)] : []),
+  ["model/seats/backend-engineer.md", page(["requires:", "  - Java", "  - Testing"], "Backend Engineer")],
+  ["model/seats/reviewer.md", page(["requires:", "  - Testing"], "Reviewer")],
+  ["model/profiles/mira/mira.md", page([`nature: ${nature}`, ...(seats.length ? ["seats:", ...seats.map((r) => `  - ${r}`)] : []),
     "email: hello@beacon.example", ...(location ? [`location: ${location}`] : [])], "Mira", skills(claims) + alsoAt(urls))],
 ]);
 const notesOf = (files) => run(files).notes;
@@ -373,14 +373,14 @@ test("a person holding a seat is noted once per required skill they do not claim
 });
 
 test("two seats requiring one skill are noted once each, and a seat listed twice once", () => {
-  assert.deepEqual(notesOf(people({ roles: ["Backend Engineer", "Reviewer", "Reviewer"], claims: ["Java"] })),
+  assert.deepEqual(notesOf(people({ seats: ["Backend Engineer", "Reviewer", "Reviewer"], claims: ["Java"] })),
     ["gap Mira: Backend Engineer requires Testing", "gap Mira: Reviewer requires Testing"]);
 });
 
 test("an agent, a person who claims every required skill and a seat naming nothing are never noted", () => {
   assert.deepEqual(notesOf(people({ nature: "agent" })), []);
   assert.deepEqual(notesOf(people({ claims: ["Java", "Testing"] })), []);
-  assert.deepEqual(notesOf(people({ roles: ["Ghost"] })), []);
+  assert.deepEqual(notesOf(people({ seats: ["Ghost"] })), []);
 });
 
 test("a person's location equal to identity's is noted, and one that differs is not", () => {

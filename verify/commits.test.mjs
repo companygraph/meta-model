@@ -191,7 +191,7 @@ test("in a family, a member of another organization's commit by the reporting id
 });
 
 // End to end: a commit from before the rule, made under the identity's own name at an address
-// that names no role and is outside the domain entirely, is reported as the owner's rather than
+// that names no seat and is outside the domain entirely, is reported as the owner's rather than
 // outside the model — the report's own leniency, never judgeCommit's.
 test("a commit authored by the identity's own name, whatever the address, is reported as the owner's", () => {
   const dir = instanceAt(temp());

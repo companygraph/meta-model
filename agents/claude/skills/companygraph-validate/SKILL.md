@@ -33,10 +33,10 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
    advisory: it never stands in for this reading, and a page it does not list is still read.
 
    One finding is a note rather than a failure, and the profile schema's Purpose says so: for
-   every profile whose nature is `human`, every skill a role it holds `requires` that has no row
+   every profile whose nature is `human`, every skill a seat it holds `requires` that has no row
    in its Skills table is a gap. `companygraph check` prints each one under `noted:` as
-   `gap <profile>: <role> requires <skill>`, once per role and skill, and never counts it as a
-   failure; carry those lines into the report as they stand rather than walking the roles by
+   `gap <profile>: <seat> requires <skill>`, once per seat and skill, and never counts it as a
+   failure; carry those lines into the report as they stand rather than walking the seats by
    hand. A gap says what the holder has to learn or the company has to hire. A profile whose
    nature is `agent` claims no skill and carries no Skills table, so a seat it holds reports no
    gap: what that seat requires is answered by its rulebook, not by a row the agent wrote about

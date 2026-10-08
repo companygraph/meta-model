@@ -30,10 +30,10 @@ test("constraintsOf gives every type its references with how many a page may hol
   const c = constraintsOf(core);
   const ref = (type, via) => c[type].references.find((r) => r.via === via);
   // A frontmatter field: required or not, one value or a list. R9 holds a required list to one entry.
-  assert.deepEqual(ref("phase", "gate-approvers"), { via: "gate-approvers", form: "ref", target: "role", by: null, in: null, array: true, required: true, min: 1, max: null });
-  assert.deepEqual(ref("phase", "owner"), { via: "owner", form: "ref", target: "role", by: null, in: null, array: false, required: true, min: 1, max: 1 });
+  assert.deepEqual(ref("phase", "gate-approvers"), { via: "gate-approvers", form: "ref", target: "seat", by: null, in: null, array: true, required: true, min: 1, max: null });
+  assert.deepEqual(ref("phase", "owner"), { via: "owner", form: "ref", target: "seat", by: null, in: null, array: false, required: true, min: 1, max: 1 });
   assert.deepEqual(ref("experience", "organization"), { via: "organization", form: "ref?", target: "identity", by: null, in: null, array: false, required: false, min: 0, max: 1 });
-  assert.deepEqual(ref("role", "requires"), { via: "requires", form: "ref", target: "skill", by: null, in: null, array: true, required: false, min: 0, max: null });
+  assert.deepEqual(ref("seat", "requires"), { via: "requires", form: "ref", target: "skill", by: null, in: null, array: true, required: false, min: 0, max: null });
   // A column or a grouped heading: `required` is of each row, and nothing bounds the rows.
   assert.deepEqual(ref("profile", "Skills.Level"), { via: "Skills.Level", form: "qualifier", target: "proficiency-level", by: null, in: null, array: false, required: true, min: 0, max: null });
   assert.deepEqual(ref("experience", "Achievements.Kind"), { via: "Achievements.Kind", form: "ref", target: "achievement-kind", by: null, in: null, array: false, required: false, min: 0, max: null });

@@ -38,7 +38,7 @@ Nothing owns a rule and a rule owns nothing: a rule reaches across the seats, pr
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Type` | Yes | string | The type of the entity this row names, as its schema is named: `role`, `process` or `phase` |
+| `Type` | Yes | string | The type of the entity this row names, as its schema is named: `seat`, `process` or `phase` |
 | `Entity` | Yes | ref → by Type in Owner | The seat, process or phase, by its canonical name |
 | `Owner` | No | string | For a phase, the process that owns it, by its canonical name; blank otherwise |
 
@@ -57,5 +57,5 @@ A rule is a statement under the company's own authority that obliges, forbids or
 
 - The statement says one thing, as the people it binds would say it, and could be kept or broken. A statement nobody could tell was kept or broken is advice and is not written (SBVR: no business rule is an advice).
 - `motivated-by` names a risk only where the rule exists because of it.
-- An `## Applies to` row names a role, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
+- An `## Applies to` row names a seat, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
 - The page writes names and prose in American English (R14).

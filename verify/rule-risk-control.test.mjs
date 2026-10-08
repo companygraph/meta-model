@@ -26,20 +26,20 @@ const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_
   ["meta/core/risk-schema.md", real("risk")],
   ["meta/core/control-schema.md", real("control")],
   ["meta/core/source-schema.md", bare("source", null, "model/sources/*.md")],
-  ["meta/core/role-schema.md", bare("role", null, "model/roles/*.md")],
+  ["meta/core/seat-schema.md", bare("seat", null, "model/seats/*.md")],
   ["meta/core/value-schema.md", bare("value", null, "model/values/*.md")],
   ["meta/core/strategic-objective-schema.md", bare("strategic-objective", null, "model/strategic-objectives/*.md")],
   ["meta/core/process-schema.md", bare("process", null, "model/processes/<process>/<process>.md")],
   ["meta/core/phase-schema.md", bare("phase", "process", "model/processes/<process>/phases/*.md")],
   ["model/sources/local.md", "# Local\n\n> Here.\n"],
-  ["model/roles/reviewer.md", "# Reviewer\n\n> The seat.\n"],
+  ["model/seats/reviewer.md", "# Reviewer\n\n> The seat.\n"],
   ["model/values/craftsmanship.md", "# Craftsmanship\n\n> One thing that holds.\n"],
   ["model/strategic-objectives/invoices-are-right.md", "# Invoices are right\n\n> An objective.\n"],
   ["model/processes/delivery/delivery.md", "# Delivery\n\n> A process.\n"],
   ["model/processes/delivery/phases/release.md", "# Release\n\n> A phase.\n"],
   ["model/rules/a-change-is-reviewed-before-it-ships.md", page(rule, "A change is reviewed before it ships",
     "A change reaches customers only after a second person has read it.",
-    ruleSections ?? [["Why", ["Prose."]], appliesTo([["role", "Reviewer", ""], ["phase", "Release", "Delivery"]])])],
+    ruleSections ?? [["Why", ["Prose."]], appliesTo([["seat", "Reviewer", ""], ["phase", "Release", "Delivery"]])])],
   ["model/risks/an-unreviewed-change-reaches-customers.md", page(risk, "An unreviewed change reaches customers",
     "A change nobody else read goes out.", [["Cause", ["Prose."]], ["Consequence", ["Prose."]]])],
   ["model/controls/main-requires-a-review.md", page(control, "Main requires a review",
@@ -87,7 +87,7 @@ test("a motivated-by naming no risk fails", () => {
 });
 
 test("a rule without Why fails", () => {
-  assert.equal(failuresOf({ ruleSections: [appliesTo([["role", "Reviewer", ""]])] }, "no `## Why`").length, 1);
+  assert.equal(failuresOf({ ruleSections: [appliesTo([["seat", "Reviewer", ""]])] }, "no `## Why`").length, 1);
 });
 
 test("an Applies to row naming a phase with no Owner fails as an owned type without its owner", () => {
@@ -102,7 +102,7 @@ test("a risk with no owner fails", () => {
   assert.equal(failuresOf({ risk: RISK_FM.filter((l) => !l.startsWith("owner")) }, "no `owner`").length, 1);
 });
 
-test("a risk whose owner names no role fails", () => {
+test("a risk whose owner names no seat fails", () => {
   const risk = RISK_FM.map((l) => l.replace("owner: Reviewer", "owner: Mira Halvorsen"));
   assert.equal(failuresOf({ risk }, "\"Mira Halvorsen\"").length, 1);
 });

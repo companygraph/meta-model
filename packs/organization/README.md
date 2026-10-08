@@ -30,10 +30,10 @@ A person sits in a unit in a job, in a row of the unit's `## People`, and the di
 - The two lines are named by the right each carries, disciplinary and professional, and the phrase "functional line", which practice uses for both, is used for neither.
 - Two lines where the Organization Ontology has one `reportsTo`, as SAP, HR-XML and German practice keep the primary line apart from the one beside it.
 - The lines run through the people a unit names and the units they sit in, and a person carries no field naming their superior.
-- Core's role is a seat, a responsibility in a process; the job is the pack's, because only a company of more than one person is structured around jobs. A position is a job in a group, and is a row of the group's `## People`, not a type.
+- Core's seat is a responsibility in a process; the job is the pack's, because only a company of more than one person is structured around jobs. A position is a job in a group, and is a row of the group's `## People`, not a type.
 - A temporary group has `start` and `end`, not a status.
 - The type is `group` rather than organizational unit, because a team drawn across units is a group and not a unit; its kind tells the two apart.
 
 ## Left for later
 
-Renaming core's `role` to `seat`, a separate and breaking change; a position type, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a check that a person in a job holds the seats the job names; a rendered org chart.
+A position type, and with it a vacant position; staff units beside a line; edges from a group to KPIs and processes; a transitive form of `part-of`; a check that a person in a job holds the seats the job names; a rendered org chart.

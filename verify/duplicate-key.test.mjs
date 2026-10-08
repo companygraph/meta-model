@@ -13,7 +13,7 @@ const PROFILE_SCHEMA = [
   "| --- | --- | --- | --- |",
   "| `nature` | Yes | enum | `human` or `agent`. What holds this profile. |",
   "| `location` | No | string | Where the person works from |",
-  "| `roles` | No | array | The seats. |", "",
+  "| `seats` | No | array | The seats. |", "",
   "## Sections", "",
   "| Section | Required | Description |",
   "| --- | --- | --- |", "",
@@ -35,9 +35,9 @@ test("a key written twice fails by name, whatever its values", () => {
 });
 
 test("a key written once, and a nested key that shares its name, pass", () => {
-  assert.deepEqual(run("nature: human\nlocation: Bern\nroles:\n  - Owner\n  - location"), []);
+  assert.deepEqual(run("nature: human\nlocation: Bern\nseats:\n  - Owner\n  - location"), []);
 });
 
 test("a list key written twice fails once, not once per entry", () => {
-  assert.deepEqual(run("nature: human\nroles:\n  - Owner\nroles:\n  - Reviewer").length, 1);
+  assert.deepEqual(run("nature: human\nseats:\n  - Owner\nseats:\n  - Reviewer").length, 1);
 });

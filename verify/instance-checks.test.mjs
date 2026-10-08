@@ -310,13 +310,13 @@ test("a column enum with no readable list fails once at the schema, not once per
 
 test("a required list field with no items fails, and one with an item passes", () => {
   const PHASE_SCHEMA = schema("phase", [
-    "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
+    "| `gate-approvers` | Yes | array of ref → seat | Who approves. |",
   ]);
-  const ROLE_SCHEMA = schema("role", []);
+  const SEAT_SCHEMA = schema("seat", []);
   const files = new Map([
     ["core/phase-schema.md", PHASE_SCHEMA],
-    ["core/role-schema.md", ROLE_SCHEMA],
-    ["model/roles/owner.md", "# Owner\n"],
+    ["core/seat-schema.md", SEAT_SCHEMA],
+    ["model/seats/owner.md", "# Owner\n"],
     ["model/processes/delivery/phases/empty.md", "---\ngate-approvers:\n---\n\n# Empty\n"],
     ["model/processes/delivery/phases/empty-flow.md", "---\ngate-approvers: []\n---\n\n# Empty Flow\n"],
     ["model/processes/delivery/phases/filled.md", "---\ngate-approvers:\n  - Owner\n---\n\n# Filled\n"],
@@ -337,12 +337,12 @@ test("a required list field with no items fails, and one with an item passes", (
 });
 
 test("an optional list field with no items is not held to the rule", () => {
-  const ROLE_SCHEMA = schema("role", [
+  const SEAT_SCHEMA = schema("seat", [
     "| `requires` | No | array of ref → skill | The skills the seat needs. |",
   ]);
   const files = new Map([
-    ["core/role-schema.md", ROLE_SCHEMA],
-    ["model/roles/owner.md", "---\nrequires:\n---\n\n# Owner\n"],
+    ["core/seat-schema.md", SEAT_SCHEMA],
+    ["model/seats/owner.md", "---\nrequires:\n---\n\n# Owner\n"],
   ]);
   const { failures } = checkInstance(files);
   assert.ok(

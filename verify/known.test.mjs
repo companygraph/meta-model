@@ -70,9 +70,9 @@ test("each broken cell fails with its own message, on its row", () => {
     [{ Rule: "decision r99" }, `${KNOWN}: row 1: decision has no writing rule r99`],
     [{ Verdict: "wrong" }, `${KNOWN}: row 1: Verdict "wrong" is neither false nor accepted`],
     [{ Why: "" }, `${KNOWN}: row 1: Why is empty, and a row says why`],
-    [{ Seat: "Nobody" }, `${KNOWN}: row 1: Seat "Nobody" names no role`],
+    [{ Seat: "Nobody" }, `${KNOWN}: row 1: Seat "Nobody" names no seat`],
     [{ Profile: "Nobody" }, `${KNOWN}: row 1: Profile "Nobody" names no profile`],
-    [{ Profile: "Tomas Reyes" }, `${KNOWN}: row 1: Tomas Reyes does not hold the seat Backend Engineer: its \`roles\` does not name it`],
+    [{ Profile: "Tomas Reyes" }, `${KNOWN}: row 1: Tomas Reyes does not hold the seat Backend Engineer: its \`seats\` does not name it`],
     [{ Date: "2026-02-30" }, `${KNOWN}: row 1: Date "2026-02-30" is not a day, YYYY-MM-DD`],
     [{ Hash: "abc" }, `${KNOWN}: row 1: Hash "abc" is not sixteen hex characters`],
   ];
@@ -145,7 +145,7 @@ test("check fails a broken row and notes a lapsed one", () => {
   write(dir, fileOf(decisionRow(instanceAt(dir), { Seat: "Nobody" })));
   const broken = run(dir);
   assert.equal(broken.status, 1);
-  assert.match(broken.stderr, /judge\/known\.md: row 1: Seat "Nobody" names no role/);
+  assert.match(broken.stderr, /judge\/known\.md: row 1: Seat "Nobody" names no seat/);
   write(dir, fileOf(decisionRow(instanceAt(dir))));
   fs.appendFileSync(path.join(dir, "model", DECISION), "\nOne more line.\n");
   const lapsed = run(dir);

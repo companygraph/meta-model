@@ -55,7 +55,7 @@ A concept owns nothing, so it is a file, and nothing owns a concept: it sits in 
 
 ## Purpose
 
-A concept is one word the company means something exact by, and it answers "what do we mean when we say this, and what does it hang off?" for anyone reading a feature, a process or a role that names it. It is an entity rather than a heading in a glossary so that a file can cite it, a rename is caught everywhere at once, and the relations between the company's words are rows a check resolves instead of lines in a drawing. A relation is written on one side only, so no two concepts each name the other in `## Relations`.
+A concept is one word the company means something exact by, and it answers "what do we mean when we say this, and what does it hang off?" for anyone reading a feature, a process or a seat that names it. It is an entity rather than a heading in a glossary so that a file can cite it, a rename is caught everywhere at once, and the relations between the company's words are rows a check resolves instead of lines in a drawing. A relation is written on one side only, so no two concepts each name the other in `## Relations`.
 
 ## Writing rules
 

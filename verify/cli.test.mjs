@@ -197,7 +197,7 @@ test("the hook refuses only on the checker's refusal, and lets the commit throug
   // Run against the real CLI, not a stub, this passed vacuously without an identity `url`: with
   // no domain every author is outside the model (governingOf), so nothing the real checker could
   // ever refuse was exercised. An `r@x.io` commit stays outside once a `url` is there too, which
-  // this keeps proving; a `--author` at the instance's own domain naming no role is what proves
+  // this keeps proving; a `--author` at the instance's own domain naming no seat is what proves
   // the real CLI, reached through the hook's own `$here` resolution (also on the Windows job),
   // actually refuses.
   assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
@@ -205,7 +205,7 @@ test("the hook refuses only on the checker's refusal, and lets the commit throug
   fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
   const refused = commit({ COMPANYGRAPH_CLI: cli }, ["--author", "Ghost <ghost@acme.example>"]);
   assert.notEqual(refused.status, 0);
-  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
 });
 
 // The hook's other branch, taken with no COMPANYGRAPH_CLI set: `npx` at the manifest's own
@@ -355,7 +355,7 @@ test("the hook runs the checker in a git-dependency layout whose bin lost its ex
 
     const refused = commit(["--author", "Ghost <ghost@acme.example>"]);
     assert.notEqual(refused.status, 0, refused.stderr);
-    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no role of Acme/);
+    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
     const through = commit();
     assert.equal(through.status, 0, through.stderr);
     assert.doesNotMatch(through.stderr, /seat check did not run/);

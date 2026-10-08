@@ -19,7 +19,7 @@ Nothing owns a risk and a risk owns nothing: what could go wrong reaches across 
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
-| `owner` | Yes | ref → role | The seat accountable for the risk, the H1 of a file in `roles/` |
+| `owner` | Yes | ref → seat | The seat accountable for the risk, the H1 of a file in `seats/` |
 | `threatens` | No | array of ref → strategic-objective | The objectives it would affect, each the H1 of a file in `strategic-objectives/` |
 
 ## Sections
@@ -47,5 +47,5 @@ A risk is what could go wrong: an event that would affect the company's objectiv
 
 - The H1 is written as an event, not as a feeling or a gap: "a secret reaches a transcript", not "security".
 - The page carries no likelihood, impact or score. Those are assessments that move, and the model holds how things are made and not their state (R17), as a KPI holds its definition and none of its values. Where the company rates its risks, `## References` points at where it does.
-- `owner` names the seat, never the person, as a role is person-neutral.
+- `owner` names the seat, never the person, as a seat is person-neutral.
 - The page writes names and prose in American English (R14).
