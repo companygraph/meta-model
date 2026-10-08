@@ -67,7 +67,7 @@ A unit of the company, or a team drawn from its units: a department, a team, a b
 
 Sections: `# [Name]`; `> [Purpose]`; `## Responsibilities`, optional and bulleted, what the group answers for; `## People`, optional, a table of the people who sit in the group; `## References`, optional.
 
-`## People` has the columns `Profile` (required, `ref → profile`), `Job` (required, `qualifier → job`, what the person does in the group) and `Place` (required, `enum`, `Lead`, `Deputy` or `Member`, the person's place in the group). A row is a position: one person, in one job, in one group. A person who does two jobs in one group has two rows with one place.
+`## People` has the columns `Profile` (required, `ref → profile`), `Job` (optional, `qualifier → job`, what the person does in the group; blank where the person is not employed in a job here, as an agent is not) and `Place` (required, `enum`, `Lead`, `Deputy` or `Member`, the person's place in the group). A row is a position: one person, in one job, in one group. A person who does two jobs in one group has two rows with one place.
 
 A person's disciplinary line is read off the unit in the line whose `## People` names them: they answer to that unit's `Lead`, and a `Lead` answers to the `Lead` of the unit its `part-of` names, and so up the tree. A person's professional line is read off their job: the group whose `guides` names the `Job` of their row, and that group's `Lead`. Two engineering departments each name their own lead and their own backend engineers, and nothing is ambiguous, because what is unique is the person, not the job.
 
