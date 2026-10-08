@@ -601,12 +601,16 @@ async function upgrade(argv) {
       const at = `${manifest.units ?? "meta"}/${name}/${path}`;
       if (!held.has(at) && existsSync(join(root, at))) held.set(at, read(join(root, at)));
     }
-  // The pages an upgrade may move or rewrite when the instance is in an earlier form, read as the
-  // checks read them and keyed from the instance root. Text only: an image is never rewritten.
-  /** @type {Map<string, string>} */
+  // The files an upgrade may move or rewrite when the instance is in an earlier form, keyed from
+  // the instance root: every page as the checks read it, and every other file under model/roles/
+  // as its bytes, since it moves with the folder and is written back exactly as it was.
+  /** @type {Map<string, string | Buffer>} */
   const model = new Map();
   if (existsSync(join(root, "model")))
-    for (const [rest, text] of filesUnder(join(root, "model"))) if (typeof text === "string") model.set(`model/${rest}`, text);
+    for (const [rest, text] of filesUnder(join(root, "model"))) {
+      if (rest.endsWith(".md") && typeof text === "string") model.set(`model/${rest}`, text);
+      else if (rest.startsWith("roles/")) model.set(`model/${rest}`, readFileSync(join(root, "model", rest)));
+    }
   /** @type {UpgradeRead} */
   const plan = upgradePlan({
     core,

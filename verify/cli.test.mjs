@@ -652,7 +652,11 @@ test("upgrade carries an instance's roles across to seats, keeping every id, and
   fs.mkdirSync(path.join(root, "model/roles"));
   fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), reviewer);
   fs.writeFileSync(path.join(root, "model/roles/backend-engineer.md"), seat("backend-engineer"));
-  fs.writeFileSync(path.join(root, "model/roles/README.md"), "# Roles\n\nOne file per role, written against `meta/core/role-schema.md`.\n");
+  fs.writeFileSync(path.join(root, "model/roles/README.md"), "# Roles\n\nOne file per role, written against `meta/core/role-schema.md`.\n\nThe owner reads these on Mondays.\n");
+  // Whatever else the folder holds moves with it, byte for byte: an image, an editor's leftover.
+  const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 255, 13, 10, 26, 10]);
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.png"), image);
+  fs.writeFileSync(path.join(root, "model/roles/.DS_Store"), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
   const agent = path.join(root, "model/profiles/ai-agent");
   fs.cpSync(path.join(example, "profiles/ai-agent"), agent, { recursive: true });
   const profile = path.join(agent, "ai-agent.md");
@@ -672,11 +676,36 @@ test("upgrade carries an instance's roles across to seats, keeping every id, and
   assert.match(said, /rewritten in this core's form: .*model\/profiles\/ai-agent\/ai-agent\.md/);
   assert.equal(fs.readFileSync(path.join(root, "model/seats/reviewer.md"), "utf8").match(/^id: (\S+)$/m)[1], id);
   assert.ok(!fs.existsSync(path.join(root, "model/roles")));
-  assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
+  assert.equal(
+    fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"),
+    "# Seats\n\nOne file per role, written against `meta/core/seat-schema.md`.\n\nThe owner reads these on Mondays.\n",
+  );
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/reviewer.png")), image);
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/.DS_Store")), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
   assert.match(fs.readFileSync(profile, "utf8"), /\nseats:\n {2}- Reviewer\n/);
   assert.match(fs.readFileSync(path.join(root, "model/rules/a-change-is-reviewed.md"), "utf8"), /\| seat \| Reviewer \| \|\n\| `seat` \| Backend Engineer \| \|/);
+  // The check holds them as it holds any such file in a seat's folder, and says so where they are
+  // now, not that model/roles/ is no type's folder; with them gone the instance checks clean.
+  const refused = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr + refused.stdout, /model\/seats\/\.DS_Store should be a \.md file/);
+  assert.doesNotMatch(refused.stderr + refused.stdout, /model\/roles/);
+  fs.rmSync(path.join(root, "model/seats/.DS_Store"));
+  fs.rmSync(path.join(root, "model/seats/reviewer.png"));
   assert.doesNotThrow(() => run(["check", root]));
   assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+test("upgrade writes a README for model/seats/ when the old model/roles/ had none", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  run(["upgrade", root]);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
+  assert.doesNotThrow(() => run(["check", root]));
 });
 
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;

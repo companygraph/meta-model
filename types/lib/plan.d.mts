@@ -49,9 +49,9 @@ export type UpgradeAsk = {
     repository?: boolean | undefined;
     workflow: string | null;
     /**
-     * Every file under the instance's `model/`, keyed by its path from the instance root; a caller that omits it has not read the model, so no page is moved or rewritten.
+     * Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a caller that omits it has not read the model, so nothing is moved or rewritten.
      */
-    model?: Map<string, string> | undefined;
+    model?: Map<string, string | Buffer> | undefined;
     fetched?: boolean | undefined;
     force?: boolean | undefined;
     name?: string | undefined;
@@ -66,14 +66,14 @@ export type UpgradeAsk = {
 };
 export type UpgradeWrites = {
     refused?: undefined;
-    writes: Map<string, string>;
+    writes: Map<string, string | Buffer>;
     removes: string[];
     edited: string[];
     missing: string[];
     given: string[];
     rewritten: string[];
     /**
-     * The pages an upgrade moves, as `[from, to]`, each keeping its id.
+     * The files an upgrade moves, as `[from, to]`, each page keeping its id.
      */
     moved: [string, string][];
     forced: string[];
@@ -135,7 +135,7 @@ export type BackfillAsk = {
  * @property {Map<string, string | undefined>} held The files the repository holds at every path the manifest or this release names, and at `.companygraph/hooks/commit-msg`, `.companygraph/hooks/pre-commit` and `.companygraph/hooks/pre-merge-commit` where they exist.
  * @property {boolean | undefined} [repository] Whether the folder is a git repository; the git gate refuses where it is not.
  * @property {string | null} workflow
- * @property {Map<string, string> | undefined} [model] Every file under the instance's `model/`, keyed by its path from the instance root; a caller that omits it has not read the model, so no page is moved or rewritten.
+ * @property {Map<string, string | Buffer> | undefined} [model] Every page under the instance's `model/` as text, and every other file under `model/roles/` as its bytes, keyed by its path from the instance root; a caller that omits it has not read the model, so nothing is moved or rewritten.
  * @property {boolean | undefined} [fetched]
  * @property {boolean | undefined} [force]
  * @property {string | undefined} [name]
@@ -147,13 +147,13 @@ export type BackfillAsk = {
  * inputs it gave, and the core versions it moves between; or a refusal, which carries nothing else.
  * @typedef {object} UpgradeWrites
  * @property {undefined} [refused]
- * @property {Map<string, string>} writes
+ * @property {Map<string, string | Buffer>} writes
  * @property {string[]} removes
  * @property {string[]} edited
  * @property {string[]} missing
  * @property {string[]} given
  * @property {string[]} rewritten
- * @property {[string, string][]} moved The pages an upgrade moves, as `[from, to]`, each keeping its id.
+ * @property {[string, string][]} moved The files an upgrade moves, as `[from, to]`, each page keeping its id.
  * @property {string[]} forced
  * @property {string[]} refreshed Gate hooks in an earlier release's text, brought to this one.
  * @property {string[]} unreplaced Gate hooks edited since the tooling wrote them, left as they are.
