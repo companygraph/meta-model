@@ -1350,6 +1350,15 @@ test("upgrade --pack names only the packs the instance did not already list", ()
   assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
 });
 
+test("init --pack organization vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization"]);
+  for (const n of ["group", "group-kind", "job"]) assert.ok(fs.existsSync(path.join(root, "meta/organization", `${n}-schema.md`)), n);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
 // An instance that took a pack reads the pack's schemas wherever the history commands read the
 // model: a bounded context's page sits in a folder only the pack's schema declares, and without
 // them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.

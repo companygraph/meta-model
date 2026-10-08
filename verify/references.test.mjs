@@ -27,9 +27,10 @@ const CAPTION = "`## References` is a table with these columns:";
 function findings(change) {
   const tmp = mkdtempSync(join(tmpdir(), "meta-model-references-"));
   try {
-    for (const dir of ["core", "example", "lib"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    for (const dir of ["core", "example", "lib", "packs"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const path = join(tmp, "core", `${SCHEMA}-schema.md`);
     const before = readFileSync(path, "utf8");
     for (const line of [ROW, WHAT, URL_ROW, CAPTION])
@@ -116,7 +117,7 @@ test("a value whose References row names its document passes", () => {
 test("a References row with no URL fails once", () => {
   const f = failuresOf("model/values/candor.md", "value", value(refs("| What | URL |", ["| Code of conduct |  |"])));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /"## References" row has no url/);
+  assert.match(f[0], /"## References" row has no URL/);
 });
 
 test("a References table with Also at's columns fails once, on the columns", () => {

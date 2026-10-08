@@ -27,8 +27,10 @@ test("a short row in a heading table fails the run instead of crashing it", () =
     cpSync(join(ROOT, "core"), join(tmp, "core"), { recursive: true });
     cpSync(join(ROOT, "example"), join(tmp, "example"), { recursive: true });
     cpSync(join(ROOT, "lib"), join(tmp, "lib"), { recursive: true });
+    cpSync(join(ROOT, "packs"), join(tmp, "packs"), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
 
     // Drop every cell but the heading name from the one row `## Achievements` declares — the
     // shape a hand-edited table takes when a cell is deleted along with its pipes instead of
@@ -72,8 +74,10 @@ test("a column typed image fails the vocabulary check by name", () => {
     cpSync(join(ROOT, "core"), join(tmp, "core"), { recursive: true });
     cpSync(join(ROOT, "example"), join(tmp, "example"), { recursive: true });
     cpSync(join(ROOT, "lib"), join(tmp, "lib"), { recursive: true });
+    cpSync(join(ROOT, "packs"), join(tmp, "packs"), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const schemaPath = join(tmp, "core", "profile-schema.md");
     const before = readFileSync(schemaPath, "utf8");
     const target = "| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |";
@@ -94,9 +98,10 @@ const mutated = (...args) => {
   const pairs = args;
   const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
   try {
-    for (const dir of ["core", "example", "lib"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    for (const dir of ["core", "example", "lib", "packs"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const schemaPath = join(tmp, "core", file);
     let text = readFileSync(schemaPath, "utf8");
     for (const [from, to] of pairs) {
@@ -158,13 +163,14 @@ test("a heading table declaring `ref → by …` fails, since a heading has no r
 test("an instance workflow that checks out another release than package.json's fails the run", () => {
   const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
   try {
-    for (const dir of ["core", "example", "lib", ".github"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    for (const dir of ["core", "example", "lib", "packs", ".github"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     cpSync(join(ROOT, "package.json"), join(tmp, "package.json"));
     // The release check asks git which tags sit on HEAD, so the copy is a repository of its own.
     spawnSync("git", ["init", "-q"], { cwd: tmp });
     spawnSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture"], { cwd: tmp });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const version = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
     const path = join(tmp, ".github", "workflows", "instance-check.yml");
     const before = readFileSync(path, "utf8");

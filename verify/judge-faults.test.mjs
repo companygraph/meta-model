@@ -8,6 +8,7 @@ import fs from "node:fs";
 import { FAULTS } from "../tools/judge-faults.mjs";
 import { writingRulesOf } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const read = (rel) => fs.readFileSync(new URL(`../${rel}`, import.meta.url), "utf8");
 const files = new Map();
@@ -19,7 +20,7 @@ const walk = (rel) => {
   }
 };
 walk("");
-const schemas = new Map(fs.readdirSync(new URL("../core/", import.meta.url)).filter((f) => f.endsWith("-schema.md")).map((f) => [f, read(`core/${f}`)]));
+const schemas = exampleSchemas();
 const graph = parseInstance(files, { schemas });
 const skills = graph.entities.filter((e) => e.type === "skill").map((e) => e.name);
 const entries = graph.entities.filter((e) => e.type === "experience").map((e) => e.path);

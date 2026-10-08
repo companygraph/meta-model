@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, sectionsOf, blocksOf, IMAGE_FILE } from "../lib/checks.mjs";
+import { examplePacks } from "./example.mjs";
 
 const roleSchema = (rows) => ["# Role Schema", "", "> A seat.", "", "## File Location", "", "`model/roles/*.md`", "",
   "## Frontmatter", "", "No YAML frontmatter.", "",
@@ -93,10 +94,11 @@ const shipped = () => {
       else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
+  for (const { dir } of examplePacks) walk(path.join(root, dir), `${dir}/`);
   walk(path.join(root, "example", "model"), "model/");
   return files;
 };
-const run = (files) => checkInstance(files, { core: "core", model: "model" }).failures;
+const run = (files) => checkInstance(files, { core: "core", model: "model", packs: examplePacks }).failures;
 const rewriteSection = (text, heading, fn) => {
   const parts = text.split(new RegExp(`^(## ${heading}\\n)`, "m"));
   const [body, ...rest] = parts[2].split(/^(?=## )/m);

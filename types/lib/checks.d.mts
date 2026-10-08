@@ -48,6 +48,77 @@ export type TypeEntry = {
         kind: string;
     };
     /**
+     * A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it; an edge the type's `within` does not admit is that check's and is not followed.
+     */
+    acyclic?: string;
+    /**
+     * Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
+     */
+    once?: ({
+        field: string;
+        when?: {
+            via: string;
+            field: string;
+            is: string;
+        };
+        until?: string;
+    } | {
+        section: string;
+        column: string;
+        when?: {
+            via: string;
+            field: string;
+            is: string;
+        };
+        until?: string;
+    })[];
+    /**
+     * A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
+     */
+    within?: {
+        field: string;
+        when: {
+            via: string;
+            field: string;
+            is: string;
+        };
+        until?: string;
+    };
+    /**
+     * Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
+     */
+    carries?: {
+        section: string;
+        column: string;
+        field: string;
+        is: string;
+        when: {
+            column: string;
+            in: string[];
+        } | {
+            via: string;
+            field: string;
+            is: string;
+        };
+    }[];
+    /**
+     * A table in which at most one distinct `by` entity holds `value` in `column`, so one entity on several rows holding it counts once.
+     */
+    atMostOne?: {
+        section: string;
+        column: string;
+        value: string;
+        by: string;
+    };
+    /**
+     * A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
+     */
+    samePer?: {
+        section: string;
+        by: string;
+        column: string;
+    };
+    /**
      * An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
      */
     gathers?: {
@@ -148,6 +219,12 @@ export type Check = {
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
+ * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it; an edge the type's `within` does not admit is that check's and is not followed.
+ * @property {({ field: string, when?: { via: string, field: string, is: string }, until?: string } | { section: string, column: string, when?: { via: string, field: string, is: string }, until?: string })[]} [once] Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
+ * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
+ * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
+ * @property {{ section: string, column: string, value: string, by: string }} [atMostOne] A table in which at most one distinct `by` entity holds `value` in `column`, so one entity on several rows holding it counts once.
+ * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.

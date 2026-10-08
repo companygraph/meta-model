@@ -11,6 +11,7 @@ import { fileURLToPath } from "node:url";
 import { instanceAt } from "../lib/history.mjs";
 import { writingRulesOf, purposeOf, bulletsOf, questionsOf, subjectsOf, subjectOf, leftOutOf, openingOf, STATE_BUDGET, reportOf, BAND, LOWEST } from "../lib/questions.mjs";
 import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const schema = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
 
@@ -172,9 +173,7 @@ const exampleFiles = () => {
   walk("");
   return files;
 };
-const coreSchemas = () => new Map(fs.readdirSync(new URL("../core/", import.meta.url))
-  .filter((f) => f.endsWith("-schema.md") || f === "manifest.json")
-  .map((f) => [f, fs.readFileSync(new URL(`../core/${f}`, import.meta.url), "utf8")]));
+const coreSchemas = exampleSchemas;
 const example = () => {
   const files = exampleFiles(), schemas = coreSchemas();
   return { graph: parseInstance(files, { schemas }), files, schemas };

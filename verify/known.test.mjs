@@ -10,6 +10,7 @@ import path from "node:path";
 import { spawnSync } from "node:child_process";
 import { fileURLToPath } from "node:url";
 import { modelAt } from "./seats-fixture.mjs";
+import { EXAMPLE_PACKS } from "./example.mjs";
 import { instanceAt } from "../lib/history.mjs";
 import { writingRulesOf } from "../lib/questions.mjs";
 import { KNOWN, KNOWN_COLUMNS, knownHashOf, checkKnown } from "../lib/known.mjs";
@@ -119,7 +120,7 @@ const checker = fileURLToPath(new URL("../bin/check-instance.mjs", import.meta.u
 const VERSION = JSON.parse(fs.readFileSync(new URL("../package.json", import.meta.url), "utf8")).version;
 const checkable = () => {
   const dir = fixture();
-  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: VERSION, units: "meta" }));
+  fs.writeFileSync(path.join(dir, ".companygraph", "manifest.json"), JSON.stringify({ tooling: VERSION, units: "meta", packs: EXAMPLE_PACKS }));
   return dir;
 };
 const run = (dir) => spawnSync(process.execPath, [checker, dir], { encoding: "utf8" });

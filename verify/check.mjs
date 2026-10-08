@@ -29,6 +29,7 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
+import { examplePacks, exampleSchemas } from "./example.mjs";
 import { TYPES, PACKS, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
 import { subjectsOf, writingRulesOf, openingOf } from "../lib/questions.mjs";
@@ -523,7 +524,16 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail, note, requireSchemaIds: true }),
+    // The packs the example takes are named once, in example.mjs, so each pack's checks hold it.
+    ...instanceChecks({
+      files: filesUnder(EX, `core`, ...examplePacks.map((p) => p.dir)),
+      core: `core`,
+      model: EX,
+      packs: examplePacks,
+      fail,
+      note,
+      requireSchemaIds: true,
+    }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at
@@ -650,9 +660,7 @@ const CHECKS = [
       const files = new Map();
       for (const [path, text] of filesUnder(EX))
         if (path.endsWith(".md")) files.set(path.slice(EX.length + 1), text);
-      const schemas = new Map();
-      for (const [path, text] of filesUnder("core"))
-        if (path.endsWith("-schema.md")) schemas.set(path.split("/").pop(), text);
+      const schemas = exampleSchemas();
       try {
         const { entities } = parseInstance(files, { sub: `${EX}/`, schemas });
         if (!entities.length) fail("the example parsed to no entities");
