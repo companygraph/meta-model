@@ -37,11 +37,13 @@
 ### Task 1: Open positions, an `## Openings` table on a group
 
 **Files:**
+
 - Modify: `packs/organization/group-schema.md` (Sections table, a new column table, Purpose, Writing rules; `Place` in `## People` gains `Staff`)
 - Modify: `lib/checks.mjs` (the per-cell table check, around lines 1330–1352: a `number` cell is digits)
 - Test: `verify/organization.test.mjs`
 
 **Interfaces:**
+
 - Consumes: nothing from other tasks.
 - Produces: the `## Openings` section and the `Staff` token in `## People`'s `Place`, which Tasks 2 and 4 rely on.
 
@@ -112,8 +114,7 @@ In the existing test "a People row with a blank Place fails as the required colu
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: FAIL. The opening tests fail with `"## Openings"` not declared (an undeclared section, or no edge drawn, depending on how the section check reports it), the Staff tests with an R8 finding for `Staff`, and the Count test because no check holds a `number` cell.
+Run: `node --test verify/organization.test.mjs` Expected: FAIL. The opening tests fail with `"## Openings"` not declared (an undeclared section, or no edge drawn, depending on how the section check reports it), the Staff tests with an R8 finding for `Staff`, and the Count test because no check holds a `number` cell.
 
 - [ ] **Step 3: Change the schema**
 
@@ -172,13 +173,11 @@ In `lib/checks.mjs`, in the per-cell loop of the table check (the `columns.forEa
 
 - [ ] **Step 5: Run the tests to see them pass**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: PASS, every test.
+Run: `node --test verify/organization.test.mjs` Expected: PASS, every test.
 
 - [ ] **Step 6: Run the whole suite as CI does**
 
-Run: `npm run build:check && npm run verify && for s in $(node -e "console.log(Object.keys(require('./package.json').scripts).filter(k=>k.startsWith('test:')).join(' '))"); do npm run -s $s || echo "FAIL $s"; done; sh conventions/conventions-format; sh conventions/conventions-check`
-Expected: every command exits 0 and no `FAIL` line. If a test elsewhere asserts the old three-token `Place` message, update its expected string to the four tokens.
+Run: `npm run build:check && npm run verify && for s in $(node -e "console.log(Object.keys(require('./package.json').scripts).filter(k=>k.startsWith('test:')).join(' '))"); do npm run -s $s || echo "FAIL $s"; done; sh conventions/conventions-format; sh conventions/conventions-check` Expected: every command exits 0 and no `FAIL` line. If a test elsewhere asserts the old three-token `Place` message, update its expected string to the four tokens.
 
 - [ ] **Step 7: Commit**
 
@@ -194,12 +193,14 @@ Subject: `A group says which positions it is looking to fill`. Body: why first (
 ### Task 2: Staff units and the check that only staff hangs below staff
 
 **Files:**
+
 - Modify: `packs/organization/group-kind-schema.md` (Frontmatter, Purpose, Writing rules)
 - Modify: `lib/checks.mjs` (the `TypeEntry` JSDoc near line 55, the `group` row of `PACKS.organization` near line 245, and a new check after "a field that runs inside a set runs only from and to what is in it", near line 2948)
 - Modify: `types/lib/checks.d.mts` (written by `npm run build`, never by hand)
 - Test: `verify/organization.test.mjs`
 
 **Interfaces:**
+
 - Consumes: the `Staff` token from Task 1.
 - Produces: `TypeEntry.inherits: { field: string, via: string, carries: string, is: string }`, read by the new check named `what a field names passes on what its kind carries`.
 
@@ -268,8 +269,7 @@ The agent test uses `withBot`, defined further down the file; place these tests 
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: FAIL. `staff` is no declared field, so each kind carrying it fails as an undeclared field, and "a department under a staff unit" finds no failure of its own.
+Run: `node --test verify/organization.test.mjs` Expected: FAIL. `staff` is no declared field, so each kind carrying it fails as an undeclared field, and "a department under a staff unit" finds no failure of its own.
 
 - [ ] **Step 3: Declare `staff` on the kind**
 
@@ -352,18 +352,15 @@ After the check named `"a field that runs inside a set runs only from and to wha
 
 - [ ] **Step 5: Build the declarations**
 
-Run: `npm run build && npm run build:check`
-Expected: `types/lib/checks.d.mts` gains the `inherits` property; `build:check` exits 0.
+Run: `npm run build && npm run build:check` Expected: `types/lib/checks.d.mts` gains the `inherits` property; `build:check` exits 0.
 
 - [ ] **Step 6: Run the tests to see them pass**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: PASS, every test.
+Run: `node --test verify/organization.test.mjs` Expected: PASS, every test.
 
 - [ ] **Step 7: Run the whole suite as CI does**
 
-Run the command of Task 1, Step 6.
-Expected: every command exits 0 and no `FAIL` line.
+Run the command of Task 1, Step 6. Expected: every command exits 0 and no `FAIL` line.
 
 - [ ] **Step 8: Commit**
 
@@ -379,10 +376,12 @@ Subject: `A staff unit stands beside its head, and only staff hangs below it`. B
 ### Task 3: The order of groups, a `rank`
 
 **Files:**
+
 - Modify: `packs/organization/group-schema.md` (Frontmatter, Writing rules)
 - Test: `verify/organization.test.mjs`
 
 **Interfaces:**
+
 - Consumes: nothing from other tasks.
 - Produces: `rank` on `group`, which Task 4's example writes.
 
@@ -413,8 +412,7 @@ test("a rank written as a word fails once", () => {
 
 - [ ] **Step 2: Run the tests to see them fail**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: FAIL. `rank` is no declared field of `group`, so each ranked page fails as an undeclared field.
+Run: `node --test verify/organization.test.mjs` Expected: FAIL. `rank` is no declared field of `group`, so each ranked page fails as an undeclared field.
 
 - [ ] **Step 3: Declare `rank` on the group**
 
@@ -432,13 +430,11 @@ In `## Writing rules`, add:
 
 - [ ] **Step 4: Run the tests to see them pass**
 
-Run: `node --test verify/organization.test.mjs`
-Expected: PASS. The existing rank check, "two entities of a ranked type do not share a rank", holds `group` the moment its schema declares the field.
+Run: `node --test verify/organization.test.mjs` Expected: PASS. The existing rank check, "two entities of a ranked type do not share a rank", holds `group` the moment its schema declares the field.
 
 - [ ] **Step 5: Run the whole suite as CI does**
 
-Run the command of Task 1, Step 6.
-Expected: every command exits 0 and no `FAIL` line.
+Run the command of Task 1, Step 6. Expected: every command exits 0 and no `FAIL` line.
 
 - [ ] **Step 6: Commit**
 
@@ -454,6 +450,7 @@ Subject: `A group can carry its place in the company's order`. Body: why first (
 ### Task 4: The example shows each, and the pack's prose says so
 
 **Files:**
+
 - Create: `example/model/group-kinds/staff-unit.md`
 - Create: `example/model/groups/legal.md`
 - Create: `example/model/jobs/legal-counsel.md`
@@ -463,6 +460,7 @@ Subject: `A group can carry its place in the company's order`. Body: why first (
 - Modify: `README.md` (the `## Packs` paragraph)
 
 **Interfaces:**
+
 - Consumes: `## Openings` (Task 1), `staff` and `Staff` (Task 2), `rank` (Task 3).
 - Produces: nothing other tasks read.
 
@@ -559,8 +557,7 @@ Write `rank` directly after `source` in each frontmatter, as `legal.md` does.
 
 - [ ] **Step 3: Check the example**
 
-Run: `npm run verify`
-Expected: exit 0. If a test elsewhere counts the example's groups, kinds or jobs, update its expected count to the example as it now stands and say so in the commit body.
+Run: `npm run verify` Expected: exit 0. If a test elsewhere counts the example's groups, kinds or jobs, update its expected count to the example as it now stands and say so in the commit body.
 
 - [ ] **Step 4: Update the pack's README**
 
@@ -592,8 +589,7 @@ In `README.md`'s `## Packs` paragraph, after "its `guides` the professional one,
 
 - [ ] **Step 6: Run the whole suite as CI does**
 
-Run the command of Task 1, Step 6.
-Expected: every command exits 0 and no `FAIL` line.
+Run the command of Task 1, Step 6. Expected: every command exits 0 and no `FAIL` line.
 
 - [ ] **Step 7: Commit**
 
