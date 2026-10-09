@@ -1,7 +1,7 @@
 ---
 id: 01a12190-1c8c-7467-b70b-0c658281c7b8
 source: Local
-kind: application
+kind: SaaS
 vendor: Lantern Mail
 lifecycle: active
 criticality: medium

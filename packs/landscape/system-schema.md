@@ -19,7 +19,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
-| `kind` | Yes | enum | `application`, `device`, `platform` or `network`. Software somebody uses or that serves other software; a physical thing that computes, prints, weighs or pays; what applications run on, a node, system software, a cloud service; or what connects systems (ArchiMate 3.2, chapters 9 to 11). |
+| `kind` | Yes | ref → system-kind | What sort of system this is, the H1 of a file in `system-kinds/`; its `element` says which ArchiMate element a system of this kind is |
 | `vendor` | No | string | Who makes it. A name, not a reference: a vendor is an entity only when it processes personal data, which `processor` says. |
 | `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
@@ -75,9 +75,9 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the
   field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
-- `kind` is what the system is made of, not what it is for: a payment terminal is a `device`
-  whatever it runs, and the software on it, where that is a system of its own, is an
-  `application` that is `part-of` the terminal.
+- `kind` names what the system is made of, not what it is for: a payment terminal is of a kind
+  whose `element` is `device` whatever it runs, and the software on it, where that is a system of
+  its own, is of an application kind and `part-of` the terminal.
 - `realizes` names features of the products staff and customers open, in the words of those
   features; a system that gives nobody anything to do, a network, a camera, realizes nothing and
   names its `domain`, or the processes it `serves`, instead.

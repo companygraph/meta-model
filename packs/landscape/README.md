@@ -6,9 +6,10 @@ An instance takes it with `companygraph init --pack landscape`. Every edge from 
 
 | Type | What it is | Owned by |
 | --- | --- | --- |
-| `system` | What IT buys, builds, runs and retires, whatever it is made of: an application, a device, a platform or a network, told apart by its `kind` | nothing |
+| `system` | What IT buys, builds, runs and retires, whatever it is made of: an application, a device, a platform or a network, told apart by its kind, whose `element` names the ArchiMate element it is | nothing |
+| `system-kind` | What sort of system a company has, in its own words, and which ArchiMate element a system of that kind is | nothing |
 
-A system realizes the features of the products staff and customers open, serves a process where no feature names it yet, runs on or in another system through `part-of`, is owned by one seat and run by another, and names the data processor behind it where it handles personal data. It takes data over the rows of its `## Connects to`, written on the side that takes it with the interface's name in `As`, and keeps concepts in `## Holds`, one system holding each concept as `master`.
+A system names its kind, a page in the company's words that carries the ArchiMate element once. A system realizes the features of the products staff and customers open, serves a process where no feature names it yet, runs on or in another system through `part-of`, is owned by one seat and run by another, and names the data processor behind it where it handles personal data. It takes data over the rows of its `## Connects to`, written on the side that takes it with the interface's name in `As`, and keeps concepts in `## Holds`, one system holding each concept as `master`.
 
 ## Sources
 
@@ -24,10 +25,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 
 | ArchiMate 3.2 | Here |
 | --- | --- |
-| ApplicationComponent, ApplicationCollaboration | `system`, kind `application` |
-| Node, SystemSoftware | `system`, kind `platform`; system software is `part-of` its node |
-| Device, Equipment | `system`, kind `device` |
-| CommunicationNetwork | `system`, kind `network` |
+| ApplicationComponent, ApplicationCollaboration, Node, SystemSoftware, Device, Equipment, CommunicationNetwork | a `system` whose kind's `element` names the one it is; system software is `part-of` its node |
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | ApplicationService, BusinessService, Capability | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
@@ -49,7 +47,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 
 ## Where it departs from its sources
 
-- One type where ArchiMate has seven across its application, technology and physical layers, and two interfaces that become rows; the kind carries the layer.
+- One type where ArchiMate has seven across its application, technology and physical layers, and two interfaces that become rows; the kind's `element` names which of the seven a system is, so nothing is lost on the way back.
 - Triggering comes back as Flow: a connection row says what is carried and how, not whether it starts something.
 - An interface is a row, not an element. Its name survives in `As`; its own composition into components and its appearance in views do not.
 - Behavior nobody uses is dropped: application functions, technology services and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.

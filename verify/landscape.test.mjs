@@ -23,11 +23,13 @@ const system = ({ kind, vendor, lifecycle, criticality, owner, operator, process
   ...(realizes.length ? [list("realizes", realizes).trimEnd()] : []), ...(serves.length ? [list("serves", serves).trimEnd()] : []),
   "---", "", page(h1, tagline) + body,
 ].join("\n");
+const kindPage = (name, element, rank) => `---\nsource: Local\nrank: ${rank}\nelement: ${element}\n---\n\n# ${name}\n\n> A kind of system.\n\n## What it means\n\nWhat is of this kind, and what is not.\n`;
 const connects = (rows) => `\n## Connects to\n\n| System | As | Carries | Via |\n| --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 const holds = (rows) => `\n## Holds\n\n| Concept | Access |\n| --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 
 const tree = (change = (m) => m) => change(new Map([
   ["meta/landscape/system-schema.md", pack("system")],
+  ["meta/landscape/system-kind-schema.md", pack("system-kind")],
   ["meta/core/source-schema.md", bare("source", "model/sources/*.md")],
   ["meta/core/domain-schema.md", bare("domain", "model/domains/*.md")],
   ["meta/core/feature-schema.md", bare("feature", "model/features/*.md")],
@@ -48,12 +50,16 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/seats/store-manager.md", page("Store Manager", "Runs a store.")],
   ["model/seats/it-operations.md", page("IT Operations", "Keeps the systems running.")],
   ["model/data-processors/tillpay.md", page("Tillpay", "Settles card payments.")],
-  [`${S}/point-of-sale.md`, system({ kind: "application", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
+  ["model/system-kinds/till-software.md", kindPage("Till software", "application-component", 10)],
+  ["model/system-kinds/store-device.md", kindPage("Store device", "device", 20)],
+  ["model/system-kinds/server.md", kindPage("Server", "node", 30)],
+  ["model/system-kinds/network.md", kindPage("Network", "communication-network", 40)],
+  [`${S}/point-of-sale.md`, system({ kind: "Till software", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
     body: connects([["Payment terminal", "Card payment", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "USB"]]) + holds([["Sale", "master"], ["Article", "reads"]]) })],
-  [`${S}/payment-terminal.md`, system({ kind: "device", vendor: "Tillpay", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
-  [`${S}/store-server.md`, system({ kind: "platform", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
-  [`${S}/store-network.md`, system({ kind: "network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
-  [`${S}/article-master.md`, system({ kind: "application", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "master"], ["Customer", "master"]]) })],
+  [`${S}/payment-terminal.md`, system({ kind: "Store device", vendor: "Tillpay", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
+  [`${S}/store-server.md`, system({ kind: "Server", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
+  [`${S}/store-network.md`, system({ kind: "Network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
+  [`${S}/article-master.md`, system({ kind: "Till software", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "master"], ["Customer", "master"]]) })],
 ]));
 const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
 const edit = (path, from, to) => (m) => m.set(path, m.get(path).replace(from, to));
@@ -63,10 +69,25 @@ test("a small instance written in the pack passes, two interfaces to one system 
   assert.deepEqual(failures(tree()), []);
 });
 
-test("a kind outside the four fails under R8", () => {
-  const f = failures(tree(edit(`${S}/store-network.md`, "kind: network", "kind: cable")));
+test("an element outside the seven fails under R8", () => {
+  const f = failures(tree(edit("model/system-kinds/store-device.md", "element: device", "element: gadget")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /store-network\.md.*cable.*\(R8\)/);
+  assert.match(f[0], /store-device\.md.*gadget.*\(R8\)/);
+});
+
+test("a kind naming no system kind fails as R4 alone", () => {
+  // The Network kind is then named by no system, so its own R16 gather fails beside the R4.
+  const f = failures(tree(edit(`${S}/store-network.md`, "kind: Network", "kind: Cable")));
+  assert.equal(only(f, "(R4)").length, 1, f.join("\n"));
+  assert.match(only(f, "(R4)")[0], /store-network\.md.*"Cable".*\(R4\)/);
+  assert.equal(f.length, 2, f.join("\n"));
+});
+
+test("a kind no system names fails, and the message says it is unused", () => {
+  const f = failures(tree((m) => m.set("model/system-kinds/sensor.md", kindPage("Sensor", "equipment", 50))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.ok(f[0].includes("0 system pages name it in `kind`"), f[0]);
+  assert.match(f[0], /vocabulary nobody uses/);
 });
 
 test("a lifecycle outside its tokens fails under R8", () => {
@@ -114,7 +135,7 @@ test("two rows naming one system with the same As fail once, and a second row wi
 });
 
 test("a part-of circle of two fails once naming both", () => {
-  const f = failures(tree(edit(`${S}/store-network.md`, "kind: network\n", "kind: network\npart-of: Store server\n")));
+  const f = failures(tree(edit(`${S}/store-network.md`, "kind: Network\n", "kind: Network\npart-of: Store server\n")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /`part-of` runs in a circle.*"Store network".*"Store server".*\(R16\)/);
 });
