@@ -6,13 +6,14 @@ import os from "node:os";
 import path from "node:path";
 import { gitTop, isInstance, readInstance, logOf, pendingOf, familyOf, changedPagesOf, deletedPagesOf, pageHistoryOf } from "../lib/history.mjs";
 import { instanceAt } from "./seats-fixture.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-history-"));
 const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=hello@beacon.example", ...args], { cwd, encoding: "utf8" });
 // A repository whose own config names the owner, so `git var` has an author on a runner with no
 // global identity.
 const repo = (dir) => {
-  git(dir, "init", "-q");
+  initRepository(dir);
   git(dir, "config", "user.name", "Robert");
   git(dir, "config", "user.email", "hello@beacon.example");
   return dir;
@@ -21,7 +22,7 @@ const repo = (dir) => {
 test("outside git there is no top, and inside it is the working tree's", () => {
   const dir = temp();
   assert.equal(gitTop(dir), null);
-  git(dir, "init", "-q");
+  initRepository(dir);
   assert.equal(fs.realpathSync.native(gitTop(dir)), fs.realpathSync.native(dir));
 });
 
@@ -36,7 +37,7 @@ test("an instance is read against the core it vendors", () => {
 
 test("the log carries each commit's author and its trailers", () => {
   const dir = temp();
-  git(dir, "init", "-q");
+  initRepository(dir);
   git(dir, "commit", "-q", "--allow-empty", "--author", "Backend Engineer <backend-engineer@beacon.example>",
     "-m", "Split the service\n\nVerified: it ran.\n\nProcess: Delivery\nPhase: Build\nTrack: Code\nCo-Authored-By: A <a@b.c>");
   git(dir, "commit", "-q", "--allow-empty", "-m", "The owner's own");
@@ -65,7 +66,7 @@ test("a commit made earlier today is not dropped by --since today", () => {
 
 test("a trailer separated from the last paragraph is no trailer", () => {
   const dir = temp();
-  git(dir, "init", "-q");
+  initRepository(dir);
   git(dir, "commit", "-q", "--allow-empty", "-m", "Subject\n\nProcess: Delivery\nPhase: Build\n\nCo-Authored-By: A <a@b.c>");
   assert.deepEqual(logOf(dir, {})[0].trailers, { process: [], phase: [], track: [] });
 });

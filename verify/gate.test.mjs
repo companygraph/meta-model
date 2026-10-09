@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { GATE_HOOK, MERGE_HOOK } from "../lib/instance-files.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-gate-"));
 const git = (cwd, ...args) => execFileSync("git", ["-c", "user.name=Robert", "-c", "user.email=mira@example.invalid", ...args], { cwd, encoding: "utf8", stdio: "pipe" });
@@ -39,7 +40,7 @@ const pathStub = process.platform === "win32" && "a shebang script with no .exe/
 // finds it whatever the global config says.
 function gated({ verify, model = true } = {}) {
   const dir = temp();
-  git(dir, "init", "-q", "-b", "main");
+  initRepository(dir, ["-b", "main"]);
   git(dir, "config", "init.defaultBranch", "main");
   if (model) {
     fs.mkdirSync(path.join(dir, "model"));
@@ -306,7 +307,7 @@ test("an ids that refuses refuses the commit and shows what ids said", () => {
 
 test("the first commit has nothing to compare, so ids does not run and nothing is said of it", () => {
   const dir = temp();
-  git(dir, "init", "-q");
+  initRepository(dir);
   fs.mkdirSync(path.join(dir, "model"));
   fs.writeFileSync(path.join(dir, "model/README.md"), "# Model\n");
   fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });
@@ -362,7 +363,7 @@ test("without init.defaultBranch, master is the default where there is no main",
   fs.writeFileSync(global, "");
   const env = { COMPANYGRAPH_CLI: stub(), GIT_CONFIG_GLOBAL: global, GIT_CONFIG_NOSYSTEM: "1" };
   const g = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
-  g("init", "-q", "-b", "master");
+  initRepository(dir, ["-b", "master"], { ...process.env, ...env });
   fs.mkdirSync(path.join(dir, "model"));
   fs.writeFileSync(path.join(dir, "model/README.md"), "# Model\n");
   fs.mkdirSync(path.join(dir, ".companygraph/hooks"), { recursive: true });

@@ -5,6 +5,7 @@ import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
 import { FORM_VERSION, markdownFilesOf, formCheck, formattedOf, linterEnvOf } from "../lib/form.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 // Each test's trees have a prefix of their own, apart from the copies formCheck makes, and are
 // removed when the test ends, so a run leaves nothing in the temporary folder.
@@ -49,7 +50,7 @@ test("the walk finds every Markdown file but .git, node_modules, the checker's c
 
 test("the walk leaves out what git ignores, and a new file that is not ignored is read", () => {
   const root = tree(temp(), { ".gitignore": "scratch/\n", "scratch/a.md": WRAPPED, "new.md": CLEAN });
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   assert.deepEqual(markdownFilesOf(root), ["new.md"]);
 });
 
