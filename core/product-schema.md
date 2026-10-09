@@ -20,7 +20,7 @@ A product owns nothing, so it is a file. Nothing owns a product either, and it l
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `domain` | Yes | ref → domain | The area of the company this product belongs to — the H1 of a file in `domains/` |
-| `audience` | No | string | Free-text grouping, e.g. `Staff`. Whether an audience becomes an entity of its own is deliberately open. |
+| `kind` | Yes | ref → product-kind | What sort of thing this product is, the H1 of a file in `product-kinds/` |
 
 ## Sections
 
@@ -47,3 +47,5 @@ A product is something the company ships that somebody uses on its own, and it a
 - The H1 names the product as the people who use it name it, not as its repository or its internal project is named.
 - `domain` names the one domain whose concepts the product's users came to it for. A product that works across two still names one, and the concepts its features name show the rest.
 - The page says nothing about a release, a version or a roadmap: a product outlives all three.
+- `kind` is the one a reader looking for this product would look under first; a product that
+  seems to need two is two products, or sits where most readers would look for it.
