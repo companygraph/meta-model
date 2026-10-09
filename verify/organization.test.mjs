@@ -487,10 +487,10 @@ test("a kind with staff: no is not staff, and a department under its group passe
   assert.deepEqual(f, []);
 });
 
-test("a staff value that is neither yes nor no fails as R8 alone, at the kind", () => {
-  const f = failures(tree((m) => withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "maybe"))));
+test("a staff value that is neither yes nor no fails as R8 alone, at the kind, with a group below it", () => {
+  const f = failures(tree((m) => below("Sales", "Odd")(withLegal(m)).set("model/group-kinds/odd.md", kind("Odd", "yes", "maybe"))));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /staff-unit\.md.*maybe/);
+  assert.match(f[0], /odd\.md.*maybe/);
 });
 
 test("a group under a staff unit whose own kind resolves to nothing fails as R4 alone", () => {
@@ -499,12 +499,28 @@ test("a group under a staff unit whose own kind resolves to nothing fails as R4 
   assert.ok(f.some((x) => x.includes("sales.md") && x.includes("Ghost Kind")), f.join("\n"));
 });
 
-test("a team whose kind says staff but stands outside the line, writing a part-of, fails once, as the line's", () => {
-  const f = failures(tree((m) => m
-    .set("model/group-kinds/team.md", kind("Team", "no", "yes"))
-    .set(TEAM, m.get(TEAM).replace("kind: Team\n", "kind: Team\npart-of: Management\n"))));
+test("a team writing a part-of naming a staff unit fails once, as the line's", () => {
+  const f = failures(tree((m) => withLegal(m).set(TEAM, m.get(TEAM).replace("kind: Team\n", "kind: Team\npart-of: Legal\n"))));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*`part-of` is written on a page whose `kind` does not carry `in-line: yes`/);
+});
+
+test("a department whose part-of names a group of a kind outside the line with staff: yes fails once, as the line's", () => {
+  const f = failures(tree((m) => m
+    .set("model/group-kinds/team.md", kind("Team", "no", "yes"))
+    .set(`${G}/sales.md`, group({ kind: "Department", partOf: "Checkout Team", body: "# Sales\n\n> Sells.\n" }))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /sales\.md.*`part-of` names "Checkout Team", whose `kind` does not carry `in-line: yes`/);
+});
+
+test("a live staff unit under a staff unit that has ended fails once, as the line's", () => {
+  const f = failures(tree((m) => below("Compliance", "Staff Unit")(ending(`${G}/legal.md`, "2025-12")(withLegal(m)))));
+  assert.deepEqual(f, [`${G}/compliance.md: \`part-of\` names "Legal", which has ended (R16)`]);
+});
+
+test("a live department under a staff unit that has ended fails once, as the line's", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(ending(`${G}/legal.md`, "2025-12")(withLegal(m)))));
+  assert.deepEqual(f, [`${G}/sales.md: \`part-of\` names "Legal", which has ended (R16)`]);
 });
 
 test("an agent with a Staff place in a department fails once, as the line's", () => {
