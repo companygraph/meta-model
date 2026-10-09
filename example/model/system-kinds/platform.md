@@ -11,6 +11,6 @@ element: node
 
 ## What it means
 
-A cluster, a database host, a runtime, run by Beacon's engineers on a provider's machines; it does nothing a customer sees.
+A cluster, a database host, run by Beacon's engineers on a provider's machines; it does nothing a customer sees.
 
 Software with a job of its own is Service or SaaS.

@@ -42,7 +42,7 @@ The set is the instance's own. A kind arriving later is one file here, not a cha
 
 ## Purpose
 
-A kind answers "what sort of system is this?" in the company's words, `SaaS`, `Store device`, `Cloud platform`, and carries once the one fact a tool needs, which element it is, so the system page says what staff say and the round trip to an architecture tool stays exact. A kind holds at least one system; a kind no system names is vocabulary nobody uses, and leaves, once the instance holds a system.
+A kind answers "what sort of system is this?" in the company's words, `SaaS`, `Store device`, `Cloud platform`, and carries once the one fact a tool needs, which element it is, so the system page says what staff say and the element comes back exact from an architecture tool, and the kind where the tool carries a specialization. A kind holds at least one system; a kind no system names is vocabulary nobody uses, and leaves, once the instance holds a system.
 
 ## Writing rules
 

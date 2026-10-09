@@ -2,7 +2,7 @@
 
 > Vocabulary for a company that runs systems: the applications it buys and builds, the devices they run on and in, the platforms under them and the networks between them. Level 1, refining core's level 0 for that kind of company.
 
-An instance takes it with `companygraph init --pack landscape`. Every edge from this type to core's is optional, and no core type names it (R20).
+An instance takes it with `companygraph init --pack landscape`. Every edge from these types to core's is optional, and no core type names it (R20).
 
 | Type | What it is | Owned by |
 | --- | --- | --- |
@@ -21,11 +21,12 @@ A system names its kind, a page in the company's words that carries the ArchiMat
 
 ## Mapping to ArchiMate 3.2
 
-The contract a generator reads in either direction: from an architecture tool's export into pages, with the element's GUID as `source-id`, and from pages back into the exchange format. What never comes back is exactly what this table says is dropped.
+The contract a generator reads in either direction: from an architecture tool's export into pages, with the element's GUID as `source-id`, and from pages back into the exchange format. What never comes back is exactly what this table says is dropped. The element is exact in both directions; the kind travels as a specialization where the tool carries one, and two kinds sharing an element are told apart only there.
 
 | ArchiMate 3.2 | Here |
 | --- | --- |
 | ApplicationComponent, ApplicationCollaboration, Node, SystemSoftware, Device, Equipment, CommunicationNetwork | a `system` whose kind's `element` names the one it is; system software is `part-of` its node |
+| Specialization of one of those elements (chapter 15) | a `system-kind`, its name the specialization's and its `element` the element specialized; where a tool carries no specialization, a kind comes back as its element alone |
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | ApplicationService, BusinessService, Capability | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
@@ -47,7 +48,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 
 ## Where it departs from its sources
 
-- One type where ArchiMate has seven across its application, technology and physical layers, and two interfaces that become rows; the kind's `element` names which of the seven a system is, so nothing is lost on the way back.
+- One type where ArchiMate has seven across its application, technology and physical layers, and two interfaces that become rows; the kind's `element` names which of the seven a system is, so the element is exact on the way back, and the kind where the tool carries a specialization.
 - Triggering comes back as Flow: a connection row says what is carried and how, not whether it starts something.
 - An interface is a row, not an element. Its name survives in `As`; its own composition into components and its appearance in views do not.
 - Behavior nobody uses is dropped: application functions, technology services and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
@@ -58,4 +59,4 @@ The contract a generator reads in either direction: from an architecture tool's 
 
 ## Left for later
 
-Location, as a second type of this pack, for the first instance that writes one; an integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; technology services and application functions; license and cost; a generator from an architecture tool's export, which is an instance's own.
+Location, as a third type of this pack, for the first instance that writes one; an integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; technology services and application functions; license and cost; a generator from an architecture tool's export, which is an instance's own.

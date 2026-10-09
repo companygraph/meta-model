@@ -75,9 +75,9 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the
   field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
-- `kind` names what the system is made of, not what it is for: a payment terminal is of a kind
-  whose `element` is `device` whatever it runs, and the software on it, where that is a system of
-  its own, is of an application kind and `part-of` the terminal.
+- `kind` names what sort of system it is, what it is made of and who runs it, not what it is for:
+  a payment terminal is of a kind whose `element` is `device` whatever it runs, and the software on
+  it, where that is a system of its own, is of an application kind and `part-of` the terminal.
 - `realizes` names features of the products staff and customers open, in the words of those
   features; a system that gives nobody anything to do, a network, a camera, realizes nothing and
   names its `domain`, or the processes it `serves`, instead.

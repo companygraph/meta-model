@@ -76,11 +76,9 @@ test("an element outside the seven fails under R8", () => {
 });
 
 test("a kind naming no system kind fails as R4 alone", () => {
-  // The Network kind is then named by no system, so its own R16 gather fails beside the R4.
-  const f = failures(tree(edit(`${S}/store-network.md`, "kind: Network", "kind: Cable")));
-  assert.equal(only(f, "(R4)").length, 1, f.join("\n"));
-  assert.match(only(f, "(R4)")[0], /store-network\.md.*"Cable".*\(R4\)/);
-  assert.equal(f.length, 2, f.join("\n"));
+  const f = failures(tree(edit(`${S}/article-master.md`, "kind: Till software", "kind: Cable")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /article-master\.md.*"Cable".*\(R4\)/);
 });
 
 test("a kind no system names fails, and the message says it is unused", () => {
