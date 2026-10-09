@@ -10,5 +10,5 @@ source: Local
 ## Responsibilities
 
 - Reads every customer contract before it is signed and says what it commits Beacon to.
-- Keeps the invoice format within the invoicing rules of each country Beacon bills in.
+- Checks each new invoice format against the invoicing rules of the country it is for before it ships.
 - Answers a customer's legal question about an invoice in writing.

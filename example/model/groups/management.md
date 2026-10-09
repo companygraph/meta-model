@@ -9,8 +9,9 @@ kind: Department
 
 > The top of Beacon Systems' line, where the company's direction is set and the departments answer.
 
-## Openings
+## People
 
-| Job | Place | Count | Since |
-| --- | --- | --- | --- |
-| Executive Assistant | Staff | | |
+| Profile | Job | Place |
+| --- | --- | --- |
+| Ines Marchetti | Managing Director | Lead |
+| Jonas Whitcombe | Executive Assistant | Staff |
