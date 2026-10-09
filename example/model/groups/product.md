@@ -2,6 +2,7 @@
 id: 01a11732-685a-77fa-b329-a53090054f37
 source: Local
 kind: Department
+rank: 30
 part-of: Management
 ---
 
@@ -20,3 +21,9 @@ part-of: Management
 | Profile | Job | Place |
 | --- | --- | --- |
 | Tomas Reyes | Head of Product | Lead |
+
+## Openings
+
+| Job | Place | Count | Since |
+| --- | --- | --- | --- |
+| Head of Product | Lead | | 2027-01-01 |

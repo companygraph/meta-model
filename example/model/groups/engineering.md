@@ -2,6 +2,7 @@
 id: 01a1152c-3830-7c3f-b3ad-3761dc40528c
 source: Local
 kind: Department
+rank: 20
 part-of: Management
 guides:
   - Backend Engineer
@@ -23,3 +24,9 @@ guides:
 | Profile | Job | Place |
 | --- | --- | --- |
 | Mira Halvorsen | Engineering Lead | Lead |
+
+## Openings
+
+| Job | Place | Count | Since |
+| --- | --- | --- | --- |
+| Backend Engineer | Member | 2 | 2026-11-01 |

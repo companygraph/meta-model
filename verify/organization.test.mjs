@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { checkInstance } from "../lib/checks.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
+import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const core = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
 const pack = (n) => fs.readFileSync(new URL(`../packs/organization/${n}-schema.md`, import.meta.url), "utf8");
@@ -18,7 +20,7 @@ const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  
 // A seat is held in a process; a job is what a person is employed as.
 const seat = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const job = (name, seats = []) => page(list("seats", seats), `# ${name}\n\n> A job.\n\n## Responsibilities\n\n- Does the work.\n`);
-const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
+const kind = (name, inLine, staff) => page(`in-line: ${inLine}\n${staff ? `staff: ${staff}\n` : ""}`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
   `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
   body,
@@ -401,11 +403,172 @@ test("a Place outside the tokens fails as R8 alone", () => {
 test("a People row with a blank Place fails as the required column alone", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | |")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.equal(f[0], `${TEAM}: a "## People" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\``);
+  assert.equal(f[0], `${TEAM}: a "## People" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\`, \`Staff\``);
 });
 
 test("a People profile that resolves to nothing fails as R4 alone", () => {
   const f = failures(tree(edit(TEAM, MIRA, "| Ghost | Backend Engineer | Lead |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
+});
+
+// ## Openings: what a group is looking for, one row per job and place.
+const openings = (rows) => `\n## Openings\n\n| Job | Place | Count | Since |\n| --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const withOpenings = (path, rows) => (m) => m.set(path, m.get(path) + openings(rows));
+
+test("a group with an opening passes, its job drawn as an edge", () => {
+  const files = tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "2", "2026-11-01"]]));
+  assert.deepEqual(failures(files), []);
+  // The parser reads the instance without its folder prefix and against the example's schemas.
+  const model = new Map([...files].filter(([path]) => path.startsWith("model/")).map(([path, text]) => [path.slice("model/".length), text]));
+  model.set("identity.md", page("", "# Acme\n\n> A company.\n\n## What it is\n\nA company.\n"));
+  const { edges } = parseInstance(model, { schemas: exampleSchemas() });
+  const edge = edges.find((e) => e.via === "Openings.Job");
+  assert.ok(edge, JSON.stringify(edges.map((e) => e.via)));
+  assert.deepEqual(edge.attrs, { Place: "Member", Count: "2", Since: "2026-11-01" });
+});
+
+test("an opening with a blank Count and Since passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Designer", "Member", "", ""]]))), []);
+});
+
+test("an open Lead beside a held Lead passes, as a succession", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Lead", "", "2027-01-01"]]))), []);
+});
+
+test("an opening on a team outside the line passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(TEAM, [["Designer", "Member", "1", ""]]))), []);
+});
+
+test("an opening naming no job fails as R4 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Ghost", "Member", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Ghost.*\(R4\)/);
+});
+
+test("an opening naming a seat, which is not a job, fails as R4 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Reviewer", "Member", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Reviewer.*\(R4\)/);
+});
+
+test("an opening whose Place is outside the tokens fails as R8 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Boss", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Boss.*\(R8\)/);
+});
+
+test("an opening with a blank Place fails as the required column alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "", "", ""]])));
+  assert.deepEqual(f, [`${G}/engineering.md: a "## Openings" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\`, \`Staff\``]);
+});
+
+test("a Count written as a word fails once, as R16's written form of a number", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "two", ""]])));
+  assert.deepEqual(f, [`${G}/engineering.md: \`Count\` in "## Openings" is declared \`number\` and says "two"; R16 wants it written as digits`]);
+});
+
+test("a Since written as a word fails once, as R9's form of a date", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "", "soon"]])));
+  assert.deepEqual(f, [`${G}/engineering.md: \`Since\` in "## Openings" is declared \`date\` and says "soon"; R9 wants YYYY, YYYY-MM or YYYY-MM-DD`]);
+});
+
+test("a Since of a year and a month passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "", "2026-11"]]))), []);
+});
+
+test("a Staff place in a People row passes for a human", () => {
+  const f = failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | Staff |")(m)));
+  assert.deepEqual(f, []);
+});
+
+test("an agent with a Staff place in a department fails once, as the line's", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Staff |")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
+});
+
+// A staff unit stays in the line; what hangs below it is staff too.
+const withLegal = (m) => m
+  .set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "yes"))
+  .set(`${G}/legal.md`, group({ kind: "Staff Unit", partOf: "Management", body: "# Legal\n\n> Advises the top on the law.\n" }));
+const below = (name, k) => (m) => m.set(`${G}/${name.toLowerCase()}.md`, group({ kind: k, partOf: "Legal", body: `# ${name}\n\n> Works below Legal.\n` }));
+
+test("a staff unit under the top passes", () => {
+  assert.deepEqual(failures(tree(withLegal)), []);
+});
+
+test("a staff unit under a staff unit passes", () => {
+  assert.deepEqual(failures(tree((m) => below("Compliance", "Staff Unit")(withLegal(m)))), []);
+});
+
+test("a department under a staff unit fails once, at the page", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m))));
+  assert.deepEqual(f, [`${G}/sales.md: \`part-of\` names "Legal", whose \`kind\` carries \`staff: yes\`, and this page's \`kind\` does not (R16)`]);
+});
+
+test("a kind with staff: no is not staff, and a department under its group passes", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "no")))));
+  assert.deepEqual(f, []);
+});
+
+test("a staff value that is neither yes nor no fails as R8 alone, at the kind, with a group below it", () => {
+  const f = failures(tree((m) => below("Sales", "Odd")(withLegal(m)).set("model/group-kinds/odd.md", kind("Odd", "yes", "maybe"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /odd\.md.*maybe/);
+});
+
+test("a staff value that is neither yes nor no on the parent's kind fails as R8 alone, and the page below it adds nothing", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "maybe")))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /staff-unit\.md.*maybe/);
+});
+
+test("a group under a staff unit whose own kind resolves to nothing fails as R4 alone", () => {
+  const f = failures(tree((m) => below("Sales", "Ghost Kind")(withLegal(m))));
+  assert.ok(f.every((x) => !x.includes("carries `staff: yes`")), f.join("\n"));
+  assert.ok(f.some((x) => x.includes("sales.md") && x.includes("Ghost Kind")), f.join("\n"));
+});
+
+test("a team writing a part-of naming a staff unit fails once, as the line's", () => {
+  const f = failures(tree((m) => withLegal(m).set(TEAM, m.get(TEAM).replace("kind: Team\n", "kind: Team\npart-of: Legal\n"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /checkout-team\.md.*`part-of` is written on a page whose `kind` does not carry `in-line: yes`/);
+});
+
+test("a department whose part-of names a group of a kind outside the line with staff: yes fails once, as the line's", () => {
+  const f = failures(tree((m) => m
+    .set("model/group-kinds/team.md", kind("Team", "no", "yes"))
+    .set(`${G}/sales.md`, group({ kind: "Department", partOf: "Checkout Team", body: "# Sales\n\n> Sells.\n" }))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /sales\.md.*`part-of` names "Checkout Team", whose `kind` does not carry `in-line: yes`/);
+});
+
+test("a live staff unit under a staff unit that has ended fails once, as the line's", () => {
+  const f = failures(tree((m) => below("Compliance", "Staff Unit")(ending(`${G}/legal.md`, "2025-12")(withLegal(m)))));
+  assert.deepEqual(f, [`${G}/compliance.md: \`part-of\` names "Legal", which has ended (R16)`]);
+});
+
+test("a live department under a staff unit that has ended fails once, as the line's", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(ending(`${G}/legal.md`, "2025-12")(withLegal(m)))));
+  assert.deepEqual(f, [`${G}/sales.md: \`part-of\` names "Legal", which has ended (R16)`]);
+});
+
+// rank: the company's own order of its groups, unique across them all (R9).
+const ranked = (path, n) => (m) => m.set(path, m.get(path).replace("kind: ", `rank: ${n}\nkind: `));
+
+test("ranked groups beside unranked ones pass", () => {
+  assert.deepEqual(failures(tree((m) => ranked(`${G}/management.md`, 10)(ranked(`${G}/engineering.md`, 20)(m)))), []);
+});
+
+test("two groups sharing a rank fail once, naming both", () => {
+  const f = failures(tree((m) => ranked(`${G}/management.md`, 20)(ranked(`${G}/engineering.md`, 20)(m))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.ok(f[0].startsWith("two group entities share rank 20: "), f[0]);
+  assert.ok(f[0].includes('"Engineering"') && f[0].includes('"Management"'), f[0]);
+});
+
+test("a rank written as a word fails once", () => {
+  const f = failures(tree(ranked(`${G}/engineering.md`, "twenty")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*`rank` is declared `number` and says "twenty"/);
 });
