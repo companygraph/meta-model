@@ -112,3 +112,32 @@ test("a part-of circle of two fails once naming both", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /`part-of` runs in a circle.*"Store network".*"Store server".*\(R16\)/);
 });
+
+test("two systems holding one concept as master fail once naming both", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | master |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /"Article" is in the "## Holds" Concept of model\/systems\/article-master\.md and model\/systems\/point-of-sale\.md; a concept is in the "## Holds" Concept, in a row whose `Access` is `master`, of one system at most \(R16\)/);
+});
+
+test("one master beside writers and readers passes, and a system holding two concepts as master passes", () => {
+  const f = failures(tree((m) => {
+    edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | writes |")(m);
+    edit(`${S}/store-server.md`, "> The machine in the back office the store's applications run on.\n", `> The machine in the back office the store's applications run on.\n${holds([["Article", "reads"], ["Sale", "reads"]])}`)(m);
+    return m;
+  }));
+  assert.deepEqual(f, []);
+});
+
+test("an Access off the list is R8's alone and is not counted as a master", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | Master |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R8\)/);
+});
+
+test("a once entry without where still counts every row, so the organization pack is unchanged", () => {
+  // Proved by npm run test:instance-checks, which runs verify/organization.test.mjs against the
+  // same check; this test pins that a `where` whose column is absent from the table counts no
+  // row, rather than every row.
+  const f = failures(tree(edit(`${S}/article-master.md`, "| Concept | Access |\n| --- | --- |", "| Concept | Mode |\n| --- | --- |")));
+  assert.equal(only(f, "in a row whose").length, 0, f.join("\n"));
+});
