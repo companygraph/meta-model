@@ -13,4 +13,4 @@ location: Zurich
 
 ## Summary
 
-The company's head, kept to a thin file because the model records what the company needs of her, a lead for the top of its line, and leaves her career to the places that publish it.
+Beacon's managing director, kept to a thin file: the model records the lead at the top of the company's line and leaves the career to the places that publish it.

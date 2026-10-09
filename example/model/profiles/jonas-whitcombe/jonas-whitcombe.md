@@ -13,4 +13,4 @@ location: Zurich
 
 ## Summary
 
-Kept to a thin file for the same reason as the managing director's: the model needs the person and the place they hold, not a history of how they came to it.
+Beacon's executive assistant, kept to a thin file for the same reason as the managing director's: the model needs the person and the place they hold, not a history of how they came to it.
