@@ -18,7 +18,7 @@ const kind = (name, rank, { meaning = true } = {}) => ["---", "source: Local", `
   ...(meaning ? ["## What it means", "", "Opened by a customer. A thing a developer connects is API.", ""] : [])].join("\n");
 const product = (name, fm) => ["---", ...fm, "---", "", `# ${name}`, "", "> What it is, and who opens it.", ""].join("\n");
 
-const tree = ({ kinds = [["Application", 10], ["API", 20]], fm = ["source: Local", "domain: Pricing", "kind: Application"], products = true, missingMeaning = false } = {}) => new Map([
+const tree = ({ kinds = [["Application", 10], ["API", 20]], fm = ["source: Local", "domain: Pricing", "kind: Application"], fm2 = ["source: Local", "domain: Pricing", "kind: API"], products = true, missingMeaning = false } = {}) => new Map([
   ["meta/core/product-kind-schema.md", real("product-kind")],
   ["meta/core/product-schema.md", real("product")],
   ["meta/core/source-schema.md", bare("source", "model/sources/*.md")],
@@ -30,7 +30,7 @@ const tree = ({ kinds = [["Application", 10], ["API", 20]], fm = ["source: Local
   ...kinds.map(([n, r], i) => [`model/product-kinds/${n.toLowerCase()}.md`, kind(n, r, { meaning: !(missingMeaning && i === 0) })]),
   ...(products ? [
     ["model/products/billing-console.md", product("Billing Console", fm)],
-    ["model/products/usage-api.md", product("Usage API", ["source: Local", "domain: Pricing", "kind: API"])],
+    ["model/products/usage-api.md", product("Usage API", fm2)],
   ] : []),
 ]);
 const failures = (opts) => checkInstance(tree(opts), { core: "meta/core", model: "model" }).failures;
@@ -51,7 +51,7 @@ test("a product still carrying audience fails as a field the schema does not dec
 });
 
 test("a kind naming no product kind fails", () => {
-  assert.equal(about("products/billing-console.md", { fm: ["source: Local", "domain: Pricing", "kind: Pricing"] }, "\"Pricing\"").length, 1);
+  assert.equal(about("products/billing-console.md", { fm: ["source: Local", "domain: Pricing", "kind: Gadget"] }, "\"Gadget\"").length, 1);
 });
 
 test("a kind naming a question kind of that name fails, because the reference resolves by its declared type", () => {
@@ -73,8 +73,14 @@ test("a product kind with no What it means fails, so the folder is read", () => 
 test("a kind no product names fails, and the message says it is unused rather than folded", () => {
   const f = about("product-kinds/page.md", { kinds: [["Application", 10], ["API", 20], ["Page", 30]] }, "0 product pages name it in `kind`");
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /vocabulary nobody uses \(R16\)/);
+  assert.match(f[0], /vocabulary nobody uses: name it from a page or remove it \(R16\)/);
   assert.doesNotMatch(f[0], /folded/);
+});
+
+test("products and no kinds at all fail on each product's missing kind and nowhere else", () => {
+  const f = failures({ kinds: [], fm: ["source: Local", "domain: Pricing"], fm2: ["source: Local", "domain: Pricing"] });
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.ok(f.every((x) => x.includes("no `kind`")), f.join("\n"));
 });
 
 test("an instance with kinds and no products passes, since there is nothing to gather yet", () => {
