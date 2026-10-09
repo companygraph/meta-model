@@ -326,6 +326,7 @@ export declare const slug: (s: string) => string;
 export declare const isNewer: (a: string, b: string) => boolean;
 export declare const TYPE_VOCABULARY: Set<string>;
 export declare const DATE: RegExp;
+export declare const DIGITS: RegExp;
 export declare const IMAGE_BOUNDS: {
     min: number;
     max: number;

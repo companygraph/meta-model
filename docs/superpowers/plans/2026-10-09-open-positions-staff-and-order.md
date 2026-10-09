@@ -202,7 +202,7 @@ Subject: `A group says which positions it is looking to fill`. Body: why first (
 **Interfaces:**
 
 - Consumes: the `Staff` token from Task 1.
-- Produces: `TypeEntry.inherits: { field: string, via: string, carries: string, is: string }`, read by the new check named `what a field names passes on what its kind carries`.
+- Produces: `TypeEntry.inherits: { field: string, via: string, carries: string, is: string }`, read by the new check named `a page under one that carries a value carries it too`.
 
 - [ ] **Step 1: Write the failing tests**
 
@@ -320,7 +320,7 @@ After the check named `"a field that runs inside a set runs only from and to wha
     // nothing outside itself. Only `is` passes on; a blank or another token does not. A `via`
     // that resolves to nothing is R4's, and a value off the field's tokens R8's, so neither is
     // judged here. Stated on the type's row; no type is named.
-    name: "what a field names passes on what its kind carries",
+    name: "a page under one that carries a value carries it too",
     rule: "R16",
     run() {
       for (const t of TYPES) {
