@@ -38,14 +38,14 @@ Status: decided by the owner on October 9, 2026, one question at a time. A kind 
 
 `## References` is the What and URL table every type carries.
 
-Purpose, as the schema will say it: a kind answers "what sort of thing does this company ship?", the question a reader cannot otherwise ask of a folder that holds a box of pralines, an online shop and the systems behind a store side by side. Its value is that the answer is a reference rather than a word: two products of one kind are the same sort of thing, a surface can draw the products of one kind together, and the chat can say what the company ships from the model rather than from its own reading. A kind holds at least one product; a kind no product names is vocabulary nobody uses, and leaves.
+Purpose, as the schema will say it: a kind answers "what sort of thing does this company ship?", the question a reader cannot otherwise ask of a folder that holds a box of pralines, an online shop and the systems behind a store side by side. Its value is that the answer is a reference rather than a word: two products of one kind are the same sort of thing, a surface can draw the products of one kind together, and the chat can say what the company ships from the model rather than from its own reading. A kind holds at least one product; a kind no product names is vocabulary nobody uses, and leaves, once the instance holds a product.
 
 Writing rules:
 
 - `## What it means` says who opens a product of this kind, a customer, a franchisee, the company's own staff, since that is the one sentence that tells a channel from the systems behind it, and it has nowhere else to live. It is where `audience` went.
 - `## What it means` says what the kind excludes as well as what it covers. The boundary between a channel and the thing sold through it, or between what IT provides and what the business sells, is where every disagreement will be.
 - `## What it means` is about the sort of thing, never about how well a product of it does, how many there are or what they earn. Those belong to the product, or to nothing in the model.
-- The H1 names what the product *is*, `Channel`, `IT product`, not the type it belongs to, `Product`, and not a market or a business unit.
+- The H1 names what a product of this kind is, `Channel`, `IT product`, and never the type, `Product`, a market or a business unit.
 - The page writes names and prose in the model's language (R14), as every page does.
 
 ## What `product` declares after it
