@@ -4,7 +4,7 @@
 import fs from "node:fs";
 import { fileURLToPath } from "node:url";
 
-export const EXAMPLE_PACKS = ["organization"];
+export const EXAMPLE_PACKS = ["organization", "landscape"];
 
 const ROOT = fileURLToPath(new URL("..", import.meta.url));
 

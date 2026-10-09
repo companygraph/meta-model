@@ -52,7 +52,7 @@ export type TypeEntry = {
      */
     acyclic?: string;
     /**
-     * Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
+     * Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `where`, only rows whose `where.column` cell holds `where.is` count, so one system holds a concept as master while any number read it; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
      */
     once?: ({
         field: string;
@@ -65,6 +65,10 @@ export type TypeEntry = {
     } | {
         section: string;
         column: string;
+        where?: {
+            column: string;
+            is: string;
+        };
         when?: {
             via: string;
             field: string;
@@ -229,7 +233,7 @@ export type Check = {
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it; an edge the type's `within` does not admit is that check's and is not followed.
- * @property {({ field: string, when?: { via: string, field: string, is: string }, until?: string } | { section: string, column: string, when?: { via: string, field: string, is: string }, until?: string })[]} [once] Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
+ * @property {({ field: string, when?: { via: string, field: string, is: string }, until?: string } | { section: string, column: string, where?: { column: string, is: string }, when?: { via: string, field: string, is: string }, until?: string })[]} [once] Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `where`, only rows whose `where.column` cell holds `where.is` count, so one system holds a concept as master while any number read it; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
  * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
  * @property {{ field: string, via: string, carries: string, is: string }} [inherits] A field naming an entity of the page's own type whose `via` entity carries `carries: is`, written only on a page whose own `via` entity carries it too; a blank `carries` is not `is`. A page `within` refuses on the same field, and a value R4 or R8 refuses, is that check's and is not read again.
  * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.

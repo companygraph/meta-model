@@ -1497,6 +1497,16 @@ test("init --pack organization vendors the pack, and the instance it writes pass
   assert.doesNotThrow(() => run(["check", root]));
 });
 
+test("init --pack landscape vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["landscape"]);
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "model/systems")), "the pack's folder is made");
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
 // An instance that took a pack reads the pack's schemas wherever the history commands read the
 // model: a bounded context's page sits in a folder only the pack's schema declares, and without
 // them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
