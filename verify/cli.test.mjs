@@ -716,6 +716,7 @@ test("upgrade writes a README for model/seats/ when the old model/roles/ had non
   fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
   const said = run(["upgrade", root]);
   assert.doesNotMatch(said, /still name roles/);
+  assert.match(said, /written, since the instance had none, and its own from now on: .*model\/seats\/README\.md/);
   assert.ok(!fs.existsSync(path.join(root, "model/roles")));
   assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
   assert.doesNotThrow(() => run(["check", root]));
@@ -740,6 +741,21 @@ test("upgrade names only the owner's own files that still say roles, and never w
   const said = run(["upgrade", root]);
   assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}docs\/notes\.md\n(?! {4})/);
   assert.doesNotMatch(said, /\.obsidian|\.claudian/);
+});
+
+test("upgrade judges a seats README that git ignores by the word role alone, as it always has", () => {
+  for (const [text, named] of [["# Seats\n\nSee roles.md and model/roles/.\n", false], ["# Seats\n\nOne file per role.\n", true]]) {
+    const root = temp();
+    run(["init", root, "--name", "Acme", "--agent", "claude"]);
+    fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+    fs.mkdirSync(path.join(root, "model/roles"));
+    fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+    fs.writeFileSync(path.join(root, "model/roles/README.md"), text);
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    fs.writeFileSync(path.join(root, ".gitignore"), "model/seats/README.md\n");
+    const said = run(["upgrade", root]);
+    assert.equal(/still name roles; yours to edit:\n(?: {4}.*\n)*? {4}model\/seats\/README\.md\n/.test(said), named, said);
+  }
 });
 
 test("upgrade outside a git repository skips dot-directories when it names the files that still say roles", () => {

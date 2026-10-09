@@ -478,15 +478,19 @@ function namedAsStillRoles(root, units) {
   }
   /** @type {Map<string, string>} */
   const texts = new Map();
-  // The seats README is looked at wherever it is, since the owner wrote it about roles.
-  for (const at of [...candidates.filter((path) => isInstancesOwn(path, units)), "model/seats/README.md"]) {
+  for (const at of candidates.filter((path) => isInstancesOwn(path, units))) {
     // A listed path may be deleted, a submodule or a link to a folder.
-    if (texts.has(at) || !existsSync(join(root, at)) || !statSync(join(root, at)).isFile()) continue;
+    if (!existsSync(join(root, at)) || !statSync(join(root, at)).isFile()) continue;
     const bytes = readFileSync(join(root, at));
     if (bytes.includes(0)) continue;
     texts.set(at, bytes.toString("utf8"));
   }
-  return stillNamingRoles(texts, units);
+  const found = stillNamingRoles(texts, units);
+  // The seats README is read whether or not git lists it, since the owner wrote it about roles; one
+  // git does not list is judged by that word alone, as only the files git lists are searched for paths.
+  const seats = join(root, "model/seats/README.md");
+  if (!texts.has("model/seats/README.md") && existsSync(seats) && /\brole\b/i.test(readFileSync(seats, "utf8"))) found.push("model/seats/README.md");
+  return found.sort();
 }
 
 /** @param {string[]} argv */
