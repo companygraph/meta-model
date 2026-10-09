@@ -16,13 +16,14 @@ const AGG = `${BC}/billing/aggregates/invoice.md`;
 const FD = "model/feature-designs/issue-an-invoice.md";
 
 const tree = (change = (m) => m) => change(new Map([
-  ...["source", "identifier", "domain", "concept", "product", "feature"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
+  ...["source", "identifier", "domain", "concept", "product", "product-kind", "feature"].map((n) => [`meta/core/${n}-schema.md`, core(n)]),
   ...["bounded-context", "concept-design", "aggregate", "domain-event", "feature-design"].map((n) => [`meta/software/${n}-schema.md`, pack(n)]),
   ["model/identifier.md", page("format: uuidv7\n", "# Entity id\n\n> What an id is for.\n")],
   ["model/sources/local.md", `---\nid: ${uuidv7()}\n---\n\n# Local\n\n> Here.\n`],
   ["model/domains/invoicing.md", page("", "# Invoicing\n\n> What a customer is asked to pay. Pricing is left to Pricing.\n")],
+  ["model/product-kinds/application.md", page("rank: 10\n", "# Application\n\n> Software a customer's own people sign in to.\n\n## What it means\n\nOpened by a customer's staff, signed in. A page reached from a link is not this kind.\n")],
   ["model/concepts/invoice.md", page("domain: Invoicing\n", "# Invoice\n\n> A request for payment.\n")],
-  ["model/products/billing-console.md", page("domain: Invoicing\n", "# Billing Console\n\n> Where finance runs billing.\n")],
+  ["model/products/billing-console.md", page("domain: Invoicing\nkind: Application\n", "# Billing Console\n\n> Where finance runs billing.\n")],
   ["model/features/billing-run.md", page("products:\n  - Billing Console\n", "# Billing run\n\n> A period is closed at once.\n\n## Description\n\nIt issues every invoice for a period and stops there.\n")],
   [`${BC}/billing/billing.md`, page("classification: core\nrealizes:\n  - Invoicing\n", "# Billing\n\n> Issues invoices. Telling the customer is left to Notification.\n\n## Responsibilities\n\n- Issue an invoice for a closed period\n")],
   [`${BC}/billing/concept-designs/invoice.md`, page("kind: entity\nrefines: Invoice\n", "# Invoice\n\n> The document a customer is asked to pay, once issued.\n\n## Attributes\n\n| Attribute | Term | Type | Many | Description |\n| --- | --- | --- | --- | --- |\n| Total | Amount | | | What is owed |\n\n## Relations\n\n| Concept | Cardinality | As |\n| --- | --- | --- |\n| Amount | one | |\n")],
