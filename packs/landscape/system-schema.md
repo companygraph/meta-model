@@ -55,7 +55,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Concept` | Yes | ref → concept | What the system keeps data of, by its canonical name |
-| `Access` | Yes | enum | `master`, `writes` or `reads`. The one system whose copy leads, a system that writes a copy, or one that only reads (ArchiMate 3.2, access relationship). |
+| `Access` | Yes | enum | `master`, `writes` or `reads`. The one system whose copy leads, a system that writes a copy, or one that only reads (ArchiMate 4, access relationship). |
 
 `## References` is a table with these columns:
 

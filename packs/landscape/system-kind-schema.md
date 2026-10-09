@@ -22,7 +22,7 @@ The set is the instance's own. A kind arriving later is one file here, not a cha
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
 | `rank` | Yes | number | The kind's position wherever systems are drawn grouped. Spaced in tens so a kind can be added without renumbering the others. |
-| `element` | Yes | enum | `application-component`, `application-collaboration`, `node`, `system-software`, `device`, `equipment` or `communication-network`. The ArchiMate 3.2 element a system of this kind is, read by a generator in either direction (chapters 9 to 11). |
+| `element` | Yes | enum | `application-component`, `node`, `system-software`, `device`, `equipment` or `communication-network`. The ArchiMate 4 element a system of this kind is, an internal active structure element of the Application or Technology Domain (chapters 9 and 10), read by a generator in either direction; the kind is that element's profile-based specialization (§14.2). |
 
 ## Sections
 

@@ -69,7 +69,7 @@ test("a small instance written in the pack passes, two interfaces to one system 
   assert.deepEqual(failures(tree()), []);
 });
 
-test("an element outside the seven fails under R8", () => {
+test("an element outside the six fails under R8", () => {
   const f = failures(tree(edit("model/system-kinds/store-device.md", "element: device", "element: gadget")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /store-device\.md.*gadget.*\(R8\)/);
