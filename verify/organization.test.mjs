@@ -401,11 +401,64 @@ test("a Place outside the tokens fails as R8 alone", () => {
 test("a People row with a blank Place fails as the required column alone", () => {
   const f = failures(tree(edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | |")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.equal(f[0], `${TEAM}: a "## People" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\``);
+  assert.equal(f[0], `${TEAM}: a "## People" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\`, \`Staff\``);
 });
 
 test("a People profile that resolves to nothing fails as R4 alone", () => {
   const f = failures(tree(edit(TEAM, MIRA, "| Ghost | Backend Engineer | Lead |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /checkout-team\.md.*Ghost.*\(R4\)/);
+});
+
+// ## Openings: what a group is looking for, one row per job and place.
+const openings = (rows) => `\n## Openings\n\n| Job | Place | Count | Since |\n| --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const withOpenings = (path, rows) => (m) => m.set(path, m.get(path) + openings(rows));
+
+test("a group with an opening passes, its job drawn as an edge", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "2", "2026-11-01"]]))), []);
+});
+
+test("an opening with a blank Count and Since passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Designer", "Member", "", ""]]))), []);
+});
+
+test("an open Lead beside a held Lead passes, as a succession", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Lead", "", "2027-01-01"]]))), []);
+});
+
+test("an opening on a team outside the line passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(TEAM, [["Designer", "Member", "1", ""]]))), []);
+});
+
+test("an opening naming no job fails as R4 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Ghost", "Member", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Ghost.*\(R4\)/);
+});
+
+test("an opening naming a seat, which is not a job, fails as R4 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Reviewer", "Member", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Reviewer.*\(R4\)/);
+});
+
+test("an opening whose Place is outside the tokens fails as R8 alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Boss", "", ""]])));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*Boss.*\(R8\)/);
+});
+
+test("an opening with a blank Place fails as the required column alone", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "", "", ""]])));
+  assert.deepEqual(f, [`${G}/engineering.md: a "## Openings" row has no Place — one of \`Lead\`, \`Deputy\`, \`Member\`, \`Staff\``]);
+});
+
+test("a Count written as a word fails once, as R16's written form of a number", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "two", ""]])));
+  assert.deepEqual(f, [`${G}/engineering.md: \`Count\` in "## Openings" is declared \`number\` and says "two"; R16 wants it written as digits`]);
+});
+
+test("a Staff place in a People row passes for a human", () => {
+  const f = failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | Staff |")(m)));
+  assert.deepEqual(f, []);
 });
