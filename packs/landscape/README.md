@@ -30,7 +30,9 @@ The contract a generator reads in either direction: from an architecture tool's 
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | Service, Capability (Common and Strategy Domains) | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
-| Process, Role, Business Actor | core `process`, `seat`, `profile` |
+| Process | core `process` |
+| Role | core `seat`: the responsibility, held by whoever holds it; a role assigned to an application component is a seat held by an agent |
+| Business Actor | an Individual is a core `profile`, an Organizational Unit the organization pack's `group`, the Organization core `identity` (the three example specializations of §14.2.2) |
 | Realization, system to service | `realizes` |
 | Serving, system to process | `serves` |
 | Serving or Realization, node or system software to application | `part-of`: the application is part of what it runs on |
