@@ -45,4 +45,4 @@ A person sits in a unit in a job, in a row of the unit's `## People`, and the di
 
 ## Left for later
 
-Edges from a group to KPIs and processes; a transitive form of `part-of`; a check that a person in a job holds the seats the job names. An org chart is drawn by companygraph/mcp-server's `diagram` tool, shape `organization`.
+Edges from a group to KPIs and processes; a transitive form of `part-of`; a check that a person in a job holds the seats the job names.
