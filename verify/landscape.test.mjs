@@ -134,10 +134,11 @@ test("an Access off the list is R8's alone and is not counted as a master", () =
   assert.match(f[0], /\(R8\)/);
 });
 
-test("a once entry without where still counts every row, so the organization pack is unchanged", () => {
-  // Proved by npm run test:instance-checks, which runs verify/organization.test.mjs against the
-  // same check; this test pins that a `where` whose column is absent from the table counts no
-  // row, rather than every row.
-  const f = failures(tree(edit(`${S}/article-master.md`, "| Concept | Access |\n| --- | --- |", "| Concept | Mode |\n| --- | --- |")));
-  assert.equal(only(f, "in a row whose").length, 0, f.join("\n"));
+test("two systems writing one concept pass, since only the master rows count", () => {
+  const f = failures(tree((m) => {
+    edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | writes |")(m);
+    edit(`${S}/article-master.md`, "| Article | master |", "| Article | writes |")(m);
+    return m;
+  }));
+  assert.deepEqual(f, []);
 });
