@@ -1,6 +1,7 @@
 ---
 id: 01a1152c-3830-7c3f-b3ad-3761dc40528c
 source: Local
+rank: 20
 kind: Department
 part-of: Management
 guides:
@@ -23,3 +24,9 @@ guides:
 | Profile | Job | Place |
 | --- | --- | --- |
 | Mira Halvorsen | Engineering Lead | Lead |
+
+## Openings
+
+| Job | Place | Count | Since |
+| --- | --- | --- | --- |
+| Backend Engineer | Member | 2 | 2026-11-01 |
