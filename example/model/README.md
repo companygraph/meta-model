@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`. That is what core and the pack ship, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`, and the `landscape` pack, whose type is `system`. That is what core and the pack ship, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -19,6 +19,7 @@ groups/                          management.md, engineering.md, product.md,
                                  billing-run-team.md
 jobs/                            engineering-lead.md, head-of-product.md,
                                  backend-engineer.md, product-engineer.md
+systems/                         billing-service.md, beacon-cluster.md, invoice-mailer.md
 seats/                           backend-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 features/                        billing-run.md, charge-explanation.md, credit-notes.md,
@@ -64,4 +65,4 @@ profiles/ai-agent/               ai-agent.md — an agent, holding the Reviewer 
 
 Everything here sits under `model/`. What an instance keeps beside it — the vendored `meta/`, its tooling, its working documents — is not content and is never walked as content.
 
-There are no schemas here. This instance is read beside `core/` and `packs/organization/` and is written against the schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away has no such neighbor and keeps a copy; where is theirs to decide, so long as it is not inside a folder named for a type.
+There are no schemas here. This instance is read beside `core/`, `packs/organization/` and `packs/landscape/` and is written against the schemas there — one copy, which cannot drift from a second. An adopter who takes `core/` away has no such neighbor and keeps a copy; where is theirs to decide, so long as it is not inside a folder named for a type.
