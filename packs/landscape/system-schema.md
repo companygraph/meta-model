@@ -46,7 +46,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `System` | Yes | ref → system | The system the data comes from, by its canonical name |
-| `As` | No | string | The interface the connection goes through, by its own name: `Paymentnetwork – Adyen`. Required where two rows name the same system (R16). |
+| `As` | No | string | The interface the connection goes through, by its own name: `Payment network – Tillpay`. Required where two rows name the same system (R16). |
 | `Carries` | No | qualifier → concept | What the connection carries, by the concept's canonical name |
 | `Via` | No | string | How it is carried: a protocol, a file, a message queue |
 
@@ -70,9 +70,9 @@ A system answers "what does this run on, what does it carry, who owns it and wha
 
 ## Writing rules
 
-- The H1 names the system as staff name it, `POS Kassensystem`, `Filialsystem`, and never by its
+- The H1 names the system as staff name it, `Kassensystem`, `Filialsystem`, and never by its
   vendor or its product name alone; the vendor goes to `vendor`. An architecture tool's habit of
-  writing both into one name, `POS Kassensystem – Comarch Retail`, splits into the H1 and the
+  writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the
   field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
 - `kind` is what the system is made of, not what it is for: a payment terminal is a `device`
