@@ -61,7 +61,7 @@ Writing rules:
 
 - The H1 names the system as staff name it, `POS Kassensystem`, `Filialsystem`, and never by its vendor or its product name alone; the vendor goes to `vendor`. An architecture tool's habit of writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
-- `kind` names what the system is made of, not what it is for: a payment terminal is of a kind whose `element` is `device` whatever it runs, and the software on it, where that is a system of its own, is of an application kind and `part-of` the terminal.
+- `kind` names what sort of system it is, what it is made of and who runs it, not what it is for: a payment terminal is of a kind whose `element` is `device` whatever it runs, and the software on it, where that is a system of its own, is of an application kind and `part-of` the terminal.
 - `realizes` names features of the products staff and customers open, in the words of those features; a system that gives nobody anything to do, a network, a camera, realizes nothing and names its `domain`, or the processes it `serves`, instead.
 - `## Connects to` is written on the system that takes the data. An exchange both ways is two rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`: the one whose copy the others are copies of.
@@ -70,24 +70,26 @@ Writing rules:
 
 ## The kind
 
-`system-kind` is owned by nothing, so its files sit in the container, `model/system-kinds/*.md`, beside `systems/`, as `product-kinds/` sits beside `products/`. Its frontmatter is `id`, `source`, `source-id`, `rank` (Yes, number, spaced in tens, for wherever systems are drawn grouped) and `element` (Yes, enum): `application-component`, `application-collaboration`, `node`, `system-software`, `device`, `equipment` or `communication-network`, the ArchiMate 3.2 element a system of this kind is (chapters 9 to 11), read by a generator in either direction. Its sections are `# [Label]`, `> [Summary]`, `## What it means` (Yes: what a system of this kind is made of, who runs or holds it, and which systems are not of it) and `## References`. Its purpose: a kind answers "what sort of system is this?" in the company's words, `SaaS`, `Store device`, `Cloud platform`, and carries once the one fact a tool needs, which element it is, so the system page says what staff say and the round trip stays exact. A kind no system names is vocabulary nobody uses, once the instance holds a system. Writing rules: `## What it means` says what a system of this kind is made of and who runs it, and what the kind excludes; the H1 names what the system is, `SaaS`, never the element, `Application component`; the page writes names and prose in the model's language (R14).
+`system-kind` is owned by nothing, so its files sit in the container, `model/system-kinds/*.md`, beside `systems/`, as `product-kinds/` sits beside `products/`. Its frontmatter is `id`, `source`, `source-id`, `rank` (Yes, number, spaced in tens, for wherever systems are drawn grouped) and `element` (Yes, enum): `application-component`, `application-collaboration`, `node`, `system-software`, `device`, `equipment` or `communication-network`, the ArchiMate 3.2 element a system of this kind is (chapters 9 to 11), read by a generator in either direction. Its sections are `# [Label]`, `> [Summary]`, `## What it means` (Yes: what a system of this kind is made of, who runs or holds it, and which systems are not of it) and `## References`. Its purpose: a kind answers "what sort of system is this?" in the company's words, `SaaS`, `Store device`, `Cloud platform`, and carries once the one fact a tool needs, which element it is, so the system page says what staff say and the element comes back exact. A kind no system names is vocabulary nobody uses, once the instance holds a system. Writing rules: `## What it means` says what a system of this kind is made of and who runs it, and what the kind excludes; the H1 names what the system is, `SaaS`, never the element, `Application component`; the page writes names and prose in the model's language (R14).
 
 ## The checks it owes
 
-Two norms span pages, so each is an instance check shipped with the pack, not a writing rule:
+Three norms span pages, so each is an instance check shipped with the pack, not a writing rule:
 
 - `part-of` forms no cycle, as a group's does in the organization pack and by the same check.
 - A concept is held as `master` by at most one system across the instance. Two masters is the question the maturity report could not answer; the check answers it with a failure naming both.
+- A kind is named by at least one system, by the `gathers` check a product kind already uses.
 
-What a single page says is held by the grammar: `kind`, `lifecycle`, `criticality` and `Access` by R8's enum check, every reference by R4, `As` on repeated systems by R16, and a pack naming only core's types and its own by R20.
+What a single page says is held by the grammar: `element`, `lifecycle`, `criticality` and `Access` by R8's enum check, `kind` and every other reference by R4, `As` on repeated systems by R16, and a pack naming only core's types and its own by R20. Which pairs of elements a `part-of` may join is not held: a node holds the system software and applications on it, a device the node it is, and a `part-of` between two kinds whose elements ArchiMate does not relate is left for later, with the export that would meet it.
 
 ## The mapping to ArchiMate 3.2
 
-The pack's README carries this table, one line per element type, relationship and enum token, and it is the contract a generator reads: from an architecture tool's export into pack pages, with the element GUID as `source-id`, and from pack pages back into the Open Exchange Format. What never comes back is exactly what the table says is dropped.
+The pack's README carries this table, one line per element type, relationship and enum token, and it is the contract a generator reads: from an architecture tool's export into pack pages, with the element GUID as `source-id`, and from pack pages back into the Open Exchange Format. What never comes back is exactly what the table says is dropped. The element is exact in both directions; the kind travels as a specialization where the tool carries one, and two kinds sharing an element are told apart only there.
 
 | ArchiMate 3.2 | Here |
 | --- | --- |
 | ApplicationComponent, ApplicationCollaboration, Node, SystemSoftware, Device, Equipment, CommunicationNetwork | a `system` whose kind's `element` names the one it is; system software is `part-of` its node |
+| Specialization of one of those elements (chapter 15) | a `system-kind`, its name the specialization's and its `element` the element specialized; where a tool carries no specialization, a kind comes back as its element alone |
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | ApplicationService, BusinessService, Capability | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
@@ -125,7 +127,7 @@ The grammar needs no change.
 
 ## Where this departs from its sources
 
-1. **One type where ArchiMate has seven** across its application, technology and physical layers, and two interfaces that become rows; the kind's `element` names which of the seven a system is, so nothing is lost on the way back.
+1. **One type where ArchiMate has seven** across its application, technology and physical layers, and two interfaces that become rows; the kind's `element` names which of the seven a system is, so the element is exact on the way back, and the kind where the tool carries a specialization.
 2. **An interface is a row, not an element.** Its name survives in `As`; its own composition into components and its appearance in views do not.
 3. **Behavior nobody uses is dropped.** Application functions, technology services and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
 4. **Capabilities and business services are not pack types.** They are features of the products staff open, which is where the retailer's Store capabilities already land once the product kind says that an IT product is a product.
@@ -136,7 +138,7 @@ The grammar needs no change.
 
 ## What was left out
 
-Location, a type that would hold the retailer's 33 locations and the devices in them, which waits for the first instance that writes one and arrives as a second type of this pack. An integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; the rows move to it then. Technology services and application functions, should an instance want internal behavior named. License and cost. A generator from an architecture tool's export, which is the instance's own and reads the mapping table. Views and diagrams, which a consumer draws from the graph as the design decided for concepts.
+A check that a `part-of` joins two kinds whose elements ArchiMate relates. Location, a type that would hold the retailer's 33 locations and the devices in them, which waits for the first instance that writes one and arrives as a second type of this pack. An integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; the rows move to it then. Technology services and application functions, should an instance want internal behavior named. License and cost. A generator from an architecture tool's export, which is the instance's own and reads the mapping table. Views and diagrams, which a consumer draws from the graph as the design decided for concepts.
 
 ## Out of scope
 
