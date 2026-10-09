@@ -30,7 +30,7 @@ In core's words, each of those packages is a product of the IT product kind, ope
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
-| `kind` | Yes | enum | `application`, `device`, `platform` or `network`. Software somebody uses or that serves other software; a physical thing that computes, prints, weighs or pays; what applications run on, a node, system software, a cloud service; or what connects systems (ArchiMate 3.2, chapters 9 and 10). |
+| `kind` | Yes | enum | `application`, `device`, `platform` or `network`. Software somebody uses or that serves other software; a physical thing that computes, prints, weighs or pays; what applications run on, a node, system software, a cloud service; or what connects systems (ArchiMate 3.2, chapters 9 to 11). |
 | `vendor` | No | string | Who makes it. A name, not a reference: a vendor is an entity only when it processes personal data, which `processor` says. |
 | `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
@@ -62,9 +62,10 @@ Writing rules:
 - The H1 names the system as staff name it, `POS Kassensystem`, `Filialsystem`, and never by its vendor or its product name alone; the vendor goes to `vendor`. An architecture tool's habit of writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
 - `kind` is what the system is made of, not what it is for: a payment terminal is a `device` whatever it runs, and the software on it, where that is a system of its own, is an `application` that is `part-of` the terminal.
-- `realizes` names features of the products staff and customers open, in the words of those features; a system that gives nobody anything to do, a network, a camera, realizes nothing and names its `domain` instead.
+- `realizes` names features of the products staff and customers open, in the words of those features; a system that gives nobody anything to do, a network, a camera, realizes nothing and names its `domain`, or the processes it `serves`, instead.
 - `## Connects to` is written on the system that takes the data. An exchange both ways is two rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`: the one whose copy the others are copies of.
+- `## Holds` names each concept once, at its strongest access: a system that writes a concept reads it too, and a row for each would draw one edge twice.
 - The page states no cost, no license count and no version. Those move, and a contract register or a configuration database holds them.
 
 ## The checks it owes
@@ -89,14 +90,19 @@ The pack's README carries this table, one line per element type, relationship an
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | ApplicationService, BusinessService, Capability | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
-| BusinessProcess, BusinessActor, BusinessRole | core `process`, `seat`, `profile` |
+| BusinessProcess, BusinessRole, BusinessActor | core `process`, `seat`, `profile` |
 | Realization, system to service | `realizes` |
 | Serving, system to process | `serves` |
+| Serving or Realization, node or system software to application | `part-of`: the application is part of what it runs on |
+| Serving, application to application | a `## Connects to` row on the served side |
 | Composition, Aggregation, Assignment between systems | `part-of`, inverse derived |
-| Flow, Triggering between systems | a `## Connects to` row |
+| Flow between systems | a `## Connects to` row |
+| Triggering between systems | a `## Connects to` row; it comes back as Flow |
 | Access, with its mode | a `## Holds` row, `Access` as `writes` or `reads`, the leading writer `master` |
+| Access with no mode | a `## Holds` row, `Access` as `reads` |
 | ApplicationFunction, TechnologyService, TechnologyFunction, Artifact | dropped: internal behavior nobody can name a user of |
 | Location | not yet; see below |
+| Path, TechnologyCollaboration, Facility, DistributionNetwork | not yet, with Location |
 | Association, untyped | dropped: an edge that says nothing |
 | Views | not held; a consumer draws the graph |
 
@@ -118,13 +124,14 @@ The grammar needs no change.
 
 ## Where this departs from its sources
 
-1. **One type where ArchiMate has nine** across its application and technology layers; the kind carries the layer.
+1. **One type where ArchiMate has seven** across its application, technology and physical layers, and two interfaces that become rows; the kind carries the layer.
 2. **An interface is a row, not an element.** Its name survives in `As`; its own composition into components and its appearance in views do not.
 3. **Behavior nobody uses is dropped.** Application functions, technology services and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
 4. **Capabilities and business services are not pack types.** They are features of the products staff open, which is where the retailer's Store capabilities already land once the product kind says that an IT product is a product.
 5. **Access is three tokens, not four.** ArchiMate's `readwrite` is `writes` here, since a writer reads, and `master` is a claim ArchiMate does not make.
 6. **Lifecycle has four stages,** where LeanIX has five; its phase-in and active are one `active` here, since the model says what is, not when it will be.
 7. **Criticality is three tokens,** `high`, `medium`, `low`, where LeanIX names four by business impact; an instance that needs the finer scale asks for it.
+8. **Triggering comes back as Flow.** A connection row says what is carried and how, not whether it starts something.
 
 ## What was left out
 
