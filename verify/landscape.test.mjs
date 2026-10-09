@@ -1,0 +1,114 @@
+// verify/landscape.test.mjs
+// The landscape pack through its real schema: packs/landscape/ is read from disk, so the test
+// fails if the schema and the checks part. The core types a system names are bare, as
+// question-kind.test.mjs has them, since the test is about the pack's edges and not their targets.
+import test from "node:test";
+import assert from "node:assert/strict";
+import fs from "node:fs";
+import { checkInstance } from "../lib/checks.mjs";
+
+const pack = (n) => fs.readFileSync(new URL(`../packs/landscape/${n}-schema.md`, import.meta.url), "utf8");
+const head = (type, location) => [`# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "", "## File Location", "", `\`${location}\``, ""];
+const bare = (type, location) => [...head(type, location), "## Frontmatter", "", "No YAML frontmatter.", "",
+  "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ""].join("\n");
+const PACKS = [{ name: "landscape", dir: "meta/landscape" }];
+const S = "model/systems";
+const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
+const page = (h1, tagline) => `# ${h1}\n\n> ${tagline}\n`;
+const system = ({ kind, vendor, lifecycle, criticality, owner, operator, processor, partOf, domain, realizes = [], serves = [], h1, tagline, body = "" }) => [
+  "---", "source: Local", `kind: ${kind}`,
+  ...(vendor ? [`vendor: ${vendor}`] : []), ...(lifecycle ? [`lifecycle: ${lifecycle}`] : []), ...(criticality ? [`criticality: ${criticality}`] : []),
+  ...(owner ? [`owner: ${owner}`] : []), ...(operator ? [`operator: ${operator}`] : []), ...(processor ? [`processor: ${processor}`] : []),
+  ...(partOf ? [`part-of: ${partOf}`] : []), ...(domain ? [`domain: ${domain}`] : []),
+  ...(realizes.length ? [list("realizes", realizes).trimEnd()] : []), ...(serves.length ? [list("serves", serves).trimEnd()] : []),
+  "---", "", page(h1, tagline) + body,
+].join("\n");
+const connects = (rows) => `\n## Connects to\n\n| System | As | Carries | Via |\n| --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const holds = (rows) => `\n## Holds\n\n| Concept | Access |\n| --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+
+const tree = (change = (m) => m) => change(new Map([
+  ["meta/landscape/system-schema.md", pack("system")],
+  ["meta/core/source-schema.md", bare("source", "model/sources/*.md")],
+  ["meta/core/domain-schema.md", bare("domain", "model/domains/*.md")],
+  ["meta/core/feature-schema.md", bare("feature", "model/features/*.md")],
+  ["meta/core/process-schema.md", bare("process", "model/processes/<process>/<process>.md")],
+  ["meta/core/concept-schema.md", bare("concept", "model/concepts/*.md")],
+  ["meta/core/seat-schema.md", bare("seat", "model/seats/*.md")],
+  ["meta/core/data-processor-schema.md", bare("data-processor", "model/data-processors/*.md")],
+  ["model/sources/local.md", page("Local", "Here.")],
+  ["model/domains/retail.md", page("Retail", "Where a customer buys.")],
+  ["model/features/ring-up-a-sale.md", page("Ring up a sale", "Take what a customer buys and total it.")],
+  ["model/features/pay-by-card.md", page("Pay by card", "Settle a sale with a card.")],
+  ["model/processes/close-the-day/close-the-day.md", page("Close the day", "What a store does after the last sale.")],
+  ["model/processes/close-the-day/phases/README.md", "# Phases\n\n> Nothing yet.\n"],
+  ["model/processes/close-the-day/tracks/README.md", "# Tracks\n\n> Nothing yet.\n"],
+  ["model/concepts/sale.md", page("Sale", "One purchase at a till.")],
+  ["model/concepts/article.md", page("Article", "One thing the company sells.")],
+  ["model/concepts/customer.md", page("Customer", "Who buys.")],
+  ["model/seats/store-manager.md", page("Store Manager", "Runs a store.")],
+  ["model/seats/it-operations.md", page("IT Operations", "Keeps the systems running.")],
+  ["model/data-processors/payline.md", page("Payline", "Settles card payments.")],
+  [`${S}/point-of-sale.md`, system({ kind: "application", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
+    body: connects([["Payment terminal", "Card payment", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "USB"]]) + holds([["Sale", "master"], ["Article", "reads"]]) })],
+  [`${S}/payment-terminal.md`, system({ kind: "device", vendor: "Payline", processor: "Payline", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
+  [`${S}/store-server.md`, system({ kind: "platform", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
+  [`${S}/store-network.md`, system({ kind: "network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
+  [`${S}/article-master.md`, system({ kind: "application", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "master"], ["Customer", "master"]]) })],
+]));
+const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
+const edit = (path, from, to) => (m) => m.set(path, m.get(path).replace(from, to));
+const only = (f, ...words) => f.filter((x) => words.every((w) => x.includes(w)));
+
+test("a small instance written in the pack passes, two interfaces to one system and a device under a processor included", () => {
+  assert.deepEqual(failures(tree()), []);
+});
+
+test("a kind outside the four fails under R8", () => {
+  const f = failures(tree(edit(`${S}/store-network.md`, "kind: network", "kind: cable")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /store-network\.md.*cable.*\(R8\)/);
+});
+
+test("a lifecycle outside its tokens fails under R8", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "lifecycle: active", "lifecycle: live")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*live.*\(R8\)/);
+});
+
+test("a part-of naming no system fails as R4 alone", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "part-of: Store server", "part-of: Ghost")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*"Ghost".*\(R4\)/);
+});
+
+test("a realizes naming no feature fails as R4, and a processor naming a seat fails as R4, since a reference resolves by its declared type", () => {
+  const a = failures(tree(edit(`${S}/point-of-sale.md`, "  - Pay by card", "  - Pay by cheque")));
+  assert.equal(only(a, "point-of-sale.md", "\"Pay by cheque\"", "(R4)").length, 1, a.join("\n"));
+  const b = failures(tree(edit(`${S}/payment-terminal.md`, "processor: Payline", "processor: IT Operations")));
+  assert.equal(only(b, "payment-terminal.md", "\"IT Operations\"", "(R4)").length, 1, b.join("\n"));
+});
+
+test("an Access outside its tokens fails under R8", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | looks |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*looks.*\(R8\)/);
+});
+
+test("a Carries naming no concept fails as R4 alone, because a qualifier resolves as a reference does", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Card payment | Sale | USB |", "| Payment terminal | Card payment | Receipt | USB |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*"Receipt".*\(R4\)/);
+});
+
+test("two rows naming one system with the same As fail once, and a second row with a blank As fails", () => {
+  const same = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Terminal status |", "| Payment terminal | Card payment |")));
+  assert.equal(only(same, "point-of-sale.md", "Card payment", "(R16)").length, 1, same.join("\n"));
+  const blank = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Terminal status |", "| Payment terminal | |")));
+  assert.equal(only(blank, "point-of-sale.md", "As", "(R16)").length, 1, blank.join("\n"));
+});
+
+test("a part-of circle of two fails once naming both", () => {
+  const f = failures(tree(edit(`${S}/store-network.md`, "kind: network\n", "kind: network\npart-of: Store server\n")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /`part-of` runs in a circle.*"Store network".*"Store server".*\(R16\)/);
+});
