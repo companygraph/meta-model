@@ -18,7 +18,7 @@ const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  
 // A seat is held in a process; a job is what a person is employed as.
 const seat = (name) => page("", `# ${name}\n\n> A seat.\n\n## What it takes\n\nA brief.\n\n## What it produces\n\nWork.\n\n## What it never does\n\n- Never merges unasked.\n`);
 const job = (name, seats = []) => page(list("seats", seats), `# ${name}\n\n> A job.\n\n## Responsibilities\n\n- Does the work.\n`);
-const kind = (name, inLine) => page(`in-line: ${inLine}\n`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
+const kind = (name, inLine, staff) => page(`in-line: ${inLine}\n${staff ? `staff: ${staff}\n` : ""}`, `# ${name}\n\n> A kind of group.\n\n## What it means\n\nWhich groups are of this kind.\n`);
 const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
   `kind: ${k}\n${partOf ? `part-of: ${partOf}\n` : ""}${list("guides", guides)}${start ? `start: ${start}\n` : ""}${end ? `end: ${end}\n` : ""}`,
   body,
@@ -461,4 +461,53 @@ test("a Count written as a word fails once, as R16's written form of a number", 
 test("a Staff place in a People row passes for a human", () => {
   const f = failures(tree((m) => edit(TEAM, "| Jon | Designer | Member |", "| Jon | Designer | Staff |")(m)));
   assert.deepEqual(f, []);
+});
+
+// A staff unit stays in the line; what hangs below it is staff too.
+const withLegal = (m) => m
+  .set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "yes"))
+  .set(`${G}/legal.md`, group({ kind: "Staff Unit", partOf: "Management", body: "# Legal\n\n> Advises the top on the law.\n" }));
+const below = (name, k) => (m) => m.set(`${G}/${name.toLowerCase()}.md`, group({ kind: k, partOf: "Legal", body: `# ${name}\n\n> Works below Legal.\n` }));
+
+test("a staff unit under the top passes", () => {
+  assert.deepEqual(failures(tree(withLegal)), []);
+});
+
+test("a staff unit under a staff unit passes", () => {
+  assert.deepEqual(failures(tree((m) => below("Compliance", "Staff Unit")(withLegal(m)))), []);
+});
+
+test("a department under a staff unit fails once, at the page", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m))));
+  assert.deepEqual(f, [`${G}/sales.md: \`part-of\` names "Legal", whose \`kind\` carries \`staff: yes\`, and this page's \`kind\` does not (R16)`]);
+});
+
+test("a kind with staff: no is not staff, and a department under its group passes", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "no")))));
+  assert.deepEqual(f, []);
+});
+
+test("a staff value that is neither yes nor no fails as R8 alone, at the kind", () => {
+  const f = failures(tree((m) => withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "maybe"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /staff-unit\.md.*maybe/);
+});
+
+test("a group under a staff unit whose own kind resolves to nothing fails as R4 alone", () => {
+  const f = failures(tree((m) => below("Sales", "Ghost Kind")(withLegal(m))));
+  assert.ok(f.every((x) => !x.includes("carries `staff: yes`")), f.join("\n"));
+  assert.ok(f.some((x) => x.includes("sales.md") && x.includes("Ghost Kind")), f.join("\n"));
+});
+
+test("a team whose kind says staff but stands outside the line, writing a part-of, fails once, as the line's", () => {
+  const f = failures(tree((m) => m
+    .set("model/group-kinds/team.md", kind("Team", "no", "yes"))
+    .set(TEAM, m.get(TEAM).replace("kind: Team\n", "kind: Team\npart-of: Management\n"))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /checkout-team\.md.*`part-of` is written on a page whose `kind` does not carry `in-line: yes`/);
+});
+
+test("an agent with a Staff place in a department fails once, as the line's", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Staff |")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
 });
