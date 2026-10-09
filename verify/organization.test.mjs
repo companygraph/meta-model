@@ -6,6 +6,8 @@ import assert from "node:assert/strict";
 import fs from "node:fs";
 import { checkInstance } from "../lib/checks.mjs";
 import { uuidv7 } from "../lib/ids.mjs";
+import { parseInstance } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const core = (n) => fs.readFileSync(new URL(`../core/${n}-schema.md`, import.meta.url), "utf8");
 const pack = (n) => fs.readFileSync(new URL(`../packs/organization/${n}-schema.md`, import.meta.url), "utf8");
@@ -415,7 +417,15 @@ const openings = (rows) => `\n## Openings\n\n| Job | Place | Count | Since |\n| 
 const withOpenings = (path, rows) => (m) => m.set(path, m.get(path) + openings(rows));
 
 test("a group with an opening passes, its job drawn as an edge", () => {
-  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "2", "2026-11-01"]]))), []);
+  const files = tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "2", "2026-11-01"]]));
+  assert.deepEqual(failures(files), []);
+  // The parser reads the instance without its folder prefix and against the example's schemas.
+  const model = new Map([...files].filter(([path]) => path.startsWith("model/")).map(([path, text]) => [path.slice("model/".length), text]));
+  model.set("identity.md", page("", "# Acme\n\n> A company.\n\n## What it is\n\nA company.\n"));
+  const { edges } = parseInstance(model, { schemas: exampleSchemas() });
+  const edge = edges.find((e) => e.via === "Openings.Job");
+  assert.ok(edge, JSON.stringify(edges.map((e) => e.via)));
+  assert.deepEqual(edge.attrs, { Place: "Member", Count: "2", Since: "2026-11-01" });
 });
 
 test("an opening with a blank Count and Since passes", () => {
@@ -456,6 +466,15 @@ test("an opening with a blank Place fails as the required column alone", () => {
 test("a Count written as a word fails once, as R16's written form of a number", () => {
   const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "two", ""]])));
   assert.deepEqual(f, [`${G}/engineering.md: \`Count\` in "## Openings" is declared \`number\` and says "two"; R16 wants it written as digits`]);
+});
+
+test("a Since written as a word fails once, as R9's form of a date", () => {
+  const f = failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "", "soon"]])));
+  assert.deepEqual(f, [`${G}/engineering.md: \`Since\` in "## Openings" is declared \`date\` and says "soon"; R9 wants YYYY, YYYY-MM or YYYY-MM-DD`]);
+});
+
+test("a Since of a year and a month passes", () => {
+  assert.deepEqual(failures(tree(withOpenings(`${G}/engineering.md`, [["Backend Engineer", "Member", "", "2026-11"]]))), []);
 });
 
 test("a Staff place in a People row passes for a human", () => {
