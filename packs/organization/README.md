@@ -19,17 +19,17 @@ A person sits in a unit in a job, in a row of the unit's `## People`, and the di
 | W3C, The Organization Ontology | https://www.w3.org/TR/vocab-org/ |
 | schema.org, department | https://schema.org/department |
 | SAP, Organizational Management in SAP HCM | https://learning.sap.com/courses/organizational-management-in-sap-hcm-for-s-4hana/finding-object-relationships |
+| SAP, Vacancy (infotype 1007) | https://help.sap.com/saphelp_em92/helpdata/en/4e/ebee1a11324e70e10000000a42189d/content.htm |
+| SAP, Department/Staff (infotype 1003) | https://help.sap.com/saphelp_em92/helpdata/en/4e/ebef1a11394e6fe10000000a42189d/content.htm |
+| SAP, Structure display ordering | https://help.sap.com/saphelp_470/helpdata/en/bb/bdba94575911d189240000e8323d3a/content.htm |
 | HR-XML 3.1, ReportsToPositionType | https://schemas.liquid-technologies.com/HR-XML/3.1/reportstopositiontype.html |
 | Gabler Wirtschaftslexikon, Einliniensystem | https://wirtschaftslexikon.gabler.de/definition/einliniensystem-32337 |
 | Gabler Wirtschaftslexikon, Mehrliniensystem | https://wirtschaftslexikon.gabler.de/definition/mehrliniensystem-41223 |
 | Gabler Wirtschaftslexikon, Stelle | https://wirtschaftslexikon.gabler.de/definition/stelle-42791 |
-| Kliemt, Der Betrieb in der Matrix-Struktur | https://kliemt.blog/2016/07/06/der-betrieb-in-der-matrix-struktur/ |
 | Gabler Wirtschaftslexikon, Stab | https://wirtschaftslexikon.gabler.de/definition/stab-45274 |
-| SAP, Vacancy (infotype 1007) | https://help.sap.com/saphelp_em92/helpdata/en/4e/ebee1a11324e70e10000000a42189d/content.htm |
-| SAP, Department/Staff (infotype 1003) | https://help.sap.com/saphelp_em92/helpdata/en/4e/ebef1a11394e6fe10000000a42189d/content.htm |
+| Kliemt, Der Betrieb in der Matrix-Struktur | https://kliemt.blog/2016/07/06/der-betrieb-in-der-matrix-struktur/ |
 | Workday, Staffing models | https://doc.workday.com/admin-guide/en-us/human-capital-management/staffing/staffing-models/ivu1483299086459.html |
 | Oracle, Reorder nodes with a custom order | https://docs.oracle.com/cloud/latest/enterprise-data-management-cloud/DMCAA/reorder_node_100x1d7f4feb.htm |
-| SAP, Structure display ordering | https://help.sap.com/saphelp_470/helpdata/en/bb/bdba94575911d189240000e8323d3a/content.htm |
 
 ## Where it departs from its sources
 
