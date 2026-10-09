@@ -6,4 +6,4 @@ realizes: Invoice
 
 # Invoice record
 
-> The row set the Billing service writes for each issued invoice, its lines and its totals, kept in the billing database and read by the mailer and the Invoice Page.
+> The row set the Billing service writes for each issued invoice, with its lines and totals, kept in the billing database.

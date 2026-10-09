@@ -47,8 +47,7 @@ A service answers "what does this system offer the others, and who depends on it
 - The H1 names the service as its consumers call it, `Invoice feed`, `Price lookup`, never by the
   system behind it.
 - The tagline says what is exposed and to whom, in the consumer's words.
-- `provided-by` names every system that exposes the service; a system that merely calls it is a
-  `## Connects to` row on that system's page.
+- `provided-by` names the systems that expose the service, never one that only calls it.
 - `realizes` names features in the words of those features; a service nobody outside its system
   uses realizes nothing.
 - The page writes names and prose in the model's language (R14), as every page does.

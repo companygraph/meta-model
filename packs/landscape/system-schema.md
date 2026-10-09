@@ -87,12 +87,12 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`:
   the one whose copy the others are copies of.
-- `## Holds` names each concept once, at its strongest access: a system that writes a concept reads
-  it too, and a row for each would draw one edge twice.
-- `## Holds` names the data object this system keeps of a concept where one is modeled, and the
-  join holds it to that concept; a blank cell says the system keeps the concept in no form the
-  model names yet.
-- `## Connects to` names the service the connection calls where one is modeled; the interface in
-  `As` and the service beside it are one row, as ArchiMate assigns an interface to a service.
+- `## Holds` names a concept once per data object the system keeps of it, and once where it keeps
+  none, each at its strongest access: a system that writes a concept reads it too, and a row for
+  each would draw one edge twice.
+- `## Holds` names the data object the system keeps of the concept where one is modeled, and leaves
+  the cell blank where it keeps the concept in no form the model names yet.
+- `## Connects to` names the service the connection calls where one is modeled, in the same row as
+  the interface it goes through.
 - The page states no cost, no license count and no version. Those move, and a contract register
   or a configuration database holds them.

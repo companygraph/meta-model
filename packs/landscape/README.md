@@ -32,16 +32,17 @@ The contract a generator reads in either direction: from an architecture tool's 
 | Application Component, Node, System Software, Device, Equipment, Communication Network (chapters 9 and 10) | a `system` whose kind's `element` names the one it is; system software is `part-of` its node |
 | A specialization of one of those, a profile (§14.2) | a `system-kind`: its name the profile's, its `element` the element specialized; where a tool carries no profile, a kind comes back as its element alone |
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
-| Service (Common Domain), where a system provides it | `service`, realizing the feature the business sees |
-| Service and Capability, where somebody uses them and no system is modeled behind | core `feature` |
+| Service (Common Domain) aggregated by a Product, and Capability | core `feature` |
+| Service, realized by a system and aggregated by no Product | `service`, realizing the feature the business sees where there is one |
 | Business Object | core `concept` |
-| Data Object | `data-object`, realizing its business object where one is modeled |
+| Data Object | `data-object`, realizing its business object |
 | Process | core `process` |
 | Role | core `seat`: the responsibility, held by whoever holds it; a role assigned to an application component is a seat held by an agent |
 | Business Actor | an Individual is a core `profile`, an Organizational Unit the organization pack's `group`, the Organization core `identity` (the three example specializations of §14.2.2) |
 | Realization, system to service | the service's `provided-by`; `realizes` on the system where no service is modeled |
 | Realization, service to business service; Serving, service to process | the service's `realizes` and `serves` |
 | Assignment, interface to service | the `As` and the `Service` of one `## Connects to` row |
+| Serving, service to system | a `## Connects to` row on the served system, the service in `Service`; a row with a service exports as this and the interface's assignment, a row without one as Flow |
 | Serving, system to process | `serves` |
 | Serving or Realization, node or system software to application | `part-of`: the application is part of what it runs on |
 | Serving, application to application | a `## Connects to` row on the served side |
@@ -50,6 +51,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 | Triggering between systems | a `## Connects to` row; it comes back as Flow |
 | Access, with its mode | a `## Holds` row, `Access` as `writes` or `reads`, the leading writer `master`, the data object as the row's qualifier |
 | Realization, data object to business object | the data object's `realizes` |
+| Data Object realizing no Business Object, and Access to it | dropped: data whose meaning nobody can name |
 | Access with no mode | a `## Holds` row, `Access` as `reads` |
 | Function (Common Domain), Artifact | dropped: internal behavior nobody can name a user of |
 | Location | not yet; see below |
@@ -63,7 +65,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 - Triggering comes back as Flow: a connection row says what is carried and how, not whether it starts something.
 - An interface is a row, not an element. Its name survives in `As`; its own composition into components and its appearance in views do not.
 - Behavior nobody uses is dropped: functions and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
-- Capabilities and business services are not pack types; they are features of the products staff open.
+- Capabilities and business services are not pack types; they are features of the products staff open; an application or technology service is, as `service`, and realizes them.
 - Access is three tokens, not four: ArchiMate's `readwrite` is `writes`, since a writer reads, and `master` is a claim ArchiMate does not make.
 - Lifecycle has four stages where LeanIX has five; its phase-in and active are one `active`, since the model says what is, not when it will be.
 - Criticality is three tokens where LeanIX names four by business impact.

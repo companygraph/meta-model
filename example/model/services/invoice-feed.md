@@ -9,4 +9,4 @@ realizes:
 
 # Invoice feed
 
-> The feed of finished invoices the Billing service exposes, which the mailer takes to deliver them and the Invoice Page reads to show one.
+> The feed of finished invoices the Billing service exposes to whoever delivers or shows one.

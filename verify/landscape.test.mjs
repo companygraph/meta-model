@@ -175,27 +175,40 @@ test("two systems writing one concept pass, since only the master rows count", (
 test("a data object whose realizes names another concept than its row fails the join", () => {
   const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale", "realizes: Article")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /Sale record.*\(R16\)/);
+  assert.match(f[0], /point-of-sale\.md.*"Sale record", and model\/data-objects\/sale-record\.md does not list "Sale" in `realizes`.*\(R16\)/);
 });
 
 test("a service the row's system does not provide fails the join", () => {
   const f = failures(tree(edit("model/services/card-authorization.md", "  - Payment terminal", "  - Store server")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /Card authorization.*\(R16\)/);
+  assert.match(f[0], /point-of-sale\.md.*"Card authorization", and model\/services\/card-authorization\.md does not list "Payment terminal" in `provided-by`.*\(R16\)/);
 });
 
-test("a service without provided-by fails as required", () => {
+test("a service without provided-by fails as required, and the row calling it fails its join", () => {
   const f = failures(tree(edit("model/services/card-authorization.md", "provided-by:\n  - Payment terminal\n", "")));
-  // The row calling the service also fails its join, since the service now lists no system.
+  assert.equal(f.length, 2, f.join("\n"));
   assert.equal(only(f, "card-authorization.md", "no `provided-by`").length, 1, f.join("\n"));
-  assert.equal(only(f, "point-of-sale.md", "(R16)").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Payment terminal\" in `provided-by`", "(R16)").length, 1, f.join("\n"));
 });
 
-test("a data object realizing no concept passes, and one naming nothing fails as R4", () => {
-  // A data object realizing no concept is held by no row: the row that names it would fail the join.
-  const none = tree((m) => { edit("model/data-objects/sale-record.md", "realizes: Sale\n", "")(m); return edit(`${S}/point-of-sale.md`, "| Sale | Sale record |", "| Sale |  |")(m); });
-  assert.deepEqual(failures(none), []);
+test("a data object without realizes fails as required", () => {
+  const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale\n", "")));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.equal(only(f, "sale-record.md", "no `realizes`").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Sale\" in `realizes`", "(R16)").length, 1, f.join("\n"));
+});
+
+test("a realizes naming nothing fails as R4 and the row's join", () => {
   const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale", "realizes: Receipt")));
-  // The row naming the data object fails its join as well, since Receipt is not Sale.
+  assert.equal(f.length, 2, f.join("\n"));
   assert.equal(only(f, "sale-record.md", "\"Receipt\"", "(R4)").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Sale\" in `realizes`", "(R16)").length, 1, f.join("\n"));
+});
+
+test("a system keeping one concept in two data objects writes two rows and passes", () => {
+  const f = failures(tree((m) => {
+    m.set("model/data-objects/sale-archive.md", "---\nsource: Local\nrealizes: Sale\n---\n\n# Sale archive\n\n> The sales of closed years, kept as files.\n");
+    return edit(`${S}/point-of-sale.md`, "| Sale | Sale record | master |", "| Sale | Sale record | master |\n| Sale | Sale archive | reads |")(m);
+  }));
+  assert.deepEqual(f, []);
 });
