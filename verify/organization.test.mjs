@@ -527,3 +527,22 @@ test("an agent with a Staff place in a department fails once, as the line's", ()
   const f = failures(tree((m) => edit(`${G}/engineering.md`, ANA, "| Bot | Designer | Staff |")(withBot(m))));
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
 });
+
+// rank: the company's own order of its groups, unique across them all (R9).
+const ranked = (path, n) => (m) => m.set(path, m.get(path).replace("kind: ", `rank: ${n}\nkind: `));
+
+test("ranked groups beside unranked ones pass", () => {
+  assert.deepEqual(failures(tree((m) => ranked(`${G}/management.md`, 10)(ranked(`${G}/engineering.md`, 20)(m)))), []);
+});
+
+test("two groups sharing a rank fail once, naming both", () => {
+  const f = failures(tree((m) => ranked(`${G}/management.md`, 20)(ranked(`${G}/engineering.md`, 20)(m))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /two group entities share rank 20: .*"Engineering".*"Management"|two group entities share rank 20: .*"Management".*"Engineering"/);
+});
+
+test("a rank written as a word fails once", () => {
+  const f = failures(tree(ranked(`${G}/engineering.md`, "twenty")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /engineering\.md.*`rank` is declared `number` and says "twenty"/);
+});
