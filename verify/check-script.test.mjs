@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { initRepository } from "./fixture-repository.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -166,7 +167,7 @@ test("an instance workflow that checks out another release than package.json's f
     for (const dir of ["core", "example", "lib", "packs", ".github"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
     cpSync(join(ROOT, "package.json"), join(tmp, "package.json"));
     // The release check asks git which tags sit on HEAD, so the copy is a repository of its own.
-    spawnSync("git", ["init", "-q"], { cwd: tmp });
+    initRepository(tmp);
     spawnSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture"], { cwd: tmp });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));

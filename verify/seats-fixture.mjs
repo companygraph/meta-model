@@ -8,6 +8,7 @@ import fs from "node:fs";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { EXAMPLE_PACKS } from "./example.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 
@@ -25,7 +26,7 @@ export function modelAt(dir) {
 
 export function instanceAt(dir) {
   modelAt(dir);
-  execFileSync("git", ["init", "-q"], { cwd: dir, encoding: "utf8" });
+  initRepository(dir);
   execFileSync("git", ["config", "user.name", "Robert"], { cwd: dir, encoding: "utf8" });
   execFileSync("git", ["config", "user.email", "mira@example.invalid"], { cwd: dir, encoding: "utf8" });
   return dir;

@@ -8,6 +8,7 @@ import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
 import { GATE_HOOK, PAST_GATE_HOOKS } from "../lib/instance-files.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
@@ -112,7 +113,7 @@ test("an agent it cannot write for is refused by name, and nothing is written", 
 
 test("init in a git repository sets the hooks path; outside one it names the command", () => {
   const inGit = temp();
-  execFileSync("git", ["init", "-q"], { cwd: inGit });
+  initRepository(inGit);
   const said = run(["init", inGit, "--name", "Acme", "--agent", "claude"]);
   assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: inGit, encoding: "utf8" }).trim(), ".companygraph/hooks");
   assert.match(said, /commit-msg hook is in use/);
@@ -130,7 +131,7 @@ test("init in a git repository sets the hooks path; outside one it names the com
 // a git repository gets a hooksPath under that subfolder, not the repository's own top.
 test("init in a subfolder of a git repository names the hooks path relative to the repository's own root", () => {
   const repo = temp();
-  execFileSync("git", ["init", "-q"], { cwd: repo });
+  initRepository(repo);
   const sub = path.join(repo, "sub");
   fs.mkdirSync(sub);
   const said = run(["init", sub, "--name", "Acme", "--agent", "claude"]);
@@ -140,7 +141,7 @@ test("init in a subfolder of a git repository names the hooks path relative to t
 
 test("init leaves a hooks path already set, and says the seat hook is not in use", () => {
   const dir = temp();
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  initRepository(dir);
   execFileSync("git", ["config", "core.hooksPath", ".husky"], { cwd: dir });
   assert.match(run(["init", dir, "--name", "Acme", "--agent", "claude"]), /core\.hooksPath is \.husky here/);
   assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: dir, encoding: "utf8" }).trim(), ".husky");
@@ -148,7 +149,7 @@ test("init leaves a hooks path already set, and says the seat hook is not in use
 
 test("init leaves an enclosing repository's own hooks folder alone, naming what is already there", () => {
   const dir = temp();
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  initRepository(dir);
   const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: dir, encoding: "utf8" }).trim();
   // git init itself writes only `*.sample` templates there; a real file is what must stop init
   // from setting core.hooksPath and switching them off.
@@ -166,7 +167,7 @@ test("init leaves an enclosing repository's own hooks folder alone, naming what 
 // ever wrote, so the guard above never found the real hook and set core.hooksPath anyway.
 test("init in a git worktree leaves the main checkout's own hooks alone, naming the hook it found", () => {
   const main = temp();
-  execFileSync("git", ["init", "-q"], { cwd: main });
+  initRepository(main);
   const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: main, encoding: "utf8" }).trim();
   fs.writeFileSync(path.join(main, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
   execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"], { cwd: main });
@@ -181,7 +182,7 @@ test("init in a git worktree leaves the main checkout's own hooks alone, naming 
 
 test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
   const dir = temp();
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  initRepository(dir);
   run(["init", dir, "--name", "Acme", "--agent", "claude"]);
   const commit = (env, extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
     { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
@@ -216,7 +217,7 @@ test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manif
   { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
   () => {
     const dir = temp();
-    execFileSync("git", ["init", "-q"], { cwd: dir });
+    initRepository(dir);
     run(["init", dir, "--name", "Acme", "--agent", "claude"]);
     const manifest = JSON.parse(fs.readFileSync(path.join(dir, ".companygraph/manifest.json"), "utf8"));
     const bin = temp();
@@ -250,7 +251,7 @@ test("the hook hands npx no repository of git's, in a worktree and on commit -a,
   { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
   () => {
     const dir = temp();
-    execFileSync("git", ["init", "-q"], { cwd: dir });
+    initRepository(dir);
     run(["init", dir, "--name", "Acme", "--agent", "claude"]);
     const bin = temp();
     const record = path.join(bin, "npx-argv.txt");
@@ -316,7 +317,7 @@ test("the hook runs the checker in a git-dependency layout whose bin lost its ex
   { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; and Windows has no execute bit to lose" },
   () => {
     const dir = temp();
-    execFileSync("git", ["init", "-q"], { cwd: dir });
+    initRepository(dir);
     run(["init", dir, "--name", "Acme", "--agent", "claude"]);
     const identityPath = path.join(dir, "model/identity.md");
     fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
@@ -727,7 +728,7 @@ test("upgrade names only the owner's own files that still say roles, and never w
   fs.rmSync(path.join(root, "model/seats"), { recursive: true });
   fs.mkdirSync(path.join(root, "model/roles"));
   fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   fs.writeFileSync(path.join(root, ".gitignore"), ".obsidian/\n.claudian/\n");
   fs.mkdirSync(path.join(root, ".obsidian"));
   fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
@@ -1212,7 +1213,7 @@ test("the exported skill names the commit it was built from", () => {
   assert.doesNotMatch(skill(), /Built from commit/, "outside git there is no commit to name");
 
   const git = (...args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: root, encoding: "utf8" });
-  git("init", "-q");
+  initRepository(root);
   fs.writeFileSync(path.join(root, ".gitignore"), "dist/\n");
   git("add", "-A");
   git("commit", "-q", "-m", "init");
@@ -1255,7 +1256,7 @@ test("the instance workflow checks a pull request's commits, over the whole hist
 
 test("the menu offers the report", () => {
   const dir = temp();
-  execFileSync("git", ["init", "-q"], { cwd: dir });
+  initRepository(dir);
   run(["init", dir, "--name", "Acme", "--agent", "claude"]);
   // The menu picks by number, and the report's entry is read off the menu rather than assumed.
   const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
@@ -1289,7 +1290,7 @@ test("ids --backfill stamps an instance's pages with their first commit", () => 
   }
   fs.rmSync(path.join(root, "model/identifier.md"), { force: true });
   const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
-  g("init", "-q");
+  initRepository(root);
   g("add", "-A");
   execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first"], {
     cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-29T09:57:08+02:00" },
@@ -1343,7 +1344,7 @@ test("ids --range refuses a commit that changed an id, across a rename", () => {
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
   g("mv", "model/vision.md", "model/outlook.md");
   const renamed = path.join(root, "model/outlook.md");
@@ -1395,7 +1396,7 @@ test("ids --range with a commit that does not exist exits 1", () => {
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const missing = "0000000000000000000000000000000000000000";
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${missing}..HEAD`], { encoding: "utf8" });
   assert.equal(said.status, 1);
@@ -1414,7 +1415,7 @@ const coreFolder = () => {
 test("ids --backfill on a folder that holds core stamps its schemas with their first commit", () => {
   const root = coreFolder();
   const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
-  g("init", "-q");
+  initRepository(root);
   g("add", "-A");
   execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first", "--no-verify"], {
     cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-23T10:00:00+02:00" },
@@ -1431,7 +1432,7 @@ test("ids --range on a folder that holds core refuses a commit that changed a sc
   fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60\n---\n\n# Skill Schema\n");
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
   fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Skill Schema\n");
   g("commit", "-qam", "second", "--no-verify");
@@ -1488,7 +1489,7 @@ test("commits and seats read an instance that took the software pack and wrote a
   run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q");
+  initRepository(root);
   const page = path.join(root, "model/bounded-contexts/ordering/ordering.md");
   fs.mkdirSync(path.dirname(page), { recursive: true });
   fs.writeFileSync(
@@ -1666,7 +1667,7 @@ test("pins exits 1 when pins.json cannot be read or an entry names no line, and 
 
 test("adopt into an empty folder writes the machinery, and check holds it to the form alone", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   const said = run(["adopt", root]);
   assert.match(said, /adopted/);
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
@@ -1746,7 +1747,7 @@ test("ids --range refuses a decision rewritten and an invariant relabelled, and 
   const aggregate = (label) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| ${label} | A total never changes. |\n`;
   write("model/decisions/2026-core-is-vendored.md", decision("Standing", "Owner"));
   write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
 
   write("model/decisions/2026-core-is-vendored.md", decision("Revised", "Owner"));
@@ -1779,7 +1780,7 @@ test("ids --range passes a decision's reference following a rename, and refuses 
   write("model/strategic-objectives/old.md", objective(o1, "Old"));
   write("model/strategic-objectives/other.md", objective(o2, "Other"));
   write("model/decisions/2026-core-is-vendored.md", decision("Old"));
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
 
   g("mv", "model/strategic-objectives/old.md", "model/strategic-objectives/new.md");
@@ -1803,7 +1804,7 @@ test("ids --range refuses a decision deleted in the range", () => {
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
   fs.mkdirSync(path.join(root, "model/decisions"), { recursive: true });
   fs.writeFileSync(path.join(root, "model/decisions/2026-core-is-vendored.md"), "---\nsource: Local\nstatus: Standing\n---\n\n# Core is vendored\n\n> We vendor core.\n");
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   const base = g("rev-parse", "HEAD");
   g("rm", "-q", "model/decisions/2026-core-is-vendored.md"); g("commit", "-qm", "second", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
@@ -1822,7 +1823,7 @@ test("ids --range holds a branch behind its base to what the branch did, not to 
   const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
   const decision = (title) => `---\nsource: Local\nstatus: Standing\n---\n\n# ${title}\n\n> We decided it.\n`;
   write("model/decisions/2026-core-is-vendored.md", decision("Core is vendored"));
-  g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   g("checkout", "-q", "-b", "topic");
   write("model/notes.md", "# Notes\n");
   g("add", "-A"); g("commit", "-qm", "on the branch", "--no-verify");
@@ -1848,7 +1849,7 @@ test("ids --range with a manifest that is not JSON says so in one line and exits
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", "HEAD..HEAD"], { encoding: "utf8" });
   assert.equal(said.status, 1);
@@ -1861,7 +1862,7 @@ test("ids --range whose ends share no commit names the cause in one line and exi
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
   const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
-  g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   g("checkout", "-q", "--orphan", "other"); g("commit", "-qm", "unrelated", "--no-verify");
   const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "other")}`], { encoding: "utf8" });
   assert.equal(said.status, 1);
@@ -1885,7 +1886,7 @@ const upgradeRepo = () => {
   write("model/decisions/2026-core-is-vendored.md", decision("Owner"));
   write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
   write("conventions.json", "{}\n");
-  g("init", "-q", "-b", "main"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   g("checkout", "-q", "-b", "topic");
   const commit = () => { g("add", "-A"); g("commit", "-qm", "change", "--no-verify"); };
   const ids = () => spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
@@ -2039,7 +2040,7 @@ test("ids --range refuses a label reused after its page was renamed", () => {
   const aggregate = (rows) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n${rows.map(([l, t]) => `| ${l} | ${t} |\n`).join("")}`;
   const AGG = "model/bounded-contexts/billing/aggregates";
   write(`${AGG}/invoice.md`, aggregate([["INV-1", "A total never changes."], ["INV-2", "A rule since removed."]]));
-  g("init", "-q"); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
   write(`${AGG}/invoice.md`, aggregate([["INV-1", "A total never changes."]]));
   g("commit", "-qam", "removed", "--no-verify");
   g("mv", `${AGG}/invoice.md`, `${AGG}/bill.md`);
@@ -2054,7 +2055,7 @@ test("ids --range refuses a label reused after its page was renamed", () => {
 
 test("init --gate git writes the hooks, points git at them, and writes no workflow", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   assert.match(said, /pre-commit/);
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
@@ -2071,7 +2072,7 @@ test("on the git gate a commit that changes an id is refused, and a commit that 
   const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
   const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
     { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
-  git("init", "-q", "-b", "main");
+  initRepository(root, ["-b", "main"]);
   git("config", "init.defaultBranch", "main");
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   git("add", "-A");
@@ -2103,7 +2104,7 @@ function gatedRepository(make) {
   const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
   const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
     { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
-  git("init", "-q", "-b", "main");
+  initRepository(root, ["-b", "main"]);
   git("config", "init.defaultBranch", "main");
   run(make(root));
   git("add", "-A");
@@ -2123,11 +2124,11 @@ test("an adopted repository on the git gate, with no model for ids to hold, comm
 
 test("adopt on the git gate does not say ids runs, and init does", () => {
   const adopted = temp();
-  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  initRepository(adopted);
   const said = run(["adopt", adopted, "--gate", "git"]);
   assert.match(said, /every commit runs check and pins\.json's verify first/);
   const instance = temp();
-  execFileSync("git", ["init", "-q"], { cwd: instance });
+  initRepository(instance);
   assert.match(run(["init", instance, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /every commit runs check, ids --range and pins\.json's verify first/);
 });
 
@@ -2158,7 +2159,7 @@ test("on a feature branch an id the branch introduced can still be fixed, and on
 test("upgrade --dry-run names a gate hook it leaves because it was edited, for an instance and an adopted repository", () => {
   for (const make of [(root) => ["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"], (root) => ["adopt", root, "--gate", "git"]]) {
     const root = temp();
-    execFileSync("git", ["init", "-q"], { cwd: root });
+    initRepository(root);
     run(make(root));
     fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
     // Something for the dry run to plan, so it does not stop at nothing to do.
@@ -2171,7 +2172,7 @@ test("upgrade --dry-run names a gate hook it leaves because it was edited, for a
 
 test("a plain upgrade brings a pre-commit hook v0.83.0 wrote to this release", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   const hook = path.join(root, ".companygraph/hooks/pre-commit");
   fs.writeFileSync(hook, PAST_GATE_HOOKS[0]);
@@ -2183,7 +2184,7 @@ test("a plain upgrade brings a pre-commit hook v0.83.0 wrote to this release", (
 
 test("a plain upgrade leaves an edited pre-commit hook as it is, and says why", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   const hook = path.join(root, ".companygraph/hooks/pre-commit");
   fs.writeFileSync(hook, `${PAST_GATE_HOOKS[0]}# mine\n`);
@@ -2205,7 +2206,7 @@ test("init --gate git in a folder without git is refused, and --gate none says n
 
 test("upgrade --gate git moves an instance from the workflow to the hooks", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
   const said = run(["upgrade", root, "--gate", "git"]);
   assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
@@ -2216,7 +2217,7 @@ test("upgrade --gate git moves an instance from the workflow to the hooks", () =
 
 test("upgrade --gate git leaves a hooks folder of the repository's own in charge, and says so", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["adopt", root]);
   execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
   const said = run(["upgrade", root, "--gate", "git"]);
@@ -2227,7 +2228,7 @@ test("upgrade --gate git leaves a hooks folder of the repository's own in charge
 
 test("upgrade --gate moves an adopted repository to none and back to github, naming what it removed", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["adopt", root, "--gate", "git"]);
   const none = run(["upgrade", root, "--gate", "none"]);
   assert.match(none, /removed, since the gate moved: \.companygraph\/hooks\/pre-commit, \.companygraph\/hooks\/pre-merge-commit/);
@@ -2243,7 +2244,7 @@ test("upgrade --gate moves an adopted repository to none and back to github, nam
 
 test("an edited gate hook stops a move by name, and --force removes it and says so", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
   const refused = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "github"], { encoding: "utf8" });
@@ -2266,7 +2267,7 @@ for (const [kind, make] of [
 ]) {
   test(`upgrade --gate github from none puts the seat hook in use, for ${kind}`, () => {
     const root = temp();
-    execFileSync("git", ["init", "-q"], { cwd: root });
+    initRepository(root);
     make(root);
     assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
     const said = run(["upgrade", root, "--gate", "github"]);
@@ -2278,7 +2279,7 @@ for (const [kind, make] of [
 
 test("init --gate git of a folder not made yet is in git when the folder above it is, and refused where it is not", () => {
   const repository = temp();
-  execFileSync("git", ["init", "-q"], { cwd: repository });
+  initRepository(repository);
   const root = path.join(repository, "acme");
   run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
@@ -2295,7 +2296,7 @@ test("init --gate git of a folder not made yet is in git when the folder above i
 // sentence init writes for the new one, and a run that moves no gate says nothing of it.
 test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quoting the new gate's", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
   const before = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
   const said = run(["upgrade", root, "--gate", "git"]);
@@ -2309,7 +2310,7 @@ test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quo
 
 test("init --gate git under a hooks folder of the repository's own does not claim every commit runs check", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
   const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   assert.match(said, /core\.hooksPath is hooks here/);
@@ -2319,11 +2320,11 @@ test("init --gate git under a hooks folder of the repository's own does not clai
 test("adopt says the seat hook lets every commit through on the git gate as on github, and not on none", () => {
   for (const gate of ["github", "git"]) {
     const root = temp();
-    execFileSync("git", ["init", "-q"], { cwd: root });
+    initRepository(root);
     assert.match(run(["adopt", root, "--gate", gate]), /lets every commit through/, gate);
   }
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   assert.doesNotMatch(run(["adopt", root, "--gate", "none"]), /lets every commit through/);
 });
 
@@ -2334,19 +2335,19 @@ const UNGATED = /nothing gates this repository until git reads these hooks: poin
 test("init and adopt --gate git under a hooks folder of the repository's own warn that nothing gates it", () => {
   for (const make of [(root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), (root) => run(["adopt", root, "--gate", "git"])]) {
     const root = temp();
-    execFileSync("git", ["init", "-q"], { cwd: root });
+    initRepository(root);
     execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
     assert.match(make(root), UNGATED);
   }
   // Where git reads them, there is nothing to warn of.
   const read = temp();
-  execFileSync("git", ["init", "-q"], { cwd: read });
+  initRepository(read);
   assert.doesNotMatch(run(["init", read, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /nothing gates/);
 });
 
 test("upgrade --gate git under a hooks folder of the repository's own warns that nothing gates it, since the workflow is gone", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
   execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
   const said = run(["upgrade", root, "--gate", "git"]);
@@ -2354,7 +2355,7 @@ test("upgrade --gate git under a hooks folder of the repository's own warns that
   assert.match(said, UNGATED);
   // Real hooks in the default folder keep git from reading these as well.
   const other = temp();
-  execFileSync("git", ["init", "-q"], { cwd: other });
+  initRepository(other);
   run(["adopt", other]);
   execFileSync("git", ["config", "--unset", "core.hooksPath"], { cwd: other });
   const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: other, encoding: "utf8" }).trim();
@@ -2364,7 +2365,7 @@ test("upgrade --gate git under a hooks folder of the repository's own warns that
 
 test("upgrade --dry-run --force names the edited gate hooks --force would remove anyway", () => {
   const root = temp();
-  execFileSync("git", ["init", "-q"], { cwd: root });
+  initRepository(root);
   run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
   fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
   const said = run(["upgrade", root, "--gate", "github", "--force", "--dry-run"]);
@@ -2372,7 +2373,7 @@ test("upgrade --dry-run --force names the edited gate hooks --force would remove
   assert.match(said, /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit$/m);
   assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
   const adopted = temp();
-  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  initRepository(adopted);
   run(["adopt", adopted, "--gate", "git"]);
   fs.appendFileSync(path.join(adopted, ".companygraph/hooks/pre-merge-commit"), "# mine\n");
   assert.match(run(["upgrade", adopted, "--gate", "none", "--force", "--dry-run"]), /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit, edited since this tooling wrote it, which --force removes anyway$/m);
@@ -2392,7 +2393,7 @@ test("check fails on a manifest gate that is no gate, naming it and the three, f
   assert.equal(result.status, 1);
   assert.match(result.stderr, /\.companygraph\/manifest\.json: names gti as its gate, and the gates are github, git and none/);
   const adopted = temp();
-  execFileSync("git", ["init", "-q"], { cwd: adopted });
+  initRepository(adopted);
   run(["adopt", adopted]);
   const at = path.join(adopted, ".companygraph/manifest.json");
   fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), gate: "gti" }, null, 2) + "\n");

@@ -9,6 +9,7 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { instanceAt, modelAt } from "./seats-fixture.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 import { SEATS_SINCE } from "../lib/seats.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
@@ -64,7 +65,7 @@ test("trailers kept apart from Co-Authored-By by a blank line are refused, and t
 
 test("a folder that is no instance governs nothing, and says so", () => {
   const dir = temp();
-  git(dir, "init", "-q");
+  initRepository(dir);
   git(dir, "commit", "-q", "--allow-empty", "-m", "x");
   const r = run(dir, "commits", ".", "--range", "HEAD~0");
   assert.equal(r.status, 0);
@@ -93,7 +94,7 @@ test("the report refuses a folder outside git, and in a lone repository a folder
   assert.equal(r.status, 1);
   assert.match(r.stderr, /not inside a git repository, so the model has no history to report on/);
   const plain = temp();
-  git(plain, "init", "-q");
+  initRepository(plain);
   r = run(plain, "seats", ".");
   assert.equal(r.status, 1);
   assert.match(r.stderr, /is not an instance/);
@@ -116,7 +117,7 @@ test("with a family it reads every member on disk, judges each by its organizati
   const instance = instanceAt(path.join(top, "mental-model"));
   const site = path.join(top, "site");
   fs.mkdirSync(site);
-  git(site, "init", "-q");
+  initRepository(site);
   git(site, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Subject\n\nProcess: Delivery\nPhase: Build\nTrack: Code");
   git(instance, "commit", "-q", "--allow-empty", "-m", "The owner's own");
   vendorFamily(instance, [["beacon/mental-model", instance], ["beacon/site", site], ["beacon/gone", path.join(top, "gone")]]);
@@ -138,7 +139,7 @@ test("a family is read from a member that is no instance, and a member whose org
   const other = path.join(top, "other");
   for (const dir of [site, other]) {
     fs.mkdirSync(dir);
-    git(dir, "init", "-q");
+    initRepository(dir);
   }
   git(site, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Subject\n\nProcess: Delivery\nPhase: Build\nTrack: Code");
   // At beacon's domain but in another organization's repository: judged against beacon's
@@ -211,7 +212,7 @@ test("a member's local path that is a plain folder inside another checkout is no
   const top = temp();
   const instance = instanceAt(path.join(top, "mental-model"));
   const outer = temp();
-  git(outer, "init", "-q");
+  initRepository(outer);
   git(outer, "commit", "-q", "--allow-empty", "--author", "Reviewer <reviewer@beacon.example>", "-m", "Not the member's own");
   const nested = path.join(outer, "member");
   fs.mkdirSync(nested);
