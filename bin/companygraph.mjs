@@ -2,14 +2,14 @@
 // The CompanyGraph tooling: making an instance, and the checks over one. Subcommands, each
 // exiting non-zero on any problem and writing nothing when its pre-flight fails; commits and ids
 // exit 3 to refuse, so a caller such as a hook can tell a refusal from a run that could not
-// happen, and 1 for anything else:
+// happen, and 1 for anything else, a flag the command does not read among it:
 //
-//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>] [--gate <github|git|none>]
+//   companygraph init [<folder>] [--here] [--agent claude] [--core <tag>] [--name <instance>] [--schemas <dir>] [--folders <a,b>] [--pack <a,b>] [--gate <github|git|none>] [--dry-run]
 //   companygraph check [<folder>]
 //   companygraph judge [<folder>]
 //   companygraph form [<folder>] [--fix]
 //   companygraph pins [<folder>]
-//   companygraph adopt [<folder>] [--gate <github|git|none>]
+//   companygraph adopt [<folder>] [--gate <github|git|none>] [--dry-run]
 //   companygraph upgrade [<folder>] [--core <tag>] [--pack <a,b>] [--force] [--dry-run] [--gate <github|git|none>]
 //   companygraph obsidian [<vault>] [--release <tag>] [--from <dir>] [--plugins | --no-plugins] [--force] [--open]
 //   companygraph commits [<folder>] (--range <a>..<b> | --message <file>)
@@ -85,10 +85,10 @@ const USAGE = `companygraph [<command>]
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern, or a range that changed an id, rewrote or removed a decision, or moved or reused a label
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook  --gate <github|git|none>
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook  --gate <github|git|none>  --dry-run
 upgrade: --core <tag>  --pack <a,b>  --force  --dry-run  --gate <github|git|none>
   --force overwrites edited vendored files, moves past Markdown out of the form, and removes edited gate hooks
-adopt: --gate <github|git|none>
+adopt: --gate <github|git|none>  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
 commits: --range <a>..<b>  --message <file>
 seats: --since <date>  --json
@@ -148,23 +148,30 @@ const packNamesOf = (value) => (value ? value.split(",").map((p) => p.trim()).fi
 /** @param {string} agent */
 const skillsFor = (agent) => filesOfThisRelease(`agents/${agent}/skills`);
 
-// Toggles carry no value; `upgrade` also reads --force and --dry-run, so both are named here
-// once rather than teaching this parser about them a second time. Everything else takes a value,
-// and a value that is missing or looks like another flag is refused by name rather than silently
-// eaten or handed to a prompt further down.
+// Toggles carry no value, and one set serves every command. Everything else takes a value, and a
+// value that is missing or looks like another flag is refused by name rather than silently eaten
+// or handed to a prompt further down.
 const TOGGLES = new Set(["here", "force", "dry-run", "plugins", "no-plugins", "open", "json", "no-hook", "backfill", "fix"]);
+
+// The flags each command reads, off its line in the usage, and none for a command with no line.
+// A flag a command does not read is refused before it runs: one taken and dropped in silence let
+// `adopt --dry-run` adopt for real, and an operator who reaches for a flag is the one who meant it.
+// Read off the usage, so what a person is told a command takes is what the parser lets through.
+const READS = new Map([...USAGE.matchAll(/^(\w+): (.*)$/gm)].map(([, command, line]) => [command, new Set([...line.matchAll(/--([a-z-]+)/g)].map(([, name]) => name))]));
 
 /**
  * @param {string[]} argv
+ * @param {string} command
  * @returns {Flags}
  */
-function flags(argv) {
+function flags(argv, command) {
   /** @type {Flags} */
   const out = { _: [] };
   for (let i = 0; i < argv.length; i++) {
     const arg = argv[i];
     if (!arg.startsWith("--")) { out._.push(arg); continue; }
     const name = arg.slice(2);
+    if (!READS.get(command)?.has(name)) throw new Error(`${command} has no --${name}`);
     if (TOGGLES.has(name)) { /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (out))[name] = true; continue; }
     const value = argv[i + 1];
     if (value === undefined) throw new Error(`--${name} needs a value`);
@@ -312,6 +319,50 @@ function panel(label, ok, text) {
   ].join("\n");
 }
 
+// Where git would read the hooks named from, and why this tooling may not point it there: an empty
+// reason means it may. Git is asked of the nearest folder that exists, and the folder's own path
+// below it added, because a dry run plans a folder init or adopt has not made yet; on a real run
+// the folder is there and is the one asked.
+/**
+ * @param {string} root
+ * @param {string[]} names
+ * @returns {{ hooks: string; why: string }}
+ */
+function hooksUse(root, names) {
+  const which = `the ${names.join(", ")} hook${names.length > 1 ? "s are" : " is"}`;
+  let at = resolve(root);
+  while (!existsSync(at) && dirname(at) !== at) at = dirname(at);
+  const below = relative(at, resolve(root)).split(sep).join("/");
+  // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
+  // instance's position under the repository's own top, whatever that top resolves to on this
+  // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
+  // a relative core.hooksPath against that same top when a hook runs, from any cwd under it.
+  const top = existsSync(at) ? gitTop(at) : null;
+  const prefix = (top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: at, encoding: "utf8" }).stdout.trim() : "") + (below ? `${below}/` : "");
+  const hooks = top && prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
+  const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: at, encoding: "utf8" }).stdout.trim() : "";
+  // A repository that already keeps real hook files under its default hooks folder — placed
+  // there directly, without ever setting core.hooksPath, as some tools still do — must not have
+  // them silently switched off by a core.hooksPath this command sets. `git rev-parse --git-path
+  // hooks` names that folder however git resolves it (relative to the folder asked, wherever
+  // `.git` really is), asked only where core.hooksPath is not already set to something else, since
+  // that case is already the husky one below. A file git itself ships as a template ends `.sample`
+  // and is never in the way.
+  // `--git-path` answers absolute in a worktree — its hooks live under the main checkout's own
+  // `.git/`, nowhere near `root` — and relative otherwise; `resolve` takes either, where `join`
+  // would concatenate an absolute answer onto the folder into a path nothing ever wrote.
+  const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: at, encoding: "utf8" }).stdout.trim() : "";
+  const hooksDirAbs = hooksDir ? resolve(at, hooksDir) : "";
+  const already = hooksDirAbs && existsSync(hooksDirAbs)
+    ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
+    : [];
+  const files = names.length > 1 ? "their files are" : "its file is";
+  if (!top) return { hooks, why: `  ${which} written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"` };
+  if (current && current !== hooks) return { hooks, why: `  core.hooksPath is ${current} here, so ${which} not in use; ${files} in ${hooks}/` };
+  if (already.length) return { hooks, why: `  ${hooksDir} already holds ${already.join(", ")}, so ${which} not in use; ${files} in ${hooks}/` };
+  return { hooks, why: "" };
+}
+
 // The hooks named made executable and, where git and the repository let it, put in use; what was
 // done or why not is said, as init always said it. A core.hooksPath of the repository's own is
 // left as it is, whichever hooks are named. It answers whether git now reads them.
@@ -322,39 +373,30 @@ function panel(label, ok, text) {
  */
 function useHook(root, names = ["commit-msg"]) {
   for (const name of names) chmodSync(join(root, `.companygraph/hooks/${name}`), 0o755);
-  const which = `the ${names.join(", ")} hook${names.length > 1 ? "s are" : " is"}`;
-  // The hooks path is asked of git itself, never computed by hand: `--show-prefix` gives the
-  // instance's position under the repository's own top, whatever that top resolves to on this
-  // machine (a symlinked temp dir on macOS, an 8.3 short name on Windows), and git then resolves
-  // a relative core.hooksPath against that same top when a hook runs, from any cwd under it.
-  const top = gitTop(root);
-  const prefix = top ? spawnSync("git", ["rev-parse", "--show-prefix"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-  const hooks = prefix ? `${prefix.replace(/\/$/, "")}/.companygraph/hooks` : ".companygraph/hooks";
-  const current = top ? spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-  // A repository that already keeps real hook files under its default hooks folder — placed
-  // there directly, without ever setting core.hooksPath, as some tools still do — must not have
-  // them silently switched off by a core.hooksPath this command sets. `git rev-parse --git-path
-  // hooks` names that folder however git resolves it (relative to root, wherever `.git` really
-  // is), asked only where core.hooksPath is not already set to something else, since that case
-  // is already the husky one below. A file git itself ships as a template ends `.sample` and is
-  // never in the way.
-  // `--git-path` answers absolute in a worktree — its hooks live under the main checkout's own
-  // `.git/`, nowhere near `root` — and relative otherwise; `resolve` takes either, where `join`
-  // would concatenate an absolute answer onto `root` into a path nothing ever wrote.
-  const hooksDir = top && !current ? spawnSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: root, encoding: "utf8" }).stdout.trim() : "";
-  const hooksDirAbs = hooksDir ? resolve(root, hooksDir) : "";
-  const already = hooksDirAbs && existsSync(hooksDirAbs)
-    ? readdirSync(hooksDirAbs).filter((f) => !f.endsWith(".sample"))
-    : [];
-  if (!top) console.log(`  ${which} written; once the folder is a git repository, run "git config core.hooksPath ${hooks}"`);
-  else if (current && current !== hooks) console.log(`  core.hooksPath is ${current} here, so ${which} not in use; ${names.length > 1 ? "their files are" : "its file is"} in ${hooks}/`);
-  else if (already.length) console.log(`  ${hooksDir} already holds ${already.join(", ")}, so ${which} not in use; ${names.length > 1 ? "their files are" : "its file is"} in ${hooks}/`);
-  else {
-    spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
-    console.log(`  ${which} in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
-    return true;
+  const { hooks, why } = hooksUse(root, names);
+  if (why) {
+    console.log(why);
+    return false;
   }
-  return false;
+  spawnSync("git", ["config", "core.hooksPath", hooks], { cwd: root });
+  console.log(`  the ${names.join(", ")} hook${names.length > 1 ? "s are" : " is"} in use: git reads hooks from ${hooks}; a fresh clone needs "git config core.hooksPath ${hooks}" again, since core.hooksPath is local config and is not cloned`);
+  return true;
+}
+
+// What init or adopt would do, said as upgrade --dry-run says it, and nothing done: every file the
+// plan writes, and core.hooksPath where the hooks it writes would be put in use. Both change git
+// config, which a branch does not hold, so the dry run is where an operator sees that first.
+/**
+ * @param {string} root
+ * @param {string} what
+ * @param {Map<string, string>} writes
+ */
+function sayPlanned(root, what, writes) {
+  console.log(`${what} ${shown(root)}, if this runs:`);
+  for (const path of writes.keys()) console.log(`  write   ${path}`);
+  const hooks = ["commit-msg", "pre-commit", "pre-merge-commit"].filter((name) => writes.has(`.companygraph/hooks/${name}`));
+  const use = hooks.length > 0 ? hooksUse(root, hooks) : null;
+  if (use && !use.why) console.log(`  set     core.hooksPath ${use.hooks}`);
 }
 
 // Whether a folder is in a git repository, asked of the nearest folder that exists: init and adopt
@@ -395,7 +437,7 @@ function sayGate(root, gate, writes) {
  * @param {{ menu?: boolean }} [options]
  */
 async function init(argv, { menu = false } = {}) {
-  const given = flags(argv);
+  const given = flags(argv, "init");
   const root = given._[0] ?? ".";
   // Walked once: the pre-flight guard and the plan's own conflict check both need it, and a
   // repository is not read twice for the price of one decision.
@@ -433,6 +475,7 @@ async function init(argv, { menu = false } = {}) {
     repository,
   });
   if (plan.refused) throw new Error(plan.refused);
+  if (given["dry-run"]) return sayPlanned(root, "init into", /** @type {Map<string, string>} */ (plan.writes));
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${written.length} files written into ${shown(root)}`);
   console.log(`  written for ${agent}, with the companygraph-validate, -export, -surface, -profile, -company, -consent and -judge skills; export and surface need Python 3`);
@@ -495,7 +538,7 @@ function namedAsStillRoles(root, units) {
 
 /** @param {string[]} argv */
 async function upgrade(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "upgrade");
   const root = given._[0] ?? ".";
   const manifestPath = join(root, ".companygraph/manifest.json");
   if (!existsSync(manifestPath)) throw new Error(`${root} is no instance: it has no .companygraph/manifest.json.`);
@@ -771,7 +814,7 @@ async function upgrade(argv) {
 // since the plugin's own `Make this vault an instance` is one way to make one.
 /** @param {string[]} argv */
 async function obsidian(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "obsidian");
   const vault = given._[0] ?? ".";
   const force = Boolean(given.force);
   const [own, ...recommended] = PLUGINS;
@@ -921,11 +964,12 @@ const excludeOf = (manifest) => manifest?.exclude ?? (manifest?.core ? excludeFo
 // and a pins.json that declares its tooling pin. A folder that is not there yet is made, as init makes one.
 /** @param {string[]} argv */
 function adopt(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "adopt");
   const root = given._[0] ?? ".";
   const gate = given.gate ?? "github";
   const plan = adoptPlan({ tooling: PACKAGE.version, present: present(root), gate, repository: inGit(root) });
   if (plan.refused) throw new Error(`${root}: ${plan.refused}`);
+  if (given["dry-run"]) return sayPlanned(root, "adopt", /** @type {Map<string, string>} */ (plan.writes));
   const written = writePlan(root, /** @type {Map<string, string>} */ (plan.writes));
   console.log(`${good("✓")} ${shown(root)} adopted at ${PACKAGE.version}: ${written.join(", ")}`);
   console.log(`  its Markdown is held to the one form, leaving out dist/; list more paths under "exclude" in .companygraph/manifest.json`);
@@ -959,7 +1003,7 @@ function manifestSaid(root) {
  * @returns {number}
  */
 function form(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "form");
   const root = given._[0] ?? ".";
   const read = manifestSaid(root);
   if (!read) return 1;
@@ -1002,7 +1046,7 @@ function remotes() {
  * @returns {number}
  */
 function pins(argv) {
-  const root = flags(argv)._[0] ?? ".";
+  const root = flags(argv, "pins")._[0] ?? ".";
   const at = join(root, "pins.json");
   if (!existsSync(at)) {
     console.error(`✗ ${shown(root)} has no pins.json; "companygraph upgrade" writes one into an instance, and "companygraph adopt" into any other repository`);
@@ -1038,7 +1082,7 @@ function pins(argv) {
  * @returns {Promise<number>}
  */
 async function check(argv) {
-  const root = flags(argv)._[0] ?? ".";
+  const root = flags(argv, "check")._[0] ?? ".";
   // A repository that took the machinery and holds no model is held to the form alone.
   const read = manifestSaid(root);
   if (!read) return 1;
@@ -1073,7 +1117,7 @@ async function check(argv) {
  * @returns {Promise<number>}
  */
 async function judge(argv) {
-  const options = flags(argv);
+  const options = flags(argv, "judge");
   // A digest is 16 hex characters; anything else, a folder written after the flag most often, is
   // refused as what it is before the instance is read, rather than as a consent that changed.
   if (options.consent !== undefined && !/^[0-9a-f]{16}$/.test(options.consent.trim().toLowerCase()))
@@ -1208,7 +1252,7 @@ function subjectOf(messageFile) {
  * @returns {number}
  */
 function commits(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "commits");
   const root = resolve(given._[0] ?? ".");
   if (!given.range === !given.message) throw new Error("commits takes one of --range <a>..<b> or --message <file>");
   // Git is read from process.cwd(), the repository whose commit is being made or checked; the
@@ -1246,7 +1290,7 @@ const NO_ORG_INSTANCE = "no instance of its organization on this disk";
  * @returns {number}
  */
 function seats(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "seats");
   const root = resolve(given._[0] ?? ".");
   const top = gitTop(root);
   if (!top) throw new Error(`${shown(root)} is not inside a git repository, so the model has no history to report on`);
@@ -1312,7 +1356,7 @@ function seats(argv) {
  * @returns {number}
  */
 function ids(argv) {
-  const given = flags(argv);
+  const given = flags(argv, "ids");
   const root = resolve(given._[0] ?? ".");
   const onCore = !isInstance(root) && existsSync(join(root, "core", "CONVENTIONS.md"));
   if (!onCore && !isInstance(root)) {

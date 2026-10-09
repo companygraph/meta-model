@@ -1701,6 +1701,51 @@ test("adopt into a folder that does not exist yet makes it and writes the machin
   assert.match(run(["check", root]), /no Markdown file to hold to the form/);
 });
 
+// A flag a command does not read was once taken and dropped without a word, so `adopt --dry-run`
+// adopted for real. Each command now takes only the flags its usage line names.
+test("a flag the command does not read is refused by name before anything is written", () => {
+  const root = initRepository(temp());
+  const refused = spawnSync(process.execPath, [cli, "seats", root, "--dry-run"], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /^seats has no --dry-run$/m);
+  for (const [command, flag] of [["check", "--backfill"], ["check", "--bogus"], ["form", "--force"], ["pins", "--json"]]) {
+    const said = spawnSync(process.execPath, [cli, command, root, flag], { encoding: "utf8" });
+    assert.equal(said.status, 1, `${command} ${flag}`);
+    assert.match(said.stderr, new RegExp(`^${command} has no ${flag}$`, "m"));
+  }
+  assert.deepEqual(fs.readdirSync(root), [".git"]);
+  assert.equal(spawnSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout, "");
+});
+
+test("adopt --dry-run says what it would write and that it would set core.hooksPath, and writes nothing", () => {
+  const root = initRepository(temp());
+  const said = run(["adopt", root, "--gate", "git", "--dry-run"]);
+  assert.match(said, /if this runs:/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/pre-commit", "pins.json"])
+    assert.match(said, new RegExp(`^ {2}write {3}${rel.replaceAll(".", "\\.")}$`, "m"));
+  assert.match(said, /^ {2}set {5}core\.hooksPath \.companygraph\/hooks$/m);
+  assert.doesNotMatch(said, /adopted at/);
+  assert.deepEqual(fs.readdirSync(root), [".git"]);
+  assert.equal(spawnSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout, "");
+});
+
+test("adopt --dry-run into a folder not there yet plans the hooks path from where it would be", () => {
+  const repo = initRepository(temp());
+  const root = path.join(repo, "a", "site");
+  const said = run(["adopt", root, "--gate", "git", "--dry-run"]);
+  assert.match(said, /^ {2}set {5}core\.hooksPath a\/site\/\.companygraph\/hooks$/m);
+  assert.ok(!fs.existsSync(path.join(repo, "a")));
+});
+
+test("init --dry-run says what it would write, and writes nothing", () => {
+  const root = path.join(temp(), "acme");
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude", "--dry-run"]);
+  assert.match(said, /^ {2}write {3}\.companygraph\/manifest\.json$/m);
+  assert.match(said, /^ {2}write {3}meta\/core\/manifest\.json$/m);
+  assert.doesNotMatch(said, /files written/);
+  assert.ok(!fs.existsSync(root));
+});
+
 test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
