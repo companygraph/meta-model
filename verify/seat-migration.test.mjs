@@ -3,6 +3,7 @@
 import test from "node:test";
 import assert from "node:assert/strict";
 import { migratedSeats, isInstancesOwn } from "../lib/seat-migration.mjs";
+import * as planned from "../lib/plan.mjs";
 import { initPlan, upgradePlan } from "../lib/plan.mjs";
 
 const page = (fm, body) => `---\n${fm}---\n\n${body}`;
@@ -145,4 +146,47 @@ test("a path is the instance's own unless the units folder, dist or node_modules
   assert.equal(isInstancesOwn("dist/notes.md", "meta"), false);
   assert.equal(isInstancesOwn("node_modules/x/index.js", "meta"), false);
   assert.equal(isInstancesOwn("docs/dist/notes.md", "meta"), true);
+});
+
+test("a fresh model/seats/README.md is reported in given, and the owner's own README is not", () => {
+  const { manifest, held, workflow } = instanceBefore();
+  const ask = { core: withSeats, tooling: "0.32.0", tag: "v0.32.0", manifest, held, workflow };
+  const reviewer = ["model/roles/reviewer.md", page("id: a1\nsource: Local\n", "# Reviewer\n\n> Reads a change.\n")];
+  const bare = upgradePlan({ ...ask, model: new Map([reviewer]) });
+  assert.ok(bare.writes.has("model/seats/README.md"));
+  assert.ok(bare.given.includes("model/seats/README.md"));
+  const own = upgradePlan({ ...ask, model: new Map([reviewer, ["model/roles/README.md", "# Roles\n\nOurs.\n"]]) });
+  assert.ok(!own.given.includes("model/seats/README.md"));
+  const none = upgradePlan({ ...ask, model: new Map() });
+  assert.ok(!none.given.includes("model/seats/README.md"));
+});
+
+const naming = (files, units = "meta") => planned.stillNamingRoles(new Map(Object.entries(files)), units);
+
+test("the plan exports the function that names the files still saying roles, beside isInstancesOwn", () => {
+  assert.equal(typeof planned.stillNamingRoles, "function");
+  assert.equal(planned.isInstancesOwn, isInstancesOwn);
+});
+
+test("the files that still say roles are the instance's own texts naming roles/, roles.md or the roles count", () => {
+  assert.deepEqual(
+    naming({
+      "README.md": "Our seats are kept in model/roles/.\n",
+      "docs/b.md": "see roles.md\n",
+      "docs/a.md": "{{count:Roles}} in all\n",
+      "docs/fine.md": "Nothing about them.\n",
+      "meta/core/x.md": "model/roles/\n",
+      "dist/notes.md": "model/roles/\n",
+      "node_modules/p/i.js": "roles/\n",
+      "vendor/meta/core/y.md": "model/roles/\n",
+    }),
+    ["README.md", "docs/a.md", "docs/b.md", "vendor/meta/core/y.md"],
+  );
+  assert.deepEqual(naming({ "vendor/meta/core/y.md": "model/roles/\n", "vendor/z.md": "roles/\n" }, "vendor/meta"), ["vendor/z.md"]);
+});
+
+test("the seats README is named where it still uses the word role, whole, in any case", () => {
+  assert.deepEqual(naming({ "model/seats/README.md": "One file per Role.\n" }), ["model/seats/README.md"]);
+  assert.deepEqual(naming({ "model/seats/README.md": "One file per seat; a seat is not a roleplay.\n" }), []);
+  assert.deepEqual(naming({ "model/seats/README.md": "See model/roles/.\n" }), ["model/seats/README.md"]);
 });

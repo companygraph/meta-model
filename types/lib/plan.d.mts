@@ -1,3 +1,4 @@
+export { isInstancesOwn, stillNamingRoles } from "./seat-migration.mjs";
 import type { Files } from "./instance.mjs";
 export type InitAsk = {
     core: Files;

@@ -18,3 +18,19 @@ export declare function migratedSeats(model: Map<string, string | Uint8Array>): 
  * @returns {boolean}
  */
 export declare const isInstancesOwn: (path: string, units: string) => boolean;
+/**
+ * After the roles moved to seats, the instance's own files that still say roles: the paths a text
+ * names (`roles/`, `roles.md`) and the count a page draws (`{{count:Roles}}`), and the seats
+ * README, which the owner wrote about roles, where it still uses the word. Pure: the caller
+ * reads the texts and says which files to read (the command line reads the ones git lists, an
+ * editor its vault's), and anything the units folder, installed packages or a build holds is
+ * left out whatever it is given. Named and never rewritten, since each is the owner's own text.
+ * @param {Map<string, string>} files every text file the caller reads as the instance's own, of any
+ *   type and not only Markdown, keyed by its `/`-separated path from the instance root; binary files
+ *   are left out, since the function does not tell them apart. The seats README is judged only
+ *   under the key `model/seats/README.md`, so a caller includes it wherever it exists, listed by
+ *   its tool or not.
+ * @param {string} units the units folder the manifest names
+ * @returns {string[]} the keys of `files` that still name roles, sorted, each at most once
+ */
+export declare function stillNamingRoles(files: Map<string, string>, units: string): string[];
