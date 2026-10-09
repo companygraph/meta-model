@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`, and the `landscape` pack, whose type is `system`. That is what core and the pack ship, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`, and the `landscape` pack, whose type is `system`. That is what core and the packs ship, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about

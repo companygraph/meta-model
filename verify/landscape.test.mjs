@@ -94,6 +94,12 @@ test("an Access outside its tokens fails under R8", () => {
   assert.match(f[0], /point-of-sale\.md.*looks.*\(R8\)/);
 });
 
+test("a backticked master is R8's alone and is not counted as a second master", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | `master` |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R8\)/);
+});
+
 test("a Carries naming no concept fails as R4 alone, because a qualifier resolves as a reference does", () => {
   const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Card payment | Sale | USB |", "| Payment terminal | Card payment | Receipt | USB |")));
   assert.equal(f.length, 1, f.join("\n"));

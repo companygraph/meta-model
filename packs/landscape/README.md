@@ -31,20 +31,26 @@ The contract a generator reads in either direction: from an architecture tool's 
 | ApplicationInterface, TechnologyInterface | the `As` of a `## Connects to` row |
 | ApplicationService, BusinessService, Capability | core `feature`, where somebody uses it |
 | DataObject, BusinessObject | core `concept` |
-| BusinessProcess, BusinessActor, BusinessRole | core `process`, `seat`, `profile` |
+| BusinessProcess, BusinessRole, BusinessActor | core `process`, `seat`, `profile` |
 | Realization, system to service | `realizes` |
 | Serving, system to process | `serves` |
+| Serving or Realization, node or system software to application | `part-of`: the application is part of what it runs on |
+| Serving, application to application | a `## Connects to` row on the served side |
+| Triggering between systems | a `## Connects to` row; it comes back as Flow |
+| Access with no mode | a `## Holds` row, `Access` as `reads` |
 | Composition, Aggregation, Assignment between systems | `part-of`, inverse derived |
-| Flow, Triggering between systems | a `## Connects to` row |
+| Flow between systems | a `## Connects to` row |
 | Access, with its mode | a `## Holds` row, `Access` as `writes` or `reads`, the leading writer `master` |
 | ApplicationFunction, TechnologyService, TechnologyFunction, Artifact | dropped: internal behavior nobody can name a user of |
 | Location | not yet |
+| Path, TechnologyCollaboration, Facility, DistributionNetwork | not yet, with Location |
 | Association, untyped | dropped: an edge that says nothing |
 | Views | not held; a consumer draws the graph |
 
 ## Where it departs from its sources
 
-- One type where ArchiMate has nine across its application and technology layers; the kind carries the layer.
+- One type where ArchiMate has seven across its application, technology and physical layers, and two interfaces that become rows; the kind carries the layer.
+- Triggering comes back as Flow: a connection row says what is carried and how, not whether it starts something.
 - An interface is a row, not an element. Its name survives in `As`; its own composition into components and its appearance in views do not.
 - Behavior nobody uses is dropped: application functions, technology services and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
 - Capabilities and business services are not pack types; they are features of the products staff open.

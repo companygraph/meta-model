@@ -19,7 +19,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
-| `kind` | Yes | enum | `application`, `device`, `platform` or `network`. Software somebody uses or that serves other software; a physical thing that computes, prints, weighs or pays; what applications run on, a node, system software, a cloud service; or what connects systems (ArchiMate 3.2, chapters 9 and 10). |
+| `kind` | Yes | enum | `application`, `device`, `platform` or `network`. Software somebody uses or that serves other software; a physical thing that computes, prints, weighs or pays; what applications run on, a node, system software, a cloud service; or what connects systems (ArchiMate 3.2, chapters 9 to 11). |
 | `vendor` | No | string | Who makes it. A name, not a reference: a vendor is an entity only when it processes personal data, which `processor` says. |
 | `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
@@ -80,10 +80,12 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   `application` that is `part-of` the terminal.
 - `realizes` names features of the products staff and customers open, in the words of those
   features; a system that gives nobody anything to do, a network, a camera, realizes nothing and
-  names its `domain` instead.
+  names its `domain`, or the processes it `serves`, instead.
 - `## Connects to` is written on the system that takes the data. An exchange both ways is two
   rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`:
   the one whose copy the others are copies of.
+- `## Holds` names each concept once, at its strongest access: a system that writes a concept reads
+  it too, and a row for each would draw one edge twice.
 - The page states no cost, no license count and no version. Those move, and a contract register
   or a configuration database holds them.
