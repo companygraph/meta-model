@@ -84,7 +84,7 @@ Headcount targets, budgets and cost centers. Recruiting: a job posting, an appli
 
 ## What it costs
 
-A minor release of the pack, with nothing breaking. In the pack's schemas: one optional table on `group` with four columns, one optional field on `group` and one on `group-kind`, and one token added to `Place`. One instance check, staff below staff, with its test, a new form that reads the kind of the group a field names as well as the kind of the group that writes it. The existing rank check, unchanged, reaches `group` through the field's name. `example/` shows each: an opening in one of Beacon Systems' units, a staff unit and a staff place, and a rank on every group. The pack's README moves the three out of its list of what is left for later.
+A minor release of the pack, with nothing breaking. In the pack's schemas: one optional table on `group` with four columns, one optional field on `group` and one on `group-kind`, and one token added to `Place`. One instance check, staff below staff, with its test, a new form that reads the kind of the group a field names as well as the kind of the group that writes it. The existing rank check, unchanged, reaches `group` through the field's name. The build also holds every table cell typed `number` to digits and every one typed `date` to R9's date form, as frontmatter values already are, which reaches every such column in core and every pack from this release on; `Since` and `Count` are the first. `example/` shows each: an opening in one of Beacon Systems' units, a staff unit and a staff place, and a rank on every group. The pack's README moves the three out of its list of what is left for later.
 
 ```mermaid
 flowchart LR
