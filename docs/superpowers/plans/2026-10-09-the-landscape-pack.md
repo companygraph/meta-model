@@ -106,10 +106,10 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/concepts/customer.md", page("Customer", "Who buys.")],
   ["model/seats/store-manager.md", page("Store Manager", "Runs a store.")],
   ["model/seats/it-operations.md", page("IT Operations", "Keeps the systems running.")],
-  ["model/data-processors/payline.md", page("Payline", "Settles card payments.")],
+  ["model/data-processors/tillpay.md", page("Tillpay", "Settles card payments.")],
   [`${S}/point-of-sale.md`, system({ kind: "application", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
     body: connects([["Payment terminal", "Card payment", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "USB"]]) + holds([["Sale", "master"], ["Article", "reads"]]) })],
-  [`${S}/payment-terminal.md`, system({ kind: "device", vendor: "Payline", processor: "Payline", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
+  [`${S}/payment-terminal.md`, system({ kind: "device", vendor: "Tillpay", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
   [`${S}/store-server.md`, system({ kind: "platform", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
   [`${S}/store-network.md`, system({ kind: "network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
   [`${S}/article-master.md`, system({ kind: "application", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "master"], ["Customer", "master"]]) })],
@@ -143,7 +143,7 @@ test("a part-of naming no system fails as R4 alone", () => {
 test("a realizes naming no feature fails as R4, and a processor naming a seat fails as R4, since a reference resolves by its declared type", () => {
   const a = failures(tree(edit(`${S}/point-of-sale.md`, "  - Pay by card", "  - Pay by cheque")));
   assert.equal(only(a, "point-of-sale.md", "\"Pay by cheque\"", "(R4)").length, 1, a.join("\n"));
-  const b = failures(tree(edit(`${S}/payment-terminal.md`, "processor: Payline", "processor: IT Operations")));
+  const b = failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "processor: IT Operations")));
   assert.equal(only(b, "payment-terminal.md", "\"IT Operations\"", "(R4)").length, 1, b.join("\n"));
 });
 
@@ -240,7 +240,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `System` | Yes | ref → system | The system the data comes from, by its canonical name |
-| `As` | No | string | The interface the connection goes through, by its own name: `Paymentnetwork – Adyen`. Required where two rows name the same system (R16). |
+| `As` | No | string | The interface the connection goes through, by its own name: `Payment network – Tillpay`. Required where two rows name the same system (R16). |
 | `Carries` | No | qualifier → concept | What the connection carries, by the concept's canonical name |
 | `Via` | No | string | How it is carried: a protocol, a file, a message queue |
 
@@ -264,9 +264,9 @@ A system answers "what does this run on, what does it carry, who owns it and wha
 
 ## Writing rules
 
-- The H1 names the system as staff name it, `POS Kassensystem`, `Filialsystem`, and never by its
+- The H1 names the system as staff name it, `Kassensystem`, `Filialsystem`, and never by its
   vendor or its product name alone; the vendor goes to `vendor`. An architecture tool's habit of
-  writing both into one name, `POS Kassensystem – Comarch Retail`, splits into the H1 and the
+  writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the
   field.
 - The tagline says what the system does and for whom, and claims nothing about how well.
 - `kind` is what the system is made of, not what it is for: a payment terminal is a `device`
