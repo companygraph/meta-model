@@ -517,6 +517,12 @@ test("a staff value that is neither yes nor no fails as R8 alone, at the kind, w
   assert.match(f[0], /odd\.md.*maybe/);
 });
 
+test("a staff value that is neither yes nor no on the parent's kind fails as R8 alone, and the page below it adds nothing", () => {
+  const f = failures(tree((m) => below("Sales", "Department")(withLegal(m).set("model/group-kinds/staff-unit.md", kind("Staff Unit", "yes", "maybe")))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /staff-unit\.md.*maybe/);
+});
+
 test("a group under a staff unit whose own kind resolves to nothing fails as R4 alone", () => {
   const f = failures(tree((m) => below("Sales", "Ghost Kind")(withLegal(m))));
   assert.ok(f.every((x) => !x.includes("carries `staff: yes`")), f.join("\n"));

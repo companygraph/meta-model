@@ -1,8 +1,8 @@
 ---
 id: 01a1152c-3830-7c3f-b3ad-3761dc40528c
 source: Local
-rank: 20
 kind: Department
+rank: 20
 part-of: Management
 guides:
   - Backend Engineer

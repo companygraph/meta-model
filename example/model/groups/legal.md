@@ -1,8 +1,8 @@
 ---
 id: 01a11fcc-a579-7c38-88e9-0784850f3e77
 source: Local
-rank: 15
 kind: Staff Unit
+rank: 15
 part-of: Management
 ---
 

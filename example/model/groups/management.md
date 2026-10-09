@@ -1,8 +1,8 @@
 ---
 id: 01a1152c-3800-7600-a961-2992dc0f3e2d
 source: Local
-rank: 10
 kind: Department
+rank: 10
 ---
 
 # Management
