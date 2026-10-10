@@ -212,3 +212,9 @@ test("a system keeping one concept in two data objects writes two rows and passe
   }));
   assert.deepEqual(f, []);
 });
+
+test("a Connects to row naming the page it is on fails once under R16, and the other rows still pass", () => {
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Terminal status |", "| Point of sale | Terminal status |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md: the "## Connects to" System names the page it is on, "Point of sale"; a reference in this table points elsewhere \(R16\)/);
+});
