@@ -17,3 +17,4 @@ start: 2026-09
 | Mira Halvorsen | Backend Engineer | Lead |
 | Tomas Reyes | Head of Product | Member |
 | AI Agent | | Member |
+| Build Agent | | Member |

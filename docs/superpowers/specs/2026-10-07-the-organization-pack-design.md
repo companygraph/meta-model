@@ -105,7 +105,7 @@ A line draws a tree only if each person has one disciplinary unit and no unit si
 - In a group whose kind is `in-line: yes`, every `## People` row names a profile whose `nature` is `human`.
 - A group's `## People` names at most one profile whose `Place` is `Lead`.
 - A profile's rows in one group's `## People` carry one `Place`.
-- In a group whose kind is `in-line: no`, a `## People` that names a profile whose `nature` is `agent` names one whose `nature` is `human` (added with #342).
+- In a group whose kind is `in-line: no`, a `## People` that names a profile whose `nature` is `agent` names one whose `nature` is `human`.
 
 A board or a cross-functional team is a kind with `in-line: no`, so the people it gathers, who already sit in a unit, are not counted twice. Since every person named in a unit in the line is human, an agent sits in teams and boards and never in the disciplinary line, which is where hiring and appraisal happen. Who directs an agent is every human in the group it sits in, settled in #342 when an instance asked for a `steers` edge from a human's profile to an agent's: a direct edge between profiles is the one the pack refuses for people too, a phase already says what an agent produces and who approves it, and a new `Place` for a human who directs would leave every human Member ambiguous again. The group is the grant, so a group that names an agent names a human beside it, and a project where only some are bound to its agents is two groups.
 
