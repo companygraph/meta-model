@@ -37,6 +37,13 @@ export type TypeEntry = {
         column: string;
     };
     /**
+     * A field written only on a page that leaves `unless` empty: `vendor` yields to `processor`, since the processor's page says who makes the system.
+     */
+    yields?: {
+        field: string;
+        unless: string;
+    };
+    /**
      * A table whose every row fills exactly one of `columns`.
      */
     oneOf?: {
@@ -238,6 +245,7 @@ export type Check = {
  * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {{ section: string, column: string }} [notSelf] A reference column of the `section` table that never names the page it is on: a system does not connect to itself.
+ * @property {{ field: string, unless: string }} [yields] A field written only on a page that leaves `unless` empty: `vendor` yields to `processor`, since the processor's page says who makes the system.
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
  * @property {string} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it; an edge the type's `within` does not admit is that check's and is not followed.

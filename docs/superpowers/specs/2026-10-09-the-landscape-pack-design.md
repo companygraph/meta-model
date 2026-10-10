@@ -31,7 +31,7 @@ In core's words, each of those packages is a product of the IT product kind, ope
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
 | `kind` | Yes | ref → system-kind | What sort of system this is, the H1 of a file in `system-kinds/`; its `element` says which ArchiMate element a system of this kind is |
-| `vendor` | No | string | Who makes it. A name, not a reference: a vendor is an entity only when it processes personal data, which `processor` says. |
+| `vendor` | No | string | Who makes it, where the model has no page for them: a name, not a reference. Written only on a system naming no `processor`; where one is named, that page says who makes it. |
 | `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
 | `owner` | No | ref → seat | The seat accountable for what the system does for the business, the H1 of a file in `seats/` |
@@ -141,7 +141,7 @@ Measured against the retailer's export of October 8, 2026, the dropped lines hol
 - **Integrations are rows, not a type.** An integration has nothing of its own to say beyond its two sides, what it carries and how; a row draws the edge and the rest qualify it, the form core already has. Written on the side that takes the data, so a one-way flow is one row and an exchange is two, and no `oneSided` rule applies, since two systems naming each other is two flows. The interface's own name sits in `As`, because R16 makes that column what tells two rows naming one system apart, and two interfaces to one system is the common case.
 - **Access as ArchiMate has it, with the master marked.** `master`, `writes`, `reads` keep the access mode the tool records and add the one claim the report wanted: which copy leads. A check holds it to one per concept.
 - **Owner and operator are seats.** The report asks for a business and an IT responsible; core's seat is a responsibility the company needs filled, held by whichever profile lists it, and two optional references from the pack's side keep core untouched (R20).
-- **The vendor is a string, the processor a reference.** Most vendors are a name on an invoice; one that processes personal data is already a core `data-processor` with a contract, and the system names it rather than repeating what that page holds.
+- **The vendor is a string, the processor a reference.** Most vendors are a name on an invoice; one that processes personal data is already a core `data-processor` with a contract, and the system names it rather than repeating what that page holds. A system that names a processor therefore writes no `vendor`, since the field would name the same party a second time in a form nothing resolves; the checker holds the pair, and a vendor stays a name only where the model has no page for them.
 - **Lifecycle and criticality are enums, and license and cost are left out.** The first two are the governing properties the report finds missing and they change seldom; the last two are numbers that move, which the model does not carry.
 
 The grammar needs no change.
