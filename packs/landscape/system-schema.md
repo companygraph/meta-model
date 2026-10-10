@@ -20,7 +20,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
 | `kind` | Yes | ref → system-kind | What sort of system this is, the H1 of a file in `system-kinds/`; its `element` says which ArchiMate element a system of this kind is |
-| `vendor` | No | string | Who makes it, where the model has no page for them: a name, not a reference. Written only on a system naming no `processor`; where one is named, that page says who makes it. |
+| `vendor` | No | string | Who makes it, where the model has no page for the party: a name, not a reference. Written only on a system naming no `processor`; where one is named, that page says which party the company's contract is with, and a maker who is another party is named in the tagline. |
 | `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
 | `owner` | No | ref → seat | The seat accountable for what the system does for the business, the H1 of a file in `seats/` |
@@ -77,10 +77,12 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   architecture tool's habit of writing both into one name, `Kassensystem – Tillworks Retail`,
   splits into the H1 and the field. Software a vendor runs and the company only connects to is
   named as its runners name it, which is the vendor's own name for it, `GitHub`, `Cloud Run`,
-  and `vendor`, or the `processor`, still says who makes it.
+  and `vendor`, or the `processor` where one is named, still says who stands behind it.
 - `vendor` is written only where no `processor` is: a processor is a page with a legal name and a
-  contract on it, and a vendor named beside it is the same party written twice, once in a form
-  nothing resolves. A system naming no processor keeps its vendor as a name.
+  contract on it, and a vendor named beside it is, nearly always, the same party written twice,
+  once in a form nothing resolves. Where the maker is another party than the one the contract is
+  with, a terminal one company makes and an acquirer runs, the tagline names the maker, as a
+  word, not a field. A system naming no processor keeps its vendor as a name.
 - The tagline says what the system does and for whom, and claims nothing about how well.
 - `kind` names what sort of system it is, what it is made of and who runs it, not what it is for:
   a payment terminal is of a kind whose `element` is `device` whatever it runs, and the software on
