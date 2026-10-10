@@ -384,6 +384,34 @@ test("an agent as Lead in a department fails exactly once", () => {
   assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" has \`Place\` "Lead", and Bot's profile does not carry \`nature: human\` (R16)`]);
 });
 
+// A group outside the line is the grant: every human in it directs every agent in it, so a group
+// that names an agent names a human too, and no agent is directed by nobody (#342). In the line
+// the agent's row is already the line's finding, and this one stays silent there.
+const CREW = `${G}/agent-crew.md`;
+const crew = (rows) => (m) => withBot(m).set(CREW, group({ kind: "Team", body: `# Agent Crew\n\n> Runs the bots.\n${people(rows)}` }));
+const withBot2 = (m) => m
+  .set("model/profiles/bot2/bot2.md", person("Bot2", ["Reviewer"], "agent"))
+  .set("model/profiles/bot2/experiences/README.md", "# Experiences\n\n> Nothing yet.\n");
+
+test("an agent as the only person in a team fails once", () => {
+  const f = failures(tree(crew([["Bot", "", "Member"]])));
+  assert.deepEqual(f, [`${CREW}: the "## People" table names "Bot", whose profile carries \`nature: agent\`, and no profile carrying \`nature: human\`; a group that names one names the other too (R16)`]);
+});
+
+test("two agents and no human in a team fail once, naming both", () => {
+  const f = failures(tree((m) => withBot2(crew([["Bot", "", "Member"], ["Bot2", "", "Member"]])(m))));
+  assert.deepEqual(f, [`${CREW}: the "## People" table names "Bot" and "Bot2", whose profiles carry \`nature: agent\`, and no profile carrying \`nature: human\`; a group that names one names the other too (R16)`]);
+});
+
+test("an agent beside a human Member in a team passes: the human directs it, Lead or not", () => {
+  assert.deepEqual(failures(tree(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member"]]))), []);
+});
+
+test("an agent alone in a department fails once, as the line's", () => {
+  const f = failures(tree((m) => edit(`${G}/engineering.md`, `${MIRA}\n${ANA}`, "| Bot | Designer | Member |")(withBot(m))));
+  assert.deepEqual(f, [`${G}/engineering.md: the "## People" row "Bot" names a profile that does not carry \`nature: human\`, in a group whose \`kind\` carries \`in-line: yes\` (R16)`]);
+});
+
 test("a human in the People of a department passes", () => {
   assert.ok(tree().get(`${G}/engineering.md`).includes("## People"));
   assert.deepEqual(failures(tree()), []);
