@@ -59,7 +59,7 @@ Purpose, as the schema will say it: a system answers "what does this run on, wha
 
 Writing rules:
 
-- The H1 names the system as staff name it, `POS Kassensystem`, `Filialsystem`, and never by its vendor or its product name alone; the vendor goes to `vendor`. An architecture tool's habit of writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the field.
+- The H1 names the system as the people who run it name it, `Kassensystem`, `Filialsystem`, and never by its vendor alone where a word of their own exists; the vendor goes to `vendor`. An architecture tool's habit of writing both into one name, `Kassensystem – Tillworks Retail`, splits into the H1 and the field. Software a vendor runs and the company only connects to is named as its runners name it, which is the vendor's own name for it, `GitHub`, `Cloud Run`, and `vendor` still says who makes it.
 - The tagline says what the system does and for whom, and claims nothing about how well.
 - `kind` names what sort of system it is, what it is made of and who runs it, not what it is for: a payment terminal is of a kind whose `element` is `device` whatever it runs, and the software on it, where that is a system of its own, is of an application kind and `part-of` the terminal.
 - `realizes` names features of the products staff and customers open, in the words of those features; a system that gives nobody anything to do, a network, a camera, realizes nothing and names its `domain`, or the processes it `serves`, instead.
