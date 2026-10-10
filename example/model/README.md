@@ -4,7 +4,7 @@
 
 Northwind Atelier and Beacon Systems do not exist, and neither do Mira Halvorsen, Tomas Reyes and the agent that holds the Reviewer seat. The content is invented so the shape can be read end to end without anyone's actual client or revenue data being published.
 
-It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `product-kind`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`, and the `landscape` pack, whose types are `system` and `system-kind`. That is what core and the packs ship, not a claim that these types describe a company.
+It uses every core type — `identity`, `vision`, `brand`, `profile`, `experience`, `experience-kind`, `achievement-kind`, `skill`, `proficiency-level`, `value`, `source`, `surface`, `strategic-objective`, `strategy`, `kpi`, `seat`, `process`, `phase`, `track`, `product`, `product-kind`, `feature`, `domain`, `concept`, `question`, `question-kind`, `decision`, `decision-kind`, `decision-status`, `rule`, `risk`, `control`, `data-processor`, `processing-activity`, `stored-item` — and, beside core, takes the `organization` pack, whose types are `group`, `group-kind` and `job`, and the `landscape` pack, whose types are `system`, `system-kind`, `data-object` and `service`. That is what core and the packs ship, not a claim that these types describe a company.
 
 ```
 identity.md                      Beacon Systems — the company all of this is about
@@ -21,6 +21,8 @@ jobs/                            engineering-lead.md, head-of-product.md,
                                  backend-engineer.md, product-engineer.md
 system-kinds/                    service.md, platform.md, saas.md
 systems/                         billing-service.md, beacon-cluster.md, invoice-mailer.md
+data-objects/                    invoice-record.md
+services/                        invoice-feed.md
 seats/                           backend-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 product-kinds/                   application.md, page.md, api.md

@@ -15,13 +15,13 @@ domain: Invoicing
 
 ## Connects to
 
-| System | As | Carries | Via |
-| --- | --- | --- | --- |
-| Billing service | Invoice feed | Invoice | REST |
+| System | As | Service | Carries | Via |
+| --- | --- | --- | --- | --- |
+| Billing service | Feed endpoint | Invoice feed | Invoice | REST |
 
 ## Holds
 
-| Concept | Access |
-| --- | --- |
-| Invoice | reads |
-| Customer | reads |
+| Concept | Data object | Access |
+| --- | --- | --- |
+| Invoice | Invoice record | reads |
+| Customer | | reads |

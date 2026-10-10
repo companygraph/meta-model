@@ -47,6 +47,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | --- | --- | --- | --- |
 | `System` | Yes | ref → system | The system the data comes from, by its canonical name |
 | `As` | No | string | The interface the connection goes through, by its own name: `Payment network – Tillpay`. Required where two rows name the same system (R16). |
+| `Service` | No | qualifier → service | `provided-by` lists `System`. The service of that system the connection calls, by its canonical name |
 | `Carries` | No | qualifier → concept | What the connection carries, by the concept's canonical name |
 | `Via` | No | string | How it is carried: a protocol, a file, a message queue |
 
@@ -55,6 +56,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `Concept` | Yes | ref → concept | What the system keeps data of, by its canonical name |
+| `Data object` | No | qualifier → data-object | `realizes` lists `Concept`. The representation this system keeps of the concept, by its canonical name |
 | `Access` | Yes | enum | `master`, `writes` or `reads`. The one system whose copy leads, a system that writes a copy, or one that only reads (ArchiMate 4, access relationship). |
 
 `## References` is a table with these columns:
@@ -85,7 +87,12 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`:
   the one whose copy the others are copies of.
-- `## Holds` names each concept once, at its strongest access: a system that writes a concept reads
-  it too, and a row for each would draw one edge twice.
+- `## Holds` names a concept once per data object the system keeps of it, and once where it keeps
+  none, each at its strongest access: a system that writes a concept reads it too, and a row for
+  each would draw one edge twice.
+- `## Holds` names the data object the system keeps of the concept where one is modeled, and leaves
+  the cell blank where it keeps the concept in no form the model names yet.
+- `## Connects to` names the service the connection calls where one is modeled, in the same row as
+  the interface it goes through.
 - The page states no cost, no license count and no version. Those move, and a contract register
   or a configuration database holds them.

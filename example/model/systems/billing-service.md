@@ -19,11 +19,11 @@ realizes:
 
 ## Holds
 
-| Concept | Access |
-| --- | --- |
-| Invoice | master |
-| Invoice line | master |
-| Credit note | master |
-| Pricing rule | master |
-| Customer | reads |
-| Usage record | reads |
+| Concept | Data object | Access |
+| --- | --- | --- |
+| Invoice | Invoice record | master |
+| Invoice line | | master |
+| Credit note | | master |
+| Pricing rule | | master |
+| Customer | | reads |
+| Usage record | | reads |

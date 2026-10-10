@@ -24,12 +24,14 @@ const system = ({ kind, vendor, lifecycle, criticality, owner, operator, process
   "---", "", page(h1, tagline) + body,
 ].join("\n");
 const kindPage = (name, element, rank) => `---\nsource: Local\nrank: ${rank}\nelement: ${element}\n---\n\n# ${name}\n\n> A kind of system.\n\n## What it means\n\nWhat is of this kind, and what is not.\n`;
-const connects = (rows) => `\n## Connects to\n\n| System | As | Carries | Via |\n| --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
-const holds = (rows) => `\n## Holds\n\n| Concept | Access |\n| --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const connects = (rows) => `\n## Connects to\n\n| System | As | Service | Carries | Via |\n| --- | --- | --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
+const holds = (rows) => `\n## Holds\n\n| Concept | Data object | Access |\n| --- | --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 
 const tree = (change = (m) => m) => change(new Map([
   ["meta/landscape/system-schema.md", pack("system")],
   ["meta/landscape/system-kind-schema.md", pack("system-kind")],
+  ["meta/landscape/data-object-schema.md", pack("data-object")],
+  ["meta/landscape/service-schema.md", pack("service")],
   ["meta/core/source-schema.md", bare("source", "model/sources/*.md")],
   ["meta/core/domain-schema.md", bare("domain", "model/domains/*.md")],
   ["meta/core/feature-schema.md", bare("feature", "model/features/*.md")],
@@ -54,12 +56,14 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/system-kinds/store-device.md", kindPage("Store device", "device", 20)],
   ["model/system-kinds/server.md", kindPage("Server", "node", 30)],
   ["model/system-kinds/network.md", kindPage("Network", "communication-network", 40)],
+  ["model/data-objects/sale-record.md", "---\nsource: Local\nrealizes: Sale\n---\n\n# Sale record\n\n> The row set a till writes for each sale, kept in the till database.\n"],
+  ["model/services/card-authorization.md", "---\nsource: Local\nprovided-by:\n  - Payment terminal\nrealizes:\n  - Pay by card\n---\n\n# Card authorization\n\n> The answer a payment terminal gives a till for a card, accepted or declined.\n"],
   [`${S}/point-of-sale.md`, system({ kind: "Till software", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
-    body: connects([["Payment terminal", "Card payment", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "USB"]]) + holds([["Sale", "master"], ["Article", "reads"]]) })],
+    body: connects([["Payment terminal", "Card payment", "Card authorization", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "", "USB"]]) + holds([["Sale", "Sale record", "master"], ["Article", "", "reads"]]) })],
   [`${S}/payment-terminal.md`, system({ kind: "Store device", vendor: "Tillpay", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
   [`${S}/store-server.md`, system({ kind: "Server", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
   [`${S}/store-network.md`, system({ kind: "Network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
-  [`${S}/article-master.md`, system({ kind: "Till software", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "master"], ["Customer", "master"]]) })],
+  [`${S}/article-master.md`, system({ kind: "Till software", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "", "master"], ["Customer", "", "master"]]) })],
 ]));
 const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
 const edit = (path, from, to) => (m) => m.set(path, m.get(path).replace(from, to));
@@ -108,19 +112,19 @@ test("a realizes naming no feature fails as R4, and a processor naming a seat fa
 });
 
 test("an Access outside its tokens fails under R8", () => {
-  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | looks |")));
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | looks |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /point-of-sale\.md.*looks.*\(R8\)/);
 });
 
 test("a backticked master is R8's alone and is not counted as a second master", () => {
-  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | `master` |")));
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | `master` |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /\(R8\)/);
 });
 
 test("a Carries naming no concept fails as R4 alone, because a qualifier resolves as a reference does", () => {
-  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Card payment | Sale | USB |", "| Payment terminal | Card payment | Receipt | USB |")));
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Payment terminal | Card payment | Card authorization | Sale | USB |", "| Payment terminal | Card payment | Card authorization | Receipt | USB |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /point-of-sale\.md.*"Receipt".*\(R4\)/);
 });
@@ -139,31 +143,72 @@ test("a part-of circle of two fails once naming both", () => {
 });
 
 test("two systems holding one concept as master fail once naming both", () => {
-  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | master |")));
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | master |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /"Article" is in the "## Holds" Concept of model\/systems\/article-master\.md and model\/systems\/point-of-sale\.md; a concept is in the "## Holds" Concept, in a row whose `Access` is `master`, of one system at most \(R16\)/);
 });
 
 test("one master beside writers and readers passes, and a system holding two concepts as master passes", () => {
   const f = failures(tree((m) => {
-    edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | writes |")(m);
-    edit(`${S}/store-server.md`, "> The machine in the back office the store's applications run on.\n", `> The machine in the back office the store's applications run on.\n${holds([["Article", "reads"], ["Sale", "reads"]])}`)(m);
+    edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | writes |")(m);
+    edit(`${S}/store-server.md`, "> The machine in the back office the store's applications run on.\n", `> The machine in the back office the store's applications run on.\n${holds([["Article", "", "reads"], ["Sale", "", "reads"]])}`)(m);
     return m;
   }));
   assert.deepEqual(f, []);
 });
 
 test("an Access off the list is R8's alone and is not counted as a master", () => {
-  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | Master |")));
+  const f = failures(tree(edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | Master |")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /\(R8\)/);
 });
 
 test("two systems writing one concept pass, since only the master rows count", () => {
   const f = failures(tree((m) => {
-    edit(`${S}/point-of-sale.md`, "| Article | reads |", "| Article | writes |")(m);
-    edit(`${S}/article-master.md`, "| Article | master |", "| Article | writes |")(m);
+    edit(`${S}/point-of-sale.md`, "| Article |  | reads |", "| Article |  | writes |")(m);
+    edit(`${S}/article-master.md`, "| Article |  | master |", "| Article |  | writes |")(m);
     return m;
+  }));
+  assert.deepEqual(f, []);
+});
+
+test("a data object whose realizes names another concept than its row fails the join", () => {
+  const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale", "realizes: Article")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*"Sale record", and model\/data-objects\/sale-record\.md does not list "Sale" in `realizes`.*\(R16\)/);
+});
+
+test("a service the row's system does not provide fails the join", () => {
+  const f = failures(tree(edit("model/services/card-authorization.md", "  - Payment terminal", "  - Store server")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /point-of-sale\.md.*"Card authorization", and model\/services\/card-authorization\.md does not list "Payment terminal" in `provided-by`.*\(R16\)/);
+});
+
+test("a service without provided-by fails as required, and the row calling it fails its join", () => {
+  const f = failures(tree(edit("model/services/card-authorization.md", "provided-by:\n  - Payment terminal\n", "")));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.equal(only(f, "card-authorization.md", "no `provided-by`").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Payment terminal\" in `provided-by`", "(R16)").length, 1, f.join("\n"));
+});
+
+test("a data object without realizes fails as required", () => {
+  const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale\n", "")));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.equal(only(f, "sale-record.md", "no `realizes`").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Sale\" in `realizes`", "(R16)").length, 1, f.join("\n"));
+});
+
+test("a realizes naming nothing fails as R4 and the row's join", () => {
+  const f = failures(tree(edit("model/data-objects/sale-record.md", "realizes: Sale", "realizes: Receipt")));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.equal(only(f, "sale-record.md", "\"Receipt\"", "(R4)").length, 1, f.join("\n"));
+  assert.equal(only(f, "point-of-sale.md", "does not list \"Sale\" in `realizes`", "(R16)").length, 1, f.join("\n"));
+});
+
+test("a system keeping one concept in two data objects writes two rows and passes", () => {
+  const f = failures(tree((m) => {
+    m.set("model/data-objects/sale-archive.md", "---\nsource: Local\nrealizes: Sale\n---\n\n# Sale archive\n\n> The sales of closed years, kept as files.\n");
+    return edit(`${S}/point-of-sale.md`, "| Sale | Sale record | master |", "| Sale | Sale record | master |\n| Sale | Sale archive | reads |")(m);
   }));
   assert.deepEqual(f, []);
 });

@@ -1506,6 +1506,10 @@ test("init --pack landscape vendors the pack, and the instance it writes passes 
   assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-kind-schema.md")));
   assert.ok(fs.existsSync(path.join(root, "model/systems")), "the pack's folder is made");
   assert.ok(fs.existsSync(path.join(root, "model/system-kinds")), "the kind's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "data-object-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "service-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "model/data-objects")), "the data object's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/services")), "the service's folder is made");
   assert.doesNotThrow(() => run(["check", root]));
 });
 
