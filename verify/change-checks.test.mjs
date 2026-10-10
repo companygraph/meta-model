@@ -9,9 +9,10 @@ import { keptChangesOf, labelChangesOf, labelsOf, PACKS, TYPES } from "../lib/ch
 
 const DECISION = "model/decisions/2026-vendored-core.md";
 const list = (field, values) => (values.length ? `${field}:\n${values.map((v) => `  - ${v}\n`).join("")}` : "");
-const call = ({ id = "id: 01a0dd35-9358-7f34-b9f9-9c998df35ff1\n", status = "Standing", by = "Owner", serves = [], upholds = [], why = "It holds still under every model.", consequences = "We keep a copy per instance.", bears = [] } = {}) =>
+const call = ({ id = "id: 01a0dd35-9358-7f34-b9f9-9c998df35ff1\n", status = "Standing", by = "Owner", serves = [], upholds = [], why = "It holds still under every model.", consequences = "We keep a copy per instance.", bears = [], references = [] } = {}) =>
   `---\n${id}source: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: ${status}\nby: ${by}\n${list("serves", serves)}${list("upholds", upholds)}---\n\n# Core is vendored\n\n> We vendor core.\n\n## Why\n\n${why}\n\n## Consequences\n\n${consequences}\n` +
-  (bears.length ? `\n## Bears on\n\n| Type | Entity | Owner | How |\n| --- | --- | --- | --- |\n${bears.map((r) => `| ${r.join(" | ")} |\n`).join("")}` : "");
+  (bears.length ? `\n## Bears on\n\n| Type | Entity | Owner | How |\n| --- | --- | --- | --- |\n${bears.map((r) => `| ${r.join(" | ")} |\n`).join("")}` : "") +
+  (references.length ? `\n## References\n\n| What | URL |\n| --- | --- |\n${references.map((r) => `| ${r.join(" | ")} |\n`).join("")}` : "");
 const change = (before, after, path = DECISION) => ({ before: path, after: path, beforeText: before, afterText: after });
 const kept = (changes, deleted = []) => keptChangesOf(changes, deleted, "main");
 
@@ -181,6 +182,30 @@ test("a reference field rewritten in another YAML shape is the same call, and a 
   assert.notEqual(flow, block);
   assert.deepEqual(followed([change(block, flow)], both, both), []);
   assert.deepEqual(followed([change(block, flow.replace("Old", "Elder"))], both, both), [FIELD("serves")]);
+});
+
+// --- A References URL follows the document it names ------------------------------------------
+
+// A References row points at a document the decision rests on, and the row draws no edge, so a
+// document that moves, or an address written wrong on the day, left the page pointing at a 404
+// that nothing could repair. The URL may follow its document; the row's What, the other rows and
+// the text around the table stay as they were.
+const SPEC = ["The specification", "https://example.com/specs/old.md"];
+const SLIDE = ["The slides", "https://example.com/slides.pdf"];
+
+test("a References row's URL may change while its What and the other rows stay", () => {
+  const was = call({ references: [SPEC, SLIDE] });
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE] }))]), []);
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], ["The slides", "https://example.com/deck.pdf"]] }))]), []);
+});
+
+test("a References row's What, a row added or removed, and a URL moved with its status still fail", () => {
+  const was = call({ references: [SPEC, SLIDE] });
+  assert.deepEqual(kept([change(was, call({ references: [["The spec", "https://example.com/specs/old.md"], SLIDE] }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, call({ references: [SPEC, SLIDE, ["A recording", "https://example.com/talk.mp4"]] }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, call({ references: [SPEC] }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE], why: "It holds still." }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE], status: "Revised" }))]), []);
 });
 
 // --- Labels ----------------------------------------------------------------------------------
