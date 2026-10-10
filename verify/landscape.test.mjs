@@ -216,8 +216,16 @@ test("a system keeping one concept in two data objects writes two rows and passe
 test("a vendor written beside a processor fails once under R16, and a vendor alone passes", () => {
   const f = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor: Tillpay\nprocessor: Tillpay"))), "payment-terminal");
   assert.equal(f.length, 1);
-  assert.match(f[0], /payment-terminal\.md: `vendor` is written beside `processor`; the page `processor` names says what `vendor` would, so `vendor` is written only where no `processor` is \(R16\)/);
+  assert.match(f[0], /payment-terminal\.md: `vendor` is written beside `processor`; the page a `processor` names says who that is, and `vendor` is left out \(R16\)/);
   assert.deepEqual(only(failures(tree()), "point-of-sale", "vendor"), []);
+});
+
+test("a vendor written as a list beside a processor still fails, and a vendor beside a processor that resolves to nothing is R4's alone", () => {
+  const listed = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor:\n  - Tillpay\nprocessor: Tillpay"))), "payment-terminal", "vendor");
+  assert.equal(listed.length, 1);
+  const typo = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor: Tillpay\nprocessor: Tilpay"))), "payment-terminal");
+  assert.equal(typo.length, 1);
+  assert.match(typo[0], /"Tilpay".*\(R4\)/);
 });
 
 test("a Connects to row naming the page it is on fails once under R16, and the other rows still pass", () => {
