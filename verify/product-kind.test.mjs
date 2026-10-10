@@ -86,3 +86,20 @@ test("products and no kinds at all fail on each product's missing kind and nowhe
 test("an instance with kinds and no products passes, since there is nothing to gather yet", () => {
   assert.deepEqual(failures({ products: false }), []);
 });
+
+test("a kind written as a list of two names fails once, as a reference naming more than one entity", () => {
+  for (const kind of ["kind: [Application, API]", "kind:\n  - Application\n  - API"]) {
+    const f = about("products/billing-console.md", { fm: ["source: Local", "domain: Pricing", kind] });
+    assert.equal(f.length, 1, f.join("\n"));
+    assert.match(f[0], /`kind` is declared `ref → product-kind` and carries a list; a reference names one entity \(R9\)/);
+  }
+});
+
+test("a scalar kind passes, and a field declared array of ref → <type> written as a list still does", () => {
+  assert.deepEqual(about("products/billing-console.md", undefined), []);
+  const files = tree();
+  files.set("meta/core/feature-schema.md", ["---", "id: 01a00000-0000-7000-8000-0000000000ff", "---", "", ...head("feature", "model/features/*.md"), "## Frontmatter", "", "| Field | Required | Type | Description |", "| --- | --- | --- | --- |", "| `products` | Yes | array of ref → product | Products. |", "", "## Sections", "", "| Section | Required | Description |", "| --- | --- | --- |", ""].join("\n"));
+  files.set("model/features/export.md", "---\nproducts:\n  - Billing Console\n  - Usage API\n---\n\n# Export\n\n> Exports.\n");
+  const f = checkInstance(files, { core: "meta/core", model: "model" }).failures.filter((x) => x.includes("features/export.md"));
+  assert.deepEqual(f, []);
+});
