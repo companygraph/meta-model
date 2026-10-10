@@ -1,7 +1,7 @@
 ---
 id: 01a12190-1c52-75a6-acde-c992a62c115a
 source: Local
-kind: platform
+kind: Platform
 vendor: Harbor Cloud
 lifecycle: active
 criticality: high

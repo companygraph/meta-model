@@ -1503,7 +1503,9 @@ test("init --pack landscape vendors the pack, and the instance it writes passes 
   const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
   assert.deepEqual(manifest.packs, ["landscape"]);
   assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-kind-schema.md")));
   assert.ok(fs.existsSync(path.join(root, "model/systems")), "the pack's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/system-kinds")), "the kind's folder is made");
   assert.doesNotThrow(() => run(["check", root]));
 });
 

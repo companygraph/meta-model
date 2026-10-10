@@ -1,7 +1,7 @@
 ---
 id: 01a12190-1c1b-7fa5-a0ec-c93888e10d73
 source: Local
-kind: application
+kind: Service
 lifecycle: active
 criticality: high
 owner: Backend Engineer
