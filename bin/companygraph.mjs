@@ -85,8 +85,8 @@ const USAGE = `companygraph [<command>]
   id                  print a fresh id, a UUID version 7
   ids [<folder>]      give every page an id from its first commit, or refuse (exit 3) under a pattern, or a range that changed an id, rewrote or removed a decision, or moved or reused a label
 
-init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b>  --no-hook  --gate <github|git|none>  --dry-run
-upgrade: --core <tag>  --pack <a,b>  --force  --dry-run  --gate <github|git|none>
+init: --here  --agent <${AGENTS.join("|")}>  --core <tag>  --name <instance>  --schemas <dir>  --folders <a,b>  --pack <a,b> (repeatable)  --no-hook  --gate <github|git|none>  --dry-run
+upgrade: --core <tag>  --pack <a,b> (repeatable)  --force  --dry-run  --gate <github|git|none>
   --force overwrites edited vendored files, moves past Markdown out of the form, and removes edited gate hooks
 adopt: --gate <github|git|none>  --dry-run
 obsidian: --release <tag>  --from <dir>  --plugins  --no-plugins  --force  --open
@@ -176,7 +176,9 @@ function flags(argv, command) {
     const value = argv[i + 1];
     if (value === undefined) throw new Error(`--${name} needs a value`);
     if (value.startsWith("--")) throw new Error(`--${name} needs a value, not ${value}`);
-    /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (out))[name] = value;
+    const slot = /** @type {Record<string, unknown>} */ (/** @type {unknown} */ (out));
+    // --pack is repeatable: `--pack a --pack b` is `--pack a,b`. Every other flag keeps its last value.
+    slot[name] = name === "pack" && typeof slot[name] === "string" ? `${slot[name]},${value}` : value;
     i++;
   }
   return out;

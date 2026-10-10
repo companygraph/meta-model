@@ -107,7 +107,7 @@ test("a refused key stops with its own error, a failure names the status, and ne
 const cli = fileURLToPath(new URL("../bin/companygraph.mjs", import.meta.url));
 const fresh = ({ pack = [] } = {}) => {
   const root = fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-judge-"));
-  // `init` keeps the last of a repeated `--pack`, so the packs go as one comma-separated value.
+  // The packs go as one comma-separated value; the CLI joins a repeated `--pack` too.
   execFileSync(process.execPath, [cli, "init", root, "--name", "Acme", "--agent", "claude", "--no-hook", ...(pack.length ? ["--pack", pack.join(",")] : [])], { encoding: "utf8" });
   return root;
 };
