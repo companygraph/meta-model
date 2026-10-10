@@ -1513,6 +1513,25 @@ test("init --pack landscape vendors the pack, and the instance it writes passes 
   assert.doesNotThrow(() => run(["check", root]));
 });
 
+test("init with --pack given twice joins the packs, as --pack organization,landscape does", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization", "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization", "landscape"]);
+  assert.ok(fs.existsSync(path.join(root, "meta/organization", "group-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-schema.md")));
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade --pack landscape on an instance that took organization lists both", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization"]);
+  run(["upgrade", root, "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization", "landscape"]);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
 // An instance that took a pack reads the pack's schemas wherever the history commands read the
 // model: a bounded context's page sits in a folder only the pack's schema declares, and without
 // them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
