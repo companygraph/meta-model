@@ -50,7 +50,7 @@ A kind answers "what sort of system is this?" in the company's words, `SaaS`, `S
   that is what tells a device in a store from the software on it, and it has nowhere else to live.
 - `## What it means` says what the kind excludes as well as what it covers.
 - `element` is the ArchiMate element and nothing more: two kinds may share one, `SaaS` and
-  `Service` are both an application component, and the kind is what tells them apart.
+  `Deployment` are both an application component, and the kind is what tells them apart.
 - The H1 names what the system is, `SaaS`, `Store device`, and never the element,
   `Application component`, or the type, `System`.
 - The page writes names and prose in the model's language (R14), as every page does.
