@@ -10,7 +10,7 @@ An instance takes it with `companygraph init --pack organization`. Every edge fr
 | `group-kind` | What kind of group a company has, and whether it stands in the disciplinary line | nothing |
 | `job` | What a person is employed as, the same wherever they sit, and the seats a person in it usually holds | nothing |
 
-A person sits in a unit in a job, in a row of the unit's `## People`, and the disciplinary line runs through those people: each answers to the person whose `Place` is `Lead`, and up through `part-of`. The professional line is a group's `guides`, which names jobs wherever the people who do them sit. A group says which positions it is looking to fill in its `## Openings`, a staff unit is a group of a kind with `staff: yes` and stands in the line beside the head it serves, and a group's `rank` is its place in the company's own order.
+A person sits in a unit in a job, in a row of the unit's `## People`, and the disciplinary line runs through those people: each answers to the person whose `Place` is `Lead`, and up through `part-of`. The professional line is a group's `guides`, which names jobs wherever the people who do them sit. A group says which positions it is looking to fill in its `## Openings`, a staff unit is a group of a kind with `staff: yes` and stands in the line beside the head it serves, and a group's `rank` is its place in the company's own order. An agent sits only in a group outside the line, and every human in that group directs every agent in it, so who may direct an agent is read from the group pages, and a group that names an agent names a human beside it.
 
 ## Sources
 
