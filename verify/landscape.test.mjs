@@ -60,7 +60,7 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/services/card-authorization.md", "---\nsource: Local\nprovided-by:\n  - Payment terminal\nrealizes:\n  - Pay by card\n---\n\n# Card authorization\n\n> The answer a payment terminal gives a till for a card, accepted or declined.\n"],
   [`${S}/point-of-sale.md`, system({ kind: "Till software", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
     body: connects([["Payment terminal", "Card payment", "Card authorization", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "", "USB"]]) + holds([["Sale", "Sale record", "master"], ["Article", "", "reads"]]) })],
-  [`${S}/payment-terminal.md`, system({ kind: "Store device", vendor: "Tillpay", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
+  [`${S}/payment-terminal.md`, system({ kind: "Store device", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
   [`${S}/store-server.md`, system({ kind: "Server", lifecycle: "active", operator: "IT Operations", partOf: "Store network", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
   [`${S}/store-network.md`, system({ kind: "Network", domain: "Retail", h1: "Store network", tagline: "The store's wired and wireless network." })],
   [`${S}/article-master.md`, system({ kind: "Till software", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "", "master"], ["Customer", "", "master"]]) })],
@@ -211,6 +211,21 @@ test("a system keeping one concept in two data objects writes two rows and passe
     return edit(`${S}/point-of-sale.md`, "| Sale | Sale record | master |", "| Sale | Sale record | master |\n| Sale | Sale archive | reads |")(m);
   }));
   assert.deepEqual(f, []);
+});
+
+test("a vendor written beside a processor fails once under R16, and a vendor alone passes", () => {
+  const f = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor: Tillpay\nprocessor: Tillpay"))), "payment-terminal");
+  assert.equal(f.length, 1);
+  assert.match(f[0], /payment-terminal\.md: `vendor` is written beside `processor`; the page a `processor` names says who that is, and `vendor` is left out \(R16\)/);
+  assert.deepEqual(only(failures(tree()), "point-of-sale", "vendor"), []);
+});
+
+test("a vendor written as a list beside a processor still fails, and a vendor beside a processor that resolves to nothing is R4's alone", () => {
+  const listed = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor:\n  - Tillpay\nprocessor: Tillpay"))), "payment-terminal", "vendor");
+  assert.equal(listed.length, 1);
+  const typo = only(failures(tree(edit(`${S}/payment-terminal.md`, "processor: Tillpay", "vendor: Tillpay\nprocessor: Tilpay"))), "payment-terminal");
+  assert.equal(typo.length, 1);
+  assert.match(typo[0], /"Tilpay".*\(R4\)/);
 });
 
 test("a Connects to row naming the page it is on fails once under R16, and the other rows still pass", () => {
