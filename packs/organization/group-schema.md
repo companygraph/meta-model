@@ -35,6 +35,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | `## Responsibilities` | No | Bulleted. What the group answers for, one item each |
 | `## People` | No | Table. The people who sit in the group, each with the job they do there and their place in it; its columns are declared below. |
 | `## Openings` | No | Table. The positions the group is looking to fill, one row per job and place; its columns are declared below. |
+| `## Direction` | No | Table. Which human of the group directs which agent in it, one row per agent and human, written only where not every human directs every agent; its columns are declared below. |
 | `## References` | No | Table. What a reader can open to learn more about the group — a charter, a mandate; its columns are declared below. |
 
 `## People` is a table with these columns:
@@ -54,6 +55,13 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 | `Count` | No | number | How many openings the row stands for. Blank is one. |
 | `Since` | No | date | From when the position is to be filled |
 
+`## Direction` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `Agent` | Yes | ref → profile | The agent, the H1 of a profile whose `nature` is `agent`, named in `## People` |
+| `Directed by` | Yes | qualifier → profile | One human of the group who directs it, the H1 of a profile whose `nature` is `human`, named in `## People`. An agent directed by two of them has a row for each. |
+
 `## References` is a table with these columns:
 
 | Column | Required | Type | Description |
@@ -63,7 +71,7 @@ A group owns nothing and nothing owns it, so it is a file. Its place in the tree
 
 ## Purpose
 
-A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `## People` rows are its positions, each one person in one job in one place; a position is a job in a group, and a row, not a page. A position that is open is a row of `## Openings` until someone fills it, and the person then takes a row of `## People` in the same change. In a group whose kind is in the line, a person answers to the person whose `Place` is `Lead`, and that lead to the lead of the unit its `part-of` names, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the professional right to direct of a matrix, the fachliches Weisungsrecht: the unit that sets a discipline's standard lists that discipline's jobs, and the standard holds wherever the people who do them sit. The checks hold the norms that follow from this: a person sits in at most one unit in the line, only a human sits in one, only a human leads or deputizes, a group has one lead, a person has one place in a group, and a group whose `part-of` names a staff unit is of a staff kind.
+A group is a unit of the company, or a team drawn from its units, and answers "who sits together, under whom, and whose standard do they work to?" Its `## People` rows are its positions, each one person in one job in one place; a position is a job in a group, and a row, not a page. A position that is open is a row of `## Openings` until someone fills it, and the person then takes a row of `## People` in the same change. In a group whose kind is in the line, a person answers to the person whose `Place` is `Lead`, and that lead to the lead of the unit its `part-of` names, as Gabler's Einliniensystem has it. Its `guides` is the professional line, the professional right to direct of a matrix, the fachliches Weisungsrecht: the unit that sets a discipline's standard lists that discipline's jobs, and the standard holds wherever the people who do them sit. A group outside the line is where an agent sits, and every human named in it directs every agent named in it: `Lead` and `Deputy` say who answers for the group, not who alone may direct, and a person who must not direct its agents is not in that group. Where a company grants direction per agent rather than per group, as a platform does that binds each agent to its controller, the group says so in `## Direction`, one row per agent and human, a fact about the two rather than a second position for the agent; a group without the section keeps the rule, the group stays the one unit its people work in, and who directs an agent is still read from its page. The checks hold the norms that follow from this: a person sits in at most one unit in the line, only a human sits in one, only a human leads or deputizes, a group has one lead, a person has one place in a group, a group whose `part-of` names a staff unit is of a staff kind, a group outside the line that names an agent names a human beside it, and a `## Direction` row names an agent and a human that `## People` names, once per pair.
 
 ## Writing rules
 
@@ -71,3 +79,4 @@ A group is a unit of the company, or a team drawn from its units, and answers "w
 - The tagline says what the group is for, not who sits in it.
 - `guides` names only jobs whose discipline the group sets, not jobs that merely work with it.
 - `## Openings` holds a job and place in one row; `Count` says how many, a whole number above zero.
+- `## Direction` names every human who directs an agent it names: an agent with a row there is directed by the humans its rows name and no other, and an agent without one by every human in the group.
