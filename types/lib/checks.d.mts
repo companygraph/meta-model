@@ -3,6 +3,11 @@ export { enumTokensOf, IMAGE_FILE };
 export type InstanceFiles = import("./instance.mjs").InstanceFiles;
 export type PageChange = import("./history.mjs").PageChange;
 export type DeletedPage = import("./history.mjs").DeletedPage;
+export type LabelPlace = {
+    section: string;
+    column?: string;
+    heading?: boolean;
+};
 export type TypeEntry = {
     type: string;
     folder?: string;
@@ -15,13 +20,9 @@ export type TypeEntry = {
         rest: string;
     };
     /**
-     * Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+     * Where a page carries labels cited from outside the model: one place, or several, whose labels share the page and so are unique across all of them.
      */
-    labels?: {
-        section: string;
-        column?: string;
-        heading?: boolean;
-    };
+    labels?: LabelPlace | LabelPlace[];
     /**
      * A reference column written on one side only: no two entities of the type each name the other in it.
      */
@@ -261,6 +262,11 @@ export type Check = {
 /** @typedef {import("./history.mjs").PageChange} PageChange */
 /** @typedef {import("./history.mjs").DeletedPage} DeletedPage */
 /**
+ * One place a page carries labels cited from outside the model: the section, and the table
+ * column or the `###` heading that holds them.
+ * @typedef {{ section: string, column?: string, heading?: boolean }} LabelPlace
+ */
+/**
  * A type as this release ships it: its folder, with `<placeholder>` segments for its owners, or
  * its one file; what owns it and what it owns; how prose writes it where its id will not do; and
  * the form its filename takes where R12's default does not hold.
@@ -272,7 +278,7 @@ export type Check = {
  * @property {string[]} [owns]
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
- * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+ * @property {LabelPlace | LabelPlace[]} [labels] Where a page carries labels cited from outside the model: one place, or several, whose labels share the page and so are unique across all of them.
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {{ section: string, column: string }} [notSelf] A reference column of the `section` table that never names the page it is on: a system does not connect to itself.
  * @property {{ field: string, unless: string }} [yields] A field written only on a page that leaves `unless` empty: `vendor` yields to `processor`, since the processor's page says who makes the system.

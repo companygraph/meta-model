@@ -146,3 +146,27 @@ test("an Applies to with no rows, and a use case without its success guarantees,
   const b = failures(tree(edit(`${U}/find-a-free-table.md`, "## Success guarantees\n\n- The guest sees the free tables.\n", "")));
   assert.equal(only(b, "find-a-free-table.md", "Success guarantees").length, 1, b.join("\n"));
 });
+
+test("a step label repeated in the main success scenario fails, naming the page and the label", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 4 | Booking system |", "| 3 | Booking system |")));
+  assert.equal(only(f, "labels two items").length, 1, f.join("\n"));
+  assert.match(only(f, "labels two items")[0], /book-a-table\.md: "3" labels two items under ## Main success scenario.*\(R16\)$/);
+});
+
+test("an extension label repeated fails under its own section", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 2a | The guest")));
+  assert.equal(only(f, "labels two items").length, 1, f.join("\n"));
+  assert.match(only(f, "labels two items")[0], /book-a-table\.md: "2a" labels two items under ## Extensions/);
+});
+
+test("a label repeated across the two tables fails once, since a label is unique on its page", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 3 | The guest")));
+  assert.equal(only(f, "labels two items").length, 1, f.join("\n"));
+  assert.match(only(f, "labels two items")[0], /book-a-table\.md: "3" labels two items under ## Extensions/);
+});
+
+test("an extension label that is no token fails once, as no label", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 3 a | The guest")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /book-a-table\.md: "3 a" under ## Extensions is no label; a label is letters, digits and hyphens \(R16\)$/);
+});
