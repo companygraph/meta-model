@@ -123,3 +123,11 @@ test("a Handled commands table without Emits and When fails, naming both column 
   assert.match(f[0], /columns are Command\|Description/);
   assert.match(f[0], /schema declares Command\|Emits\|When\|Description/);
 });
+
+// A value in quotes is the value inside them (YAML): a root whose kind is written "entity" is an
+// entity for the check that reads it from the aggregate, as it is for R8 on its own page.
+test("a kind written in quotes is the kind it names, for the root check as for R8", () => {
+  const path = `${BC}/billing/concept-designs/invoice.md`;
+  const f = failures(tree((m) => m.set(path, m.get(path).replace("kind: entity", 'kind: "entity"'))));
+  assert.deepEqual(f, []);
+});
