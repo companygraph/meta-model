@@ -21,7 +21,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `source-id` | No | string | The identifier this page has in its source, an element's GUID in an architecture tool. Absent when the source has none. |
 | `kind` | Yes | ref → system-kind | What sort of system this is, the H1 of a file in `system-kinds/`; its `element` says which ArchiMate element a system of this kind is |
 | `vendor` | No | string | Who makes it, where the model has no page for the party: a name, not a reference. Written only on a system naming no `processor`; where one is named, that page says which party the company's contract is with, and a maker who is another party is named in the tagline. |
-| `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date (LeanIX, application lifecycle). |
+| `lifecycle` | No | enum | `planned`, `active`, `retiring` or `retired`. The stage the system is in, not a date: `planned` before it runs, `active` while it does, `retiring` while a successor takes over, `retired` once nothing runs on it. |
 | `criticality` | No | enum | `high`, `medium` or `low`. What stops when it stops. |
 | `owner` | No | ref → seat | The seat accountable for what the system does for the business, the H1 of a file in `seats/` |
 | `operator` | No | ref → seat | The seat that runs it, the H1 of a file in `seats/` |

@@ -21,7 +21,6 @@ A system holds data objects through the `Data object` qualifier of its `## Holds
 | --- | --- |
 | The Open Group, ArchiMate 4 Specification | https://pubs.opengroup.org/architecture/archimate4-doc/ |
 | The Open Group, ArchiMate Model Exchange File Format | https://www.opengroup.org/xsd/archimate/ |
-| LeanIX, Application lifecycle | https://docs-eam.leanix.net/ |
 
 ## Mapping to ArchiMate 4
 
@@ -67,8 +66,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 - Behavior nobody uses is dropped: functions and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
 - Capabilities and business services are not pack types; they are features of the products staff open; an application or technology service is, as `service`, and realizes them.
 - Access is three tokens, not four: ArchiMate's `readwrite` is `writes`, since a writer reads, and `master` is a claim ArchiMate does not make.
-- Lifecycle has four stages where LeanIX has five; its phase-in and active are one `active`, since the model says what is, not when it will be.
-- Criticality is three tokens where LeanIX names four by business impact.
+- Lifecycle is four stages and criticality three tokens, a company's own words for where a system stands and what stops when it stops, with no tool's scale behind them: the model says what is, not when it will be.
 - A kind is a profile and takes no shape of its own: ArchiMate 4 lets a specialization define a notation (§14.2); the pack leaves that to a drawing, which shows the element's notation and the kind as its stereotype, so a generic editor needs the standard's shapes and nothing per kind.
 
 ## Left for later
