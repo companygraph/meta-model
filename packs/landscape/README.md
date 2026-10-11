@@ -42,6 +42,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 | Process | core `process` |
 | Role | core `seat`: the responsibility, held by whoever holds it; a role assigned to an application component is a seat held by an agent |
 | Business Actor | an Individual is a core `profile`, an Organizational Unit the organization pack's `group`, the Organization core `identity` (the three example specializations of §14.2.2) |
+| Grouping (Common Domain) of what runs in one environment | an `environment`, named by the page's H1, aggregating every system whose `environment` names it |
 | Realization, system to service | the service's `provided-by`; `realizes` on the system where no service is modeled |
 | Realization, service to business service; Serving, service to process | the service's `realizes` and `serves` |
 | Assignment, interface to service | the `As` and the `Service` of one `## Connects to` row |
@@ -56,7 +57,8 @@ The contract a generator reads in either direction: from an architecture tool's 
 | Realization, data object to business object | the data object's `realizes` |
 | Data Object realizing no Business Object, and Access to it | dropped: data whose meaning nobody can name |
 | Access with no mode | a `## Holds` row, `Access` as `reads` |
-| Function (Common Domain), Artifact | dropped: internal behavior nobody can name a user of |
+| Artifact assigned to a Node, realizing an Application Component | a `system` whose `instance-of` names the component's system and whose `part-of` names the node; a copy exports as an artifact assigned to its node and realizing the software's component |
+| Artifact that no node is assigned to, and Function (Common Domain) | dropped: a file nobody deploys, and internal behavior nobody can name a user of |
 | Location | not yet; see below |
 | Collaboration (Common Domain), Path, Facility, Distribution Network | not yet; a collaboration is several systems working together, with Location and the physical elements |
 | Association, untyped | dropped: an edge that says nothing |
@@ -71,8 +73,9 @@ The contract a generator reads in either direction: from an architecture tool's 
 - Capabilities and business services are not pack types; they are features of the products staff open; an application or technology service is, as `service`, and realizes them.
 - Access is three tokens, not four: ArchiMate's `readwrite` is `writes`, since a writer reads, and `master` is a claim ArchiMate does not make.
 - Lifecycle is four stages and criticality three tokens, a company's own words for where a system stands and what stops when it stops, with no tool's scale behind them: the model says what is, not when it will be.
+- A running copy is a system, not an artifact: a copy has connections, an operator and an owner of its own that an artifact does not carry, and the element comes back exact on export.
 - A kind is a profile and takes no shape of its own: ArchiMate 4 lets a specialization define a notation (§14.2); the pack leaves that to a drawing, which shows the element's notation and the kind as its stereotype, so a generic editor needs the standard's shapes and nothing per kind.
 
 ## Left for later
 
-Location, as a third type of this pack, for the first instance that writes one; an integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; functions; license and cost; a collaboration, ArchiMate 4's element for several systems working together; a notation on the kind; an artifact realizing a data object; a field list on a data object; a generator from an architecture tool's export, which is an instance's own.
+Location, a type of this pack for the first instance that writes one, since an environment is not a place; an integration type, for an instance whose integrations need an owner, a lifecycle or references of their own; functions; license and cost; a collaboration, ArchiMate 4's element for several systems working together; a notation on the kind; an artifact realizing a data object; a field list on a data object; a field on `environment` for the data it holds, real or synthetic, which `## What it means` carries as a sentence until an instance needs it as a fact; a generator from an architecture tool's export, which is an instance's own.

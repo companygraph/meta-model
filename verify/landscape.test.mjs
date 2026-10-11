@@ -61,7 +61,7 @@ const tree = (change = (m) => m) => change(new Map([
   ["model/environments/production.md", envPage("Production", 30, "Where the store's customers are served.")],
   ["model/environments/test.md", envPage("Test", 20, "Where a release candidate runs against synthetic data.")],
   ["model/data-objects/sale-record.md", "---\nsource: Local\nrealizes: Sale\n---\n\n# Sale record\n\n> The row set a till writes for each sale, kept in the till database.\n"],
-  ["model/services/card-authorization.md", "---\nsource: Local\nprovided-by:\n  - Payment terminal\nrealizes:\n  - Pay by card\n---\n\n# Card authorization\n\n> The answer a payment terminal gives a till for a card, accepted or declined.\n"],
+  ["model/services/card-authorization.md", "---\nsource: Local\nprovided-by:\n  - Payment terminal\ndomain: Retail\nrealizes:\n  - Pay by card\n---\n\n# Card authorization\n\n> The answer a payment terminal gives a till for a card, accepted or declined.\n"],
   [`${S}/point-of-sale.md`, system({ kind: "Till software", vendor: "Tillworks", lifecycle: "active", criticality: "high", owner: "Store Manager", operator: "IT Operations", partOf: "Store server", realizes: ["Ring up a sale", "Pay by card"], h1: "Point of sale", tagline: "The till software a sale is rung up on.",
     body: connects([["Payment terminal", "Card payment", "Card authorization", "Sale", "USB"], ["Payment terminal", "Terminal status", "", "", "USB"]]) + holds([["Sale", "Sale record", "master"], ["Article", "", "reads"]]) })],
   [`${S}/payment-terminal.md`, system({ kind: "Store device", processor: "Tillpay", lifecycle: "active", criticality: "high", h1: "Payment terminal", tagline: "The card reader beside each till." })],
@@ -275,4 +275,11 @@ test("an environment no page resolves is R4's", () => {
   const f = failures(tree(edit(`${S}/billing-service-test.md`, "environment: Test", "environment: Staging")));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /billing-service-test\.md.*"Staging".*\(R4\)/);
+});
+
+test("a service in a domain resolves beside its features, and one naming no domain page is R4's", () => {
+  assert.deepEqual(failures(tree()), []);
+  const f = failures(tree(edit("model/services/card-authorization.md", "domain: Retail", "domain: Payments")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /card-authorization\.md.*"Payments".*\(R4\)/);
 });
