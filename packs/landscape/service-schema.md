@@ -22,6 +22,7 @@ A service is owned by nothing, and several systems may provide one, so the edge 
 | `provided-by` | Yes | array of ref → system | The systems that expose this service, each the H1 of a file in `systems/`; several where several realize one |
 | `realizes` | No | array of ref → feature | The features this service gives people, through the products that carry them, each the H1 of a file in `features/` |
 | `serves` | No | array of ref → process | The processes this service carries, each the H1 of a process's own file |
+| `domain` | No | ref → domain | The area of the company the service belongs to, the H1 of a file in `domains/`, written beside `realizes` where the features alone do not place it |
 
 ## Sections
 
@@ -50,4 +51,9 @@ A service answers "what does this system offer the others, and who depends on it
 - `provided-by` names the systems that expose the service, never one that only calls it.
 - `realizes` names features in the words of those features; a service nobody outside its system
   uses realizes nothing.
+- `domain` groups what a context offers outward: an API, an SDK client and a set of MCP tools
+  that consumers call apart are three services provided by the same system, each named as its
+  consumers call it, and the domain is what groups them, never one service that bundles them. A
+  service names no bounded context, since a pack names only core's types and its own (R20); a
+  context realizes domains, so a service in a domain stands beside the context of that domain.
 - The page writes names and prose in the model's language (R14), as every page does.
