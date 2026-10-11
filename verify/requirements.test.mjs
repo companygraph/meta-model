@@ -187,3 +187,25 @@ test("a use case included by two others is no circle and passes", () => {
   const f = failures(tree(edit(`${U}/run-an-evening-of-service.md`, "  - Book a table", "  - Book a table\n  - Find a free table")));
   assert.deepEqual(f, []);
 });
+
+test("a use case that includes one above its own level fails once, naming both levels", () => {
+  const f = failures(tree(edit(`${U}/find-a-free-table.md`, "level: subfunction", "level: summary")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/use-cases\/book-a-table\.md: `includes` names "Find a free table", whose `level` is `summary`, above this page's `user goal`; what a page names there stands at its `level` or below \(R16\)$/);
+});
+
+test("a use case that includes one at its own level passes", () => {
+  assert.deepEqual(failures(tree(edit(`${U}/find-a-free-table.md`, "level: subfunction", "level: user goal"))), []);
+});
+
+test("a level off the list is R8's alone and is not compared", () => {
+  const f = failures(tree(edit(`${U}/find-a-free-table.md`, "level: subfunction", "level: very high")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R8\)/);
+});
+
+test("an include naming nothing is R4's alone and is not compared", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "  - Find a free table", "  - Find a table")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R4\)/);
+});
