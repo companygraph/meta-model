@@ -79,7 +79,7 @@ A use case is all the ways of using a system to achieve one goal for one actor (
 - The H1 is the primary actor's goal as a short active verb phrase, `Download an invoice`, and never a screen or a feature's name.
 - The tagline says what the primary actor wants and what they have when it is done, in their words.
 - `level` is `user goal` where the primary actor gets the goal done in one sitting and goes away content; a goal that gathers several of those is a summary, and one that no actor would stop after is a subfunction.
-- `primary-actor` names a seat where the company has one for whoever has the goal, and otherwise the actor as the company calls them: `Payer`, `Card issuer`. A name some other entity of the model carries is no string: the check refuses it, since a reference resolves by the type it declares, so such an actor takes the name of the role it plays.
+- `primary-actor` names a seat where the company has one for whoever has the goal, and otherwise the actor as the company calls them: `Customer`, `Payment provider`.
 - `## Stakeholders and interests` names every party whose interest the use case must protect, the primary actor among them, and each Interest says what the party needs, not what it does.
 - Each row of `## Main success scenario` is one actor doing one thing that moves toward the goal; a condition is an extension, never a step.
 - `Action`, in a step that calls a subordinate use case, names that use case by its H1, and every use case in `includes` is named so in some step.
