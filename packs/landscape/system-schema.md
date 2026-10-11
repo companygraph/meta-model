@@ -27,6 +27,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `operator` | No | ref → seat | The seat that runs it, the H1 of a file in `seats/` |
 | `processor` | No | ref → data-processor | The party outside the company that runs it where it handles personal data, the H1 of a file in `data-processors/`; the contract sits on that page |
 | `part-of` | No | ref → system | The system this one runs on or in, the H1 of another file in `systems/`: the device a terminal is, the node an application runs on. Written on the part; the whole lists nothing. |
+| `environment` | No | ref → environment | Where this system runs, in the path from a developer's machine to the customer, the H1 of a file in `environments/`. Written on a copy, and on a platform, which runs somewhere too. |
 | `domain` | No | ref → domain | The area of the company the system belongs to where it realizes no feature, the H1 of a file in `domains/` |
 | `realizes` | No | array of ref → feature | The features this system gives, each the H1 of a file in `features/` |
 | `serves` | No | array of ref → process | The processes this system carries where no feature names it yet, each the H1 of a process's own file |
