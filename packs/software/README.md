@@ -28,7 +28,7 @@ An instance takes it with `companygraph init --pack software`. Every edge from t
 
 - The strategic classification sits on the bounded context, as the Bounded Context Canvas puts it, and not on the subdomain as Evans does, so core's `domain` stays untouched.
 - A domain event is a type and a command a row, because other contexts name an event and nothing outside its aggregate names a command.
-- An architecture decision is core's `decision`, which the pack's types name; there is no type of its own.
+- An architecture decision is core's `decision`, which the pack's types name; there is no type of its own, because `decision` already has the sections an architecture decision record has — the question, the alternatives, why and the consequences — and every business decides, so a decision belongs in core.
 - An attribute's or a payload value's type is written in one of two columns, `Term` for a term of the context and `Type` for a plain type from a closed list, because a term is a reference and a plain type names nothing.
 
 ## Left for later
