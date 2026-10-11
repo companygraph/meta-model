@@ -77,6 +77,29 @@ test("a reference lands on the type its schema declares, not on any entity of th
   assert.match(hit, /experience/);
 });
 
+// A number and a date are held to their written form (R16, R9), so quotes, which make either
+// text in YAML, are a fault there, said once with what to drop; a name or a token in quotes is
+// the name or token inside them.
+test("a quoted number fails R16 and a quoted date fails R9, each saying to drop the quotes", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `rank` | No | number | Its order. |",
+      "| `since` | No | date | Since when. |",
+    ])],
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", "---\nsource: \"Local\"\nrank: \"10\"\nsince: '2019'\n---\n\n# Java\n\n> A language.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const mine = failures.filter((f) => f.includes("java.md"));
+  assert.equal(mine.length, 2, mine.join("\n"));
+  assert.match(mine.find((f) => f.includes("`rank`")) ?? "", /"10".*written as digits.*written bare/);
+  assert.match(mine.find((f) => f.includes("`since`")) ?? "", /'2019'.*YYYY.*written bare/);
+});
+
 test("a value that resolves to the declared type is not a failure", () => {
   const files = new Map([
     ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
