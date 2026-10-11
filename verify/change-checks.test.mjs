@@ -278,6 +278,20 @@ test("labels whose base ends its lines in CRLF and whose head in LF, and whose w
 
 // A new label that carries a gone label's text and that the page carried before is one label
 // moved and used again; it is said once, as the reuse, which is the more specific of the two.
+// An item inserted in the middle of numbered labels, with every label after it moved up by one:
+// the old label stays and carries the new item, and its item moves to a label added in the same
+// change. That is a move, and what cited the old label now finds another item.
+test("a label renumbered on insert fails as a move, naming where its item went", () => {
+  const was = invariants([["INV-1", "A total never changes."], ["INV-2", "One customer."]]);
+  const f = labels([change(was, invariants([["INV-1", "A total never changes."], ["INV-2", "A new rule."], ["INV-3", "One customer."]]), AGG)]);
+  assert.deepEqual(f, [`${AGG}: "INV-3" under ## Invariants carries what "INV-2" carried at main, and "INV-2" now carries something else; a label stays with its item, and a new item takes a new label (R16)`]);
+});
+
+test("a new label carrying the same text as a label that keeps it is no move", () => {
+  const was = invariants([["INV-1", "A total never changes."]]);
+  assert.deepEqual(labels([change(was, invariants([["INV-1", "A total never changes."], ["INV-2", "A total never changes."]]), AGG)]), []);
+});
+
 test("a label that is both a relabel and a reuse is said once, as the reuse", () => {
   const history = () => [invariants([["INV-1", "A total never changes."]]), invariants([["INV-1", "A total never changes."], ["INV-2", "A rule since removed."]])];
   const f = labels([change(invariants([["INV-1", "A total never changes."]]), invariants([["INV-2", "A total never changes."]]), AGG)], history);
