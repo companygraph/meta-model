@@ -1513,6 +1513,17 @@ test("init --pack landscape vendors the pack, and the instance it writes passes 
   assert.doesNotThrow(() => run(["check", root]));
 });
 
+test("init --pack requirements vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "requirements"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["requirements"]);
+  for (const n of ["use-case", "requirement"]) assert.ok(fs.existsSync(path.join(root, "meta/requirements", `${n}-schema.md`)), n);
+  assert.ok(fs.existsSync(path.join(root, "model/use-cases")), "the use case's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/requirements")), "the requirement's folder is made");
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
 test("init with --pack given twice joins the packs, as --pack organization,landscape does", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization", "--pack", "landscape"]);
