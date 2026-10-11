@@ -59,7 +59,10 @@ const IDENTITY_SCHEMA = schema("identity", []);
 
 test("a reference lands on the type its schema declares, not on any entity of that name", () => {
   const files = new Map([
-    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/experience-schema.md", schema("experience", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `organization` | No | ref → identity | Where the period was spent. |",
+    ])],
     ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
     ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
     [
@@ -75,6 +78,48 @@ test("a reference lands on the type its schema declares, not on any entity of th
   assert.match(hit, /organization/);
   assert.match(hit, /identity/);
   assert.match(hit, /experience/);
+});
+
+// R9: a `ref?` value that resolves is an edge, one that does not stays a string, and neither is
+// an error. It resolves against its declared type alone, so a name another type carries is a
+// value that does not resolve: an actor called Customer beside a concept called Customer.
+test("an optional reference naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
+    ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
+    [
+      "model/profiles/robert-blust/experiences/2019-aroov-realestate.md",
+      "---\norganization: Aroov\n---\n\n# Aroov\n\n> A rental platform.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("organization")), []);
+});
+
+// A number and a date are held to their written form (R16, R9), so quotes, which make either
+// text in YAML, are a fault there, said once with what to drop; a name or a token in quotes is
+// the name or token inside them.
+test("a quoted number fails R16 and a quoted date fails R9, each saying to drop the quotes", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `rank` | No | number | Its order. |",
+      "| `since` | No | date | Since when. |",
+    ])],
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", "---\nsource: \"Local\"\nrank: \"10\"\nsince: '2019'\n---\n\n# Java\n\n> A language.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const mine = failures.filter((f) => f.includes("java.md"));
+  assert.equal(mine.length, 2, mine.join("\n"));
+  assert.match(mine.find((f) => f.includes("`rank`")) ?? "", /"10".*written as digits.*written bare/);
+  assert.match(mine.find((f) => f.includes("`since`")) ?? "", /'2019'.*YYYY.*written bare/);
 });
 
 test("a value that resolves to the declared type is not a failure", () => {
@@ -1338,6 +1383,64 @@ test("a blank required reference column is named the same way a blank required e
   const hit = failures.find((f) => f.includes("has no Skill"));
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /## Relations/);
+});
+
+test("an optional reference column naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Taught by` | No | Table. Who teaches it. |",
+        "",
+        "`## Taught by` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Teacher` | Yes | ref? → skill | A skill that teaches it, or a name |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Taught by", "",
+      "| Teacher |", "| --- |", "| Local |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("java.md")), []);
+});
+
+test("a qualifier column naming an entity of another type still fails R4, since a qualifier must resolve", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Builds on` | No | Table. What it builds on. |",
+        "",
+        "`## Builds on` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | The skill it builds on |",
+        "| `Learned from` | No | qualifier → source | Where that was learned |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Builds on", "",
+      "| Skill | Learned from |", "| --- | --- |", "| Maven | Maven |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hits = failures.filter((f) => f.includes("java.md") && f.includes("Learned from"));
+  assert.equal(hits.length, 1, failures.join("\n"));
+  assert.match(hits[0], /names an entity of type skill, not source.*\(R4\)/);
 });
 
 const sid = (n) => `0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b${String(n).padStart(2, "0")}`;
