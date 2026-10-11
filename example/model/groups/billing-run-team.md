@@ -12,9 +12,15 @@ start: 2026-09
 
 ## People
 
-| Profile | Job | Place | Directed by |
-| --- | --- | --- | --- |
-| Mira Halvorsen | Backend Engineer | Lead | |
-| Tomas Reyes | Head of Product | Member | |
-| AI Agent | | Member | |
-| Build Agent | | Member | Mira Halvorsen |
+| Profile | Job | Place |
+| --- | --- | --- |
+| Mira Halvorsen | Backend Engineer | Lead |
+| Tomas Reyes | Head of Product | Member |
+| AI Agent | | Member |
+| Build Agent | | Member |
+
+## Direction
+
+| Agent | Directed by |
+| --- | --- |
+| Build Agent | Mira Halvorsen |

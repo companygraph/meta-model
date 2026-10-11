@@ -12,4 +12,4 @@ seats:
 
 ## Summary
 
-The second profile an agent holds: where AI Agent reviews, this one builds, and the two never hold one seat, so a change is never approved by what wrote it. It claims no skill, as no agent does, and the seat's gap is reported for no one. What holds it to the seat is the rulebook, and who directs it is on its row in the Billing Run Team: Mira Halvorsen, named in `Directed by`, where AI Agent beside it is directed by every human in the team.
+The second profile an agent holds: where AI Agent reviews, this one builds, and the two never hold one seat, so a change is never approved by what wrote it. It claims no skill, as no agent does, and the seat's gap is reported for no one. What holds it to the seat is the rulebook, and who directs it is a row of the Billing Run Team's Direction: Mira Halvorsen alone, where AI Agent beside it, with no row there, is directed by every human in the team.

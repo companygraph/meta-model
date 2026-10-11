@@ -15,8 +15,8 @@ const page = (fm, body) => `---\nid: ${uuidv7()}\nsource: Local\n${fm}---\n\n${b
 const PACKS = [{ name: "organization", dir: "meta/organization" }];
 const G = "model/groups";
 const TEAM = `${G}/checkout-team.md`;
-// A row of `## People`, its four cells; a blank cell is written `| |`, as the pages write it.
-const row = (cells) => `| ${[...cells, "", "", ""].slice(0, 4).join(" | ")} |`.replace(/ {2}\|/g, " |");
+// A row of `## People`, its three cells; a blank cell is written `| |`, as the pages write it.
+const row = (cells) => `| ${[...cells, "", ""].slice(0, 3).join(" | ")} |`.replace(/ {2}\|/g, " |");
 const ANA = row(["Ana", "Backend Engineer", "Member"]);
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}\n` : "";
 // A seat is held in a process; a job is what a person is employed as.
@@ -28,7 +28,9 @@ const group = ({ kind: k, partOf, guides = [], start, end, body = "" }) => page(
   body,
 );
 // A group's `## People`: one row per person, as the schema's columns have it.
-const people = (rows) => `\n## People\n\n| Profile | Job | Place | Directed by |\n| --- | --- | --- | --- |\n${rows.map(row).join("\n")}\n`;
+const people = (rows) => `\n## People\n\n| Profile | Job | Place |\n| --- | --- | --- |\n${rows.map(row).join("\n")}\n`;
+// A group's `## Direction`: one row per agent and the human who directs it.
+const direction = (rows) => `\n## Direction\n\n| Agent | Directed by |\n| --- | --- |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 const person = (name, seats = [], nature = "human") => page(`nature: ${nature}\n${list("seats", seats)}`, `# ${name}\n\n> A person.\n`);
 const profile = (name, seats = [], nature) => [
   [`model/profiles/${name.toLowerCase()}/${name.toLowerCase()}.md`, person(name, seats, nature)],
@@ -417,56 +419,49 @@ test("an agent on two rows of a team, alone, fails once", () => {
 const beside = (f) => f.filter((x) => x.includes("names the other too"));
 
 // Where not every human in a group directs every agent in it, an instance whose platform grants
-// direction per agent, the agent's row says who does: `Directed by` names one human of the
-// group, and an agent directed by two has a row for each. Blank keeps the rule, every human. The
-// cell stands only on an agent's row and names only a human the table names, so the project
-// stays one group and the grant is still read from its page (#342).
-const directed = (f) => f.filter((x) => x.includes("in `Directed by`") || x.includes("fills `Directed by`"));
+// direction per agent, the group says who does in `## Direction`: one row per agent and human,
+// a fact about the two and not a second position for the agent, so `## People` keeps one row
+// per person. A group without the section keeps the rule, every human. Both names are people
+// of the group, the one an agent and the other a human, and a pair is written once (#342).
+const directedCrew = (direct, people = [["Jon", "Designer", "Member"], ["Ana", "Backend Engineer", "Member"], ["Bot", "", "Member"]]) => (m) =>
+  withBot(m).set(CREW, group({ kind: "Team", body: `# Agent Crew\n\n> Runs the bots.\n${people ? (people.length ? `\n## People\n\n| Profile | Job | Place |\n| --- | --- | --- |\n${people.map(row).join("\n")}\n` : "") : ""}${direction(direct)}` }));
+const directed = (f) => f.filter((x) => x.includes('"## Direction" row'));
 
 test("an agent directed by one human of the group passes, and by two on two rows passes", () => {
-  assert.deepEqual(failures(tree(crew([["Jon", "Designer", "Member"], ["Ana", "Backend Engineer", "Member"], ["Bot", "", "Member", "Jon"]]))), []);
-  assert.deepEqual(failures(tree(crew([["Jon", "Designer", "Member"], ["Ana", "Backend Engineer", "Member"], ["Bot", "", "Member", "Jon"], ["Bot", "", "Member", "Ana"]]))), []);
+  assert.deepEqual(failures(tree(directedCrew([["Bot", "Jon"]]))), []);
+  assert.deepEqual(failures(tree(directedCrew([["Bot", "Jon"], ["Bot", "Ana"]]))), []);
 });
 
-test("an agent directed by a human the group does not name fails once", () => {
-  const f = failures(tree(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member", "Mira"]])));
-  assert.deepEqual(f, [`${CREW}: the "## People" row "Bot" names "Mira" in \`Directed by\`, whom the table's \`Profile\` does not name; a \`Directed by\` names one of the table's own (R16)`]);
+test("a Direction row naming a human the group does not name fails once", () => {
+  const f = failures(tree(directedCrew([["Bot", "Mira"]])));
+  assert.deepEqual(f, [`${CREW}: the "## Direction" row names "Mira" in \`Directed by\`, whom "## People" does not name; a "## Direction" row names people of the group (R16)`]);
 });
 
-test("an agent directed by another agent fails once", () => {
-  const f = failures(tree((m) => withBot2(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member", "Bot2"], ["Bot2", "", "Member"]])(m))));
-  assert.deepEqual(f, [`${CREW}: the "## People" row "Bot" names "Bot2" in \`Directed by\`, whose profile does not carry \`nature: human\` (R16)`]);
+test("a Direction row naming an agent the group does not name fails once", () => {
+  const f = failures(tree((m) => withBot2(directedCrew([["Bot2", "Jon"]])(m))));
+  assert.deepEqual(f, [`${CREW}: the "## Direction" row names "Bot2" in \`Agent\`, whom "## People" does not name; a "## Direction" row names people of the group (R16)`]);
 });
 
-test("a human's row that says who directs them fails once", () => {
-  const f = failures(tree(crew([["Jon", "Designer", "Lead"], ["Ana", "Backend Engineer", "Member", "Jon"], ["Bot", "", "Member"]])));
-  assert.deepEqual(f, [`${CREW}: the "## People" row "Ana" fills \`Directed by\` with "Jon", and Ana's profile does not carry \`nature: agent\`; only such a row fills it (R16)`]);
+test("a Direction row with an agent as the director, or a human as the agent, fails once each", () => {
+  const f = failures(tree((m) => withBot2(directedCrew([["Bot", "Bot2"]], [["Jon", "Designer", "Member"], ["Bot", "", "Member"], ["Bot2", "", "Member"]])(m))));
+  assert.deepEqual(f, [`${CREW}: the "## Direction" row names "Bot2" in \`Directed by\`, whose profile does not carry \`nature: human\` (R16)`]);
+  const g = failures(tree(directedCrew([["Ana", "Jon"]])));
+  assert.deepEqual(g, [`${CREW}: the "## Direction" row names "Ana" in \`Agent\`, whose profile does not carry \`nature: agent\` (R16)`]);
 });
 
-test("a director no profile is fails as R4 alone, and a director whose nature is off the enum leaves the row to R8", () => {
-  const f = failures(tree(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member", "Nobody"]])));
+test("a pair written twice fails once", () => {
+  const f = failures(tree(directedCrew([["Bot", "Jon"], ["Bot", "Jon"]])));
+  assert.deepEqual(f, [`${CREW}: the "## Direction" row "Bot" and "Jon" is written twice; one row per pair (R16)`]);
+});
+
+test("a name no profile is fails as R4 alone, and a nature off the enum leaves the row to R8", () => {
+  const f = failures(tree(directedCrew([["Bot", "Nobody"]])));
   assert.ok(f.some((x) => x.includes("(R4)")), f.join("\n"));
   assert.deepEqual(directed(f), []);
   const robot = (m) => edit("model/profiles/jon/jon.md", "nature: human", "nature: robot")(m);
-  const g = failures(tree((m) => robot(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member", "Jon"]])(m))));
+  const g = failures(tree((m) => robot(directedCrew([["Bot", "Jon"]])(m))));
   assert.ok(g.length >= 1 && g.every((x) => x.includes("jon.md")), g.join("\n"));
   assert.deepEqual(directed(g), []);
-});
-
-test("a row that cannot be judged leaves the page to the check that owns the fault", () => {
-  const robot = (m) => edit("model/profiles/jon/jon.md", "nature: human", "nature: robot")(m);
-  const f = failures(tree((m) => robot(crew([["Jon", "Designer", "Member"], ["Bot", "", "Member"]])(m))));
-  assert.ok(f.length >= 1 && f.every((x) => x.includes("jon.md")), f.join("\n"));
-  assert.deepEqual(beside(f), []);
-  const g = failures(tree(crew([["Nobody", "", "Member"], ["Bot", "", "Member"]])));
-  assert.ok(g.some((x) => x.includes("(R4)")), g.join("\n"));
-  assert.deepEqual(beside(g), []);
-});
-
-test("a kind that resolves to nothing leaves an agent-only team to R4", () => {
-  const f = failures(tree((m) => edit(CREW, "kind: Team", "kind: Nowhere")(crew([["Bot", "", "Member"]])(m))));
-  assert.ok(f.some((x) => x.includes("(R4)")), f.join("\n"));
-  assert.deepEqual(beside(f), []);
 });
 
 test("an agent alone in a department fails once, as the line's", () => {

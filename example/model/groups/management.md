@@ -11,7 +11,7 @@ rank: 10
 
 ## People
 
-| Profile | Job | Place | Directed by |
-| --- | --- | --- | --- |
-| Ines Marchetti | Managing Director | Lead | |
-| Jonas Whitcombe | Executive Assistant | Staff | |
+| Profile | Job | Place |
+| --- | --- | --- |
+| Ines Marchetti | Managing Director | Lead |
+| Jonas Whitcombe | Executive Assistant | Staff |
