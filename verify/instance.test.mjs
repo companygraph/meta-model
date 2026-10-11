@@ -550,6 +550,21 @@ test("a string field carrying a canonical name draws nothing", () => {
   assert.equal(entities.find((e) => e.name === "Mira Halvorsen").fields.location, "Bergen");
 });
 
+// YAML reads quotes as the value's delimiters, and an editor writes them around a value with a
+// colon or a leading symbol, so the parser reads the value inside them, as the checks do: a
+// quoted name resolves as the bare one, and a scalar keeps no quote.
+test("a value in quotes is the value inside them, scalar and list item alike", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: \"2022-02\"\norganization: 'Beacon Systems'\nskills:\n  - \"Java Programming\"\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n");
+  const { edges, entities } = parseInstance(files, { schemas });
+  const exp = entities.find((e) => e.type === "experience");
+  assert.equal(exp.fields.start, "2022-02");
+  assert.equal(exp.fields.organization, "Beacon Systems");
+  assert.deepEqual(exp.fields.skills, ["Java Programming"]);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via === "skills").length, 1);
+});
+
 // `ref? → identity` resolves against identities and nothing else. A value that names a profile
 // and no identity is a fact, not an edge to the profile.
 test("a ref? that names an entity of another type stays a fact", () => {

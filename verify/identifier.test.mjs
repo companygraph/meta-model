@@ -37,7 +37,7 @@ test("an uppercase UUID fails the format", () => {
 test("a quoted id fails once, saying it is quoted, whether the quotes are double or single", () => {
   for (const q of ['"', "'"]) {
     const f = r18(tree({ local: `---\nid: ${q}${A}${q}\n---\n\n# Local\n` }));
-    assert.deepEqual(f, [`model/sources/local.md: \`id\` is written in quotes, ${q}${A}${q}; an id is written bare, as the parser reads every field as written (R18)`]);
+    assert.deepEqual(f, [`model/sources/local.md: \`id\` is written in quotes, ${q}${A}${q}; an id is written bare, since the id tools read it as written and would hold its quotes (R18)`]);
   }
 });
 
