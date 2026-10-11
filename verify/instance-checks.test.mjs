@@ -59,7 +59,10 @@ const IDENTITY_SCHEMA = schema("identity", []);
 
 test("a reference lands on the type its schema declares, not on any entity of that name", () => {
   const files = new Map([
-    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/experience-schema.md", schema("experience", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `organization` | No | ref → identity | Where the period was spent. |",
+    ])],
     ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
     ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
     [
@@ -75,6 +78,25 @@ test("a reference lands on the type its schema declares, not on any entity of th
   assert.match(hit, /organization/);
   assert.match(hit, /identity/);
   assert.match(hit, /experience/);
+});
+
+// R9: a `ref?` value that resolves is an edge, one that does not stays a string, and neither is
+// an error. It resolves against its declared type alone, so a name another type carries is a
+// value that does not resolve: an actor called Customer beside a concept called Customer.
+test("an optional reference naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
+    ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
+    [
+      "model/profiles/robert-blust/experiences/2019-aroov-realestate.md",
+      "---\norganization: Aroov\n---\n\n# Aroov\n\n> A rental platform.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("organization")), []);
 });
 
 test("a value that resolves to the declared type is not a failure", () => {
@@ -1338,6 +1360,33 @@ test("a blank required reference column is named the same way a blank required e
   const hit = failures.find((f) => f.includes("has no Skill"));
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /## Relations/);
+});
+
+test("an optional reference column naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Taught by` | No | Table. Who teaches it. |",
+        "",
+        "`## Taught by` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Teacher` | Yes | ref? → skill | A skill that teaches it, or a name |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Taught by", "",
+      "| Teacher |", "| --- |", "| Local |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("java.md")), []);
 });
 
 const sid = (n) => `0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b${String(n).padStart(2, "0")}`;
