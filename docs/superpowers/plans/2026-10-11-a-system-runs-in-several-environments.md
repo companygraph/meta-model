@@ -8,7 +8,7 @@
 
 **Tech Stack:** Node 22+, `node:test`, the checker in `lib/checks.mjs`, `tsc` for `types/`.
 
-**Spec:** `docs/superpowers/specs/2026-10-11-a-system-runs-in-several-environments-design.md`, committed as `586bba7` on the branch `a-system-runs-in-several-environments`.
+**Spec:** `docs/superpowers/specs/2026-10-11-a-system-runs-in-several-environments-design.md`, committed as `586bba7` and amended as `5cedb9a` on the branch `a-system-runs-in-several-environments`.
 
 ## Global Constraints
 
@@ -242,6 +242,7 @@ In `## Writing rules`, after the rule on `## Holds` naming concepts, add the sen
 - A copy writes no `## Holds` row: the data it keeps is the software's, and a copy that claimed `master` beside the software's row is refused by the one-master rule.
 - `## Connects to` on a copy names what that copy takes data from there: in production the production database, locally the one on the laptop. A connection the software takes everywhere is written on the software page once.
 - A copy's H1 names the software and its environment as the people who run it say it, `Billing service (production)`, so the two are told apart in every list. A database, a queue or a cache is a system too, and its copies follow the same pattern.
+- `instance-of` names the same software running elsewhere. Another product in the same role, an object store that is one product on a laptop and another in production, is a system of its own, with its own kind, vendor or processor and lifecycle, and the service both provide, `provided-by` both, is what joins them; a copy's `## Connects to` row names the system of its own environment with that service in `Service`.
 ```
 
 and extend the last rule to: "The page states no cost, no license count, no version, no port, no command and no log path. Those move, and a contract register, a configuration database or a runbook holds them; `## References` names the runbook, the log console and the repository whose README carries the commands, one row each, so an agent reading the page finds where to look."
@@ -336,7 +337,7 @@ Run: `node --test verify/landscape.test.mjs` Expected: FAIL on the passing insta
 In `packs/landscape/service-schema.md`, after the `serves` row:
 
 ```markdown
-| `domain` | No | ref → domain | The area of the company the service belongs to where it realizes no feature, the H1 of a file in `domains/` |
+| `domain` | No | ref → domain | The area of the company the service belongs to, the H1 of a file in `domains/`, written beside `realizes` where the features alone do not place it |
 ```
 
 and a writing rule after the one on `realizes`: "An API, an SDK client and a set of MCP tools that consumers call apart are three services provided by the same system, each named as its consumers call it; `domain` is what groups them, never one service that bundles them. A service names no bounded context, since a pack names only core's types and its own (R20); a context realizes domains, so a service in a domain stands beside the context of that domain."
