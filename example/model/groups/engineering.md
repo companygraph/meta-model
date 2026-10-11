@@ -21,9 +21,9 @@ guides:
 
 ## People
 
-| Profile | Job | Place |
-| --- | --- | --- |
-| Mira Halvorsen | Engineering Lead | Lead |
+| Profile | Job | Place | Directed by |
+| --- | --- | --- | --- |
+| Mira Halvorsen | Engineering Lead | Lead | |
 
 ## Openings
 

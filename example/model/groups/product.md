@@ -18,9 +18,9 @@ part-of: Management
 
 ## People
 
-| Profile | Job | Place |
-| --- | --- | --- |
-| Tomas Reyes | Head of Product | Lead |
+| Profile | Job | Place | Directed by |
+| --- | --- | --- | --- |
+| Tomas Reyes | Head of Product | Lead | |
 
 ## Openings
 

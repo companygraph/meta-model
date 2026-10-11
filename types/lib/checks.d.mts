@@ -129,6 +129,17 @@ export type TypeEntry = {
         };
     }[];
     /**
+     * A `column` of the `section` table whose filled cell names one of the entities the same table's `of` column names, carrying `field: is`, and stands only on a row whose own `of` entity carries `field: row`. A cell or an entity another check refuses, naming nothing or carrying no declared token, is that check's finding.
+     */
+    among?: {
+        section: string;
+        column: string;
+        of: string;
+        field: string;
+        is: string;
+        row: string;
+    };
+    /**
      * A table that names an entity carrying `field: is` in `column` names one carrying `field: needs` too; with `when`, only on a page whose `when.via` entity carries `when.field: is`. A row whose entity cannot be judged, a cell naming nothing or an entity whose field is missing or off its tokens, is another check's finding, and the page waits on it.
      */
     beside?: {
@@ -268,6 +279,7 @@ export type Check = {
  * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
  * @property {{ field: string, via: string, carries: string, is: string }} [inherits] A field naming an entity of the page's own type whose `via` entity carries `carries: is`, written only on a page whose own `via` entity carries it too; a blank `carries` is not `is`. A page `within` refuses on the same field, and a value R4 or R8 refuses, is that check's and is not read again.
  * @property {{ section: string, column: string, field: string, is: string, when: { column: string, in: string[] } | { via: string, field: string, is: string } }[]} [carries] Table rows whose `column` entity carries `field: is`, on a row whose `when.column` holds one of `when.in`, or on every row of a page whose `when.via` entity carries `when.field: is`.
+ * @property {{ section: string, column: string, of: string, field: string, is: string, row: string }} [among] A `column` of the `section` table whose filled cell names one of the entities the same table's `of` column names, carrying `field: is`, and stands only on a row whose own `of` entity carries `field: row`. A cell or an entity another check refuses, naming nothing or carrying no declared token, is that check's finding.
  * @property {{ section: string, column: string, field: string, is: string, needs: string, when?: { via: string, field: string, is: string } }} [beside] A table that names an entity carrying `field: is` in `column` names one carrying `field: needs` too; with `when`, only on a page whose `when.via` entity carries `when.field: is`. A row whose entity cannot be judged, a cell naming nothing or an entity whose field is missing or off its tokens, is another check's finding, and the page waits on it.
  * @property {{ section: string, column: string, value: string, by: string }} [atMostOne] A table in which at most one distinct `by` entity holds `value` in `column`, so one entity on several rows holding it counts once.
  * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
