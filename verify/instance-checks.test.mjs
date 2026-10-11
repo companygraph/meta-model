@@ -1389,6 +1389,37 @@ test("an optional reference column naming an entity of another type stays a fact
   assert.deepEqual(failures.filter((f) => f.includes("java.md")), []);
 });
 
+test("a qualifier column naming an entity of another type still fails R4, since a qualifier must resolve", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Builds on` | No | Table. What it builds on. |",
+        "",
+        "`## Builds on` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | The skill it builds on |",
+        "| `Learned from` | No | qualifier → source | Where that was learned |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Builds on", "",
+      "| Skill | Learned from |", "| --- | --- |", "| Maven | Maven |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hits = failures.filter((f) => f.includes("java.md") && f.includes("Learned from"));
+  assert.equal(hits.length, 1, failures.join("\n"));
+  assert.match(hits[0], /names an entity of type skill, not source.*\(R4\)/);
+});
+
 const sid = (n) => `0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b${String(n).padStart(2, "0")}`;
 const withSchemaId = (id, text) => `---\nid: ${id}\n---\n\n${text}`;
 const schemaFailures = (entries) =>
