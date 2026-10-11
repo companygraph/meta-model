@@ -27,6 +27,7 @@ A system owns nothing and nothing owns it, so it is a file. What it runs on or i
 | `operator` | No | ref → seat | The seat that runs it, the H1 of a file in `seats/` |
 | `processor` | No | ref → data-processor | The party outside the company that runs it where it handles personal data, the H1 of a file in `data-processors/`; the contract sits on that page |
 | `part-of` | No | ref → system | The system this one runs on or in, the H1 of another file in `systems/`: the device a terminal is, the node an application runs on. Written on the part; the whole lists nothing. |
+| `instance-of` | No | ref → system | The system this one is a running copy of, the H1 of another file in `systems/`, written on the copy; the software page names nothing. One level deep: the page named leaves `instance-of` empty, so a copy is never a copy of a copy. |
 | `environment` | No | ref → environment | Where this system runs, in the path from a developer's machine to the customer, the H1 of a file in `environments/`. Written on a copy, and on a platform, which runs somewhere too. |
 | `domain` | No | ref → domain | The area of the company the system belongs to where it realizes no feature, the H1 of a file in `domains/` |
 | `realizes` | No | array of ref → feature | The features this system gives, each the H1 of a file in `features/` |
@@ -94,7 +95,9 @@ A system answers "what does this run on, what does it carry, who owns it and wha
 - `## Connects to` is written on the system that takes the data. An exchange both ways is two
   rows, one on each page.
 - `## Holds` names concepts, not tables or files, and one system holds a concept as `master`:
-  the one whose copy the others are copies of.
+  the one whose copy the others are copies of. A row with `writes` or `reads` alone is right where
+  the master stands on another system; a concept only one system keeps, as a cache keeps queue
+  jobs, is that system's as `master`.
 - `## Holds` names a concept once per data object the system keeps of it, and once where it keeps
   none, each at its strongest access: a system that writes a concept reads it too, and a row for
   each would draw one edge twice.
@@ -102,5 +105,25 @@ A system answers "what does this run on, what does it carry, who owns it and wha
   the cell blank where it keeps the concept in no form the model names yet.
 - `## Connects to` names the service the connection calls where one is modeled, in the same row as
   the interface it goes through.
-- The page states no cost, no license count and no version. Those move, and a contract register
-  or a configuration database holds them.
+- `instance-of` makes a software that runs in several environments one page for the software and
+  one per running copy. The software page carries what is the same wherever it runs: its kind, its owner, what it
+  holds and the master's row among it, the services it provides and the features it realizes. A
+  copy carries what differs where it runs: its platform, its operator, its environment and the
+  connections it takes there, and repeats nothing the software page says.
+- A copy writes no `## Holds` row: the data it keeps is the software's, and a copy that claimed
+  `master` beside the software's row is refused by the one-master rule.
+- `## Connects to` on a copy names what that copy takes data from there: in production the
+  production database, locally the one on the laptop. A connection the software takes everywhere
+  is written on the software page once.
+- The H1 of a copy names the software and its environment as the people who run it say it,
+  `Billing service (production)`, so the two are told apart in every list. A database, a queue or a
+  cache is a system too, and its copies follow the same pattern.
+- `instance-of` names the same software running elsewhere. Another product in the same role, an
+  object store that is one product on a laptop and another in production, is a system of its own,
+  with its own kind, vendor or processor and lifecycle, and the service both provide, `provided-by`
+  both, is what joins them; a copy's `## Connects to` row names the system of its own environment
+  with that service in `Service`.
+- The page states no cost, no license count, no version, no port, no command and no log path.
+  Those move, and a contract register, a configuration database or a runbook holds them;
+  `## References` names the runbook, the log console and the repository whose README carries the
+  commands, one row each, so an agent reading the page finds where to look.

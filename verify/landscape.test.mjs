@@ -68,6 +68,9 @@ const tree = (change = (m) => m) => change(new Map([
   [`${S}/store-server.md`, system({ kind: "Server", lifecycle: "active", operator: "IT Operations", partOf: "Store network", environment: "Production", serves: ["Close the day"], h1: "Store server", tagline: "The machine in the back office the store's applications run on." })],
   [`${S}/store-network.md`, system({ kind: "Network", domain: "Retail", environment: "Test", h1: "Store network", tagline: "The store's wired and wireless network." })],
   [`${S}/article-master.md`, system({ kind: "Till software", lifecycle: "active", domain: "Retail", h1: "Article master", tagline: "Where an article is created and priced.", body: holds([["Article", "", "master"], ["Customer", "", "master"]]) })],
+  [`${S}/billing-service.md`, system({ kind: "Till software", lifecycle: "active", owner: "Store Manager", h1: "Billing service", tagline: "The service that prices every sale.", body: holds([["Customer", "", "reads"]]) })],
+  [`${S}/billing-service-production.md`, system({ kind: "Till software", instanceOf: "Billing service", environment: "Production", partOf: "Store server", operator: "IT Operations", h1: "Billing service (production)", tagline: "The copy that serves the stores.", body: connects([["Article master", "Article feed", "", "Article", "REST"]]) })],
+  [`${S}/billing-service-test.md`, system({ kind: "Till software", instanceOf: "Billing service", environment: "Test", partOf: "Store server", operator: "IT Operations", h1: "Billing service (test)", tagline: "The copy a release candidate runs as." })],
 ]));
 const failures = (files) => checkInstance(files, { core: "meta/core", model: "model", packs: PACKS }).failures;
 const edit = (path, from, to) => (m) => m.set(path, m.get(path).replace(from, to));
@@ -240,7 +243,7 @@ test("a Connects to row naming the page it is on fails once under R16, and the o
 
 test("an environment no system names is told so, and one a platform alone names passes", () => {
   assert.deepEqual(failures(tree()), [], "Test, named by the Store network alone, passes");
-  const f = failures(tree(edit(`${S}/store-network.md`, "environment: Test", "environment: Production")));
+  const f = failures(tree((m) => { edit(`${S}/store-network.md`, "environment: Test", "environment: Production")(m); edit(`${S}/billing-service-test.md`, "environment: Test", "environment: Production")(m); return m; }));
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /environments\/test\.md: 0 system pages name it in `environment`; a environment gathers at least 1/);
 });
@@ -251,4 +254,25 @@ test("an environment's rank is required and a number, and its sections are the s
   assert.match(f[0], /production\.md.*rank/);
   const g = failures(tree(edit("model/environments/production.md", "## What it means", "## What it is")));
   assert.ok(g.some((x) => /production\.md.*What it means/.test(x)), g.join("\n"));
+});
+
+test("a copy of a copy is told so once, naming both pages, and a copy of itself is a circle", () => {
+  const f = failures(tree(edit(`${S}/billing-service-test.md`, "instance-of: Billing service", "instance-of: Billing service (production)")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /billing-service-test\.md names "Billing service \(production\)" in `instance-of`, which is itself `instance-of` "Billing service"; a copy is a copy of the software, never of another copy \(R16\)/);
+  const g = failures(tree(edit(`${S}/billing-service.md`, "owner: Store Manager", "owner: Store Manager\ninstance-of: Billing service")));
+  assert.equal(g.length, 1, g.join("\n"));
+  assert.match(g[0], /`instance-of` runs in a circle.*"Billing service" → "Billing service"/);
+});
+
+test("a copy that claims the master beside the software fails once, under the master rule alone", () => {
+  const f = failures(tree(edit(`${S}/billing-service-test.md`, "> The copy a release candidate runs as.\n", "> The copy a release candidate runs as.\n" + holds([["Customer", "", "master"]]))));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /"Customer" is in the "## Holds" Concept of model\/systems\/article-master\.md and model\/systems\/billing-service-test\.md/);
+});
+
+test("an environment no page resolves is R4's", () => {
+  const f = failures(tree(edit(`${S}/billing-service-test.md`, "environment: Test", "environment: Staging")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /billing-service-test\.md.*"Staging".*\(R4\)/);
 });
