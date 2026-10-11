@@ -273,6 +273,8 @@ export type Constraints = {
  * @property {{ section: string; kind: "Bulleted" | "Numbered"; required: boolean; min: number }[]} lists
  */
 export declare const CORE_LABEL = "Core";
+/** @param {string} value @returns {string} */
+export declare const unquote: (value: string) => string;
 export declare function parseInstance(files: InstanceFiles, options: {
     sub?: string;
     schemas: Files;
