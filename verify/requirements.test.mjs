@@ -209,3 +209,22 @@ test("an include naming nothing is R4's alone and is not compared", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /\(R4\)/);
 });
+
+test("an extension whose label begins with no step fails once", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 7a | The guest")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/use-cases\/book-a-table\.md: "7a" under ## Extensions begins with no Step of ## Main success scenario and a letter; a branch's label is the label it branches from and a letter, `2a` \(R16\)$/);
+});
+
+test("an extension labeled as a step with no letter fails, and a second branch of one step passes", () => {
+  const f = failures(tree(edit(`${U}/run-an-evening-of-service.md`, "| 2a | No table", "| 7 | No table")));
+  assert.equal(only(f, "begins with no Step").length, 1, f.join("\n"));
+  const g = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 2b | The guest")));
+  assert.deepEqual(g, []);
+});
+
+test("an extension label that is no token is the label check's alone", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 3 a | The guest")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /is no label/);
+});
