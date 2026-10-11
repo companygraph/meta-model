@@ -188,8 +188,8 @@ test("a reference field rewritten in another YAML shape is the same call, and a 
 
 // A References row points at a document the decision rests on, and the row draws no edge, so a
 // document that moves, or an address written wrong on the day, left the page pointing at a 404
-// that nothing could repair. The URL may follow its document; the row's What, the other rows and
-// the text around the table stay as they were.
+// that nothing could repair. The URL may follow the document it points at; the row's What, the
+// other rows and the text around the table stay as they were.
 const SPEC = ["The specification", "https://example.com/specs/old.md"];
 const SLIDE = ["The slides", "https://example.com/slides.pdf"];
 
@@ -199,13 +199,22 @@ test("a References row's URL may change while its What and the other rows stay",
   assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], ["The slides", "https://example.com/deck.pdf"]] }))]), []);
 });
 
-test("a References row's What, a row added or removed, and a URL moved with its status still fail", () => {
+test("a References row's What, a row added or removed, a cell grown, and a URL moved with any other rewrite still fail", () => {
   const was = call({ references: [SPEC, SLIDE] });
   assert.deepEqual(kept([change(was, call({ references: [["The spec", "https://example.com/specs/old.md"], SLIDE] }))]), [TEXT]);
   assert.deepEqual(kept([change(was, call({ references: [SPEC, SLIDE, ["A recording", "https://example.com/talk.mp4"]] }))]), [TEXT]);
   assert.deepEqual(kept([change(was, call({ references: [SPEC] }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md", "and more"], SLIDE] }))]), [TEXT]);
   assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE], why: "It holds still." }))]), [TEXT]);
+  assert.deepEqual(kept([change(was, `${call({ references: [SPEC, SLIDE] })}\n| What | URL |\n| --- | --- |\n| A recording | https://example.com/talk.mp4 |\n`)]), [TEXT]);
+});
+
+test("a References section that appears or disappears is a rewrite, and a URL may move in the change that moves status", () => {
+  const was = call({ references: [SPEC, SLIDE] });
+  assert.deepEqual(kept([change(call(), was)]), [TEXT]);
+  assert.deepEqual(kept([change(was, call())]), [TEXT]);
   assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE], status: "Revised" }))]), []);
+  assert.deepEqual(kept([change(was, call({ references: [["The specification", "https://example.com/specs/new.md"], SLIDE], status: "Dropped", consequences: "We keep a copy per instance. Dropped on 2026-10-10." }))]), []);
 });
 
 // --- Labels ----------------------------------------------------------------------------------
