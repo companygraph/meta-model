@@ -170,3 +170,20 @@ test("an extension label that is no token fails once, as no label", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /book-a-table\.md: "3 a" under ## Extensions is no label; a label is letters, digits and hyphens \(R16\)$/);
 });
+
+test("an includes circle of two fails once, naming both from the page whose path sorts first", () => {
+  const f = failures(tree(edit(`${U}/find-a-free-table.md`, "primary-actor: Guest\n", "primary-actor: Guest\nincludes:\n  - Book a table\n")));
+  const circle = only(f, "runs in a circle");
+  assert.equal(circle.length, 1, f.join("\n"));
+  assert.match(circle[0], /^model\/use-cases\/book-a-table\.md: `includes` runs in a circle, "Book a table" → "Find a free table" → "Book a table"; a line never returns to where it starts \(R16\)$/);
+});
+
+test("a use case that includes itself fails as a circle of one", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "  - Find a free table", "  - Find a free table\n  - Book a table")));
+  assert.equal(only(f, "runs in a circle", "\"Book a table\" → \"Book a table\"").length, 1, f.join("\n"));
+});
+
+test("a use case included by two others is no circle and passes", () => {
+  const f = failures(tree(edit(`${U}/run-an-evening-of-service.md`, "  - Book a table", "  - Book a table\n  - Find a free table")));
+  assert.deepEqual(f, []);
+});
