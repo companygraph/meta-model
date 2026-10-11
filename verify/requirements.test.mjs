@@ -228,3 +228,20 @@ test("an extension label that is no token is the label check's alone", () => {
   assert.equal(f.length, 1, f.join("\n"));
   assert.match(f[0], /is no label/);
 });
+
+test("an actor naming another entity of the model fails once under R4, since a reference resolves by the type it declares", () => {
+  const a = failures(tree(edit(`${U}/book-a-table.md`, "| 2 | Booking system |", "| 2 | Booking App |")));
+  assert.equal(a.length, 1, a.join("\n"));
+  assert.match(a[0], /book-a-table\.md.*"Booking App".*\(R4\)/);
+  assert.match(a[0], /product/);
+  const b = failures(tree(edit(`${U}/book-a-table.md`, "primary-actor: Guest", "primary-actor: Table booking")));
+  assert.equal(b.length, 1, b.join("\n"));
+  assert.match(b[0], /book-a-table\.md.*"Table booking".*\(R4\)/);
+  assert.match(b[0], /feature/);
+});
+
+test("a blank Step in the main scenario is the required-column check's alone, and an extension citing it is no second finding", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3 | Guest | Confirms", "|  | Guest | Confirms")));
+  assert.equal(only(f, "begins with no Step").length, 0, f.join("\n"));
+  assert.equal(only(f, "has no Step").length, 1, f.join("\n"));
+});
