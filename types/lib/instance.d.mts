@@ -273,6 +273,17 @@ export type Constraints = {
  * @property {{ section: string; kind: "Bulleted" | "Numbered"; required: boolean; min: number }[]} lists
  */
 export declare const CORE_LABEL = "Core";
+/**
+ * A frontmatter value in one pair of matching quotes is the text inside them, as a YAML reader
+ * takes it: an editor writes quotes around a value that holds a colon or opens with a symbol, and
+ * the value it means is the one written bare. Shared with the checks, so the parser and every
+ * check read one value from one line. Only the outer pair is taken off: an escape inside, `\"`
+ * or a doubled `''`, is kept as written, and a value followed by a `# comment` is not in one
+ * pair and stays as written, so either reaches a reader as text no name or token matches.
+ * @param {string} value
+ * @returns {string}
+ */
+export declare const unquote: (value: string) => string;
 export declare function parseInstance(files: InstanceFiles, options: {
     sub?: string;
     schemas: Files;
