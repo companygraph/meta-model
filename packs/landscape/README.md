@@ -6,7 +6,7 @@ An instance takes it with `companygraph init --pack landscape`. Every edge from 
 
 | Type | What it is | Owned by |
 | --- | --- | --- |
-| `system` | What IT buys, builds, runs and retires, whatever it is made of: an application, a device, a platform or a network, told apart by its kind, whose `element` names the ArchiMate element it is | nothing |
+| `system` | What IT buys, builds, runs and retires, whatever it is made of: an application, a device, a platform or a network, told apart by its kind, whose `element` names the ArchiMate® element it is | nothing |
 | `system-kind` | What sort of system a company has, in its own words, and which ArchiMate element a system of that kind is | nothing |
 | `data-object` | Data a system keeps, realizing the concept it stands for | nothing |
 | `service` | What a system exposes to others, realizing the feature the business sees, provided by the systems that expose it | nothing |
@@ -19,9 +19,12 @@ A system holds data objects through the `Data object` qualifier of its `## Holds
 
 | What | URL |
 | --- | --- |
-| The Open Group, ArchiMate 4 Specification | https://pubs.opengroup.org/architecture/archimate4-doc/ |
 | The Open Group, ArchiMate Model Exchange File Format | https://www.opengroup.org/xsd/archimate/ |
 | LeanIX, Application lifecycle | https://docs-eam.leanix.net/ |
+
+## The name and the license
+
+ArchiMate® is a registered trademark of The Open Group. The pack uses the name to say what its types align to, and names the standard's elements and relations in its own words; it reproduces no part of the specification, which The Open Group licenses on its own terms and which a reader takes from The Open Group, so the pack links to no copy of it. Describing a method and mapping a vocabulary to it is what The Open Group sets apart from commercial use, as it does for a book or for consultancy, and this pack and the tooling that reads it are given away under the Apache License. Nothing here is certified by The Open Group, and nothing claims to be; a product sold for commercial gain that implements the language would need The Open Group's commercial license, and this is not one.
 
 ## Mapping to ArchiMate 4
 
