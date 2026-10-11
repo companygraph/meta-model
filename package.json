@@ -1,20 +1,56 @@
 {
   "name": "companygraph-meta-model",
-  "version": "0.91.0",
+  "version": "0.92.0",
   "license": "Apache-2.0",
   "type": "module",
-  "engines": { "node": ">=22" },
-  "files": ["lib", "bin", "types/lib", "core", "form", "packs", "agents"],
-  "bin": { "companygraph": "./bin/companygraph.mjs" },
+  "engines": {
+    "node": ">=22"
+  },
+  "files": [
+    "lib",
+    "bin",
+    "types/lib",
+    "core",
+    "form",
+    "packs",
+    "agents"
+  ],
+  "bin": {
+    "companygraph": "./bin/companygraph.mjs"
+  },
   "exports": {
-    "./ids": { "types": "./types/lib/ids.d.mts", "default": "./lib/ids.mjs" },
-    "./instance": { "types": "./types/lib/instance.d.mts", "default": "./lib/instance.mjs" },
-    "./checks": { "types": "./types/lib/checks.d.mts", "default": "./lib/checks.mjs" },
-    "./plan": { "types": "./types/lib/plan.d.mts", "default": "./lib/plan.mjs" },
-    "./write": { "types": "./types/lib/write.d.mts", "default": "./lib/write.mjs" },
-    "./obsidian": { "types": "./types/lib/obsidian.d.mts", "default": "./lib/obsidian.mjs" },
-    "./localization": { "types": "./types/lib/localization.d.mts", "default": "./lib/localization.mjs" },
-    "./questions": { "types": "./types/lib/questions.d.mts", "default": "./lib/questions.mjs" }
+    "./ids": {
+      "types": "./types/lib/ids.d.mts",
+      "default": "./lib/ids.mjs"
+    },
+    "./instance": {
+      "types": "./types/lib/instance.d.mts",
+      "default": "./lib/instance.mjs"
+    },
+    "./checks": {
+      "types": "./types/lib/checks.d.mts",
+      "default": "./lib/checks.mjs"
+    },
+    "./plan": {
+      "types": "./types/lib/plan.d.mts",
+      "default": "./lib/plan.mjs"
+    },
+    "./write": {
+      "types": "./types/lib/write.d.mts",
+      "default": "./lib/write.mjs"
+    },
+    "./obsidian": {
+      "types": "./types/lib/obsidian.d.mts",
+      "default": "./lib/obsidian.mjs"
+    },
+    "./localization": {
+      "types": "./types/lib/localization.d.mts",
+      "default": "./lib/localization.mjs"
+    },
+    "./questions": {
+      "types": "./types/lib/questions.d.mts",
+      "default": "./lib/questions.mjs"
+    }
   },
   "scripts": {
     "build": "tsc",
@@ -32,12 +68,16 @@
     "test:rules": "node --test verify/rule-citations.test.mjs verify/check-script.test.mjs verify/every-test-runs.test.mjs",
     "test:cli": "node --test verify/cli.test.mjs",
     "test:consumer": "node --test verify/consumer.test.mjs",
-    "test:untar":"node --test verify/untar.test.mjs",
+    "test:untar": "node --test verify/untar.test.mjs",
     "test:fetch-core": "node --test verify/fetch-core.test.mjs",
     "test:obsidian": "node --test verify/obsidian.test.mjs",
     "test:judge": "node --test verify/questions.test.mjs verify/judge.test.mjs verify/judge-faults.test.mjs verify/known.test.mjs",
     "test:seats": "node --test verify/seats.test.mjs verify/history.test.mjs verify/commits.test.mjs",
     "test:gate": "node --test verify/gate.test.mjs"
   },
-  "devDependencies": { "@types/node": "22.20.5", "markdownlint-cli2": "0.23.2", "typescript": "7.0.2" }
+  "devDependencies": {
+    "@types/node": "22.20.5",
+    "markdownlint-cli2": "0.23.2",
+    "typescript": "7.0.2"
+  }
 }
