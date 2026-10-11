@@ -263,6 +263,10 @@ test("a copy of a copy is told so once, naming both pages, and a copy of itself 
   const g = failures(tree(edit(`${S}/billing-service.md`, "owner: Store Manager", "owner: Store Manager\ninstance-of: Billing service")));
   assert.equal(g.length, 1, g.join("\n"));
   assert.match(g[0], /`instance-of` runs in a circle.*"Billing service" → "Billing service"/);
+  // A circle of two is the circle rule's alone too, once, naming both; the one-level rule stays silent.
+  const h = failures(tree((m) => { edit(`${S}/billing-service-production.md`, "instance-of: Billing service", "instance-of: Billing service (test)")(m); edit(`${S}/billing-service-test.md`, "instance-of: Billing service", "instance-of: Billing service (production)")(m); return m; }));
+  assert.equal(h.length, 1, h.join("\n"));
+  assert.match(h[0], /`instance-of` runs in a circle.*"Billing service \(production\)" → "Billing service \(test\)" → "Billing service \(production\)"/);
 });
 
 test("a copy that claims the master beside the software fails once, under the master rule alone", () => {

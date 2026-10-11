@@ -10,7 +10,7 @@ An instance takes it with `companygraph init --pack landscape`. Every edge from 
 | `system-kind` | What sort of system a company has, in its own words, and which ArchiMate element a system of that kind is | nothing |
 | `data-object` | Data a system keeps, realizing the concept it stands for | nothing |
 | `service` | What a system exposes to others, realizing the feature the business sees, provided by the systems that expose it | nothing |
-| `environment` | Where a copy of a software runs, in the company's words and ranked along the path from a developer's machine to the customer | nothing |
+| `environment` | Where a system runs, a copy of a software or the platform under it, in the company's words and ranked along the path from a developer's machine to the customer | nothing |
 
 A system names its kind, a page in the company's words that carries the ArchiMate element once. A system realizes the features of the products staff and customers open, serves a process where no feature names it yet, runs on or in another system through `part-of`, is owned by one seat and run by another, and names the data processor behind it where it handles personal data. It takes data over the rows of its `## Connects to`, written on the side that takes it with the interface's name in `As`, and keeps concepts in `## Holds`, one system holding each concept as `master`. A system that runs in several environments is one page for the software and one per running copy, each `instance-of` the software, `part-of` its platform and naming its `environment`, a page of its own with a rank on that path.
 
@@ -69,7 +69,7 @@ The contract a generator reads in either direction: from an architecture tool's 
 - One type where ArchiMate has six internal active structure elements across its Application and Technology Domains, and two interfaces that become rows; the kind's `element` names which of the six a system is, so the element is exact on the way back, and the kind where the tool carries a profile.
 - Triggering comes back as Flow: a connection row says what is carried and how, not whether it starts something.
 - An interface is a row, not an element. Its name survives in `As`; its own composition into components and its appearance in views do not.
-- Behavior nobody uses is dropped: functions and artifacts have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down.
+- Behavior nobody uses is dropped: functions, and artifacts no node is assigned to, have no page, because core's rule that a thing nobody can name a user of is not a feature is applied once more one level down; an artifact on a node is a running copy, a system.
 - Capabilities and business services are not pack types; they are features of the products staff open; an application or technology service is, as `service`, and realizes them.
 - Access is three tokens, not four: ArchiMate's `readwrite` is `writes`, since a writer reads, and `master` is a claim ArchiMate does not make.
 - Lifecycle is four stages and criticality three tokens, a company's own words for where a system stands and what stops when it stops, with no tool's scale behind them: the model says what is, not when it will be.
