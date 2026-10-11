@@ -11,7 +11,7 @@ modality: must
 
 ## Why
 
-A customer files the copy in their own books, and a copy that changes after the fact makes their books disagree with the company's without either side noticing.
+A payer files the copy in their own books, and a copy that changes after the fact makes their books disagree with the company's without either side noticing.
 
 ## Fit criterion
 
@@ -21,5 +21,4 @@ An invoice downloaded on the day it is issued, and again after a credit note aga
 
 | Type | Entity |
 | --- | --- |
-| feature | Invoice download |
 | use-case | Download an invoice |

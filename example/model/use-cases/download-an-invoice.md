@@ -29,7 +29,7 @@ The payer's bookkeeping asks for the invoice of a closed billing period.
 
 | Step | Actor | Action |
 | --- | --- | --- |
-| 1 | Payer | Opens the Invoice Page and finds the invoice, as Find an invoice says |
+| 1 | Payer | Finds the invoice on the Invoice Page, as Find an invoice says |
 | 2 | Payer | Asks for a copy |
 | 3 | System | Hands over the invoice as it was issued, every line and its explanation |
 
@@ -37,7 +37,7 @@ The payer's bookkeeping asks for the invoice of a closed billing period.
 
 | Step | Condition | Handling |
 | --- | --- | --- |
-| 1a | The billing period is still open, so no invoice is issued yet | The page says when the period closes, and the payer comes back then |
+| 1a | The billing period is still open, so no invoice is issued yet | The page says when the period closes, and the payer comes back then, so the use case ends without a copy |
 | 3a | A credit note has been issued against the invoice since | The copy is still the invoice as issued, and the page names the credit note beside it |
 
 ## Minimal guarantees

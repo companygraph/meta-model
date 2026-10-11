@@ -9,7 +9,7 @@ An instance takes it with `companygraph init --pack requirements`. Every edge fr
 | `use-case` | All the ways of using a system to achieve one goal for one actor, fully dressed: its stakeholders and their interests, its steps and extensions, and what is guaranteed | nothing |
 | `requirement` | One statement a product is held to, functional, quality or constraint, with the measure that shows it met | nothing |
 
-A use case names the features it asks something of and the subordinate use cases its steps call; its primary actor, its stakeholders and the actor of each step are seats where the company has them and names otherwise. A requirement applies to features, products or use cases, and names the company rules it carries into the product. The software pack's feature design refines the same features, so a company taking both packs reads the trace from a use case and its requirements, through the feature, to the designs that build it, and neither pack names the other.
+A use case names the features it asks something of and the subordinate use cases its steps call; its primary actor, its stakeholders and the actor of each step are seats where the company has them and otherwise a name that no other entity carries. A requirement applies to features, products or use cases, and names the company rules it carries into the product. The software pack's feature design refines the same features, so a company taking both packs reads the trace from a use case and its requirements, through the feature, to the designs that build it, and neither pack names the other.
 
 ## Sources
 

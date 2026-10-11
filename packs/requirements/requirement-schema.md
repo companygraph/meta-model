@@ -18,7 +18,7 @@ A requirement owns nothing and nothing owns it, so it is a file. What it is abou
 | --- | --- | --- | --- |
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
-| `source-id` | No | string | The identifier this page has in its source, the label a specification gives it: `FR-011`. Absent when the source has none, as a repository does not. |
+| `source-id` | No | string | The identifier this page has in its source, the label a specification gives it: `FR-011`. Absent when the source has none. |
 | `kind` | Yes | enum | `functional`, `quality` or `constraint`. A result or behavior a function of the product provides; a quality concern no functional requirement covers, how fast, how safe, how available; or a limit on the solution beyond what the other two need (IREB CPRE glossary). |
 | `modality` | Yes | enum | `must`, `should` or `may`. Binding; binding unless a reason to depart is understood and stated; or permitted (RFC 2119). |
 | `follows` | No | array of ref → rule | The company's rules this requirement carries into the product, each the H1 of a file in `rules/` |
