@@ -19,7 +19,7 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 | `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered, the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source. Absent when the source has none, as a repository does not. |
-| `level` | Yes | enum | `very high summary`, `summary`, `user goal` or `subfunction`. How high the goal stands against what a primary actor gets done in one sitting: well above it, above it, at it, or below it (Cockburn's goal levels, drawn as cloud, kite, waves at sea and fish). |
+| `level` | Yes | enum | `very high summary`, `summary`, `user goal` or `subfunction`. How high the goal stands against what a primary actor gets done in one sitting: well above it, above it, at it, or below it (Cockburn's goal levels, drawn as cloud, kite, waves at sea and fish). The four are listed from the highest down, and the order is read: what a use case includes stands at its level or below. |
 | `scope` | No | enum | `organization`, `system` or `component`. What the use case treats as the thing under design (Cockburn's design scope). |
 | `primary-actor` | Yes | ref? → seat | Whoever has the goal: the H1 of a file in `seats/` where the company has the seat, otherwise the actor's name, which stays a string |
 | `features` | No | array of ref → feature | The features the use case asks something of, each the H1 of a file in `features/` |
@@ -59,7 +59,7 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Step` | Yes | string | The label of the step it branches from and a letter: `2a` |
+| `Step` | Yes | string | The label of the step it branches from and one lowercase letter: `2a` |
 | `Condition` | Yes | string | What the system can detect that sends the step another way |
 | `Handling` | Yes | string | What happens then, and where the scenario goes on |
 
@@ -83,6 +83,7 @@ A use case is all the ways of using a system to achieve one goal for one actor (
 - `## Stakeholders and interests` names every party whose interest the use case must protect, the primary actor among them, and each Interest says what the party needs, not what it does.
 - Each row of `## Main success scenario` is one actor doing one thing that moves toward the goal; a condition is an extension, never a step.
 - `Action`, in a step that calls a subordinate use case, names that use case by its H1, and every use case in `includes` is named so in some step.
+- `includes` names use cases at the page's `level` or below, in the order `level` lists them: a summary may call a user goal, and a subfunction calls no summary.
 - `Condition`, in `## Extensions`, is something the system can detect, not something an actor feels.
 - `## Minimal guarantees` hold however the use case ends, an extension that gives up included, and `## Success guarantees` only when the goal is reached.
 - `Action` names an aggregate, an invariant or an event, where a step needs one, in words: they are another pack's types, and the page draws no edge to them.

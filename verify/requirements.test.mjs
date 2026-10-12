@@ -133,11 +133,12 @@ test("a feature, an include and a followed rule that name nothing each fail as R
   assert.match(c[0], /bookings-are-stored-in-the-region\.md.*"Guest data stays home".*\(R4\)/);
 });
 
-test("an Applies to row naming nothing of its type, or a type no schema declares, fails as R4", () => {
+test("an Applies to row naming nothing of its type fails as R4, and a type off the list is R8's alone", () => {
   const a = failures(tree(edit(`${R}/booking-confirmed-within-two-seconds.md`, "| use-case | Book a table |", "| use-case | Book a room |")));
   assert.equal(only(a, "booking-confirmed-within-two-seconds.md", "Book a room", "(R4)").length, 1, a.join("\n"));
   const b = failures(tree(edit(`${R}/booking-confirmed-within-two-seconds.md`, "| product | Booking App |", "| screen | Booking App |")));
-  assert.equal(only(b, "booking-confirmed-within-two-seconds.md", "screen", "(R4)").length, 1, b.join("\n"));
+  assert.equal(b.length, 1, b.join("\n"));
+  assert.match(b[0], /`Type` in "## Applies to" is "screen", and requirement-schema\.md permits `feature`, `product`, `use-case` \(R8\)$/);
 });
 
 test("an Applies to with no rows, and a use case without its success guarantees, each fail once", () => {
@@ -221,6 +222,12 @@ test("an extension labeled as a step with no letter fails, and a second branch o
   assert.equal(only(f, "begins with no Step").length, 1, f.join("\n"));
   const g = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 2b | The guest")));
   assert.deepEqual(g, []);
+});
+
+test("an extension labeled with two letters fails, since a branch takes one", () => {
+  const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3a | The guest", "| 3ab | The guest")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /"3ab" under ## Extensions begins with no Step/);
 });
 
 test("an extension label that is no token is the label check's alone", () => {

@@ -38,7 +38,7 @@ A requirement owns nothing and nothing owns it, so it is a file. What it is abou
 
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
-| `Type` | Yes | string | The type of the entity this row names, as its schema is named: `feature`, `product` or `use-case` |
+| `Type` | Yes | enum | `feature`, `product` or `use-case`. The type of the entity this row names, as its schema is named. |
 | `Entity` | Yes | ref → by Type | The feature, product or use case, by its canonical name |
 
 `## References` is a table with these columns:
@@ -60,7 +60,6 @@ A requirement is one statement of what a product must do or be, written so that 
 - `## Fit criterion` names what is observed and what counts as met, with the measure and the conditions it is taken under where it is a quantity; "works well" is no criterion.
 - `kind` is `quality` where `## Fit criterion` measures how well the product does something rather than whether it does it.
 - `## Applies to` names the narrowest subject that carries the requirement: a feature where one feature does, a product where every feature of it does.
-- `## Applies to` names a feature, a product or a use case in each row; the grammar reads any type in the Type column, so this is the agent pass's to hold.
 - `follows` names a rule only where the requirement exists because of it.
 - `## Why` says the need, not the solution.
 - `source-id`, on a page drawn from a specification, is the label the specification gives it, so a test that cites the label still finds the page.

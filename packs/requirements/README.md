@@ -11,6 +11,8 @@ An instance takes it with `companygraph init --pack requirements`. Every edge fr
 
 A use case names the features it asks something of and the subordinate use cases its steps call; its primary actor, its stakeholders and the actor of each step are seats where the company has them and names otherwise. A requirement applies to features, products or use cases, and names the company rules it carries into the product. The software pack's feature design refines the same features, so a company taking both packs reads the trace from a use case and its requirements, through the feature, to the designs that build it, and neither pack names the other.
 
+Which to write: a use case where the question is what someone wants from the system and what must hold when they get it or do not; a requirement where it is one statement a product can be shown to meet or to miss, with the measure that shows it; and the software pack's feature design where it is how a feature is built, the terms and events it reads and writes. The first two say what is wanted and are written before the design; the third says how and is written after it.
+
 ## Sources
 
 | What | URL |
