@@ -103,7 +103,7 @@ test("a primary actor or a stakeholder naming no seat stays a string and fails n
 test("a level outside the four fails under R8", () => {
   const f = failures(tree(edit(`${U}/find-a-free-table.md`, "level: subfunction", "level: fish")));
   assert.equal(f.length, 1, f.join("\n"));
-  assert.match(f[0], /find-a-free-table\.md.*fish.*\(R8\)/);
+  assert.match(f[0], /find-a-free-table\.md: `level` is "fish", and use-case-schema\.md permits `very high summary`, `summary`, `user goal`, `subfunction` \(R8\)$/);
 });
 
 test("a scope outside the three fails under R8", () => {

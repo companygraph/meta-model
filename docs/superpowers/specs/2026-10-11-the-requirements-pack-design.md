@@ -75,7 +75,7 @@ Sections:
 - `## Preconditions`, optional, bulleted: what the system makes sure of before the use case may start.
 - `## Trigger`, optional: what starts it, which may be a time.
 - `## Main success scenario`, required, a table: `Step` (string, a label unique on the page), `Actor` (`ref? → seat`), `Action` (string). A step that calls a subordinate use case names it in its Action, and the use case stands in `includes`.
-- `## Extensions`, optional, a table: `Step` (string, the step it branches from and a letter, `2a`), `Condition` (string, what the system can detect), `Handling` (string).
+- `## Extensions`, optional, a table: `Step` (string, the step it branches from and one lowercase letter, `2a`), `Condition` (string, what the system can detect), `Handling` (string).
 - `## Minimal guarantees`, required, bulleted: what holds however the use case ends.
 - `## Success guarantees`, required, bulleted: what holds when the goal is reached.
 - `## References`.
@@ -96,7 +96,7 @@ Sections:
 
 - `## Why`, required: the rationale, the need behind the statement (Volere; 29148's rationale).
 - `## Fit criterion`, required: how anyone can tell the requirement is met, measured where it can be. A requirement for which none can be written is ambiguous or not yet understood (Volere).
-- `## Applies to`, required, a table: `Type` (string, `feature`, `product` or `use-case`, as the schema is named) and `Entity` (`ref → by Type`, the entity by its canonical name), the shape core's rule and control already use. Unlike a rule's, the table has at least one row: a rule with none applies everywhere, and a requirement with none is about nothing anyone could verify.
+- `## Applies to`, required, a table: `Type` (enum, `feature`, `product` or `use-case`, as the schema is named) and `Entity` (`ref → by Type`, the entity by its canonical name), the shape core's rule and control already use, with the type column an enum where theirs is a string: the review asked that the three types be held by a check, so R9 admits an enum type column, and a type off the list is R8's. Unlike a rule's, the table has at least one row: a rule with none applies everywhere, and a requirement with none is about nothing anyone could verify.
 - `## References`.
 
 A page drawn from a specification names that specification's repository as its `source` and the label it carries there, `FR-011`, as its `source-id`, so the label a test cites stays findable and the requirement's own id and name are what make the citation unambiguous.
@@ -108,7 +108,7 @@ Two norms span pages, so each is an instance check shipped with the pack:
 - `includes` forms no cycle, by the check `part-of` already uses in the organization and landscape packs.
 - A use case named in `includes` is at the level of the one that names it or below, in the order `level` lists: a summary may call a user goal, and a subfunction calls no summary.
 
-Two hold on one page: the `Step` labels of `## Main success scenario` and of `## Extensions` are tokens of letters, digits and hyphens, none repeated on the page, by the label check the software pack built; and an extension's label begins with the label of a step of the main success scenario, a check of the pack's own. What else a single page says is held by the grammar: `level`, `scope`, `kind` and `modality` by R8, every reference by R4, and the pack naming only core's types and its own by R20. That a use case named in `includes` is named in some step's Action, and that an `## Applies to` row names a feature, a product or a use case, are writing rules, as the second is on core's rule.
+Two hold on one page: the `Step` labels of `## Main success scenario` and of `## Extensions` are tokens of letters, digits and hyphens, none repeated on the page, by the label check the software pack built; and an extension's label begins with the label of a step of the main success scenario, a check of the pack's own. What else a single page says is held by the grammar: `level`, `scope`, `kind` and `modality` by R8, every reference by R4, and the pack naming only core's types and its own by R20. That a use case named in `includes` is named in some step's Action is a writing rule; that an `## Applies to` row names a feature, a product or a use case is R8's, since the type column is an enum.
 
 ## The decisions, and why
 

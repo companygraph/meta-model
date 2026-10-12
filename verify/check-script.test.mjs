@@ -129,7 +129,7 @@ test("a `by` naming a column that is neither a string nor an enum column of its 
 
 test("an `in` naming a column that is not a string column of its table fails", () => {
   const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Where in Kind | The page. |"]);
-  assert.match(out, /`Kind` is not a string or enum column of the same table \(R9\)/);
+  assert.match(out, /`Kind` is not a string column of the same table \(R9\)/);
 });
 
 test("a required `by` column whose type column is optional fails", () => {
