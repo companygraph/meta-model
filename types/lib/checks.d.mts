@@ -3,6 +3,11 @@ export { enumTokensOf, IMAGE_FILE };
 export type InstanceFiles = import("./instance.mjs").InstanceFiles;
 export type PageChange = import("./history.mjs").PageChange;
 export type DeletedPage = import("./history.mjs").DeletedPage;
+export type LabelPlace = {
+    section: string;
+    column?: string;
+    heading?: boolean;
+};
 export type TypeEntry = {
     type: string;
     folder?: string;
@@ -15,13 +20,9 @@ export type TypeEntry = {
         rest: string;
     };
     /**
-     * Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+     * Where a page carries labels cited from outside the model: one place, or several, whose labels share the page and so are unique across all of them.
      */
-    labels?: {
-        section: string;
-        column?: string;
-        heading?: boolean;
-    };
+    labels?: LabelPlace | LabelPlace[];
     /**
      * A reference column written on one side only: no two entities of the type each name the other in it.
      */
@@ -62,13 +63,31 @@ export type TypeEntry = {
         kind: string;
     };
     /**
-     * A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it, or several such fields, each its own chain; an edge the type's `within` does not admit is that check's and is not followed.
+     * A field naming entities of the page's own type, `ref → <type>` or `array of ref → <type>`, whose chain from any page never returns to a page already on it, or several such fields, each its own chain; an edge the type's `within` does not admit is that check's and is not followed.
      */
     acyclic?: string | string[];
     /**
      * A field naming an entity of the page's own type that is one level deep: the entity named carries the field empty, so a copy is never a copy of a copy.
      */
     flat?: string;
+    /**
+     * A field naming entities of the page's own type, each of which carries in the enum field `by` a token at the page's own place in its schema's list or after it, the list read from the top down. A value off the list is R8's, and a name that resolves to nothing R4's, and neither is compared.
+     */
+    descends?: {
+        field: string;
+        by: string;
+    };
+    /**
+     * A table whose labels each begin with a label of the `from` table's column and go on with one lowercase letter: an extension `2a` branches from step `2`. A label that is no token is the label check's and is not read here.
+     */
+    branches?: {
+        section: string;
+        column: string;
+        from: {
+            section: string;
+            column: string;
+        };
+    };
     /**
      * Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `where`, only rows whose `where.column` cell holds `where.is` count, so one system holds a concept as master while any number read it; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
      */
@@ -265,6 +284,11 @@ export type Check = {
 /** @typedef {import("./history.mjs").PageChange} PageChange */
 /** @typedef {import("./history.mjs").DeletedPage} DeletedPage */
 /**
+ * One place a page carries labels cited from outside the model: the section, and the table
+ * column or the `###` heading that holds them.
+ * @typedef {{ section: string, column?: string, heading?: boolean }} LabelPlace
+ */
+/**
  * A type as this release ships it: its folder, with `<placeholder>` segments for its owners, or
  * its one file; what owns it and what it owns; how prose writes it where its id will not do; and
  * the form its filename takes where R12's default does not hold.
@@ -276,14 +300,16 @@ export type Check = {
  * @property {string[]} [owns]
  * @property {string} [noun]
  * @property {{ year: string, rest: string }} [filename]
- * @property {{ section: string, column?: string, heading?: boolean }} [labels] Where a page carries labels cited from outside the model: the section, and the table column or the `###` heading that holds them.
+ * @property {LabelPlace | LabelPlace[]} [labels] Where a page carries labels cited from outside the model: one place, or several, whose labels share the page and so are unique across all of them.
  * @property {{ section: string, column: string }} [oneSided] A reference column written on one side only: no two entities of the type each name the other in it.
  * @property {{ section: string, column: string }} [notSelf] A reference column of the `section` table that never names the page it is on: a system does not connect to itself.
  * @property {{ field: string, unless: string }} [yields] A field written only on a page that leaves `unless` empty: `vendor` yields to `processor`, since the processor's page says who makes the system.
  * @property {{ section: string, columns: string[] }} [oneOf] A table whose every row fills exactly one of `columns`.
  * @property {{ field: string, kind: string } | { section: string, column: string, kind: string }} [refKind] A reference field, or a reference column of a section's table, whose target carries this value in its own `kind`.
- * @property {string | string[]} [acyclic] A field naming an entity of the page's own type, `ref → <type>`, whose chain from any page never returns to a page already on it, or several such fields, each its own chain; an edge the type's `within` does not admit is that check's and is not followed.
+ * @property {string | string[]} [acyclic] A field naming entities of the page's own type, `ref → <type>` or `array of ref → <type>`, whose chain from any page never returns to a page already on it, or several such fields, each its own chain; an edge the type's `within` does not admit is that check's and is not followed.
  * @property {string} [flat] A field naming an entity of the page's own type that is one level deep: the entity named carries the field empty, so a copy is never a copy of a copy.
+ * @property {{ field: string, by: string }} [descends] A field naming entities of the page's own type, each of which carries in the enum field `by` a token at the page's own place in its schema's list or after it, the list read from the top down. A value off the list is R8's, and a name that resolves to nothing R4's, and neither is compared.
+ * @property {{ section: string, column: string, from: { section: string, column: string } }} [branches] A table whose labels each begin with a label of the `from` table's column and go on with one lowercase letter: an extension `2a` branches from step `2`. A label that is no token is the label check's and is not read here.
  * @property {({ field: string, when?: { via: string, field: string, is: string }, until?: string } | { section: string, column: string, where?: { column: string, is: string }, when?: { via: string, field: string, is: string }, until?: string })[]} [once] Where every entity is named by one page of the type at most: in a list field (`field`), or in the `column` of the `section` table, a reference column; with `where`, only rows whose `where.column` cell holds `where.is` count, so one system holds a concept as master while any number read it; with `when`, only pages whose field `via` names an entity carrying `field` with the value `is` count; with `until`, a page whose date field of that name has passed, read as R9 reads an `end`, is not counted.
  * @property {{ field: string, when: { via: string, field: string, is: string }, until?: string }} [within] A field that is written only on a page satisfying `when`, and names only an entity that does: the field `via` names an entity carrying `field` with the value `is`; with `until`, a page whose date field of that name has not passed names no entity whose date there has passed, and one whose date has passed is held to `when` all the same.
  * @property {{ field: string, via: string, carries: string, is: string }} [inherits] A field naming an entity of the page's own type whose `via` entity carries `carries: is`, written only on a page whose own `via` entity carries it too; a blank `carries` is not `is`. A page `within` refuses on the same field, and a value R4 or R8 refuses, is that check's and is not read again.

@@ -445,17 +445,18 @@ const CHECKS = [
               continue;
             }
             // R9: a reference whose type is read from its row needs a row, so it is a column of a
-            // column table, and the columns it reads are string columns of that same table.
+            // column table; the type column it reads is a string or enum column of that same table, an
+            // enum where the schema can list the types a row may name, and the owner column a string.
             const by = declared.match(/^ref → by (.+?)(?: in (.+))?$/);
             if (by) {
               if (fm === frontmatter || headingTables.has(fm)) {
                 fail(`${path}: ${row[0]} is "${declared}"; a reference whose type is read from its row is a column, never a frontmatter field or a heading`);
                 continue;
               }
-              for (const name of [by[1], by[2]].filter(Boolean)) {
+              for (const [name, forms] of /** @type {[string, string[]][]} */ ([[by[1], ["string", "enum"]], ...(by[2] ? [[by[2], ["string"]]] : [])])) {
                 const named = fm.rows.find((r) => (r[0] ?? "").replace(/`/g, "").trim() === name.trim());
-                if (!named || (named[2] ?? "").replace(/`/g, "").trim() !== "string")
-                  fail(`${path}: ${row[0]} is "${declared}", and \`${name.trim()}\` is not a string column of the same table (R9)`);
+                if (!named || !forms.includes((named[2] ?? "").replace(/`/g, "").trim()))
+                  fail(`${path}: ${row[0]} is "${declared}", and \`${name.trim()}\` is not a ${forms.join(" or ")} column of the same table (R9)`);
               }
               // A name with no type cannot resolve, so the type column is required wherever the
               // reference is.

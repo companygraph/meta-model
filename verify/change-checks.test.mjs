@@ -304,3 +304,14 @@ test("a label that is both a move and a reuse is said once, as the reuse", () =>
   const f = labels([change(was, invariants([["INV-1", "A total never changes."], ["INV-2", "A new rule."], ["INV-3", "One customer."]]), AGG)], history);
   assert.deepEqual(f, [`${AGG}: "INV-3" under ## Invariants was carried by this page before and removed; a removed item's label is not used again (R16)`]);
 });
+
+test("a use case's labels are held in both its tables, each under its own section", () => {
+  const UC = "model/use-cases/book-a-table.md";
+  const useCase = (steps, extensions) => `---\nsource: Local\nlevel: user goal\nprimary-actor: Guest\n---\n\n# Book a table\n\n> A table.\n\n## Main success scenario\n\n| Step | Actor | Action |\n| --- | --- | --- |\n${steps.map(([l, t]) => `| ${l} | Guest | ${t} |\n`).join("")}\n## Extensions\n\n| Step | Condition | Handling |\n| --- | --- | --- |\n${extensions.map(([l, t]) => `| ${l} | ${t} | Leaves |\n`).join("")}`;
+  const types = [...TYPES, ...PACKS.requirements];
+  const was = useCase([["1", "Asks"], ["2", "Confirms"]], [["2a", "No table is free"]]);
+  const f = labelChangesOf([change(was, useCase([["1", "Asks"], ["2", "Confirms"]], [["2b", "No table is free"]]), UC)], "main", { types });
+  assert.deepEqual(f, [`${UC}: "2b" under ## Extensions carries what "2a" carried at main, and "2a" is gone; a label stays with its item, and a new item takes a new label (R16)`]);
+  const g = labelChangesOf([change(was, useCase([["1", "Asks"], ["3", "Confirms"]], [["2a", "No table is free"]]), UC)], "main", { types });
+  assert.deepEqual(g, [`${UC}: "3" under ## Main success scenario carries what "2" carried at main, and "2" is gone; a label stays with its item, and a new item takes a new label (R16)`]);
+});
