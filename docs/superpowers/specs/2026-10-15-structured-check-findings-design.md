@@ -2,7 +2,7 @@
 
 > `checkInstance` reports a failure as one line of text, and a program that reads the report has to take the text apart again to learn which page it is about, which check raised it and whether that page alone decides it. This design returns the same failures a second time as records, `findings`, beside the strings, which stay byte for byte as they are. Each check declares by default how far its verdict reaches, the page, a reference, several pages or a file that is no instance page, a finding may override that where one check mixes reaches, and the run writes the result onto every finding it raises.
 
-Status: proposed, for the owner's decision. It is written against this repository at `0a81a74`, at the request of beacon.build, whose platform imports an instance into a knowledge graph page by page and reads the checker's report to attach each failure to the page it is about. Every line number below refers to that commit. Nothing here is implemented; the implementation waits for the owner's word on this design.
+Status: proposed, with its open questions decided (see Decisions). It is written against this repository at `0a81a74`, at the request of beacon.build, whose platform imports an instance into a knowledge graph page by page and reads the checker's report to attach each failure to the page it is about. Every line number below refers to that commit. Nothing here is implemented; the implementation waits for the owner's word on this design.
 
 ---
 
@@ -14,7 +14,7 @@ Most messages open with the page, `${child}: `, and close with the rule, ` (R4)`
 
 Some lines open with a path and no colon. The container check opens `model/ is missing` with the folder (`lib/checks.mjs:1146`), and its siblings with the singular file or folder they name (`1160` to `1196`). Two files that derive to one filename open with the later path, `${child} and ${other} both derive …` (`2802`); two entities that each name the other, `${a} and ${b} each name the other in …` (`2879`); and a chain that returns to a copy, `${path} names "…" in …` (`3099`).
 
-Some lines open with no path at all. Messages about several pages open with a quoted name or a list of names: R2's name shared across a type (`1604`), R16's `once` (`3194`) and `replaced` (`3589`), and a rank collision, which names the entities that share it (`2046`).
+Some lines open with no path at all. Messages about several pages open with a quoted name or a list of names: R2's name shared across a type (`1604`), R16's `once` (`3194`) and `replaced` (`3589`), and a rank collision, which names the entities that share it (`2045`).
 
 Many lines close with no rule, and R18's missing `id` names its rule in the middle of the text (`2419`). A circle opens with the lowest path and names the rest by their H1 inside the text (`3063`).
 
@@ -50,7 +50,7 @@ The exported callback does not change. `instanceChecks` takes `fail: (message: s
 
 The run fills `check`, `rule` and `scope` from the check it is running, so a call site cannot get them wrong and most never write them. A finding renders as `${path}: ${message}`, which is what the call sites write today.
 
-Every line that is not of the form `${path}: ${message}` is bare. That covers the two forms of section 1 whose lines do not open with `${path}: `, a path and no colon, and no path at all. A line that opens with `${path}: ` but closes with no rule, or with its rule mid-text, is an ordinary finding whose `message` is the text after the path, unchanged. A bare finding keeps its legacy line whole in `message` and is rendered as `message` alone, so its line does not change, and it still carries `path` for the reader that attaches it. `path` is the path the legacy line opens with, which is what the plugin attaches the line to; for a line that opens with a name instead of a path, the first page that takes part in code-unit order, with the rest in `related`. The rank collision and `replaced` collect names and statuses in insertion order today, so those checks keep the page paths as they collect and sort them in code-unit order. For the container findings `path` is the file or folder the line names, not the content tree. Because `bare` is a field of the record, a renderer given only the records reproduces `failures` without a wording heuristic, and a consumer that shows `path` and `message` side by side shows `message` alone when `bare` is set. Whether bare lines should one day open with a page like every other message is a question for a later release, since it changes `failures`, and is left open in section 9.
+Every line that is not of the form `${path}: ${message}` is bare. That covers the two forms of section 1 whose lines do not open with `${path}: `, a path and no colon, and no path at all. A line that opens with `${path}: ` but closes with no rule, or with its rule mid-text, is an ordinary finding whose `message` is the text after the path, unchanged. A bare finding keeps its legacy line whole in `message` and is rendered as `message` alone, so its line does not change, and it still carries `path` for the reader that attaches it. `path` is the path the legacy line opens with, which is what the plugin attaches the line to; for a line that opens with a name instead of a path, the first page that takes part in code-unit order, with the rest in `related`. The rank collision and `replaced` collect names and statuses in insertion order today, so those checks keep the page paths as they collect and sort them in code-unit order. For the container findings `path` is the file or folder the line names, not the content tree. Because `bare` is a field of the record, a renderer given only the records reproduces `failures` without a wording heuristic, and a consumer that shows `path` and `message` side by side shows `message` alone when `bare` is set. `bare` is a lasting field and not a step toward a later release: a reader takes the page from `path`, and opening these lines with a page would change `failures` for no reader that needs it.
 
 `rule` is the rule the message cites, or the check's own when it cites none. Many messages cite another: an R9 failure inside an R4 check, an R8 failure inside an R16 check. The call overrides `rule` as it overrides `scope`, and the table in section 4 lists each case. A message that cites two rules takes the check's own when it is one of them, so the schema-id failures that close with `(R9, R18)` are R18, and the other rule stays in the text.
 
@@ -63,15 +63,15 @@ Every line that is not of the form `${path}: ${message}` is bare. That covers th
 The four values are defined by what a reader that loads pages in batches does with the finding.
 
 - `page`: final until this page changes. The reader attaches it to the page and need not wait.
-- `reference`: depends on whether a name the page writes resolves. The reader holds it until the batch is complete, since another page can resolve the name. When the name resolved to a page of the wrong kind, `related` holds that page; when it resolved to nothing, `related` is empty.
+- `reference`: depends on whether a name the page writes resolves. The reader holds it until the batch is complete, since another page can resolve the name. When the name resolved to a page of the wrong kind, `related` holds that page if the check keeps it; when it resolved to nothing, `related` is empty.
 - `cross-page`: depends on what other pages say, their order, their count, their fields or their names. The reader holds it until the batch is complete and attaches it to `path` and to every page in `related`. A finding of this reach with an empty `related`, the count of pages that name an entity at zero or a rule no page binds, is held the same way, since a page that arrives can clear it.
-- `schema`: about a file or folder that is no instance page: a core or pack schema, `model/identifier.md`, a picture, or the layout of the folders. The graph has no page for it, so the reader reports it against `path` as a file. Most of these are final until that file changes. A few clear when a file or page arrives, a singular file or an owner's file or folder that is missing and an image that no page names, and the reader holds those until the batch is complete, as it does a reference. The table marks them held.
+- `schema`: about a file or folder that is no instance page: a core or pack schema, a picture, the container itself or the layout of its folders. The graph has no page for it, so the reader reports it against `path` as a file. Most of these are final until that file changes. A few clear when a file or page arrives, a singular file or an owner's file or folder that is missing and an image that no page names, and the reader holds those until the batch is complete, as it does a reference. The table marks them held.
 
 The table lists every check in the order `instanceChecks` returns them, with its default and each finding whose reach or rule differs, by the line of the `fail(` call at `0a81a74`, which for a call that spans lines is the line of `fail(` and not of its message. Line 901 is the one `fail` of the helper `enumOpensWithNoList`, called at 1376 by the check that holds the instance to its schemas and at 2600 by the enum check. A dash is nothing to list. "Opens" lists the lines that are not of the form `${path}: ` by the form: PX is a path without a colon, N is no path, and "no rule" is a message that does not close with its rule.
 
 | # | Check | Rule | Default | Other reach, by line | Other rule cited | Opens |
 | --- | --- | --- | --- | --- | --- | --- |
-| 1 | the container holds what the types imply | R6 | schema | schema, held: 1166, 1182, 1186 | 1196: R5 | PX 1146, 1160, 1166, 1176, 1182, 1186, 1189, 1196; no rule 1146, 1160, 1166, 1176, 1182, 1186, 1189 |
+| 1 | the container holds what the types imply | R6 | schema | schema, held: 1146, 1166, 1182, 1186 | 1196: R5 | PX 1146, 1160, 1166, 1176, 1182, 1186, 1189, 1196; no rule 1146, 1160, 1166, 1176, 1182, 1186, 1189 |
 | 2 | references resolve | R4 | reference | page 1282, 1285, 1287, 1291, 1312 | 1312: R9 | — |
 | 3 | the instance is held to what the schemas declare | R16 | page | schema 901 (called at 1376), 1392, 1398 | 901: R8; 1453: R9; 1465: R8 | no rule 901, 1392, 1398, 1415, 1428, 1439, 1446, 1453 |
 | 4 | a repeated reference in a table names the role each row plays | R16 | page | — | — | — |
@@ -94,7 +94,7 @@ The table lists every check in the order `instanceChecks` returns them, with its
 | 21 | a frontmatter key appears once | R15 | page | — | — | — |
 | 22 | list fields are block sequences | R11 | page | — | — | no rule 2346 |
 | 23 | required frontmatter fields are present | R9 | page | — | — | no rule 2392 |
-| 24 | every entity carries an id in the declared format, and no two share one | R18 | page | schema 2412; cross-page 2427, 2433 | — | no rule 2419 |
+| 24 | every entity carries an id in the declared format, and no two share one | R18 | page | cross-page 2427, 2433 | — | no rule 2419 |
 | 25 | every schema carries an id, and no two share one | R18 | schema | — | 2457, 2463: R9 as well as R18, the check's own; 2465: R9 | no rule 2457 |
 | 26 | the model names its language as a language tag | R14 | page | — | — | — |
 | 27 | required list fields carry at least one item | R9 | page | — | — | — |
@@ -129,7 +129,7 @@ The table lists every check in the order `instanceChecks` returns them, with its
 
 The checks driven by the types table take their default from the key that drives them: `once`, `gathers`, `acyclic`, `flat`, `replaced`, `binds`, `within`, `inherits`, `descends`, `beside`, `among`, `carries`, `oneSided` and `refKind` are `cross-page`; `atMostOne`, `samePer`, `notSelf`, `oneOf`, `branches` and `labels` are `page`; `yields` is `reference`. A check that reads another page only for whether it exists, as the grouped-section check does for the heading's type, is `cross-page`, because a page that arrives changes the verdict.
 
-R18's wrong-format finding (the row for ids, line 2427) is `cross-page` because it depends on `model/identifier.md`: it does not occur while that file is absent. The checks marked note only call only `note`. They raise no failure and so no finding, and need no scope.
+`model/identifier.md` is an instance page, the singular `identifier` entity (`lib/checks.mjs:210`), so the finding about that page (line 2412 of the row for ids) is `page`, the row's default. R18's wrong-format finding (line 2427 of the same row) is `cross-page` because it depends on that page: it does not occur while the page is absent, and `related` holds `model/identifier.md`. The checks marked note only call only `note`. They raise no failure and so no finding, and need no scope.
 
 `related` is filled by every finding whose message names other pages, or the entities they hold by name: a shared name or id, the page a cell or heading was read from, an owner's table set against the owned pages, two entities that name each other, a chain or a copy that returns to where it starts. Where the message names an H1 or a folder instead of a path, the check keeps the path of the page it read as it collects, and `related` holds that path. A `reference` finding fills it with the resolved page only when the check keeps that page; `references resolve` keeps types and not paths today, so its `related` stays empty until the check collects them.
 
@@ -151,18 +151,12 @@ The example company raises nothing, so a parity test over `example/` alone canno
 
 ## 8. Files
 
-`lib/checks.mjs`: the `emit` function, the `finding` callback, `Check.scope`, the per-check scopes and the overrides of section 4, and the `Finding` typedef. `types/lib/checks.d.mts`: rebuilt by `npm run build`. `verify/`: the fixtures and the parity test of section 7. `bin/check-instance.mjs`, `mcp-server/lib/snapshot.mjs` and the Obsidian plugin: untouched.
+`lib/checks.mjs`: the `emit` function, the `finding` callback, `Check.scope`, the per-check scopes and the overrides of section 4, and the `Finding` typedef. `types/lib/checks.d.mts`: rebuilt by `npm run build`. `verify/`: the fixtures and the parity test of section 7. `bin/check-instance.mjs` and the Obsidian plugin: untouched. `mcp-server/lib/snapshot.mjs` shows `scope`, as a change of its own in the pull request that re-pins meta-model onto the release that carries it.
 
-## 9. Open questions
-
-- The taxonomy. Whether four values are the right ones, in particular where `cross-page` ends and `reference` begins for the checks that read the target page's own fields (`refKind`, `descends`), is for the owner to read off the table in section 4.
-- The bare lines. Section 3 keeps them as they are, and a bare finding carries its structured path. Opening them with their page like every other message would drop the `bare` field and change their lines in `failures`, which a minor cannot do.
-- `scope` in the snapshot. Whether the server's list of checks shows it is the server's decision.
-
-## 10. Release
+## 9. Release
 
 A minor of the meta-model: `findings` is added, `failures` keeps its bytes, the exported callback keeps its signature and the checks gain a field. No schema changes, so `core/manifest.json` keeps its version and no vendored core reads as behind. beacon.build takes the release at its next regular re-pin, and its platform then attaches failures by `path` and `scope` and drops its pattern over the wording.
 
 ## Decisions
 
-None yet. The shape, the four values of `scope` and the table of section 4 are proposed for the owner's decision.
+Taken by the owner on Oct 16, 2026, in the review of the pull request. The four values of `scope` stand, and `refKind` and `descends` are `cross-page`, since a wrong-kind or wrong-level reference is fixed on either page and belongs to both. The bare lines stay as they are, and `bare` is a lasting field rather than a step toward a later release. The MCP server shows `scope` in its snapshot, as a change of its own in the pull request that re-pins meta-model onto the release that carries it.
