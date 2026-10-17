@@ -1,3 +1,7 @@
+---
+id: 01a0bfb0-acf0-79e1-bc25-474cf0bd7ac0
+---
+
 # Track Schema
 
 > Required structure for track files.
@@ -14,6 +18,7 @@ A track is owned by a process and cannot exist without it, so it nests inside th
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 
@@ -23,6 +28,14 @@ A track is owned by a process and cannot exist without it, so it nests inside th
 | --- | --- | --- |
 | `# [Track]` | Yes | The canonical name of the track. The owning process's `## Tracks` table and a phase's `### [Track]` headings reference it by this exact string. |
 | `> [Produces]` | Yes | One-paragraph statement of what one pass down this track leaves behind |
+| `## References` | No | Table. What a reader can open to learn more about the track; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a rulebook, a checklist |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
@@ -30,14 +43,9 @@ A track is one kind of thing a process makes, and it answers “which of the thi
 
 ## Writing rules
 
-- A track is named for what it makes, not for who makes it: `Code`, not `Engineering`.
+- The H1 names what the track makes, not who makes it: `Code`, not `Engineering`.
 - The tagline says what is left behind when a change has run down the track, as a thing a
   reader could point at: “a merged change to the platform”, not “development work”.
-- A track's name is unique within its process (R2): two processes may each have a track called
-  `Code`, and a phase's heading or a process's `## Tracks` finds the one in its own process
-  (R4).
-- A track carries no order: the order a process lists its tracks in is the order a reader meets
-  them and nothing more.
-- A track carries its name and what it produces, and nothing more. R9 lets a page hold sections
-  of its own, so no script refuses one here; what a track would say in it belongs to the phase
-  that does the work or to the process that owns the track.
+- The page carries the track's name and what it produces, and nothing more. R9 lets a page hold
+  sections of its own, so no script refuses one here; what a track would say in it belongs to
+  the phase that does the work or to the process that owns the track.

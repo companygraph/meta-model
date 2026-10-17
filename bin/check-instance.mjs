@@ -32,14 +32,22 @@
 import { readdirSync, statSync, readFileSync, existsSync, realpathSync } from "node:fs";
 import { join, resolve, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
-import { checkInstance, isNewer, MODEL, IMAGE_FILE } from "../lib/checks.mjs";
-import { hashOf, unixLines } from "../lib/instance-files.mjs";
+import { checkInstance, isNewer, MODEL, IMAGE_FILE, PACKS } from "../lib/checks.mjs";
+import { gateFault, hashOf, unixLines } from "../lib/instance-files.mjs";
+import { instanceAt } from "../lib/history.mjs";
+import { KNOWN, checkKnown } from "../lib/known.mjs";
+/** @import { InstanceFiles } from "../lib/instance.mjs" */
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const VERSION = JSON.parse(readFileSync(join(HERE, "..", "package.json"), "utf8")).version;
 
+/**
+ * @param {string} path
+ * @returns {number}
+ */
 export function checkPath(path) {
   const root = resolve(path);
+  /** @type {(message: string) => never} */
   const die = (message) => {
     throw new Error(message);
   };
@@ -75,10 +83,18 @@ export function checkPath(path) {
   // R13: one container, and the manifest names where the vendored units sit beside it.
   const units = manifest.units ?? "meta";
   const core = `${units}/core`;
-  for (const rel of [MODEL, core])
+  // R20: each pack the instance took is a unit beside core. One this checker does not ship has
+  // no types it could hold the instance to, so it is refused by name before anything is read.
+  const packs = (manifest.packs ?? []).map((/** @type {string} */ name) => {
+    if (!Object.hasOwn(PACKS, name)) die(`.companygraph/manifest.json takes the pack ${name}, and this checker ships ${Object.keys(PACKS).join(", ") || "none"}`);
+    return { name, dir: `${units}/${name}` };
+  });
+  for (const rel of [MODEL, core, ...packs.map((/** @type {{ dir: string }} */ p) => p.dir)])
     if (!existsSync(join(root, rel))) die(`${root} has no ${rel}/`);
 
+  /** @type {InstanceFiles} */
   const files = new Map();
+  /** @param {string} rel */
   const walk = (rel) => {
     for (const entry of readdirSync(join(root, rel))) {
       const child = `${rel}/${entry}`;
@@ -90,8 +106,12 @@ export function checkPath(path) {
   };
   walk(MODEL);
   walk(core);
+  for (const p of packs) walk(p.dir);
 
-  const { failures, skipped } = checkInstance(files, { core, model: MODEL });
+  const { failures, skipped, notes } = checkInstance(files, { core, model: MODEL, packs });
+  // The gate the manifest names, which upgrade reads to know what to move.
+  const gate = gateFault(manifest);
+  if (gate) failures.push(gate);
 
   // The manifest's per-file hashes, read on the one command every commit runs. What the tooling
   // wrote — the vendored core, and the skills where it installed them — is not the instance's to
@@ -113,13 +133,40 @@ export function checkPath(path) {
     else if (hashOf(text) !== recorded)
       failures.push(`${path}: not as the tooling wrote it, and it is not the instance's to edit — \`companygraph upgrade --force\` puts it back`);
   }
-  const against = `${MODEL}/ against ${core}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
+  // judge/known.md, the flags the owner has decided about the judge's report, when the instance
+  // keeps one: a row that names nothing fails here, on the commit that wrote it, and a row whose
+  // page or rule has changed since is noted, since it is a reason to read that flag again rather
+  // than a broken file. It is read as `judge` reads the instance, so the hash a row carries is
+  // the one `judge` printed. A model that does not parse has said so above, and every row would
+  // fail for that one reason, so the file is then left unread and noted.
+  if (existsSync(join(root, KNOWN))) {
+    /** @type {ReturnType<typeof instanceAt> | null} */
+    let instance = null;
+    try {
+      instance = instanceAt(root);
+    } catch (error) {
+      notes.push(`${KNOWN}: not read, since the model does not parse: ${/** @type {Error} */ (error).message}`);
+    }
+    if (instance) {
+      const known = checkKnown(unixLines(readFileSync(join(root, KNOWN), "utf8")), instance);
+      failures.push(...known.failures);
+      notes.push(...known.notes);
+    }
+  }
+  const against = `${MODEL}/ against ${[core, ...packs.map((/** @type {{ dir: string }} */ p) => p.dir)].join(", ")}/ at core ${manifest.core?.version ?? "an unnamed version"}`;
 
   if (failures.length) {
     console.error(`\n✗ ${failures.length} problem${failures.length > 1 ? "s" : ""} in ${against}\n`);
     for (const f of failures) console.error(`  ${f}`);
   } else {
     console.log(`✓ ${against}: the mechanical checks pass`);
+  }
+
+  // On both paths, and never counted: a note is a fact worth seeing that fails nothing, so the
+  // exit code stays the failures' alone.
+  if (notes.length) {
+    console.log("  noted:");
+    for (const n of notes) console.log(`    ${n}`);
   }
 
   // Always, and on both paths: a report says what it did not check.
@@ -150,7 +197,7 @@ if (ranDirectly()) {
   try {
     process.exit(checkPath(process.argv[2] ?? ".") ? 1 : 0);
   } catch (error) {
-    console.error(`✗ ${error.message}`);
+    console.error(`✗ ${/** @type {Error} */ (error).message}`);
     process.exit(1);
   }
 }

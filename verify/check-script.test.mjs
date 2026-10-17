@@ -17,6 +17,7 @@ import { tmpdir } from "node:os";
 import { join, dirname } from "node:path";
 import { fileURLToPath } from "node:url";
 import { spawnSync } from "node:child_process";
+import { initRepository } from "./fixture-repository.mjs";
 
 const HERE = dirname(fileURLToPath(import.meta.url));
 const ROOT = join(HERE, "..");
@@ -27,8 +28,10 @@ test("a short row in a heading table fails the run instead of crashing it", () =
     cpSync(join(ROOT, "core"), join(tmp, "core"), { recursive: true });
     cpSync(join(ROOT, "example"), join(tmp, "example"), { recursive: true });
     cpSync(join(ROOT, "lib"), join(tmp, "lib"), { recursive: true });
+    cpSync(join(ROOT, "packs"), join(tmp, "packs"), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
 
     // Drop every cell but the heading name from the one row `## Achievements` declares — the
     // shape a hand-edited table takes when a cell is deleted along with its pipes instead of
@@ -72,8 +75,10 @@ test("a column typed image fails the vocabulary check by name", () => {
     cpSync(join(ROOT, "core"), join(tmp, "core"), { recursive: true });
     cpSync(join(ROOT, "example"), join(tmp, "example"), { recursive: true });
     cpSync(join(ROOT, "lib"), join(tmp, "lib"), { recursive: true });
+    cpSync(join(ROOT, "packs"), join(tmp, "packs"), { recursive: true });
     mkdirSync(join(tmp, "verify"));
     cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
     const schemaPath = join(tmp, "core", "profile-schema.md");
     const before = readFileSync(schemaPath, "utf8");
     const target = "| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |";
@@ -81,6 +86,99 @@ test("a column typed image fails the vocabulary check by name", () => {
     writeFileSync(schemaPath, before.replace(target, "| `Where` | Yes | image | The place. |"));
     const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
     assert.match(result.stdout + result.stderr, /profile-schema\.md: `Where` is "image"; an image is a frontmatter field, never a column/);
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+});
+
+// `pairs` is one [from, to] row replacement or a list of them, mutating core/profile-schema.md.
+// A leading string argument names a different schema file to mutate instead, for a fixture that
+// needs a row profile-schema.md does not carry — a heading table, say.
+const mutated = (...args) => {
+  const file = typeof args[0] === "string" ? args.shift() : "profile-schema.md";
+  const pairs = args;
+  const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
+  try {
+    for (const dir of ["core", "example", "lib", "packs"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    mkdirSync(join(tmp, "verify"));
+    cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
+    const schemaPath = join(tmp, "core", file);
+    let text = readFileSync(schemaPath, "utf8");
+    for (const [from, to] of pairs) {
+      assert.ok(text.includes(from), `core/${file} no longer carries the row this test mutates — update the fixture`);
+      text = text.replace(from, to);
+    }
+    writeFileSync(schemaPath, text);
+    const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
+    return result.stdout + result.stderr;
+  } finally {
+    rmSync(tmp, { recursive: true, force: true });
+  }
+};
+
+test("a frontmatter field typed by its row fails, since a field has no row", () => {
+  const out = mutated(["| `location` | No | string | Where the person works from |", "| `location` | No | ref → by Kind | Where. |"]);
+  assert.match(out, /`location` is "ref → by Kind"; a reference whose type is read from its row is a column, never a frontmatter field/);
+});
+
+test("a `by` naming a column that is neither a string nor an enum column of its table fails", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Kind | The page. |"]);
+  assert.match(out, /`URL` is "ref → by Kind", and `Kind` is not a string or enum column of the same table \(R9\)/);
+});
+
+test("an `in` naming a column that is not a string column of its table fails", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Where in Kind | The page. |"]);
+  assert.match(out, /`Kind` is not a string column of the same table \(R9\)/);
+});
+
+test("a required `by` column whose type column is optional fails", () => {
+  const out = mutated(
+    ["| `Where` | Yes | string | The place, in plain words — GitHub, LinkedIn, Substack |", "| `Where` | No | string | The place. |"],
+    ["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref → by Where | The page. |"]);
+  assert.match(out, /`URL` is required and `Where`, which names its type, is not \(R9\)/);
+});
+
+test("the form spelled with `ref?` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | ref? → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("the form spelled with `array of` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | array of ref → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("the form spelled with `qualifier` is refused by its own message", () => {
+  const out = mutated(["| `URL` | Yes | string | The person's own page there |", "| `URL` | Yes | qualifier → by Where | The page. |"]);
+  assert.match(out, /`ref → by <Column>` and `ref → by <Column> in <Owner>` are the forms \(R9\)/);
+});
+
+test("a heading table declaring `ref → by …` fails, since a heading has no row either", () => {
+  const out = mutated("experience-schema.md",
+    ["| `Kind` | No | ref → achievement-kind | The kind every bullet below it is chiefly evidence of |",
+     "| `Kind` | No | ref → by Kind | The kind. |"]);
+  assert.match(out, /`Kind` is "ref → by Kind"; a reference whose type is read from its row is a column, never a frontmatter field or a heading/);
+});
+
+test("an instance workflow that checks out another release than package.json's fails the run", () => {
+  const tmp = mkdtempSync(join(tmpdir(), "meta-model-check-"));
+  try {
+    for (const dir of ["core", "example", "lib", "packs", ".github"]) cpSync(join(ROOT, dir), join(tmp, dir), { recursive: true });
+    cpSync(join(ROOT, "package.json"), join(tmp, "package.json"));
+    // The release check asks git which tags sit on HEAD, so the copy is a repository of its own.
+    initRepository(tmp);
+    spawnSync("git", ["-c", "user.name=check", "-c", "user.email=check@example.invalid", "commit", "-q", "--allow-empty", "-m", "fixture"], { cwd: tmp });
+    mkdirSync(join(tmp, "verify"));
+    cpSync(join(ROOT, "verify", "check.mjs"), join(tmp, "verify", "check.mjs"));
+    cpSync(join(ROOT, "verify", "example.mjs"), join(tmp, "verify", "example.mjs"));
+    const version = JSON.parse(readFileSync(join(ROOT, "package.json"), "utf8")).version;
+    const path = join(tmp, ".github", "workflows", "instance-check.yml");
+    const before = readFileSync(path, "utf8");
+    assert.ok(before.includes(`ref: v${version}`), "instance-check.yml no longer names package.json's release — update the fixture");
+    writeFileSync(path, before.replace(`ref: v${version}`, "ref: v0.0.1"));
+    const result = spawnSync(process.execPath, ["verify/check.mjs"], { cwd: tmp, encoding: "utf8" });
+    assert.match(result.stdout + result.stderr, new RegExp(`checks the checker out at v0\\.0\\.1, and package\\.json says ${version.replace(/\./g, "\\.")}`));
   } finally {
     rmSync(tmp, { recursive: true, force: true });
   }

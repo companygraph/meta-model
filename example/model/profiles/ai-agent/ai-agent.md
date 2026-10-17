@@ -1,7 +1,8 @@
 ---
+id: 01a0a6b8-7e80-78af-b202-d3733bdd650c
 source: Local
 nature: agent
-roles:
+seats:
   - Reviewer
 image: ai-agent.png
 ---
@@ -12,4 +13,4 @@ image: ai-agent.png
 
 ## Summary
 
-One profile for every agent the company runs, so the seat has a holder. It claims no skill, and not because the first review is unread: a claim is a person's history with a capability, and an agent has none. What holds it to the seat is the rulebook, never a row.
+One profile for whichever agent reviews, so the seat has a holder. It claims no skill, and not because the first review is unread: a claim is a person's history with a capability, and an agent has none. What holds it to the seat is the rulebook, never a row.

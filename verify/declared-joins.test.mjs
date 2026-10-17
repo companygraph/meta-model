@@ -10,6 +10,7 @@ import test from "node:test";
 import assert from "node:assert/strict";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
+import { examplePacks } from "./example.mjs";
 
 const head = (type, owner) => [
   `# ${type[0].toUpperCase()}${type.slice(1)} Schema`, "", `> A ${type}.`, "",
@@ -166,8 +167,9 @@ test("core's profile schema declares both joins, and the example breaks them whe
       else files.set(prefix + e.name, fs.readFileSync(path.join(dir, e.name), IMAGE_FILE.test(e.name) ? undefined : "utf8"));
   };
   walk(path.join(root, "core"), "core/");
+  for (const { dir } of examplePacks) walk(path.join(root, dir), `${dir}/`);
   walk(path.join(root, "example", "model"), "model/");
-  assert.deepEqual(checkInstance(files, { core: "core", model: "model" }).failures, [], "the example as shipped passes");
+  assert.deepEqual(checkInstance(files, { core: "core", model: "model", packs: examplePacks }).failures, [], "the example as shipped passes");
 
   const profile = [...files.keys()].find((k) => /^model\/profiles\/[^/]+\/[^/]+\.md$/.test(k) && files.get(k).includes("## Evidence"));
   const rows = files.get(profile).split("## Evidence")[1].split("\n").filter((l) => l.startsWith("| ") && !l.startsWith("| Skill") && !l.startsWith("| ---"));

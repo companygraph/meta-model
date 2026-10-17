@@ -1,4 +1,5 @@
 ---
+id: 01a04c7b-6b80-7021-b82c-bfedcb24827f
 source: Google Workspace
 email: hello@beacon.example
 location: Rotterdam, Netherlands

@@ -1,3 +1,7 @@
+---
+id: 01a02f8b-db90-7d28-8506-23282bf3a383
+---
+
 # Proficiency Level Schema
 
 > Required structure for proficiency level files.
@@ -12,6 +16,7 @@ A level owns nothing and nothing owns it: many profiles claim the same few, and 
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `rank` | Yes | number | Position on the ladder. Spaced in tens so a rung can be added without renumbering the others. |
@@ -23,6 +28,14 @@ A level owns nothing and nothing owns it: many profiles claim the same few, and 
 | `# [Label]` | Yes | The canonical name. Every assessment references this exact string. |
 | `> [Summary]` | Yes | One-paragraph summary of what the level claims |
 | `## What it means` | Yes | What someone at this level can actually do |
+| `## References` | No | Table. What a reader can open to learn more about the level; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a competency framework, a standard |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
@@ -30,15 +43,14 @@ A proficiency level is one rung of the single ladder every claim in the instance
 
 ## Writing rules
 
-- `## What it means` is written so that two assessors reading it would place the same person on
-  the same rung. A rung that cannot do that is not yet a rung.
-- It describes what someone at this level does with *it* — the thing being claimed — and never
-  what that thing is. Every rung is claimed against every skill, so anything specific to one
-  skill does not belong on a rung.
-- A rung names what it has that the rung below does not. Working unsupervised, choosing between
-  alternatives, knowing where the thing breaks down: each rung earns its place by a difference
-  someone could observe, or the ladder has fewer rungs than it claims.
-- The ladder is the instance's own, in its own words. No external scale — SFIA, Dreyfus, a
-  set of HR bands — is cited or reproduced, for the same reason a skill cites none.
-- A rung is about capability, never about seniority, tenure or job title. Those are the
-  organization's business and they move for reasons that have nothing to do with the claim.
+- `## What it means` describes what someone at this level does with *it* — the thing being
+  claimed — and never what that thing is. Every rung is claimed against every skill, so anything
+  specific to one skill does not belong on a rung.
+- `## What it means` names what this rung has that the rung below does not. Working
+  unsupervised, choosing between alternatives, knowing where the thing breaks down: each rung
+  earns its place by a difference someone could observe, or the ladder has fewer rungs than it
+  claims.
+- The page cites and reproduces no external scale — SFIA, Dreyfus, a set of HR bands — for the
+  same reason a skill cites none: the ladder is the instance's own, in its own words.
+- `## What it means` is about capability, never about seniority, tenure or job title. Those are
+  the organization's business and they move for reasons that have nothing to do with the claim.

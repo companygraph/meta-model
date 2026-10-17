@@ -1,4 +1,5 @@
 ---
+id: 01a0ae17-9058-7ce4-a36c-49a68628ca76
 source: Local
 production: built
 built-by: https://git.beacon.example/website
@@ -14,5 +15,5 @@ url: https://beacon.example
 
 - **Home** — the identity's tagline and `## What it is`.
 - **Principles** — the vision and the values.
-- **Team** — the profiles, each with the roles it holds.
+- **Team** — the profiles, each with the seats it holds.
 - **How we deliver** — the process and its phases, in order.

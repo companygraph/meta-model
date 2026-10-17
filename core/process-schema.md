@@ -1,3 +1,7 @@
+---
+id: 01a0a8b4-7978-7026-a388-b10e041b45b5
+---
+
 # Process Schema
 
 > Required structure for process files.
@@ -12,10 +16,11 @@ A process owns its phases and its tracks and cannot be read without them, so it 
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
-| `owner` | Yes | ref → role | The seat accountable for the process as a whole, the H1 of a file in `roles/` |
-| `supported-by` | No | array of ref → role | The seats that keep the process working without being accountable for it |
+| `owner` | Yes | ref → seat | The seat accountable for the process as a whole, the H1 of a file in `seats/` |
+| `supported-by` | No | array of ref → seat | The seats that keep the process working without being accountable for it |
 
 ## Sections
 
@@ -49,26 +54,18 @@ A process owns its phases and its tracks and cannot be read without them, so it 
 
 ## Purpose
 
-A process is the path work takes through the company's seats — one folder, the phases in the order they are passed through, and the gate between each pair — and it answers "what happens next, who does it, and what has to be true before it moves on?" for someone doing the work or waiting on it. It is not a seat, which says what one role takes and produces whenever it acts, and it is not a record of work that happened, which is an experience.
+A process is the path work takes through the company's seats — one folder, the phases in the order they are passed through, and the gate between each pair — and it answers "what happens next, who does it, and what has to be true before it moves on?" for someone doing the work or waiting on it. It is not a seat, which says what one seat takes and produces whenever it acts, and it is not a record of work that happened, which is an experience.
 
 ## Writing rules
 
-- Person-neutral, as a role is: a process names seats and never who holds them.
-- Named for the work rather than for the tool that carries it: `Delivery`, not `The board`.
-- Tracks run together in one pass rather than instead of one another. A change that is both
-  code and prose runs down both, so a phase's `### [Track]` headings are strands of one step
-  and never alternative routes through it, and a phase may produce a deliverable per track in
-  the same pass.
+- The page is person-neutral, as a seat is: a process names seats and never who holds them.
+- The H1 names the work rather than the tool that carries it: `Delivery`, not `The board`.
 - Each line under `## What it never does` is a sentence an agent can hold a change against.
   "Never merges without the Owner" can fail; "works carefully" cannot.
-- `## Phases` lists every phase in the folder and nothing else, in the order the work passes
-  through them. It is the authority on that order, and each phase's `gate-to` agrees with it;
-  the instance checks hold both.
-- A phase is named in `## Phases` by its canonical name and nothing beside it (R3). A path to
-  the phase's file is not written there: a path moves, nothing resolves one, and whatever shows
-  the model to a reader can make the name a link.
-- `## Tracks` lists every track in the folder and nothing else, each by its canonical name and
-  nothing beside it (R3); the instance checks hold it. What a track produces is said once, in
-  the track's own file, and is not repeated here.
-- A process with one track says so and names it; a track table is not omitted because there
-  happens to be only one kind of work today.
+- `## Phases` names a phase by its canonical name and nothing beside it (R3). A path to the
+  phase's file is not written there: a path moves, nothing resolves one, and whatever shows the
+  model to a reader can make the name a link.
+- `## Tracks` names each track by its canonical name and nothing beside it (R3). What a track
+  produces is said once, in the track's own file, and is not repeated here. (The half "lists
+  every track in the folder and nothing else" is dropped: the instance check that an owner lists
+  every track it owns holds it, R5.)

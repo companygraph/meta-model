@@ -8,7 +8,8 @@
 // and no scaffolding to keep the other checks quiet.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { blocksOf, checkInstance, enumTokensOf, isNewer, sectionsOf } from "../lib/checks.mjs";
+import fs from "node:fs";
+import { blocksOf, checkInstance, instanceChecks, enumTokensOf, isNewer, sectionsOf } from "../lib/checks.mjs";
 
 // A schema in the fixed shape R9 states, with only the rows a case needs. `grouped` adds R9's
 // third declared shape: a section marked "Grouped." and the heading table that says what its
@@ -58,7 +59,10 @@ const IDENTITY_SCHEMA = schema("identity", []);
 
 test("a reference lands on the type its schema declares, not on any entity of that name", () => {
   const files = new Map([
-    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/experience-schema.md", schema("experience", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `organization` | No | ref → identity | Where the period was spent. |",
+    ])],
     ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
     ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
     [
@@ -74,6 +78,48 @@ test("a reference lands on the type its schema declares, not on any entity of th
   assert.match(hit, /organization/);
   assert.match(hit, /identity/);
   assert.match(hit, /experience/);
+});
+
+// R9: a `ref?` value that resolves is an edge, one that does not stays a string, and neither is
+// an error. It resolves against its declared type alone, so a name another type carries is a
+// value that does not resolve: an actor called Customer beside a concept called Customer.
+test("an optional reference naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/experience-schema.md", EXPERIENCE_SCHEMA],
+    ["meta/core/identity-schema.md", IDENTITY_SCHEMA],
+    ["model/identity.md", "# Robert Blust\n\n> A person.\n"],
+    [
+      "model/profiles/robert-blust/experiences/2019-aroov-realestate.md",
+      "---\norganization: Aroov\n---\n\n# Aroov\n\n> A rental platform.\n",
+    ],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("organization")), []);
+});
+
+// A number and a date are held to their written form (R16, R9), so quotes, which make either
+// text in YAML, are a fault there, said once with what to drop; a name or a token in quotes is
+// the name or token inside them.
+test("a quoted number fails R16 and a quoted date fails R9, each saying to drop the quotes", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [
+      "| `source` | Yes | ref → source | Where it came from. |",
+      "| `rank` | No | number | Its order. |",
+      "| `since` | No | date | Since when. |",
+    ])],
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", "---\nsource: \"Local\"\nrank: \"10\"\nsince: '2019'\n---\n\n# Java\n\n> A language.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const mine = failures.filter((f) => f.includes("java.md"));
+  assert.equal(mine.length, 2, mine.join("\n"));
+  assert.match(mine.find((f) => f.includes("`rank`")) ?? "", /"10".*written as digits.*written bare/);
+  assert.match(mine.find((f) => f.includes("`since`")) ?? "", /'2019'.*YYYY.*written bare/);
 });
 
 test("a value that resolves to the declared type is not a failure", () => {
@@ -272,7 +318,7 @@ test("a blank required column enum is named with its permitted values", () => {
 
   const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
 
-  const hit = failures.find((f) => f.includes("has no confidence"));
+  const hit = failures.find((f) => f.includes("has no Confidence"));
   assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
   assert.match(hit, /one of `high`, `low`/);
 });
@@ -310,13 +356,13 @@ test("a column enum with no readable list fails once at the schema, not once per
 
 test("a required list field with no items fails, and one with an item passes", () => {
   const PHASE_SCHEMA = schema("phase", [
-    "| `gate-approvers` | Yes | array of ref → role | Who approves. |",
+    "| `gate-approvers` | Yes | array of ref → seat | Who approves. |",
   ]);
-  const ROLE_SCHEMA = schema("role", []);
+  const SEAT_SCHEMA = schema("seat", []);
   const files = new Map([
     ["core/phase-schema.md", PHASE_SCHEMA],
-    ["core/role-schema.md", ROLE_SCHEMA],
-    ["model/roles/owner.md", "# Owner\n"],
+    ["core/seat-schema.md", SEAT_SCHEMA],
+    ["model/seats/owner.md", "# Owner\n"],
     ["model/processes/delivery/phases/empty.md", "---\ngate-approvers:\n---\n\n# Empty\n"],
     ["model/processes/delivery/phases/empty-flow.md", "---\ngate-approvers: []\n---\n\n# Empty Flow\n"],
     ["model/processes/delivery/phases/filled.md", "---\ngate-approvers:\n  - Owner\n---\n\n# Filled\n"],
@@ -337,12 +383,12 @@ test("a required list field with no items fails, and one with an item passes", (
 });
 
 test("an optional list field with no items is not held to the rule", () => {
-  const ROLE_SCHEMA = schema("role", [
+  const SEAT_SCHEMA = schema("seat", [
     "| `requires` | No | array of ref → skill | The skills the seat needs. |",
   ]);
   const files = new Map([
-    ["core/role-schema.md", ROLE_SCHEMA],
-    ["model/roles/owner.md", "---\nrequires:\n---\n\n# Owner\n"],
+    ["core/seat-schema.md", SEAT_SCHEMA],
+    ["model/seats/owner.md", "---\nrequires:\n---\n\n# Owner\n"],
   ]);
   const { failures } = checkInstance(files);
   assert.ok(
@@ -483,7 +529,7 @@ test("a heading that names nothing of its type is a failure naming the type", ()
   const hit = failures.find((f) => f.includes("2022-beacon.md") && f.includes("Deliverly"));
   assert.ok(hit, `no failure named the heading; got: ${failures.join(" | ") || "none"}`);
   assert.match(hit, /achievement-kind/);
-  assert.match(hit, /R16/);
+  assert.match(hit, /R4/);
 });
 
 // A tie in rank and the same heading twice used to fall through the same `<=` and be reported
@@ -753,12 +799,12 @@ test("a successor written in quotes is read as every other check reads a field, 
 });
 
 test("a row that matches no H1 is reported once, as a name that resolves nowhere, and not as another owner's", () => {
-  // The phase file is there and has no H1, so "Build" names no phase anywhere: R16 says so, and
+  // The phase file is there and has no H1, so "Build" names no phase anywhere: R4 says so, and
   // the owner check, which speaks only of a name that resolves to another owner's entity, does not.
   const failures = ownedWith(processWith(["Specify", "Build"]), [["specify", "Specify", "Build"], ["build", null, null]]);
   const about = failures.filter((f) => f.includes("delivery.md") && f.includes('"Build"') && !f.includes("gate-to"));
   assert.equal(about.length, 1, failures.join("\n"));
-  assert.ok(about[0].includes("R16"), about[0]);
+  assert.ok(about[0].includes("R4"), about[0]);
 });
 
 // R3, the half a machine can read. An entity names another by its canonical name and never by
@@ -957,10 +1003,10 @@ test("a folder inside an owner's folder that it does not own is a failure", () =
   assert.ok(failures[0].includes("(R5)") || failures[0].includes("not a folder"), failures[0]);
 });
 // One cause is one finding. A qualifier or a reference that names no entity of its type at all is
-// R16's to report, that it resolves nowhere; the owner check speaks only of a name that does
+// R4's to report, that it resolves nowhere; the owner check speaks only of a name that does
 // resolve and belongs to another owner. Found in the plugin, where a blank-named period showed
 // twice in the pane.
-test("a name of an owned type that names nothing at all is reported once, by R16, and not by the owner check", () => {
+test("a name of an owned type that names nothing at all is reported once, by R4, and not by the owner check", () => {
   const failures = checkInstance(
     new Map([
       ["meta/core/profile-schema.md", OWNING_PROFILE_SCHEMA],
@@ -973,7 +1019,32 @@ test("a name of an owned type that names nothing at all is reported once, by R16
     { core: "meta/core" },
   ).failures.filter((f) => f.includes("A period that never was"));
   assert.equal(failures.length, 1, failures.join("\n"));
-  assert.ok(failures[0].includes("R16"), failures[0]);
+  assert.ok(failures[0].includes("R4"), failures[0]);
+});
+
+// "references resolve" once walked the profiles alone, so a misspelled reference anywhere else
+// reported under R16 and a reader took the check's name to cover what it did not (#242).
+test("a reference on a page outside the profiles that names nothing fails under R4", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["meta/core/value-schema.md", schema("value", ["| `serves` | No | array of ref → skill | A skill. |"])],
+    ["model/skills/java.md", "# Java\n\n> A language.\n"],
+    ["model/values/plain.md", "---\nserves:\n  - Jaav\n---\n\n# Plain\n\n> A value.\n"],
+  ]);
+  const hits = checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("Jaav"));
+  assert.equal(hits.length, 1, hits.join("\n"));
+  assert.match(/** @type {string} */ (hits[0]), /plain\.md.*names no entity.*\(R4\)/);
+});
+
+test("two unowned pages of one type sharing a canonical name fail under R2, naming both", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["model/skills/java.md", "# Java\n\n> A language.\n"],
+    ["model/skills/java-again.md", "# Java\n\n> The same language.\n"],
+  ]);
+  const hits = checkInstance(files, { core: "meta/core" }).failures.filter((f) => f.includes("share the canonical name"));
+  assert.equal(hits.length, 1, hits.join("\n"));
+  assert.match(/** @type {string} */ (hits[0]), /java\.md and .*java-again\.md;.*\(R2\)|java-again\.md and .*java\.md;.*\(R2\)/);
 });
 
 // R2, for an owned type: a name is unique within its owner. The checks list a type's own folder
@@ -1278,4 +1349,175 @@ test("two rows naming one entity with distinct roles pass", () => {
     model: "model",
   });
   assert.deepEqual(failures.filter((f) => f.includes("Maven")), []);
+});
+
+// The parser now lets a blank cell in the reference column through without an R4 — nothing to
+// resolve, so the row draws no edge — which is what makes an optional reference column usable
+// at all. Whether the column could be left blank stays this checker's business, read from the
+// schema's Required column exactly as any other column's blank cell is (`col.required`, above,
+// for an enum). A required reference column left blank is still caught, here rather than by R4.
+test("a blank required reference column is named the same way a blank required enum is", () => {
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Relations` | No | Table. What this points at. |",
+        "",
+        "`## Relations` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | What this points at |",
+        "| `As` | No | string | The role it plays. |",
+      ],
+    })],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Relations", "",
+      "| Skill | As |", "| --- | --- |", "|  | builds |",
+    ].join("\n")],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hit = failures.find((f) => f.includes("has no Skill"));
+  assert.ok(hit, `expected a blank-cell failure, got: ${failures.join(" | ")}`);
+  assert.match(hit, /## Relations/);
+});
+
+test("an optional reference column naming an entity of another type stays a fact", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Taught by` | No | Table. Who teaches it. |",
+        "",
+        "`## Taught by` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Teacher` | Yes | ref? → skill | A skill that teaches it, or a name |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Taught by", "",
+      "| Teacher |", "| --- |", "| Local |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  assert.deepEqual(failures.filter((f) => f.includes("java.md")), []);
+});
+
+test("a qualifier column naming an entity of another type still fails R4, since a qualifier must resolve", () => {
+  const files = new Map([
+    ["meta/core/source-schema.md", schema("source", [])],
+    ["meta/core/skill-schema.md", schema("skill", ["| `source` | Yes | ref → source | Where it came from. |"], {
+      sections: [
+        "| `## Builds on` | No | Table. What it builds on. |",
+        "",
+        "`## Builds on` is a table with these columns:",
+        "",
+        "| Column | Required | Type | Description |",
+        "| --- | --- | --- | --- |",
+        "| `Skill` | Yes | ref → skill | The skill it builds on |",
+        "| `Learned from` | No | qualifier → source | Where that was learned |",
+      ],
+    })],
+    ["model/sources/local.md", "# Local\n\n> Here.\n"],
+    ["model/skills/maven.md", "---\nsource: Local\n---\n\n# Maven\n\n> A build tool.\n"],
+    ["model/skills/java.md", [
+      "---", "source: Local", "---", "", "# Java", "", "> A language.", "",
+      "## Builds on", "",
+      "| Skill | Learned from |", "| --- | --- |", "| Maven | Maven |",
+    ].join("\n")],
+  ]);
+
+  const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
+
+  const hits = failures.filter((f) => f.includes("java.md") && f.includes("Learned from"));
+  assert.equal(hits.length, 1, failures.join("\n"));
+  assert.match(hits[0], /names an entity of type skill, not source.*\(R4\)/);
+});
+
+const sid = (n) => `0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b${String(n).padStart(2, "0")}`;
+const withSchemaId = (id, text) => `---\nid: ${id}\n---\n\n${text}`;
+const schemaFailures = (entries) =>
+  checkInstance(new Map(entries), { core: "meta/core", model: "model" }).failures.filter((f) => f.startsWith("meta/core/"));
+
+test("a core where one schema carries an id fails every schema that does not", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", withSchemaId(sid(1), schema("skill", []))],
+    ["meta/core/source-schema.md", schema("source", [])],
+  ]);
+  assert.ok(failures.some((f) => f.startsWith("meta/core/source-schema.md: no `id`")), failures.join("\n"));
+});
+
+test("a core where no schema carries an id predates the rule and is not held to it", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["meta/core/source-schema.md", schema("source", [])],
+  ]);
+  assert.ok(!failures.some((f) => /`id`/.test(f)), failures.join("\n"));
+});
+
+test("two schemas with one id fail, naming the other", () => {
+  const failures = schemaFailures([
+    ["meta/core/skill-schema.md", withSchemaId(sid(1), schema("skill", []))],
+    ["meta/core/source-schema.md", withSchemaId(sid(1), schema("source", []))],
+  ]);
+  assert.ok(failures.some((f) => f.startsWith("meta/core/source-schema.md:") && f.includes("is shared with meta/core/skill-schema.md")), failures.join("\n"));
+});
+
+test("an uppercase schema id fails as not a lowercase UUID version 7", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", withSchemaId(sid(1).toUpperCase(), schema("skill", []))]]);
+  assert.ok(failures.some((f) => f.includes("which is not a lowercase UUID version 7")), failures.join("\n"));
+});
+
+test("a schema's frontmatter holding more than its id fails", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", `---\nid: ${sid(1)}\nsource: Local\n---\n\n${schema("skill", [])}`]]);
+  assert.ok(failures.some((f) => f.includes('frontmatter holds "source: Local"')), failures.join("\n"));
+});
+
+// The repository that makes core never holds a core from before the rule, so its own run asks for
+// every schema's id: a change that stripped them all would otherwise read as an older core.
+test("a core that must carry ids fails every schema without one, even when none has one", () => {
+  const failures = [];
+  const files = new Map([
+    ["meta/core/skill-schema.md", schema("skill", [])],
+    ["meta/core/source-schema.md", schema("source", [])],
+  ]);
+  for (const check of instanceChecks({ files, core: "meta/core", model: "model", fail: (f) => failures.push(f), requireSchemaIds: true }))
+    if (check.name === "every schema carries an id, and no two share one") check.run();
+  assert.equal(failures.filter((f) => f.includes("no `id`; every schema opens with one")).length, 2, failures.join("\n"));
+});
+
+test("a schema's frontmatter with its id written twice fails", () => {
+  const failures = schemaFailures([["meta/core/skill-schema.md", `---\nid: ${sid(1)}\nid: ${sid(2)}\n---\n\n${schema("skill", [])}`]]);
+  assert.ok(failures.some((f) => f.includes("`id` is written twice")), failures.join("\n"));
+});
+
+// The field an experience's part is written in is `capacity`. `role` was its name once, and a page
+// that still carries it is the page R15 exists for: a field left behind by a rename, rendered under
+// the old name while nothing reads it. This runs on core's own experience schema, so it fails if the
+// schema declares the old name again.
+const realExperienceSchema = fs.readFileSync(new URL("../core/experience-schema.md", import.meta.url), "utf8");
+const experienceWith = (frontmatter) =>
+  checkInstance(
+    new Map([
+      ["meta/core/experience-schema.md", realExperienceSchema],
+      ["model/profiles/mira/experiences/2022-beacon.md", `---\n${frontmatter}\n---\n\n# Beacon\n\n> A period.\n`],
+      ["model/profiles/mira/experiences/README.md", "# Experiences\n"],
+    ]),
+    { core: "meta/core", model: "model" },
+  ).failures.filter((f) => /frontmatter field/.test(f));
+
+test("an experience carrying role fails as an undeclared field, and capacity does not", () => {
+  assert.deepEqual(experienceWith("start: 2022-01\nrole: Speaker"), [
+    "model/profiles/mira/experiences/2022-beacon.md: frontmatter field `role` is not declared by the experience schema",
+  ]);
+  assert.deepEqual(experienceWith("start: 2022-01\ncapacity: Speaker"), []);
 });

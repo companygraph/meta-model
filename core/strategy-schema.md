@@ -1,3 +1,7 @@
+---
+id: 01a0a48b-9818-7d5d-a7eb-46aee2dfe2a7
+---
+
 # Strategy Schema
 
 > Required structure for strategy files.
@@ -12,6 +16,7 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a directory id, a record key. Absent when the source has none, as a repository does not. |
 | `adopted` | Yes | date | When this strategy began deciding things |
@@ -27,6 +32,14 @@ One file per strategy. Nothing owns a strategy and a strategy owns nothing, as w
 | `## The approach` | Yes | How, concretely enough that someone could follow it |
 | `## What it rules out` | Yes | The options this choice forecloses |
 | `## What would show it is working` | Yes | What is observable, early enough to change course |
+| `## References` | No | Table. What a reader can open to learn more about the strategy; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a plan, a board paper |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
@@ -44,14 +57,10 @@ A strategy is how an objective gets reached — one route among routes that coul
 - `## What would show it is working` states something observable while there is still time to
   change course. A measure that only arrives at the horizon is a verdict rather than an
   instrument, and the objective is where a verdict belongs.
-- It says how, never where. A strategy restating the vision has skipped the objective that was
-  supposed to sit between them.
-- `serves` names at least one objective. A strategy serving none is either an objective nobody
-  wrote down or work nothing in the model asked for.
+- The statement says how, never where. A strategy restating the vision has skipped the objective
+  that was supposed to sit between them.
 - `upholds` names the values that actually constrained the route, where any did. A citation that
   would be equally true of any strategy the company might have chosen instead tells a reader
   nothing.
-- Written in the company's own first person — "I" for a company of one, "we" otherwise — and the
-  same one throughout the instance.
-- A strategy that has been replaced is deleted rather than marked, because the model states the
-  route currently being taken and git holds the ones that were.
+- The page is written in the company's own first person — "I" for a company of one, "we"
+  otherwise — and the same one throughout the instance.

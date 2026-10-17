@@ -1,7 +1,8 @@
 ---
+id: 01a0c25c-19f8-73d1-90f2-6b99d03be0a7
 source: Local
 domain: Pricing
-audience: Finance
+kind: Application
 ---
 
 # Billing Console

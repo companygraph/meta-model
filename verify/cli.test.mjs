@@ -7,11 +7,16 @@ import os from "node:os";
 import path from "node:path";
 import { fileURLToPath } from "node:url";
 import { checkInstance, IMAGE_FILE } from "../lib/checks.mjs";
+import { GATE_HOOK, PAST_GATE_HOOKS } from "../lib/instance-files.mjs";
+import { initRepository } from "./fixture-repository.mjs";
 
 const here = path.dirname(fileURLToPath(import.meta.url));
 const cli = path.join(here, "..", "bin", "companygraph.mjs");
 const run = (args, options = {}) => execFileSync(process.execPath, [cli, ...args], { encoding: "utf8", ...options });
 const temp = () => fs.mkdtempSync(path.join(os.tmpdir(), "companygraph-"));
+// Quit's own number, read off a menu screen already captured: an entry added or removed moves
+// it, and a test asserting around Quit should not need to change to match.
+const quitOf = (said) => Number(said.match(/(\d+) {2}Quit/)[1]);
 
 // Every file under a folder, as the checks read one: path relative to the root with `/` on every
 // platform, text, and bytes for an image (R9).
@@ -30,6 +35,12 @@ test("an instance init writes passes the mechanical checks on its first day", ()
   const files = filesOf(root);
   const { failures } = checkInstance(files, { core: "meta/core", model: "model" });
   assert.deepEqual(failures, []);
+});
+
+test("init says what the model starts with without counting its singular entities, which the next type would make wrong", () => {
+  const said = run(["init", temp(), "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /its source and its singular entities/);
+  assert.doesNotMatch(said, /\b(two|three|four) singular/);
 });
 
 test("what it wrote is what its manifest says it wrote", () => {
@@ -92,9 +103,267 @@ test("--here names a file already there in a subfolder as a conflict, and writes
 
 test("an agent it cannot write for is refused by name, and nothing is written", () => {
   const root = temp();
-  assert.throws(() => run(["init", root, "--name", "Acme", "--agent", "codex"], { stdio: "pipe" }), /codex/);
+  // The plan's own sentence, not a missing folder that happens to carry the name in its path.
+  assert.throws(
+    () => run(["init", root, "--name", "Acme", "--agent", "codex"], { stdio: "pipe" }),
+    (error) => /codex is not an agent this release writes for; it writes for claude\./.test(error.stderr) && !/ENOENT/.test(error.stderr),
+  );
   assert.deepEqual([...filesOf(root).keys()], []);
 });
+
+test("init in a git repository sets the hooks path; outside one it names the command", () => {
+  const inGit = temp();
+  initRepository(inGit);
+  const said = run(["init", inGit, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: inGit, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use/);
+  const bare = temp();
+  assert.match(run(["init", bare, "--name", "Acme", "--agent", "claude"]), /git config core\.hooksPath \.companygraph\/hooks/);
+  const none = temp();
+  run(["init", none, "--name", "Acme", "--agent", "claude", "--no-hook"]);
+  assert.equal(fs.existsSync(path.join(none, ".companygraph/hooks/commit-msg")), false);
+});
+
+// R1: the brief's own hooks-path computation breaks on macOS, where os.tmpdir() is /var/... but
+// `git rev-parse --show-toplevel` answers /private/var/..., and on Windows' 8.3 short names.
+// Reading the prefix from git itself, instead of computing a relative path by hand against a
+// possibly-different rendering of the same folder, sidesteps both: an instance in a subfolder of
+// a git repository gets a hooksPath under that subfolder, not the repository's own top.
+test("init in a subfolder of a git repository names the hooks path relative to the repository's own root", () => {
+  const repo = temp();
+  initRepository(repo);
+  const sub = path.join(repo, "sub");
+  fs.mkdirSync(sub);
+  const said = run(["init", sub, "--name", "Acme", "--agent", "claude"]);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repo, encoding: "utf8" }).trim(), "sub/.companygraph/hooks");
+  assert.match(said, /commit-msg hook is in use: git reads hooks from sub\/\.companygraph\/hooks/);
+});
+
+test("init leaves a hooks path already set, and says the seat hook is not in use", () => {
+  const dir = temp();
+  initRepository(dir);
+  execFileSync("git", ["config", "core.hooksPath", ".husky"], { cwd: dir });
+  assert.match(run(["init", dir, "--name", "Acme", "--agent", "claude"]), /core\.hooksPath is \.husky here/);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: dir, encoding: "utf8" }).trim(), ".husky");
+});
+
+test("init leaves an enclosing repository's own hooks folder alone, naming what is already there", () => {
+  const dir = temp();
+  initRepository(dir);
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: dir, encoding: "utf8" }).trim();
+  // git init itself writes only `*.sample` templates there; a real file is what must stop init
+  // from setting core.hooksPath and switching them off.
+  fs.writeFileSync(path.join(dir, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  const said = run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: dir, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset");
+});
+
+// Found in re-review: `git rev-parse --git-path hooks` answers absolute inside a worktree — the
+// hooks live under the main checkout's own `.git/`, nowhere near the worktree's own folder — and
+// `join(root, hooksDir)` had concatenated that absolute answer onto `root` into a path nothing
+// ever wrote, so the guard above never found the real hook and set core.hooksPath anyway.
+test("init in a git worktree leaves the main checkout's own hooks alone, naming the hook it found", () => {
+  const main = temp();
+  initRepository(main);
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: main, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(main, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"], { cwd: main });
+  const worktree = path.join(temp(), "wt");
+  execFileSync("git", ["worktree", "add", "-q", worktree, "-b", "wt-branch"], { cwd: main });
+  const said = run(["init", worktree, "--name", "Acme", "--agent", "claude"]);
+  assert.match(said, /pre-commit/);
+  assert.match(said, /not in use/);
+  const cfg = spawnSync("git", ["config", "--get", "core.hooksPath"], { cwd: worktree, encoding: "utf8" });
+  assert.notEqual(cfg.status, 0, "core.hooksPath was left unset in the worktree");
+});
+
+test("the hook refuses only on the checker's refusal, and lets the commit through when it cannot run", () => {
+  const dir = temp();
+  initRepository(dir);
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  const commit = (env, extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
+    { cwd: dir, encoding: "utf8", env: { ...process.env, ...env } });
+  const stub = (code) => {
+    const file = path.join(temp(), "stub.mjs");
+    fs.writeFileSync(file, `process.exit(${code});\n`);
+    return file;
+  };
+  assert.notEqual(commit({ COMPANYGRAPH_CLI: stub(3) }).status, 0);
+  const through = commit({ COMPANYGRAPH_CLI: stub(1) });
+  assert.equal(through.status, 0);
+  assert.match(through.stderr, /seat check did not run/);
+  // Run against the real CLI, not a stub, this passed vacuously without an identity `url`: with
+  // no domain every author is outside the model (governingOf), so nothing the real checker could
+  // ever refuse was exercised. An `r@x.io` commit stays outside once a `url` is there too, which
+  // this keeps proving; a `--author` at the instance's own domain naming no seat is what proves
+  // the real CLI, reached through the hook's own `$here` resolution (also on the Windows job),
+  // actually refuses.
+  assert.equal(commit({ COMPANYGRAPH_CLI: cli }).status, 0);
+  const identityPath = path.join(dir, "model/identity.md");
+  fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
+  const refused = commit({ COMPANYGRAPH_CLI: cli }, ["--author", "Ghost <ghost@acme.example>"]);
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
+});
+
+// The hook's other branch, taken with no COMPANYGRAPH_CLI set: `npx` at the manifest's own
+// `tooling`, with no network reached. A fake `npx` first on PATH stands in for the real one and
+// records what it was called with, which pins the hook's `sed` extraction of `tooling` from
+// `.companygraph/manifest.json` and the exact companygraph invocation it hands npx.
+test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manifest's own tooling release",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
+  () => {
+    const dir = temp();
+    initRepository(dir);
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const manifest = JSON.parse(fs.readFileSync(path.join(dir, ".companygraph/manifest.json"), "utf8"));
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, `#!/bin/sh\nfor a in "$@"; do printf '%s\\n' "$a" >> "${record}"; done\nexit 0\n`);
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const result = spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", "-m", "x"],
+      { cwd: dir, encoding: "utf8", env });
+    assert.equal(result.status, 0, result.stderr);
+    const argv = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `github:companygraph/meta-model#v${manifest.tooling}`, "companygraph"]);
+    const commitsAt = argv.indexOf("commits");
+    assert.notEqual(commitsAt, -1);
+    assert.equal(fs.realpathSync.native(argv[commitsAt + 1]), fs.realpathSync.native(dir));
+    assert.equal(argv[commitsAt + 2], "--message");
+    // The hook passes git's own "$1" through unchanged, which git hands it relative to the
+    // repository root it runs the hook in, not to this process's own cwd.
+    assert.ok(fs.existsSync(path.resolve(dir, argv[commitsAt + 3])), "the message file path handed to npx exists");
+  });
+
+// Found in review: `git commit` exports GIT_INDEX_FILE to its hooks — absolute in a linked
+// worktree and for `commit -a` — and the `git clone` npx runs to fetch the tooling inherited it,
+// writing the tooling's own index over the instance's. The hook now clears git's repository
+// variables before the checker runs. This fake npx refuses (exit 3, a refusal the hook passes on)
+// whenever one of them reaches it, so a leak refuses the commit outright; it prints a line on
+// stdout the way a passing checker does, which a passing commit must not show.
+test("the hook hands npx no repository of git's, in a worktree and on commit -a, and a passing commit prints nothing",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; not verifiable without a Windows runner" },
+  () => {
+    const dir = temp();
+    initRepository(dir);
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> "${record}"`,
+      'for v in GIT_INDEX_FILE GIT_DIR GIT_WORK_TREE; do',
+      '  eval "set_=\\${$v+x}"',
+      '  if [ -n "$set_" ]; then echo "npx was handed $v" >&2; exit 3; fi',
+      "done",
+      "echo 'the checker passed'",
+      "exit 0",
+      "",
+    ].join("\n"));
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const git = (cwd, args) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", ...args], { cwd, encoding: "utf8", env });
+    const tracked = (cwd) => {
+      const status = git(cwd, ["status", "--porcelain"]);
+      assert.equal(status.status, 0, `git status works afterwards: ${status.stderr}`);
+      assert.equal(status.stdout, "", "nothing is left staged or changed");
+      const listed = git(cwd, ["ls-files"]).stdout;
+      assert.equal(listed, git(cwd, ["ls-tree", "-r", "--name-only", "HEAD"]).stdout, "the index lists the commit's own files");
+      assert.match(listed, /^\.companygraph\/manifest\.json$/m);
+      assert.doesNotMatch(listed, /^verify\/cli\.test\.mjs$/m, "no file of the tooling's own is in the index");
+    };
+    assert.equal(git(dir, ["add", "-A"]).status, 0);
+    assert.equal(git(dir, ["commit", "-q", "--no-verify", "-m", "the instance"]).status, 0);
+
+    const worktree = path.join(temp(), "wt");
+    assert.equal(git(dir, ["worktree", "add", "-q", worktree, "-b", "wt-branch"]).status, 0);
+    fs.writeFileSync(path.join(worktree, "note.md"), "a note\n");
+    assert.equal(git(worktree, ["add", "note.md"]).status, 0);
+    const inWorktree = git(worktree, ["commit", "-q", "-m", "a note"]);
+    assert.equal(inWorktree.status, 0, inWorktree.stderr);
+    assert.equal(inWorktree.stdout + inWorktree.stderr, "", "a passing commit prints nothing");
+    tracked(worktree);
+    assert.match(git(worktree, ["ls-files"]).stdout, /^note\.md$/m);
+
+    fs.appendFileSync(path.join(dir, "AGENTS.md"), "\nA line of the instance's own.\n");
+    const all = git(dir, ["commit", "-q", "-a", "-m", "a line"]);
+    assert.equal(all.status, 0, all.stderr);
+    assert.equal(all.stdout + all.stderr, "", "a passing commit prints nothing");
+    tracked(dir);
+
+    const calls = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.equal(calls.length, 2, "npx ran once for each commit the hook checked");
+    for (const call of calls) assert.match(call, /companygraph commits .* --message /);
+  });
+
+// Found on 2026-10-02 in the three MCP hosts, which take meta-model as a git dependency: git had
+// the bin at 100644, npm sets a bin's mode only when it links one, and a release put back under a
+// link already in node_modules kept 0644. npx in that repository runs the project's own copy, sh
+// cannot (bash exits 126, Debian's dash 127), and the hook let every commit through as one the
+// check did not run. This builds that layout — the package in the instance's node_modules, its
+// bin not executable — and a fake
+// npx that runs commands the way npm exec does there, the project's .bin first on PATH, through
+// sh. A commit going through proves nothing, since a hook that cannot start lets it through too;
+// the refusal of a seat only the real checker knows is what proves the checker ran.
+test("the hook runs the checker in a git-dependency layout whose bin lost its execute bit, and refuses a bad seat",
+  { skip: process.platform === "win32" && "a shebang script with no .exe/.cmd extension is not reliably resolved via PATH by Git Bash's sh here; and Windows has no execute bit to lose" },
+  () => {
+    const dir = temp();
+    initRepository(dir);
+    run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+    const identityPath = path.join(dir, "model/identity.md");
+    fs.writeFileSync(identityPath, fs.readFileSync(identityPath, "utf8").replace("source: Local\n---", "source: Local\nurl: https://acme.example/\n---"));
+
+    const repo = path.join(here, "..");
+    const pkg = path.join(dir, "node_modules/companygraph-meta-model");
+    fs.mkdirSync(path.join(pkg, "bin"), { recursive: true });
+    for (const entry of ["package.json", "lib", "core", "form", "packs", "agents"])
+      fs.symlinkSync(path.join(repo, entry), path.join(pkg, entry));
+    // bin/ holds a folder, bin/judges/, so it is copied whole and every file in it loses its bit.
+    fs.cpSync(path.join(repo, "bin"), path.join(pkg, "bin"), { recursive: true });
+    for (const file of fs.readdirSync(path.join(pkg, "bin"), { recursive: true }))
+      if (fs.statSync(path.join(pkg, "bin", file)).isFile()) fs.chmodSync(path.join(pkg, "bin", file), 0o644);
+    fs.mkdirSync(path.join(dir, "node_modules/.bin"));
+    fs.symlinkSync("../companygraph-meta-model/bin/companygraph.mjs", path.join(dir, "node_modules/.bin/companygraph"));
+    assert.equal(fs.statSync(path.join(dir, "node_modules/.bin/companygraph")).mode & 0o111, 0, "the layout's bin is not executable");
+
+    const bin = temp();
+    const record = path.join(bin, "npx-argv.txt");
+    const fake = path.join(bin, "npx");
+    fs.writeFileSync(fake, [
+      "#!/bin/sh",
+      `printf '%s\\n' "$*" >> "${record}"`,
+      `PATH="$PWD/node_modules/.bin:${path.dirname(process.execPath)}:/usr/bin:/bin"; export PATH`,
+      "while :; do",
+      '  case $1 in --yes|--prefer-offline) shift ;; --package) shift 2 ;; -c) exec sh -c "$2" ;; *) break ;; esac',
+      "done",
+      'exec sh -c \'"$@"\' sh "$@"',
+      "",
+    ].join("\n"));
+    fs.chmodSync(fake, 0o755);
+    const env = { ...process.env, PATH: `${bin}${path.delimiter}${process.env.PATH}` };
+    delete env.COMPANYGRAPH_CLI;
+    const commit = (extra = []) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@x.io", "commit", "-q", "--allow-empty", ...extra, "-m", "x"],
+      { cwd: dir, encoding: "utf8", env });
+
+    const refused = commit(["--author", "Ghost <ghost@acme.example>"]);
+    assert.notEqual(refused.status, 0, refused.stderr);
+    assert.match(refused.stderr, /ghost@acme\.example is at acme\.example and names no seat of Acme/);
+    const through = commit();
+    assert.equal(through.status, 0, through.stderr);
+    assert.doesNotMatch(through.stderr, /seat check did not run/);
+    const calls = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
+    assert.equal(calls.length, 4, "each commit asked npx for the bin, then for node on it");
+    assert.match(calls[1], / -c /);
+  });
 
 test("a command it does not know, and no command at all, print what it can do", () => {
   assert.throws(() => run(["dance"], { stdio: "pipe" }), /init/);
@@ -103,7 +372,7 @@ test("a command it does not know, and no command at all, print what it can do", 
 
 test("the menu makes an instance from answers alone, and what it made passes the checks", () => {
   const root = path.join(temp(), "acme");
-  const said = run(["menu"], { input: `1\n${root}\nAcme\nn\n`, stdio: "pipe" });
+  const said = run(["menu"], { input: `1\n${root}\nAcme\n\nn\n`, stdio: "pipe" });
   assert.match(said, /1 {2}Make a model/);
   assert.match(said, /files written into/);
   const { failures } = checkInstance(filesOf(root), { core: "meta/core", model: "model" });
@@ -121,17 +390,20 @@ test("the menu asks before it adds to a folder that holds files, and a no writes
 test("the menu shows an upgrade before it runs one, and a pick it does not have is refused", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
-  assert.match(run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" }), /nothing to do/);
-  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), /9 is not one of 1-5/);
+  const said = run(["menu"], { input: `3\n${root}\n`, stdio: "pipe" });
+  assert.match(said, /nothing to do/);
+  const quit = quitOf(said);
+  assert.throws(() => run(["menu"], { input: "9\n", stdio: "pipe" }), new RegExp(`9 is not one of 1-${quit}`));
 });
 
 test("the menu comes back after a pick and stays until Quit", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
   const said = run(["menu"], { input: `\n2\n${root}\n9\nq\n1\n`, stdio: "pipe" });
-  assert.equal(said.match(/5 {2}Quit/g).length, 4);
+  const quit = quitOf(said);
+  assert.equal(said.match(new RegExp(`${quit} {2}Quit`, "g")).length, 4);
   assert.doesNotMatch(said, /Which folder\?.*\n.*Which folder\?/s);
-  assert.match(run(["menu"], { input: "5\n", stdio: "pipe" }), /5 {2}Quit/);
+  assert.match(run(["menu"], { input: `${quit}\n`, stdio: "pipe" }), new RegExp(`${quit} {2}Quit`));
 });
 
 // A question inside a pick is left with b, and the menu comes back with nothing more done: here
@@ -144,7 +416,7 @@ test("the menu comes back from any question on b, and says so without calling it
   assert.match(said, /back to the menu/);
   assert.doesNotMatch(said, /✗/);
   assert.equal(fs.existsSync(root), false);
-  assert.equal(said.match(/5 {2}Quit/g).length, 2);
+  assert.equal(said.match(new RegExp(`${quitOf(said)} {2}Quit`, "g")).length, 2);
   // Outside the menu a b is an answer like any other: a no to a y/N, here.
   const vault = temp();
   const build = temp();
@@ -167,11 +439,13 @@ test("the menu comes back from a question on Ctrl+C, and ends on Ctrl+C at its o
     child.stdout.on("data", (chunk) => { said += chunk; look(); });
     look();
   });
+  await until("Pick 1-");
+  const pick = `Pick 1-${said.match(/Pick 1-(\d+)/)[1]}`;
   child.stdin.write(`1\n${temp()}\n`);
   await until("What is the company called?");
   child.kill("SIGINT");
   await until("back to the menu");
-  await until("Pick 1-5");
+  await until(pick);
   child.kill("SIGINT");
   const code = await new Promise((done) => child.on("exit", done));
   assert.equal(code, 130);
@@ -319,6 +593,186 @@ test("upgrade moves an instance, says what it did, and leaves the model alone", 
   assert.ok(fs.existsSync(path.join(root, "model/skills/java.md")));
 });
 
+// An instance made before init wrote the export's inputs has none, and its bundle shipped no
+// reading guide. The upgrade writes the one missing, names it, and leaves the one the instance has.
+test("upgrade writes a reading guide the instance lacks, names it, and keeps the instance's own README", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "export/gemini-notebook-AGENTS.md"));
+  fs.writeFileSync(path.join(root, "export/README.md"), "# the instance's own\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /written, since the instance had none.*export\/gemini-notebook-AGENTS\.md/);
+  assert.match(fs.readFileSync(path.join(root, "export/gemini-notebook-AGENTS.md"), "utf8"), /^# Acme — the model\n/);
+  assert.equal(fs.readFileSync(path.join(root, "export/README.md"), "utf8"), "# the instance's own\n");
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+// Review fix 1: an instance made before the localization schema landed has no model/localization.md at
+// all, and `init` alone never revisits an existing instance. `upgrade` now writes it once,
+// reading `source` off model/identity.md, and the instance it lands on still passes `check`.
+test("upgrade writes model/localization.md the instance lacks, with source read from identity, and the instance still checks clean", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/localization.md"));
+  const said = run(["upgrade", root]);
+  assert.match(said, /written, since the instance had none.*model\/localization\.md/);
+  const page = fs.readFileSync(path.join(root, "model/localization.md"), "utf8");
+  assert.match(page, /\nsource: Local\n/);
+  assert.match(page, /\nlocale: en-US\n/);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade rewrites a localization page in the earlier form, says so, and a second upgrade leaves it be", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const loc = path.join(root, "model/localization.md");
+  const id = fs.readFileSync(loc, "utf8").match(/^id: (\S+)$/m)[1];
+  fs.writeFileSync(loc, `---\nid: ${id}\nsource: Local\n---\n\n# Languages\n\n> Who reads it.\n\n## Locales\n\n| Locale | Role |\n| --- | --- |\n| en-US | primary |\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /rewritten in this core's form: model\/localization\.md/);
+  assert.equal(fs.readFileSync(loc, "utf8"), `---\nid: ${id}\nsource: Local\nlocale: en-US\n---\n\n# Languages\n\n> Who reads it.\n`);
+  assert.doesNotThrow(() => run(["check", root]));
+  // The page now names its locale, so the plan writes nothing and upgrade says it has nothing to do.
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+// Core 0.63.0 renamed the type role to seat. An instance written before it holds its seats in
+// model/roles/, a profile's roles: and a Type cell naming role. The earlier pages are built here
+// from the example's current ones, put back into the earlier form, so the move is tested on
+// pages the checks accept in either.
+test("upgrade carries an instance's roles across to seats, keeping every id, and a second upgrade has nothing to do", () => {
+  const example = path.join(here, "..", "example", "model");
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // The two seats without their skills, which this instance does not hold.
+  const seat = (name) => fs.readFileSync(path.join(example, `seats/${name}.md`), "utf8").replace(/requires:\n {2}- .*\n/, "");
+  const reviewer = seat("reviewer");
+  const id = reviewer.match(/^id: (\S+)$/m)[1];
+  // An instance made before the rename has no model/seats/; this release's init wrote one.
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), reviewer);
+  fs.writeFileSync(path.join(root, "model/roles/backend-engineer.md"), seat("backend-engineer"));
+  fs.writeFileSync(path.join(root, "model/roles/README.md"), "# Roles\n\nOne file per role, written against `meta/core/role-schema.md`.\n\nThe owner reads these on Mondays.\n");
+  // Whatever else the folder holds moves with it, byte for byte: an image, an editor's leftover.
+  const image = Buffer.from([0x89, 0x50, 0x4e, 0x47, 0, 255, 13, 10, 26, 10]);
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.png"), image);
+  fs.writeFileSync(path.join(root, "model/roles/.DS_Store"), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
+  const agent = path.join(root, "model/profiles/ai-agent");
+  fs.cpSync(path.join(example, "profiles/ai-agent"), agent, { recursive: true });
+  const profile = path.join(agent, "ai-agent.md");
+  fs.writeFileSync(profile, fs.readFileSync(profile, "utf8").replace("\nseats:\n", "\nroles:\n"));
+  fs.writeFileSync(
+    path.join(root, "model/rules/a-change-is-reviewed.md"),
+    "---\nid: 01a0fb1b-b4ff-7020-8a63-e80de5bbcc7f\nsource: Local\nmodality: must\n---\n\n# A change is reviewed\n\n> A change ships only after a second person has read it.\n\n## Why\n\nThe author is the person least able to see what they missed.\n\n## Applies to\n\n| Type | Entity | Owner |\n| --- | --- | --- |\n| role | Reviewer | |\n| `role` | Backend Engineer | |\n",
+  );
+
+  // The instance's own files that still say roles are named after the move and never rewritten;
+  // what the vendored units folder, git and a build hold is not the instance's to edit.
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/notes.md"), "see model/roles/\n");
+
+  const planned = run(["upgrade", root, "--dry-run"]);
+  assert.doesNotMatch(planned, /still name roles/);
+  assert.match(planned, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.ok(fs.existsSync(path.join(root, "model/roles/reviewer.md")));
+
+  const said = run(["upgrade", root]);
+  assert.match(said, /moved {3}model\/roles\/reviewer\.md → model\/seats\/reviewer\.md/);
+  assert.match(said, /moved {3}model\/roles\/backend-engineer\.md → model\/seats\/backend-engineer\.md/);
+  assert.match(said, /rewritten in this core's form: .*model\/profiles\/ai-agent\/ai-agent\.md/);
+  // The owner's README keeps its word role, so it is named beside the instance's README.md; the
+  // build's folder and the vendored units are not looked in.
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}model\/seats\/README\.md\n/);
+  assert.doesNotMatch(said, /dist\/notes\.md/);
+  assert.equal(fs.readFileSync(path.join(root, "README.md"), "utf8"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  assert.equal(fs.readFileSync(path.join(root, "model/seats/reviewer.md"), "utf8").match(/^id: (\S+)$/m)[1], id);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.equal(
+    fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"),
+    "# Seats\n\nOne file per role, written against `meta/core/seat-schema.md`.\n\nThe owner reads these on Mondays.\n",
+  );
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/reviewer.png")), image);
+  assert.deepEqual(fs.readFileSync(path.join(root, "model/seats/.DS_Store")), Buffer.from([0, 0, 0, 1, 66, 117, 100, 49, 255]));
+  assert.match(fs.readFileSync(profile, "utf8"), /\nseats:\n {2}- Reviewer\n/);
+  assert.match(fs.readFileSync(path.join(root, "model/rules/a-change-is-reviewed.md"), "utf8"), /\| seat \| Reviewer \| \|\n\| `seat` \| Backend Engineer \| \|/);
+  // The check holds them as it holds any such file in a seat's folder, and says so where they are
+  // now, not that model/roles/ is no type's folder; with them gone the instance checks clean.
+  const refused = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr + refused.stdout, /model\/seats\/\.DS_Store should be a \.md file/);
+  assert.doesNotMatch(refused.stderr + refused.stdout, /model\/roles/);
+  fs.rmSync(path.join(root, "model/seats/.DS_Store"));
+  fs.rmSync(path.join(root, "model/seats/reviewer.png"));
+  assert.doesNotThrow(() => run(["check", root]));
+  assert.match(run(["upgrade", root]), /already on core/i);
+});
+
+test("upgrade writes a README for model/seats/ when the old model/roles/ had none", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  const said = run(["upgrade", root]);
+  assert.doesNotMatch(said, /still name roles/);
+  assert.match(said, /written, since the instance had none, and its own from now on: .*model\/seats\/README\.md/);
+  assert.ok(!fs.existsSync(path.join(root, "model/roles")));
+  assert.match(fs.readFileSync(path.join(root, "model/seats/README.md"), "utf8"), /^# Seats\n/);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade names only the owner's own files that still say roles, and never what git ignores", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  initRepository(root);
+  fs.writeFileSync(path.join(root, ".gitignore"), ".obsidian/\n.claudian/\n");
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.mkdirSync(path.join(root, ".claudian"));
+  fs.writeFileSync(path.join(root, ".claudian/a.meta.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  fs.mkdirSync(path.join(root, "docs"));
+  fs.writeFileSync(path.join(root, "docs/notes.md"), "see model/roles/\n");
+  execFileSync("git", ["add", "docs/notes.md"], { cwd: root });
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n {4}docs\/notes\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian|\.claudian/);
+});
+
+test("upgrade judges a seats README that git ignores by the word role alone, as it always has", () => {
+  for (const [text, named] of [["# Seats\n\nSee roles.md and model/roles/.\n", false], ["# Seats\n\nOne file per role.\n", true]]) {
+    const root = temp();
+    run(["init", root, "--name", "Acme", "--agent", "claude"]);
+    fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+    fs.mkdirSync(path.join(root, "model/roles"));
+    fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+    fs.writeFileSync(path.join(root, "model/roles/README.md"), text);
+    execFileSync("git", ["init", "-q"], { cwd: root });
+    fs.writeFileSync(path.join(root, ".gitignore"), "model/seats/README.md\n");
+    const said = run(["upgrade", root]);
+    assert.equal(/still name roles; yours to edit:\n(?: {4}.*\n)*? {4}model\/seats\/README\.md\n/.test(said), named, said);
+  }
+});
+
+test("upgrade outside a git repository skips dot-directories when it names the files that still say roles", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.rmSync(path.join(root, "model/seats"), { recursive: true });
+  fs.mkdirSync(path.join(root, "model/roles"));
+  fs.writeFileSync(path.join(root, "model/roles/reviewer.md"), fs.readFileSync(path.join(here, "..", "example/model/seats/reviewer.md"), "utf8").replace(/requires:\n {2}- .*\n/, ""));
+  fs.mkdirSync(path.join(root, ".obsidian"));
+  fs.writeFileSync(path.join(root, ".obsidian/x.json"), '{"path": "model/roles/"}\n');
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\nOur seats are kept in model/roles/.\n");
+  const said = run(["upgrade", root]);
+  assert.match(said, /\n {2}still name roles; yours to edit:\n {4}README\.md\n(?! {4})/);
+  assert.doesNotMatch(said, /\.obsidian/);
+});
+
 const sha256 = (text) => `sha256:${createHash("sha256").update(text).digest("hex")}`;
 
 // Defect 6 (2026-09-20 review): the spec asks for "an upgrade between two real releases tested
@@ -428,7 +882,7 @@ test("upgrade refuses a manifest whose units escapes the instance, and writes no
 
 function tempPackage() {
   const dir = temp();
-  for (const part of ["bin", "lib", "core", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
+  for (const part of ["bin", "lib", "core", "form", "agents"]) fs.cpSync(path.join(here, "..", part), path.join(dir, part), { recursive: true });
   fs.cpSync(path.join(here, "..", "package.json"), path.join(dir, "package.json"));
   return dir;
 }
@@ -455,9 +909,18 @@ test("upgrade refuses a core newer than itself, and writes nothing", () => {
 // Defect 5: checkPath can still throw after a real move — here because the model is gone — and
 // an upgrade that stood is not to be hidden by it: the throw is printed with the "✗ " prefix
 // `check` uses, and the upgrade is said to stand.
+//
+// Review fix 1 made `upgrade` write model/localization.md where the instance lacks one and the
+// core carries `localization-schema.md`, which every bundled core does from here on — so
+// deleting model/ before an upgrade against this package's own core no longer leaves it empty
+// afterward, and checkPath's "has no model/" guard would never fire. A private copy of the
+// package with that one schema file removed stands in for a release from before the localization schema, which is
+// what this defect actually needs: a target core that does not heal the folder back.
 test("upgrade's own check prints a guard failure with its prefix and still says the upgrade stands", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const pkg = tempPackage();
+  fs.rmSync(path.join(pkg, "core/localization-schema.md"));
   const manifestPath = path.join(root, ".companygraph/manifest.json");
   const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
   const older = "# Conventions\n\nAs an older release shipped it.\n";
@@ -466,7 +929,7 @@ test("upgrade's own check prints a guard failure with its prefix and still says 
   manifest.files["meta/core/CONVENTIONS.md"] = sha256(older);
   fs.writeFileSync(manifestPath, `${JSON.stringify(manifest, null, 2)}\n`);
   fs.rmSync(path.join(root, "model"), { recursive: true });
-  const result = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  const result = spawnSync(process.execPath, [path.join(pkg, "bin/companygraph.mjs"), "upgrade", root], { encoding: "utf8" });
   assert.equal(result.status, 0);
   assert.match(result.stderr, /✗ .*has no model\//);
   assert.match(result.stdout, /the upgrade stands/);
@@ -530,7 +993,7 @@ test("a core newer than the checker is refused naming both pins, the manifest's 
   assert.match(result.stderr, /move the manifest's tooling and the workflow pin to v99\.99\.99 together/);
 });
 
-const SKILL_NAMES = ["companygraph-export", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
+const SKILL_NAMES = ["companygraph-company", "companygraph-consent", "companygraph-export", "companygraph-judge", "companygraph-profile", "companygraph-surface", "companygraph-validate"];
 
 test("init writes the skills, hashed into the manifest like the core, and tells how to run the checks", () => {
   const root = temp();
@@ -541,7 +1004,65 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
   assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
+  assert.match(said, /-company, -consent and -judge/);
+  const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  assert.ok(agents.includes("`companygraph-company`"), "AGENTS.md names the company skill");
+  assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
+  assert.ok(agents.includes("`companygraph-judge`"), "AGENTS.md names the judge skill");
+  assert.ok(agents.includes("`judge/known.md`"), "AGENTS.md names the file of known flags");
   assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
+});
+
+test("the judge skill writes its report and reading to dist/judge/, the reading as findings with a fix each", () => {
+  const skill = fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-judge/SKILL.md"), "utf8");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>\.txt/, "the raw report goes to dist/, where every skill writes what is not committed");
+  assert.match(skill, /dist\/judge\/judge-<YYYY-MM-DD-HHMM>-read\.md/, "and the reading beside it");
+  assert.match(skill, /git check-ignore -q dist\/judge\//, "it checks dist/ is ignored before anything is sent");
+  assert.doesNotMatch(skill, /outside the repository|folder that holds the instance/, "nothing is written outside the repository");
+  for (const part of ["## Findings", "## False flags", "## Not checked"]) assert.ok(skill.includes(part), `the report has ${part}`);
+  assert.match(skill, /proposed fix/i);
+  assert.match(skill, /Change no entry/);
+  assert.match(skill, /forecast cost/, "the question names what a run will cost");
+  assert.match(skill, /`sent:` line/, "the reading names what the run cost");
+});
+
+test("the judge skill reads judge/known.md before the flags and proposes rows only on the owner's word", () => {
+  const skill = fs.readFileSync(path.join(here, "..", "agents/claude/skills/companygraph-judge/SKILL.md"), "utf8");
+  assert.match(skill, /judge\/known\.md/);
+  for (const part of ["## Known", "## Proposed for known"]) assert.ok(skill.includes(part), `the reading has ${part}`);
+  assert.ok(skill.includes("| Entity | Owner | Rule | Verdict | Why | Seat | Profile | Date | Hash |"), "a proposed row has the file's columns");
+  assert.match(skill, /one batch/, "the confirmed false flags are proposed as one batch");
+  assert.match(skill, /superseding decision/, "a finding on a standing decision says how it is fixed");
+  assert.match(skill, /never compute/i, "the hash is copied from the report, never computed");
+  assert.match(skill, /on the owner's word/i);
+  assert.match(skill, /one per flagged page/, "an accepted finding is proposed as one row per flagged page");
+  assert.match(skill, /did not raise/, "a lapsed row whose flag did not come back is proposed for removal");
+});
+
+// A release walk ships what is in the package folder, and a package folder in the npx cache is
+// not pristine: Python leaves __pycache__ beside a skill's script it compiled, macOS drops a
+// .DS_Store, and the three instances took two .pyc files into their manifests at 0.50.0 that
+// way. The walk skips what no release ships, so an instance never records a file it did not get.
+test("init ships no __pycache__ or .DS_Store that sits beside the release's skills", () => {
+  const skillDir = path.join(here, "..", "agents/claude/skills/companygraph-export");
+  const cache = path.join(skillDir, "__pycache__");
+  const store = path.join(skillDir, ".DS_Store");
+  fs.mkdirSync(cache, { recursive: true });
+  fs.writeFileSync(path.join(cache, "build.cpython-314.pyc"), "not python");
+  fs.writeFileSync(store, "not a file a release ships");
+  try {
+    const root = temp();
+    run(["init", root, "--name", "Acme", "--agent", "claude"]);
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/__pycache__")), "no __pycache__ was written");
+    assert.ok(!fs.existsSync(path.join(root, ".claude/skills/companygraph-export/.DS_Store")), "no .DS_Store was written");
+    const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+    assert.ok(!Object.keys(manifest.files).some((key) => key.includes("__pycache__") || key.endsWith(".DS_Store")), "the manifest names neither");
+    const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+    assert.equal(result.status, 0, result.stderr);
+  } finally {
+    fs.rmSync(cache, { recursive: true, force: true });
+    fs.rmSync(store, { force: true });
+  }
 });
 
 test("check fails on a skill edited inside the instance, as on edited core", () => {
@@ -551,6 +1072,15 @@ test("check fails on a skill edited inside the instance, as on edited core", () 
   const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.equal(result.status, 1);
   assert.match(result.stderr, /\.claude\/skills\/companygraph-validate\/SKILL\.md: not as the tooling wrote it/);
+});
+
+test("check fails on the company skill edited inside the instance, the one an operator is most tempted to edit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.appendFileSync(path.join(root, ".claude/skills/companygraph-company/SKILL.md"), "\n10. Also read the blog.\n");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /\.claude\/skills\/companygraph-company\/SKILL\.md: not as the tooling wrote it/);
 });
 
 test("upgrade gives no skills to an instance init did not give them to, and leaves its own alone", () => {
@@ -578,7 +1108,28 @@ test("upgrade gives no skills to an instance init did not give them to, and leav
 });
 
 // companygraph/mental-model is this case: made by init before the skills existed, its manifest
-// records none and it holds none, and an upgrade gives it all three.
+// records none and it holds none, and an upgrade gives it every one.
+// The three live instances were this case at 0.50.0: a manifest recording the skills a release
+// before this one wrote, and none of the folders a later release added. The upgrade fills them in.
+test("upgrade gives an instance that records some skills the ones a later release added", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  for (const gone of ["companygraph-company", "companygraph-consent"]) {
+    fs.rmSync(path.join(root, ".claude/skills", gone), { recursive: true });
+    for (const key of Object.keys(manifest.files)) if (key.startsWith(`.claude/skills/${gone}/`)) delete manifest.files[key];
+  }
+  fs.writeFileSync(manifestPath, JSON.stringify(manifest, null, 2) + "\n");
+  assert.ok(Object.keys(manifest.files).some((key) => key.startsWith(".claude/skills/companygraph-validate/")), "the fixture still records the older skills");
+  run(["upgrade", root]);
+  assert.deepEqual(fs.readdirSync(path.join(root, ".claude/skills")).sort(), SKILL_NAMES);
+  const moved = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  assert.ok(moved.files[".claude/skills/companygraph-company/SKILL.md"], "the manifest records the added skill");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 0, result.stderr);
+});
+
 test("upgrade gives the skills to an instance that records none and holds none, and check passes after", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);
@@ -632,9 +1183,63 @@ for (const schemas of ["meta", "schemas"])
     const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
     assert.equal(verify.status, 0, verify.stdout + verify.stderr);
     assert.match(verify.stdout, /PASS .*zip agrees/);
+    assert.ok(fs.existsSync(path.join(root, "dist/acme-skill.zip")), "a folder that already names the identity is not said twice");
+    assert.doesNotMatch(build.stdout, /missing/, "init gave the bundle its reading guide");
+    const shipped = fs.readFileSync(path.join(root, "dist/acme-gemini-notebook/AGENTS.md"), "utf8");
+    assert.match(shipped, /^# Acme — the model\n/);
+    assert.doesNotMatch(shipped, /\{\{/, "every token was counted");
     const facts = spawnSync("python3", [".claude/skills/companygraph-surface/facts.py"], { cwd: root, encoding: "utf8" });
     assert.equal(facts.status, 0, facts.stdout + facts.stderr);
   });
+
+// Every instance `init` writes for itself sits in a folder called mental-model, and an account
+// holds one skill per name, so the skill is named for the identity first. The verifier makes the
+// name a second time, and `zip agrees` is what says the two made the same one.
+test("the exported skill is named for the identity and then the folder", () => {
+  const root = path.join(temp(), "mental-model");
+  run(["init", root, "--name", "Acme Zürich", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\n> A company, described.\n");
+  const build = spawnSync("python3", [".claude/skills/companygraph-export/build.py"], { cwd: root, encoding: "utf8" });
+  assert.equal(build.status, 0, build.stdout + build.stderr);
+  assert.ok(fs.existsSync(path.join(root, "dist/mental-model-gemini-notebook")), "the bundle keeps the folder's name");
+  const verify = spawnSync("python3", [".claude/skills/companygraph-export/verify.py"], { cwd: root, encoding: "utf8" });
+  assert.equal(verify.status, 0, verify.stdout + verify.stderr);
+  assert.match(verify.stdout, /PASS .*zip agrees/);
+  // Bytes to stdout, since Windows' text-mode print would turn every newline into CRLF.
+  const read = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read('acme-zurich-mental-model/SKILL.md'))";
+  const skill = spawnSync("python3", ["-c", read, "dist/acme-zurich-mental-model-skill.zip"], { cwd: root, encoding: "utf8" });
+  assert.equal(skill.status, 0, skill.stderr);
+  assert.match(skill.stdout, /^---\nname: acme-zurich-mental-model\n/);
+  assert.match(skill.stdout, /\n# acme-zurich-mental-model\n/);
+});
+
+// An agent holding the skill and a server serving the same model can only tell which is older
+// when both name a commit. Outside git there is none to name, and a build over uncommitted files
+// says so rather than naming a commit that does not hold what it read.
+test("the exported skill names the commit it was built from", () => {
+  const root = path.join(temp(), "acme");
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "README.md"), "# Acme\n\n> A company, described.\n");
+  const read = "import sys, zipfile; sys.stdout.buffer.write(zipfile.ZipFile(sys.argv[1]).read('acme/SKILL.md'))";
+  const skill = () => {
+    const build = spawnSync("python3", [".claude/skills/companygraph-export/build.py"], { cwd: root, encoding: "utf8" });
+    assert.equal(build.status, 0, build.stdout + build.stderr);
+    return spawnSync("python3", ["-c", read, "dist/acme-skill.zip"], { cwd: root, encoding: "utf8" }).stdout;
+  };
+  assert.doesNotMatch(skill(), /Built from commit/, "outside git there is no commit to name");
+
+  const git = (...args) => spawnSync("git", ["-c", "user.name=t", "-c", "user.email=t@t", ...args], { cwd: root, encoding: "utf8" });
+  initRepository(root);
+  fs.writeFileSync(path.join(root, ".gitignore"), "dist/\n");
+  git("add", "-A");
+  git("commit", "-q", "-m", "init");
+  const sha = git("rev-parse", "HEAD").stdout.trim();
+  assert.match(sha, /^[0-9a-f]{40}$/);
+  assert.match(skill(), new RegExp(`Built from commit \`${sha}\`; a server`));
+
+  fs.writeFileSync(path.join(root, "model/values/candor.md"), "---\nsource: Local\n---\n\n# Candor\n\n> Say it.\n");
+  assert.match(skill(), new RegExp(`Built from commit \`${sha}\`, with changes not yet committed;`));
+});
 
 // The command is the reader every instance's CI runs, and it has a walker of its own. An image
 // read there as text reaches the check corrupted, and no suite that feeds the check a map would
@@ -656,4 +1261,1258 @@ test("check reads an image as bytes: a named PNG passes, and the same bytes name
   const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
   assert.match(failing.stdout + failing.stderr, /mira\.jpg: is a PNG named as a JPEG \(R9\)/);
   assert.equal(failing.status, 1);
+});
+
+test("the instance workflow checks a pull request's commits, over the whole history", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /fetch-depth: 0/);
+  assert.match(yml, /if: github\.event_name == 'pull_request'/);
+  assert.match(yml, /companygraph\.mjs commits \. --range "\$\{\{ github\.event\.pull_request\.base\.sha \}\}\.\.\$\{\{ github\.event\.pull_request\.head\.sha \}\}"/);
+});
+
+test("the menu offers the report", () => {
+  const dir = temp();
+  initRepository(dir);
+  run(["init", dir, "--name", "Acme", "--agent", "claude"]);
+  // The menu picks by number, and the report's entry is read off the menu rather than assumed.
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  const pick = listed.match(/(\d+)\S*\s+Report by seat/)[1];
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `${pick}\n${dir}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /Commits by seat in /);
+});
+
+test("the menu offers adopt and the pin report after the report by seat, and keeps the first five where they were", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /1\S*\s+Make a model/);
+  assert.match(listed, /5\S*\s+Report by seat/);
+  assert.match(listed, /6\S*\s+Hold a repository/);
+  assert.match(listed, /7\S*\s+Report pins/);
+  const root = temp();
+  const out = spawnSync(process.execPath, [cli, "menu"], { input: `6\n${root}\n`, encoding: "utf8" });
+  assert.match(out.stdout, /adopted/);
+});
+
+test("id prints one fresh UUID version 7", () => {
+  assert.match(run(["id"]).trim(), /^[0-9a-f]{8}-[0-9a-f]{4}-7[0-9a-f]{3}-[89ab][0-9a-f]{3}-[0-9a-f]{12}$/);
+});
+
+test("ids --backfill stamps an instance's pages with their first commit", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  // init writes ids from Task 3 on; strip them so this test holds before and after it.
+  for (const rel of ["model/identity.md", "model/vision.md", "model/brand.md", "model/sources/local.md"]) {
+    const full = path.join(root, rel);
+    fs.writeFileSync(full, fs.readFileSync(full, "utf8").replace(/^id: .*\n/m, "").replace(/^---\n---\n\n/, ""));
+  }
+  fs.rmSync(path.join(root, "model/identifier.md"), { force: true });
+  const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
+  initRepository(root);
+  g("add", "-A");
+  execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first"], {
+    cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-29T09:57:08+02:00" },
+  });
+  run(["ids", root, "--backfill"]);
+  const id = fs.readFileSync(path.join(root, "model/identity.md"), "utf8").match(/^id: (.+)$/m)[1];
+  assert.equal(parseInt(id.replace(/-/g, "").slice(0, 12), 16), Date.parse("2026-08-29T07:57:08Z"));
+  assert.ok(fs.existsSync(path.join(root, "model/identifier.md")));
+});
+
+// The spec: under a pattern format, the instance makes its own ids, and the tooling only checks
+// them. A backfill that stamped UUIDv7 ids over that declaration anyway would leave the instance
+// with two id formats at once, so it refuses whole, and no page is touched.
+test("ids --backfill refuses whole when model/identifier.md declares a pattern", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const identity = path.join(root, "model/identity.md");
+  fs.writeFileSync(identity, fs.readFileSync(identity, "utf8").replace(/^id: .*\n/m, ""));
+  const before = fs.readFileSync(identity, "utf8");
+  fs.writeFileSync(
+    path.join(root, "model/identifier.md"),
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: pattern\npattern: ^E-[0-9]{4,}$\n---\n\n# Entity id\n",
+  );
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/identifier\.md declares a pattern; the tooling makes only UUID version 7 \(R18\)/);
+  assert.equal(fs.readFileSync(identity, "utf8"), before);
+});
+
+// A format neither `uuidv7` nor `pattern` is a declaration the tooling cannot read, refused the
+// same way and for the same reason as a declared pattern: stamping ids past it could write ids
+// no later check would accept, so the whole backfill refuses and no page is touched.
+test("ids --backfill refuses whole when model/identifier.md declares an unreadable format", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const identity = path.join(root, "model/identity.md");
+  fs.writeFileSync(identity, fs.readFileSync(identity, "utf8").replace(/^id: .*\n/m, ""));
+  const before = fs.readFileSync(identity, "utf8");
+  fs.writeFileSync(
+    path.join(root, "model/identifier.md"),
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nformat: serial\n---\n\n# Entity id\n",
+  );
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/identifier\.md: `format` is "serial"; it is `uuidv7` or `pattern` \(R18\)/);
+  assert.equal(fs.readFileSync(identity, "utf8"), before);
+});
+
+test("ids --range refuses a commit that changed an id, across a rename", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  g("mv", "model/vision.md", "model/outlook.md");
+  const renamed = path.join(root, "model/outlook.md");
+  const text = fs.readFileSync(renamed, "utf8").replace(/^id: .*$/m, "id: 01a04c85-bc20-7092-a266-845d81173e9f");
+  fs.writeFileSync(renamed, text);
+  g("commit", "-qam", "second", "--no-verify");
+  const head = g("rev-parse", "HEAD");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${head}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /model\/outlook\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+  assert.match(said.stderr, /\(then model\/vision\.md\)/);
+  assert.match(said.stderr, new RegExp(`before this change \\(${base.slice(0, 7)}\\)`), "the base is named short, as git names a commit to a reader");
+});
+
+// Not an instance is a run that could not happen at all, not a refusal, so it stays 1 where a
+// `--range` or `--backfill` refusal is 3.
+test("ids refuses a folder that is not an instance, and says so", () => {
+  const said = spawnSync(process.execPath, [cli, "ids", temp(), "--backfill"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /is not an instance: it has no \.companygraph\/manifest\.json beside a model\/ folder/);
+});
+
+// A missing flag is a run that could not happen, not a refusal, so it stays 1.
+test("ids with neither --backfill nor --range refuses, naming both", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const said = spawnSync(process.execPath, [cli, "ids", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /✗ ids needs --backfill or --range <a>\.\.<b>/);
+});
+
+// A three-dot range asks git for the change since the merge base, and split on ".." it read its
+// head as ".<head>", which git then failed on. It is refused by name, as is a range with no dots.
+// A malformed range is a run that could not happen, not a refusal, so it stays 1.
+test("ids --range refuses a three-dot range and a range without two dots", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  for (const range of ["main...HEAD", "HEAD"]) {
+    const said = spawnSync(process.execPath, [cli, "ids", root, "--range", range], { encoding: "utf8" });
+    assert.equal(said.status, 1, range);
+    assert.match(said.stderr, /✗ --range takes <a>\.\.<b>, two dots between two commits/, range);
+  }
+});
+
+// A range shaped like <a>..<b> but naming a commit git does not have is a git failure, not a
+// refusal: it cannot run at all, so it exits 1, the same as a malformed range.
+test("ids --range with a commit that does not exist exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const missing = "0000000000000000000000000000000000000000";
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${missing}..HEAD`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+});
+
+// A folder that holds core/ and is not an instance — this repository — is stamped and ranged over
+// its schemas, as an instance is over its pages.
+const coreFolder = () => {
+  const root = temp();
+  fs.mkdirSync(path.join(root, "core"));
+  fs.writeFileSync(path.join(root, "core/CONVENTIONS.md"), "# Conventions\n");
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "# Skill Schema\n\n> A skill.\n");
+  return root;
+};
+
+test("ids --backfill on a folder that holds core stamps its schemas with their first commit", () => {
+  const root = coreFolder();
+  const g = (...a) => execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", ...a], { cwd: root });
+  initRepository(root);
+  g("add", "-A");
+  execFileSync("git", ["-c", "user.name=t", "-c", "user.email=t@t.invalid", "commit", "-qm", "first", "--no-verify"], {
+    cwd: root, env: { ...process.env, GIT_AUTHOR_DATE: "2026-08-23T10:00:00+02:00" },
+  });
+  run(["ids", root, "--backfill"]);
+  const text = fs.readFileSync(path.join(root, "core/skill-schema.md"), "utf8");
+  const id = text.match(/^id: (.+)$/m)[1];
+  assert.equal(parseInt(id.replace(/-/g, "").slice(0, 12), 16), Date.parse("2026-08-23T08:00:00Z"));
+  assert.equal(fs.readFileSync(path.join(root, "core/CONVENTIONS.md"), "utf8"), "# Conventions\n");
+});
+
+test("ids --range on a folder that holds core refuses a commit that changed a schema's id", () => {
+  const root = coreFolder();
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60\n---\n\n# Skill Schema\n");
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  fs.writeFileSync(path.join(root, "core/skill-schema.md"), "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\n---\n\n# Skill Schema\n");
+  g("commit", "-qam", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /core\/skill-schema\.md: `id` is "01a04c85-bc20-7092-a266-845d81173e9f"/);
+});
+
+// R20: the manifest names the packs an instance took, and check refuses one it does not ship.
+test("a manifest that takes a pack this checker does not ship is refused by name", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  const manifest = JSON.parse(fs.readFileSync(manifestPath, "utf8"));
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...manifest, packs: ["cooking"] }));
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /takes the pack cooking, and this checker ships software/);
+});
+
+test("an upgrade with --core is refused for an instance that lists a pack, and for --pack, before anything is fetched", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const listed = spawnSync(process.execPath, [cli, "upgrade", root, "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(listed.status, 1);
+  assert.match(listed.stderr, /takes the pack software, and --core fetches another release's core without it/);
+  const plain = temp();
+  run(["init", plain, "--name", "Acme", "--agent", "claude"]);
+  const added = spawnSync(process.execPath, [cli, "upgrade", plain, "--pack", "software", "--core", "v0.0.0-unreachable"], { encoding: "utf8" });
+  assert.equal(added.status, 1);
+  assert.match(added.stderr, /takes the pack software, and --core fetches another release's core without it/);
+});
+
+test("upgrade --pack names only the packs the instance did not already list", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  assert.doesNotMatch(run(["upgrade", root, "--pack", "software"]), /packs: software/);
+});
+
+test("init --pack organization vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization"]);
+  for (const n of ["group", "group-kind", "job"]) assert.ok(fs.existsSync(path.join(root, "meta/organization", `${n}-schema.md`)), n);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("init --pack landscape vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["landscape"]);
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-kind-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "model/systems")), "the pack's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/system-kinds")), "the kind's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "data-object-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "service-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "model/data-objects")), "the data object's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/services")), "the service's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "environment-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "model/environments")), "the environment's folder is made");
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("init --pack requirements vendors the pack, and the instance it writes passes check", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "requirements"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["requirements"]);
+  for (const n of ["use-case", "requirement"]) assert.ok(fs.existsSync(path.join(root, "meta/requirements", `${n}-schema.md`)), n);
+  assert.ok(fs.existsSync(path.join(root, "model/use-cases")), "the use case's folder is made");
+  assert.ok(fs.existsSync(path.join(root, "model/requirements")), "the requirement's folder is made");
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("init with --pack given twice joins the packs, as --pack organization,landscape does", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization", "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization", "landscape"]);
+  assert.ok(fs.existsSync(path.join(root, "meta/organization", "group-schema.md")));
+  assert.ok(fs.existsSync(path.join(root, "meta/landscape", "system-schema.md")));
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+test("upgrade --pack landscape on an instance that took organization lists both", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "organization"]);
+  run(["upgrade", root, "--pack", "landscape"]);
+  const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
+  assert.deepEqual(manifest.packs, ["organization", "landscape"]);
+  assert.doesNotThrow(() => run(["check", root]));
+});
+
+// An instance that took a pack reads the pack's schemas wherever the history commands read the
+// model: a bounded context's page sits in a folder only the pack's schema declares, and without
+// them `commits` and `seats` met R13 on it, so the instance's own pull-request check went red.
+test("commits and seats read an instance that took the software pack and wrote a bounded context", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root);
+  const page = path.join(root, "model/bounded-contexts/ordering/ordering.md");
+  fs.mkdirSync(path.dirname(page), { recursive: true });
+  fs.writeFileSync(
+    page,
+    "---\nid: 01a04c85-bc20-7092-a266-845d81173e9f\nsource: Local\nclassification: core\n---\n\n# Ordering\n\n> Takes an order and leaves payment to Billing.\n\n## Responsibilities\n\n- Accept an order\n",
+  );
+  g("add", "-A");
+  g("commit", "-qm", "Add the ordering context", "--no-verify");
+  const message = path.join(root, "message.txt");
+  fs.writeFileSync(message, "Add a thing\n");
+  const commits = spawnSync(process.execPath, [cli, "commits", root, "--message", message], { encoding: "utf8", env });
+  assert.equal(commits.status, 0, commits.stdout + commits.stderr);
+  const seats = spawnSync(process.execPath, [cli, "seats", root], { encoding: "utf8", env });
+  assert.equal(seats.status, 0, seats.stdout + seats.stderr);
+});
+
+test("an instance init writes is in the one form, and check says so", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  assert.match(run(["form", root]), /in the one form/);
+  assert.match(run(["check", root]), /in the one form/);
+});
+
+test("check fails on Markdown out of the form, names the line, and form --fix puts it right", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const failed = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failed.status, 1);
+  assert.match(failed.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(failed.stderr, /form .* --fix/);
+  run(["form", root, "--fix"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+});
+
+test("the form check leaves out what the manifest excludes", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  fs.mkdirSync(path.join(root, "dist"));
+  fs.writeFileSync(path.join(root, "dist/out.md"), "# Out\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" }).status, 0);
+});
+
+test("form refuses where the manifest names another release, as the checker does", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "form", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names 0\.0\.1/);
+});
+
+test("form --fix writes the form where the manifest names another release, which is the remedy upgrade names", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /form .* --fix/);
+  const fixed = spawnSync(process.execPath, [cli, "form", root, "--fix"], { encoding: "utf8" });
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  assert.equal(fs.readFileSync(path.join(root, "NOTES.md"), "utf8"), "# Notes\n\nOne paragraph that wraps.\n");
+  const moved = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stdout + moved.stderr);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+});
+
+test("check says a manifest naming another release once, and does not run the form after it", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  const said = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.equal(said.stderr.match(/names 0\.0\.1/g)?.length, 1, said.stderr);
+});
+
+test("form and check say a manifest that is not JSON with the ✗ prefix, and exit 1", () => {
+  for (const make of [(root) => run(["init", root, "--name", "Acme", "--agent", "claude"]), (root) => run(["adopt", root])]) {
+    const root = temp();
+    make(root);
+    fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+    for (const command of ["form", "check"]) {
+      const said = spawnSync(process.execPath, [cli, command, root], { encoding: "utf8" });
+      assert.equal(said.status, 1, command);
+      assert.match(said.stderr, /^✗ .*manifest\.json could not be read as JSON/, `${command}: ${said.stderr}`);
+    }
+  }
+});
+
+test("the instance workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/instance-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  // A failing model check does not hide the form's hits.
+  assert.match(yml, /if: \$\{\{ !cancelled\(\) \}\}\n\s+run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+});
+
+test("upgrade stops on Markdown out of the form, naming it and moving nothing, and --force moves anyway", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  // An instance a release before this one made: an older tooling, no exclude, no pins.json.
+  const older = { ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" };
+  delete older.exclude;
+  fs.writeFileSync(manifestPath, `${JSON.stringify(older, null, 2)}\n`);
+  fs.rmSync(path.join(root, "pins.json"));
+  fs.writeFileSync(path.join(root, "NOTES.md"), "# Notes\n\nOne paragraph\nthat wraps.\n");
+  const stopped = spawnSync(process.execPath, [cli, "upgrade", root], { encoding: "utf8" });
+  assert.equal(stopped.status, 1);
+  assert.match(stopped.stderr, /NOTES\.md:3: paragraph-on-one-line/);
+  assert.match(stopped.stderr, /--force/);
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.equal(fs.existsSync(path.join(root, "pins.json")), false);
+  run(["upgrade", root, "--force"]);
+  assert.notEqual(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, "0.0.1");
+  assert.ok(fs.existsSync(path.join(root, "pins.json")));
+});
+
+test("upgrade leaves a family instance's own pins.json as it is", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const own = `${JSON.stringify({ pins: [{ kind: "conventions", file: "conventions.json", repo: "robertblust/conventions" }], verify: ["npm test"] }, null, 2)}\n`;
+  fs.writeFileSync(path.join(root, "pins.json"), own);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), tooling: "0.0.1" }));
+  run(["upgrade", root]);
+  assert.equal(fs.readFileSync(path.join(root, "pins.json"), "utf8"), own);
+});
+
+// The report asks each upstream with git ls-remote; COMPANYGRAPH_REMOTES names a file of fixed
+// answers instead, so no test reaches the network.
+test("pins reports each pin of a repository and exits 0 when one is behind", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`, "v999.0.0"], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /behind\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json: .* → v999\.0\.0/);
+});
+
+test("pins on an adopted repository reports its own tooling pin as current and nothing as unmanaged", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, JSON.stringify({ "companygraph/meta-model": { tags: [`v${version}`], head: null } }));
+  const said = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env: { ...process.env, COMPANYGRAPH_REMOTES: remotes } });
+  assert.equal(said.status, 0);
+  assert.match(said.stdout, /current\s+core-release companygraph\/meta-model in \.companygraph\/manifest\.json/);
+  assert.doesNotMatch(said.stdout, /unmanaged/);
+});
+
+test("pins exits 1 when pins.json cannot be read or an entry names no line, and moves nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const remotes = path.join(temp(), "remotes.json");
+  fs.writeFileSync(remotes, "{}");
+  const env = { ...process.env, COMPANYGRAPH_REMOTES: remotes };
+  fs.writeFileSync(path.join(root, "pins.json"), JSON.stringify({ pins: [{ kind: "npm-tag", file: "package.json", repo: "acme/design" }] }));
+  const missing = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(missing.status, 1);
+  assert.match(missing.stdout, /missing\s+npm-tag acme\/design in package\.json/);
+  fs.writeFileSync(path.join(root, "pins.json"), "{ not json");
+  assert.equal(spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env }).status, 1);
+  fs.rmSync(path.join(root, "pins.json"));
+  const none = spawnSync(process.execPath, [cli, "pins", root], { encoding: "utf8", env });
+  assert.equal(none.status, 1);
+  assert.match(none.stderr, /no pins\.json/);
+});
+
+test("adopt into an empty folder writes the machinery, and check holds it to the form alone", () => {
+  const root = temp();
+  initRepository(root);
+  const said = run(["adopt", root]);
+  assert.match(said, /adopted/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph on one line.\n");
+  assert.match(run(["check", root]), /in the one form/);
+  fs.writeFileSync(path.join(root, "README.md"), "# A site\n\nOne paragraph\nthat wraps.\n");
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 1);
+});
+
+test("adopt into a folder that does not exist yet makes it and writes the machinery", () => {
+  const root = path.join(temp(), "a", "site");
+  assert.match(run(["adopt", root]), /adopted/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/commit-msg", ".github/workflows/companygraph.yml", "pins.json"])
+    assert.ok(fs.existsSync(path.join(root, rel)), rel);
+  assert.match(run(["check", root]), /no Markdown file to hold to the form/);
+});
+
+// A flag a command does not read was once taken and dropped without a word, so `adopt --dry-run`
+// adopted for real. Each command now takes only the flags its usage line names.
+test("a flag the command does not read is refused by name before anything is written", () => {
+  const root = initRepository(temp());
+  const refused = spawnSync(process.execPath, [cli, "seats", root, "--dry-run"], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /^seats has no --dry-run$/m);
+  for (const [command, flag] of [["check", "--backfill"], ["check", "--bogus"], ["form", "--force"], ["pins", "--json"]]) {
+    const said = spawnSync(process.execPath, [cli, command, root, flag], { encoding: "utf8" });
+    assert.equal(said.status, 1, `${command} ${flag}`);
+    assert.match(said.stderr, new RegExp(`^${command} has no ${flag}$`, "m"));
+  }
+  assert.deepEqual(fs.readdirSync(root), [".git"]);
+  assert.equal(spawnSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout, "");
+});
+
+test("adopt --dry-run says what it would write and that it would set core.hooksPath, and writes nothing", () => {
+  const root = initRepository(temp());
+  const said = run(["adopt", root, "--gate", "git", "--dry-run"]);
+  assert.match(said, /if this runs:/);
+  for (const rel of [".companygraph/manifest.json", ".companygraph/hooks/pre-commit", "pins.json"])
+    assert.match(said, new RegExp(`^ {2}write {3}${rel.replaceAll(".", "\\.")}$`, "m"));
+  assert.match(said, /^ {2}set {5}core\.hooksPath \.companygraph\/hooks$/m);
+  assert.doesNotMatch(said, /adopted at/);
+  assert.deepEqual(fs.readdirSync(root), [".git"]);
+  assert.equal(spawnSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).stdout, "");
+});
+
+test("adopt --dry-run into a folder not there yet plans the hooks path from where it would be", () => {
+  const repo = initRepository(temp());
+  const root = path.join(repo, "a", "site");
+  const said = run(["adopt", root, "--gate", "git", "--dry-run"]);
+  assert.match(said, /^ {2}set {5}core\.hooksPath a\/site\/\.companygraph\/hooks$/m);
+  assert.ok(!fs.existsSync(path.join(repo, "a")));
+});
+
+test("init --dry-run says what it would write, and writes nothing", () => {
+  const root = path.join(temp(), "acme");
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude", "--dry-run"]);
+  assert.match(said, /^ {2}write {3}\.companygraph\/manifest\.json$/m);
+  assert.match(said, /^ {2}write {3}meta\/core\/manifest\.json$/m);
+  assert.doesNotMatch(said, /files written/);
+  assert.ok(!fs.existsSync(root));
+});
+
+test("adopt refuses an instance by name and points at upgrade, writing nothing", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const before = [...filesOf(root).keys()].sort();
+  const refused = spawnSync(process.execPath, [cli, "adopt", root], { encoding: "utf8" });
+  assert.equal(refused.status, 1);
+  assert.match(refused.stderr, /upgrade/);
+  assert.deepEqual([...filesOf(root).keys()].sort(), before);
+});
+
+test("upgrade moves an adopted repository's tooling and workflow, and vendors no core into it", () => {
+  const root = temp();
+  run(["adopt", root]);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ tooling: "0.0.1", exclude: ["dist"] }));
+  const workflowPath = path.join(root, ".github/workflows/companygraph.yml");
+  fs.writeFileSync(workflowPath, fs.readFileSync(workflowPath, "utf8").replace(/@v[\d.]+/, "@v0.0.1"));
+  run(["upgrade", root]);
+  const version = JSON.parse(fs.readFileSync(path.join(here, "..", "package.json"), "utf8")).version;
+  assert.equal(JSON.parse(fs.readFileSync(manifestPath, "utf8")).tooling, version);
+  assert.match(fs.readFileSync(workflowPath, "utf8"), new RegExp(`repository-check\\.yml@v${version}`));
+  assert.equal(fs.existsSync(path.join(root, "meta")), false);
+});
+
+test("the repository workflow holds the Markdown to the form with the checker it checked out", () => {
+  const yml = fs.readFileSync(path.join(here, "..", ".github/workflows/repository-check.yml"), "utf8");
+  assert.match(yml, /run: node \.companygraph-checker\/bin\/companygraph\.mjs form \.$/m);
+  assert.doesNotMatch(yml, /check-instance/);
+});
+
+// A note is printed under `noted:` on a passing run and on a failing one, and never moves the
+// exit code: a horizon passes on a date, and failing on it would turn a green default branch red
+// overnight.
+test("check prints a passed horizon under noted:, on a passing run and a failing one, and exits on the failures alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const dir = path.join(root, "model/strategic-objectives");
+  fs.mkdirSync(dir, { recursive: true });
+  fs.writeFileSync(path.join(dir, "invoices-explain-themselves.md"),
+    `---\nid: ${run(["id"]).trim()}\nsource: Local\nadopted: 2020-01\nhorizon: 2020-06\n---\n\n# Invoices explain themselves\n\n> A customer reads why a line is on an invoice without asking.\n\n## What it makes true\n\nNobody calls to ask.\n`);
+  const passing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(passing.status, 0, passing.stdout + passing.stderr);
+  assert.match(passing.stdout, /^ {2}noted:\n {4}model\/strategic-objectives\/invoices-explain-themselves\.md: `horizon` is 2020-06, which has passed/m);
+
+  fs.writeFileSync(path.join(root, "model/stray.md"), "# Stray\n\n> Nothing.\n");
+  const failing = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(failing.status, 1);
+  assert.match(failing.stdout, /^ {2}noted:\n {4}model\/strategic-objectives\/invoices-explain-themselves\.md/m);
+});
+
+// The range reads the manifest's packs, so a pack page's type is known: a decision rewritten and
+// an invariant relabelled are refused beside the id check, and a status moved alone passes.
+test("ids --range refuses a decision rewritten and an invariant relabelled, and passes a status moved alone", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const decision = (status, by) => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: ${status}\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n`;
+  const aggregate = (label) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| ${label} | A total never changes. |\n`;
+  write("model/decisions/2026-core-is-vendored.md", decision("Standing", "Owner"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Revised", "Owner"));
+  g("commit", "-qam", "second", "--no-verify");
+  const moved = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(moved.status, 0, moved.stderr);
+  assert.match(moved.stdout, /no page kept as written was rewritten or removed/);
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Revised", "Architect"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-9"));
+  g("commit", "-qam", "third", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `by` changed since [0-9a-f]{7}/);
+  assert.match(said.stderr, /✗ model\/bounded-contexts\/billing\/aggregates\/invoice\.md: "INV-9" under ## Invariants carries what "INV-1" carried/);
+});
+
+// A name a decision carries follows the entity it names: the range reads the decision schema the
+// instance vendored and the model at both ends, so an objective renamed with its id kept, and the
+// decision's `serves` moved to the new name, passes, while moving it to another objective fails.
+test("ids --range passes a decision's reference following a rename, and refuses one moved elsewhere", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const objective = (id, name) => `---\nid: ${id}\nsource: Local\nadopted: 2026-01\n---\n\n# ${name}\n\n> A statement.\n`;
+  const decision = (serves) => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: Standing\nby: Owner\nserves:\n  - ${serves}\n---\n\n# Core is vendored\n\n> We vendor core.\n`;
+  const [o1, o2] = [run(["id"]).trim(), run(["id"]).trim()];
+  write("model/strategic-objectives/old.md", objective(o1, "Old"));
+  write("model/strategic-objectives/other.md", objective(o2, "Other"));
+  write("model/decisions/2026-core-is-vendored.md", decision("Old"));
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+
+  g("mv", "model/strategic-objectives/old.md", "model/strategic-objectives/new.md");
+  write("model/strategic-objectives/new.md", objective(o1, "New"));
+  write("model/decisions/2026-core-is-vendored.md", decision("New"));
+  g("add", "-A"); g("commit", "-qm", "rename", "--no-verify");
+  const renamed = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(renamed.status, 0, renamed.stderr);
+
+  write("model/decisions/2026-core-is-vendored.md", decision("Other"));
+  g("commit", "-qam", "elsewhere", "--no-verify");
+  const moved = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(moved.status, 3);
+  assert.match(moved.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `serves` changed since [0-9a-f]{7}/);
+});
+
+test("ids --range refuses a decision deleted in the range", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  fs.mkdirSync(path.join(root, "model/decisions"), { recursive: true });
+  fs.writeFileSync(path.join(root, "model/decisions/2026-core-is-vendored.md"), "---\nsource: Local\nstatus: Standing\n---\n\n# Core is vendored\n\n> We vendor core.\n");
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  g("rm", "-q", "model/decisions/2026-core-is-vendored.md"); g("commit", "-qm", "second", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
+});
+
+// A pull request's range runs from the base branch's tip when the event fired, which on a branch
+// behind its base is not where it branched: a decision main added since is not one the branch
+// deleted, and a decision the branch did delete still fails from there.
+test("ids --range holds a branch behind its base to what the branch did, not to what main did since", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const decision = (title) => `---\nsource: Local\nstatus: Standing\n---\n\n# ${title}\n\n> We decided it.\n`;
+  write("model/decisions/2026-core-is-vendored.md", decision("Core is vendored"));
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "-b", "topic");
+  write("model/notes.md", "# Notes\n");
+  g("add", "-A"); g("commit", "-qm", "on the branch", "--no-verify");
+  g("checkout", "-q", "main");
+  write("model/decisions/2026-packs-are-units.md", decision("Packs are units"));
+  g("add", "-A"); g("commit", "-qm", "on main", "--no-verify");
+  const range = () => `${g("rev-parse", "main")}..${g("rev-parse", "topic")}`;
+  const behind = spawnSync(process.execPath, [cli, "ids", root, "--range", range()], { encoding: "utf8" });
+  assert.equal(behind.status, 0, behind.stderr);
+
+  g("checkout", "-q", "topic");
+  g("rm", "-q", "model/decisions/2026-core-is-vendored.md"); g("commit", "-qm", "delete", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", range()], { encoding: "utf8" });
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: deleted in this change/);
+  assert.doesNotMatch(said.stderr, /packs-are-units/);
+});
+
+// A range that cannot run says why in one line and exits 1, as a malformed range does: a manifest
+// that is not JSON, and two ends with no commit in common, which a shallow clone also shows.
+test("ids --range with a manifest that is not JSON says so in one line and exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  fs.writeFileSync(path.join(root, ".companygraph/manifest.json"), "{ not json");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", "HEAD..HEAD"], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /^✗ .*\.companygraph[\\/]manifest\.json could not be read as JSON/);
+  assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
+});
+
+test("ids --range whose ends share no commit names the cause in one line and exits 1", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "--orphan", "other"); g("commit", "-qm", "unrelated", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "other")}`], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /^✗ .*have no commit in common here.*fetch its full history/);
+  assert.equal(said.stderr.trim().split("\n").length, 1, said.stderr);
+});
+
+// A decision and a label are compared after both sides are put in the family's Markdown form, so
+// a change the form would make anyway is no rewrite. A release that reshapes what the decision
+// schema or a label-declaring schema asks of a page makes the instance change those pages in the
+// same range, so a range that changes the vendored schema governing a check is not held to that
+// check, and says so in one line; any other upgrade, re-pin or resync is held as always.
+const upgradeRepo = () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const decision = (by, list = "- one\n- two\n\nA consequence on one line.") => `---\nsource: Local\ndecided: 2026-08-25\nkind: Architecture\nstatus: Standing\nby: ${by}\n---\n\n# Core is vendored\n\n> We vendor core.\n\n## Consequences\n\n${list}\n`;
+  const aggregate = (label) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n| ${label} | A total never changes. |\n`;
+  write("model/decisions/2026-core-is-vendored.md", decision("Owner"));
+  write("model/bounded-contexts/billing/aggregates/invoice.md", aggregate("INV-1"));
+  write("conventions.json", "{}\n");
+  initRepository(root, ["-b", "main"]); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  g("checkout", "-q", "-b", "topic");
+  const commit = () => { g("add", "-A"); g("commit", "-qm", "change", "--no-verify"); };
+  const ids = () => spawnSync(process.execPath, [cli, "ids", root, "--range", `${g("rev-parse", "main")}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  const DECISION = "model/decisions/2026-core-is-vendored.md", AGGREGATE = "model/bounded-contexts/billing/aggregates/invoice.md";
+  return { root, g, write, decision, aggregate, commit, ids, DECISION, AGGREGATE };
+};
+// What a release does to a vendored unit: its schema changes and its manifest's version moves.
+const release = (root, unit, schema) => {
+  fs.appendFileSync(path.join(root, `meta/${unit}/${schema}-schema.md`), "\nA sentence a release added.\n");
+  const at = path.join(root, `meta/${unit}/manifest.json`);
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), version: "99.0.0" }) + "\n");
+};
+const DECISION_LINE = /^ {2}the decision schema changed in this range: decision text not held$/m;
+const LABEL_LINE = /^ {2}the aggregate schema changed in this range: aggregate label text not held$/m;
+
+test("ids --range passes a decision whose two sides differ only where the Markdown form makes them one", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  // Another list marker, a paragraph wrapped over two lines: as written, each would read as a rewrite.
+  write(DECISION, decision("Owner", "* one\n* two\n\nA consequence\non one line."));
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, /no page kept as written was rewritten or removed/);
+  assert.doesNotMatch(said.stdout, /not held|could not be applied/);
+});
+
+test("ids --range still refuses a decision with a word changed, after the form", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Owner", "* one\n* three\n\nA consequence on one line."));
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: its text changed since [0-9a-f]{7}/);
+});
+
+test("ids --range over a change to the vendored decision schema does not hold a decision rewritten in it, and says so once", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  release(root, "core", "decision");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, DECISION_LINE);
+  assert.equal(said.stdout.match(/not held/g)?.length, 1, said.stdout);
+});
+
+// A hand edit of the vendored schema is no release: with the unit's version where it was, the
+// decision rewritten is refused as it would be anywhere.
+test("ids --range over a hand edit of the vendored decision schema, its version unmoved, still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  fs.appendFileSync(path.join(root, "meta/core/decision-schema.md"), "\nA sentence a hand added.\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
+  assert.doesNotMatch(said.stdout, /not held/);
+});
+
+test("ids --range over a version moved with the schema file untouched still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  const at = path.join(root, "meta/core/manifest.json");
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), version: "99.0.0" }) + "\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+});
+
+test("ids --range over a decision schema change still holds a label moved in the same range", () => {
+  const { root, write, decision, aggregate, commit, ids, DECISION, AGGREGATE } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  write(AGGREGATE, aggregate("INV-9"));
+  release(root, "core", "decision");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /"INV-9" under ## Invariants carries what "INV-1" carried/);
+  assert.doesNotMatch(said.stderr, /2026-core-is-vendored/);
+});
+
+test("ids --range over a change to the aggregate schema does not hold a label moved in it", () => {
+  const { root, write, aggregate, commit, ids, AGGREGATE } = upgradeRepo();
+  write(AGGREGATE, aggregate("INV-9"));
+  release(root, "software", "aggregate");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 0, said.stderr);
+  assert.match(said.stdout, LABEL_LINE);
+  assert.doesNotMatch(said.stdout, DECISION_LINE);
+});
+
+test("ids --range over another change to the vendored core still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  fs.appendFileSync(path.join(root, "meta/core/manifest.json"), "\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /✗ model\/decisions\/2026-core-is-vendored\.md: `by` changed since/);
+  assert.doesNotMatch(said.stdout, /not held/);
+});
+
+test("ids --range over a conventions resync still refuses a decision rewritten in it", () => {
+  const { write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  write("conventions.json", "{ \"version\": \"1.0.0\" }\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
+});
+
+test("ids --range over a tooling re-pin in the manifest still refuses a decision rewritten in it", () => {
+  const { root, write, decision, commit, ids, DECISION } = upgradeRepo();
+  write(DECISION, decision("Architect"));
+  const at = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), tooling: "0.0.1" }, null, 2) + "\n");
+  commit();
+  const said = ids();
+  assert.equal(said.status, 3, said.stdout);
+  assert.match(said.stderr, /`by` changed since/);
+});
+
+// The decision and label checks compare from where the branch began, so their refusals name that
+// commit, and not the base branch's tip the range was given.
+test("ids --range on a branch behind main names the merge base in a decision's refusal", () => {
+  const { g, write, decision, ids } = upgradeRepo();
+  const fork = g("rev-parse", "--short=7", "main");
+  write("model/decisions/2026-core-is-vendored.md", decision("Architect"));
+  g("add", "-A"); g("commit", "-qm", "rewrite", "--no-verify");
+  g("checkout", "-q", "main");
+  write("model/notes.md", "# Notes\n");
+  g("add", "-A"); g("commit", "-qm", "on main", "--no-verify");
+  const tip = g("rev-parse", "--short=7", "main");
+  g("checkout", "-q", "topic");
+  const said = ids();
+  assert.equal(said.status, 3);
+  assert.match(said.stderr, new RegExp(`\`by\` changed since ${fork}`));
+  assert.doesNotMatch(said.stderr, new RegExp(tip));
+});
+
+// A label's history is read across a rename of its page: a label the page carried under its old
+// path, and removed, is not used again under its new one.
+test("ids --range refuses a label reused after its page was renamed", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--pack", "software"]);
+  const env = { ...process.env, GIT_AUTHOR_NAME: "t", GIT_AUTHOR_EMAIL: "t@t.invalid", GIT_COMMITTER_NAME: "t", GIT_COMMITTER_EMAIL: "t@t.invalid" };
+  const g = (...a) => execFileSync("git", a, { cwd: root, env, encoding: "utf8" }).trim();
+  const write = (rel, text) => { fs.mkdirSync(path.dirname(path.join(root, rel)), { recursive: true }); fs.writeFileSync(path.join(root, rel), text); };
+  const aggregate = (rows) => `---\nsource: Local\nroot: Invoice\n---\n\n# Invoice\n\n> Changed together.\n\n## Invariants\n\n| Label | Invariant |\n| --- | --- |\n${rows.map(([l, t]) => `| ${l} | ${t} |\n`).join("")}`;
+  const AGG = "model/bounded-contexts/billing/aggregates";
+  write(`${AGG}/invoice.md`, aggregate([["INV-1", "A total never changes."], ["INV-2", "A rule since removed."]]));
+  initRepository(root); g("add", "-A"); g("commit", "-qm", "first", "--no-verify");
+  write(`${AGG}/invoice.md`, aggregate([["INV-1", "A total never changes."]]));
+  g("commit", "-qam", "removed", "--no-verify");
+  g("mv", `${AGG}/invoice.md`, `${AGG}/bill.md`);
+  g("commit", "-qm", "renamed", "--no-verify");
+  const base = g("rev-parse", "HEAD");
+  write(`${AGG}/bill.md`, aggregate([["INV-1", "A total never changes."], ["INV-2", "A new rule."]]));
+  g("commit", "-qam", "reused", "--no-verify");
+  const said = spawnSync(process.execPath, [cli, "ids", root, "--range", `${base}..${g("rev-parse", "HEAD")}`], { encoding: "utf8" });
+  assert.equal(said.status, 3, said.stdout + said.stderr);
+  assert.match(said.stderr, /✗ model\/bounded-contexts\/billing\/aggregates\/bill\.md: "INV-2" under ## Invariants was carried by this page before and removed/);
+});
+
+test("init --gate git writes the hooks, points git at them, and writes no workflow", () => {
+  const root = temp();
+  initRepository(root);
+  const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.match(said, /pre-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  // Windows has no execute bit to set.
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/pre-commit")).mode & 0o111, 0o111);
+});
+
+// The real hooks with the real CLI, end to end and offline: COMPANYGRAPH_CLI points the hooks at
+// this checkout, so no npx is asked for the release the manifest names.
+test("on the git gate a commit that changes an id is refused, and a commit that leaves ids alone goes through", () => {
+  const root = temp();
+  const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
+  const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
+    { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
+  initRepository(root, ["-b", "main"]);
+  git("config", "init.defaultBranch", "main");
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  git("add", "-A");
+  const first = commit("The instance");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  const vision = path.join(root, "model/vision.md");
+  const before = fs.readFileSync(vision, "utf8");
+  const id = before.match(/^id: (\S+)$/m)[1];
+  const moved = id.slice(0, -1) + (id.endsWith("0") ? "1" : "0");
+  fs.writeFileSync(vision, before.replace(`id: ${id}`, `id: ${moved}`));
+  git("add", "model/vision.md");
+  const refused = commit("A new id");
+  assert.notEqual(refused.status, 0, refused.stdout + refused.stderr);
+  assert.match(refused.stderr, /model\/vision\.md/);
+  assert.ok(refused.stderr.includes(id), refused.stderr);
+  assert.match(refused.stderr, /nothing was committed/);
+  assert.equal(git("log", "--format=%s", "-1"), "The instance\n");
+  fs.writeFileSync(vision, before.replace("One paragraph stating", "A paragraph stating"));
+  git("add", "model/vision.md");
+  const passed = commit("A plainer vision");
+  assert.equal(passed.status, 0, passed.stdout + passed.stderr);
+  assert.equal(git("log", "--format=%s", "-1"), "A plainer vision\n");
+});
+
+// A repository on the git gate with the real hooks and the real CLI, offline: its default branch
+// is main, set in its own config, and every commit runs the hooks through COMPANYGRAPH_CLI.
+function gatedRepository(make) {
+  const root = temp();
+  const git = (...args) => execFileSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", ...args], { cwd: root, encoding: "utf8" });
+  const commit = (message) => spawnSync("git", ["-c", "user.name=R", "-c", "user.email=r@example.invalid", "commit", "-q", "-m", message],
+    { cwd: root, encoding: "utf8", env: { ...process.env, COMPANYGRAPH_CLI: cli } });
+  initRepository(root, ["-b", "main"]);
+  git("config", "init.defaultBranch", "main");
+  run(make(root));
+  git("add", "-A");
+  const first = commit("The start");
+  assert.equal(first.status, 0, first.stdout + first.stderr);
+  return { root, git, commit };
+}
+
+test("an adopted repository on the git gate, with no model for ids to hold, commits a second time", () => {
+  const { root, git, commit } = gatedRepository((root) => ["adopt", root, "--gate", "git"]);
+  fs.writeFileSync(path.join(root, "notes.md"), "# Notes\n");
+  git("add", "notes.md");
+  const second = commit("Some notes");
+  assert.equal(second.status, 0, second.stdout + second.stderr);
+  assert.equal(git("log", "--format=%s", "-1"), "Some notes\n");
+});
+
+test("adopt on the git gate does not say ids runs, and init does", () => {
+  const adopted = temp();
+  initRepository(adopted);
+  const said = run(["adopt", adopted, "--gate", "git"]);
+  assert.match(said, /every commit runs check and pins\.json's verify first/);
+  const instance = temp();
+  initRepository(instance);
+  assert.match(run(["init", instance, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /every commit runs check, ids --range and pins\.json's verify first/);
+});
+
+test("on a feature branch an id the branch introduced can still be fixed, and on main a committed id cannot change", () => {
+  const { root, git, commit } = gatedRepository((root) => ["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const page = path.join(root, "model/values/candor.md");
+  const value = (id) => `---\nid: ${id}\nsource: Local\n---\n\n# Candor\n\n> We say what we see.\n\n## In practice\n\nA review names the fault it found.\n`;
+  const first = run(["id"]).trim(), second = run(["id"]).trim();
+  git("checkout", "-q", "-b", "candor");
+  fs.writeFileSync(page, value(first));
+  git("add", "model/values/candor.md");
+  const added = commit("Candor");
+  assert.equal(added.status, 0, added.stdout + added.stderr);
+  fs.writeFileSync(page, value(second));
+  git("add", "model/values/candor.md");
+  const fixed = commit("Candor's id fixed before it lands");
+  assert.equal(fixed.status, 0, fixed.stdout + fixed.stderr);
+  git("checkout", "-q", "main");
+  git("merge", "-q", "--ff-only", "candor");
+  fs.writeFileSync(page, value(first));
+  git("add", "model/values/candor.md");
+  const refused = commit("Candor's id moved after it landed");
+  assert.notEqual(refused.status, 0, refused.stdout + refused.stderr);
+  assert.ok(refused.stderr.includes(second), refused.stderr);
+  assert.match(refused.stderr, /nothing was committed/);
+});
+
+test("upgrade --dry-run names a gate hook it leaves because it was edited, for an instance and an adopted repository", () => {
+  for (const make of [(root) => ["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"], (root) => ["adopt", root, "--gate", "git"]]) {
+    const root = temp();
+    initRepository(root);
+    run(make(root));
+    fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+    // Something for the dry run to plan, so it does not stop at nothing to do.
+    fs.rmSync(path.join(root, "pins.json"));
+    const said = run(["upgrade", root, "--dry-run"]);
+    assert.match(said, /write {3}pins\.json/);
+    assert.match(said, /not replaced, since it was edited: \.companygraph\/hooks\/pre-commit/);
+  }
+});
+
+test("a plain upgrade brings a pre-commit hook v0.83.0 wrote to this release", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, PAST_GATE_HOOKS[0]);
+  const said = run(["upgrade", root]);
+  assert.match(said, /brought to this release: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), GATE_HOOK);
+  if (process.platform !== "win32") assert.equal(fs.statSync(hook).mode & 0o111, 0o111);
+});
+
+test("a plain upgrade leaves an edited pre-commit hook as it is, and says why", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  const hook = path.join(root, ".companygraph/hooks/pre-commit");
+  fs.writeFileSync(hook, `${PAST_GATE_HOOKS[0]}# mine\n`);
+  const said = run(["upgrade", root]);
+  assert.match(said, /not replaced, since it was edited: \.companygraph\/hooks\/pre-commit/);
+  assert.equal(fs.readFileSync(hook, "utf8"), `${PAST_GATE_HOOKS[0]}# mine\n`);
+});
+
+test("init --gate git in a folder without git is refused, and --gate none says nothing gates it", () => {
+  const refused = spawnSync(process.execPath, [cli, "init", temp(), "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /not a git repository/);
+  const root = temp();
+  const said = run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "none"]);
+  assert.match(said, /nothing gates this folder/);
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks")));
+  assert.ok(!fs.existsSync(path.join(root, ".github")));
+});
+
+test("upgrade --gate git moves an instance from the workflow to the hooks", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
+  assert.ok(!fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate, "git");
+});
+
+test("upgrade --gate git leaves a hooks folder of the repository's own in charge, and says so", () => {
+  const root = temp();
+  initRepository(root);
+  run(["adopt", root]);
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /core\.hooksPath is hooks here/);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), "hooks");
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+});
+
+test("upgrade --gate moves an adopted repository to none and back to github, naming what it removed", () => {
+  const root = temp();
+  initRepository(root);
+  run(["adopt", root, "--gate", "git"]);
+  const none = run(["upgrade", root, "--gate", "none"]);
+  assert.match(none, /removed, since the gate moved: \.companygraph\/hooks\/pre-commit, \.companygraph\/hooks\/pre-merge-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  run(["upgrade", root, "--gate", "github"]);
+  assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+  if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  // github is the default, and a manifest on it carries no gate at all.
+  assert.equal(JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8")).gate ?? "github", "github");
+});
+
+test("an edited gate hook stops a move by name, and --force removes it and says so", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+  const refused = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "github"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /\.companygraph\/hooks\/pre-commit/);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  const said = run(["upgrade", root, "--gate", "github", "--force"]);
+  assert.match(said, /removed, as --force asked: \.companygraph\/hooks\/pre-commit$/m);
+  // A forced hook is named once, under --force, and not again as an ordinary removal.
+  assert.match(said, /removed, since the gate moved: \.companygraph\/hooks\/pre-merge-commit$/m);
+  assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.ok(fs.existsSync(path.join(root, ".github/workflows/companygraph.yml")));
+});
+
+// A move onto github from none writes the seat hook, which git ignores until it is executable and
+// core.hooksPath names its folder; the move does both, for an instance and an adopted repository.
+for (const [kind, make] of [
+  ["an instance", (root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "none"])],
+  ["an adopted repository", (root) => run(["adopt", root, "--gate", "none"])],
+]) {
+  test(`upgrade --gate github from none puts the seat hook in use, for ${kind}`, () => {
+    const root = temp();
+    initRepository(root);
+    make(root);
+    assert.ok(!fs.existsSync(path.join(root, ".companygraph/hooks/commit-msg")));
+    const said = run(["upgrade", root, "--gate", "github"]);
+    assert.match(said, /the commit-msg hook is in use/);
+    if (process.platform !== "win32") assert.equal(fs.statSync(path.join(root, ".companygraph/hooks/commit-msg")).mode & 0o111, 0o111);
+    assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: root, encoding: "utf8" }).trim(), ".companygraph/hooks");
+  });
+}
+
+test("init --gate git of a folder not made yet is in git when the folder above it is, and refused where it is not", () => {
+  const repository = temp();
+  initRepository(repository);
+  const root = path.join(repository, "acme");
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  assert.equal(execFileSync("git", ["config", "core.hooksPath"], { cwd: repository, encoding: "utf8" }).trim(), "acme/.companygraph/hooks");
+  const outside = path.join(temp(), "acme");
+  const refused = spawnSync(process.execPath, [cli, "init", outside, "--name", "Acme", "--agent", "claude", "--gate", "git"], { encoding: "utf8" });
+  assert.notEqual(refused.status, 0);
+  assert.match(refused.stderr, /not a git repository/);
+  assert.ok(!fs.existsSync(outside));
+});
+
+// AGENTS.md is the instance's own and no upgrade rewrites it, so after a gate move its sentence
+// about what checks the repository still names the old gate; the move says so, and quotes the
+// sentence init writes for the new one, and a run that moves no gate says nothing of it.
+test("upgrade --gate names AGENTS.md's sentence as the instance's to update, quoting the new gate's", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  const before = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /AGENTS\.md is this instance's own and was not rewritten/);
+  assert.ok(said.includes("checked on every commit by the pre-commit hook in `.companygraph/hooks/`"), said);
+  assert.ok(said.includes("then `ids --range` from where the branch left the default branch"), said);
+  assert.equal(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8"), before);
+  const again = spawnSync(process.execPath, [cli, "upgrade", root, "--gate", "git"], { encoding: "utf8" });
+  assert.doesNotMatch(again.stdout, /AGENTS\.md/);
+});
+
+test("init --gate git under a hooks folder of the repository's own does not claim every commit runs check", () => {
+  const root = temp();
+  initRepository(root);
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  assert.match(said, /core\.hooksPath is hooks here/);
+  assert.doesNotMatch(said, /every commit runs check/);
+});
+
+test("adopt says the seat hook lets every commit through on the git gate as on github, and not on none", () => {
+  for (const gate of ["github", "git"]) {
+    const root = temp();
+    initRepository(root);
+    assert.match(run(["adopt", root, "--gate", gate]), /lets every commit through/, gate);
+  }
+  const root = temp();
+  initRepository(root);
+  assert.doesNotMatch(run(["adopt", root, "--gate", "none"]), /lets every commit through/);
+});
+
+// A move to the git gate removes the workflow, so where git does not read the hooks it wrote
+// nothing gates the repository at all, and saying only that the hooks are not in use undersells it.
+const UNGATED = /nothing gates this repository until git reads these hooks: point core\.hooksPath at \.companygraph\/hooks, or call them from the repository's own hooks/;
+
+test("init and adopt --gate git under a hooks folder of the repository's own warn that nothing gates it", () => {
+  for (const make of [(root) => run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), (root) => run(["adopt", root, "--gate", "git"])]) {
+    const root = temp();
+    initRepository(root);
+    execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+    assert.match(make(root), UNGATED);
+  }
+  // Where git reads them, there is nothing to warn of.
+  const read = temp();
+  initRepository(read);
+  assert.doesNotMatch(run(["init", read, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]), /nothing gates/);
+});
+
+test("upgrade --gate git under a hooks folder of the repository's own warns that nothing gates it, since the workflow is gone", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude"]);
+  execFileSync("git", ["config", "core.hooksPath", "hooks"], { cwd: root });
+  const said = run(["upgrade", root, "--gate", "git"]);
+  assert.match(said, /removed, since the gate moved: \.github\/workflows\/companygraph\.yml/);
+  assert.match(said, UNGATED);
+  // Real hooks in the default folder keep git from reading these as well.
+  const other = temp();
+  initRepository(other);
+  run(["adopt", other]);
+  execFileSync("git", ["config", "--unset", "core.hooksPath"], { cwd: other });
+  const hooksDir = execFileSync("git", ["rev-parse", "--git-path", "hooks"], { cwd: other, encoding: "utf8" }).trim();
+  fs.writeFileSync(path.join(other, hooksDir, "pre-commit"), "#!/bin/sh\nexit 0\n", { mode: 0o755 });
+  assert.match(run(["upgrade", other, "--gate", "git"]), UNGATED);
+});
+
+test("upgrade --dry-run --force names the edited gate hooks --force would remove anyway", () => {
+  const root = temp();
+  initRepository(root);
+  run(["init", root, "--here", "--name", "Acme", "--agent", "claude", "--gate", "git"]);
+  fs.appendFileSync(path.join(root, ".companygraph/hooks/pre-commit"), "# mine\n");
+  const said = run(["upgrade", root, "--gate", "github", "--force", "--dry-run"]);
+  assert.match(said, /^ {2}remove {2}\.companygraph\/hooks\/pre-commit, edited since this tooling wrote it, which --force removes anyway$/m);
+  assert.match(said, /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit$/m);
+  assert.ok(fs.existsSync(path.join(root, ".companygraph/hooks/pre-commit")));
+  const adopted = temp();
+  initRepository(adopted);
+  run(["adopt", adopted, "--gate", "git"]);
+  fs.appendFileSync(path.join(adopted, ".companygraph/hooks/pre-merge-commit"), "# mine\n");
+  assert.match(run(["upgrade", adopted, "--gate", "none", "--force", "--dry-run"]), /^ {2}remove {2}\.companygraph\/hooks\/pre-merge-commit, edited since this tooling wrote it, which --force removes anyway$/m);
+});
+
+test("upgrade's help says --force also removes edited gate hooks", () => {
+  assert.match(run(["--help"]), /--force[^\n]*removes edited gate hooks/);
+});
+
+test("check fails on a manifest gate that is no gate, naming it and the three, for an instance and an adopted repository", () => {
+  const root = temp();
+  run(["init", root, "--name", "Acme", "--agent", "claude", "--gate", "none"]);
+  assert.equal(spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" }).status, 0);
+  const manifestPath = path.join(root, ".companygraph/manifest.json");
+  fs.writeFileSync(manifestPath, JSON.stringify({ ...JSON.parse(fs.readFileSync(manifestPath, "utf8")), gate: "gti" }, null, 2) + "\n");
+  const result = spawnSync(process.execPath, [cli, "check", root], { encoding: "utf8" });
+  assert.equal(result.status, 1);
+  assert.match(result.stderr, /\.companygraph\/manifest\.json: names gti as its gate, and the gates are github, git and none/);
+  const adopted = temp();
+  initRepository(adopted);
+  run(["adopt", adopted]);
+  const at = path.join(adopted, ".companygraph/manifest.json");
+  fs.writeFileSync(at, JSON.stringify({ ...JSON.parse(fs.readFileSync(at, "utf8")), gate: "gti" }, null, 2) + "\n");
+  const said = spawnSync(process.execPath, [cli, "check", adopted], { encoding: "utf8" });
+  assert.equal(said.status, 1);
+  assert.match(said.stderr, /names gti as its gate/);
+});
+
+test("the menu says Hold a repository writes what the chosen gate writes", () => {
+  const listed = spawnSync(process.execPath, [cli, "menu"], { input: "", encoding: "utf8" }).stdout;
+  assert.match(listed, /Hold a repository\s+a site or service with no model: the form check, and the workflow or hooks the chosen gate writes/);
+  assert.doesNotMatch(listed, /its workflow and the seat hook/);
 });

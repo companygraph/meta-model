@@ -3,7 +3,11 @@
 // against, and every rule the spec names has a fixture that breaks it.
 import test from "node:test";
 import assert from "node:assert/strict";
-import { parseInstance, parseSchemas, declarationOf, CORE_LABEL } from "../lib/instance.mjs";
+import fs from "node:fs";
+import path from "node:path";
+import { fileURLToPath } from "node:url";
+import { parseInstance, parseSchemas, declarationOf, constraintsOf, CORE_LABEL, ownerTypesOf, rowScope, resolveRow } from "../lib/instance.mjs";
+import { exampleSchemas } from "./example.mjs";
 
 const valid = new Map([
   ["README.md", "# Example instance\n\nIgnored: a README is never an entity.\n"],
@@ -80,6 +84,7 @@ const schemas = new Map([
              ["organization", "ref? → identity"], ["skills", "array of ref → skill"]],
     tables: { References: [["What", "string"], ["URL", "string"]] },
     grouped: { Achievements: ["Kind", "ref → achievement-kind"] },
+    owner: "profile",
   })],
 ]);
 
@@ -115,6 +120,19 @@ test("an entity carries a stamp of its kind and period, and one without either c
   assert.equal("stamp" in entities.find((e) => e.id === "skills/java-programming"), false);
 });
 
+// A temporary group carries a kind and a start too, and its kind is a group kind: a renderer
+// that translates a stamp's kind against the experience kinds must never meet one.
+test("a period stamp carries a kind only for an experience", () => {
+  const s = new Map(schemas);
+  s.set("group-kind-schema.md", schema("group-kind"));
+  s.set("group-schema.md", schema("group", { fields: [["kind", "ref → group-kind"], ["start", "date"], ["end", "date"]] }));
+  const files = new Map(valid);
+  files.set("group-kinds/team.md", "# Team\n\n> A team.\n");
+  files.set("groups/checkout.md", "---\nkind: Team\nstart: 2026-03\n---\n\n# Checkout\n\n> Ships the checkout.\n");
+  const g = parseInstance(files, { schemas: s }).entities.find((e) => e.type === "group");
+  assert.deepEqual(g.stamp, { kind: null, start: "2026-03", end: null });
+});
+
 test("an open period stamps a null end, and a one-off stamps end equal to start", () => {
   const files = new Map(valid);
   files.set("experience-kinds/role.md", "# Role\n\n> A position held.\n\n## What it means\n\nText.\n");
@@ -126,6 +144,20 @@ test("an open period stamps a null end, and a one-off stamps end equal to start"
     "---\nkind: Role\nstart: 2012-05-04\nend: 2012-05-04\n---\n\n# A talk\n\n> One day.\n");
   assert.deepEqual(parseInstance(files, { schemas }).entities.find((e) => e.type === "experience").stamp,
                    { kind: "Role", start: "2012-05-04", end: "2012-05-04" });
+});
+
+// A decision carries a `kind` too, a decision kind, and no period. The stamp is a period's:
+// a renderer translates its kind against the experience kinds, so a kind alone is not a stamp.
+test("a decision, which carries a kind but no period, carries no stamp", () => {
+  const files = new Map(valid);
+  files.set("decision-kinds/architecture.md", "# Architecture\n\n> How it is built.\n\n## What it means\n\nText.\n");
+  files.set("decisions/2022-billing.md",
+    "---\nkind: Architecture\ndecided: 2022-01\n---\n\n# Billing leaves the monolith\n\n> The call.\n");
+  const withDecisions = new Map(schemas);
+  withDecisions.set("decision-kind-schema.md", schema("decision-kind"));
+  withDecisions.set("decision-schema.md", schema("decision", { fields: [["kind", "ref → decision-kind"], ["decided", "date"]] }));
+  const { entities } = parseInstance(files, { schemas: withDecisions });
+  assert.equal("stamp" in entities.find((e) => e.type === "decision"), false);
 });
 
 test("types come from folders, singular by R7, with their owner", () => {
@@ -145,7 +177,7 @@ test("an entity is its H1, tagline, fields, sections and path; a README is not o
   assert.equal(entities.length, 6);
   const java = entities.find(e => e.id === "skills/java-programming");
   assert.deepEqual(java, {
-    id: "skills/java-programming", type: "skill", name: "Java Programming",
+    id: "skills/java-programming", address: "skills/java-programming", type: "skill", name: "Java Programming",
     tagline: "JVM services.", fields: { group: "Programming Languages" },
     sections: [{ heading: "In practice", text: "Reading the stack trace.", tables: [] }],
     owner: null, path: "skills/java-programming.md",
@@ -438,6 +470,36 @@ test("a ref → cell in a column table is an edge via Section.Column; the Owner 
     { from: "core/experience", to: "core/profile", via: "owner", attrs: {} });
 });
 
+const SKILL_ID = "0198f2a4-6c1e-7b3d-9a52-3e8f1c7d4b60";
+const stamped = () => {
+  const withId = new Map(core);
+  withId.set("skill-schema.md", `---\nid: ${SKILL_ID}\n---\n\n${core.get("skill-schema.md")}`);
+  return withId;
+};
+
+test("a schema that carries an id leaves the parse by it, and keeps core/<type> as its address", () => {
+  const { entities, edges } = parseSchemas(stamped());
+  const skill = entities.find((e) => e.address === "core/skill");
+  assert.equal(skill.id, SKILL_ID);
+  assert.equal(skill.name, "Skill Schema");
+  const source = entities.find((e) => e.address === "core/source");
+  assert.equal(source.id, "core/source", "a schema with no id keeps core/<type> as its id");
+  assert.deepEqual(edges.find((x) => x.from === "core/experience" && x.via === "skills"),
+    { from: "core/experience", to: SKILL_ID, via: "skills", attrs: { type: "array of ref → skill" } });
+  assert.ok(entities.every((e) => e.address === `core/${e.path.replace(/-schema\.md$/, "")}`));
+});
+
+test("an instance parses against schemas that carry ids exactly as against ones that do not", () => {
+  const plain = parseInstance(valid, { schemas });
+  const withIds = new Map(schemas);
+  let n = 10; // two hex digits, one per schema, so no two share an id
+  for (const [file, text] of schemas)
+    if (file.endsWith("-schema.md")) withIds.set(file, `---\nid: ${SKILL_ID.slice(0, -2)}${n++}\n---\n\n${text}`);
+  const read = parseInstance(valid, { schemas: withIds });
+  assert.deepEqual(read.entities, plain.entities);
+  assert.deepEqual(read.edges, plain.edges);
+});
+
 test("a ref → a type with no schema is an R4 error", () => {
   const broken = new Map(core);
   broken.set("skill-schema.md", broken.get("skill-schema.md").replace("ref → source", "ref → team"));
@@ -486,6 +548,21 @@ test("a string field carrying a canonical name draws nothing", () => {
   const { edges, entities } = parseInstance(files, { schemas });
   assert.equal(edges.filter((x) => x.via === "location").length, 0);
   assert.equal(entities.find((e) => e.name === "Mira Halvorsen").fields.location, "Bergen");
+});
+
+// YAML reads quotes as the value's delimiters, and an editor writes them around a value with a
+// colon or a leading symbol, so the parser reads the value inside them, as the checks do: a
+// quoted name resolves as the bare one, and a scalar keeps no quote.
+test("a value in quotes is the value inside them, scalar and list item alike", () => {
+  const files = new Map(valid);
+  files.set("profiles/mira-halvorsen/experiences/2022-beacon-systems.md",
+    "---\nstart: \"2022-02\"\norganization: 'Beacon Systems'\nskills:\n  - \"Java Programming\"\n---\n\n# Splitting the billing domain\n\n> Ongoing.\n\n## Achievements\n\n- Split one service.\n");
+  const { edges, entities } = parseInstance(files, { schemas });
+  const exp = entities.find((e) => e.type === "experience");
+  assert.equal(exp.fields.start, "2022-02");
+  assert.equal(exp.fields.organization, "Beacon Systems");
+  assert.deepEqual(exp.fields.skills, ["Java Programming"]);
+  assert.equal(edges.filter((x) => x.from === exp.id && x.via === "skills").length, 1);
 });
 
 // `ref? → identity` resolves against identities and nothing else. A value that names a profile
@@ -787,7 +864,7 @@ test("a heading declared qualifier resolves and draws no edge", () => {
 // it reads a Type cell through the one reader and never through a copy of DECLARATION.
 test("declarationOf is the one reader of a Type cell, and a consumer may call it", () => {
   assert.deepEqual(declarationOf("ref → source"), { form: "ref", target: "source" });
-  assert.deepEqual(declarationOf("`array of ref → role`"), { form: "ref", target: "role" });
+  assert.deepEqual(declarationOf("`array of ref → seat`"), { form: "ref", target: "seat" });
   assert.deepEqual(declarationOf("ref? → identity"), { form: "ref?", target: "identity" });
   assert.deepEqual(declarationOf("qualifier → proficiency-level"), { form: "qualifier", target: "proficiency-level" });
   assert.equal(declarationOf("string"), null);
@@ -811,15 +888,22 @@ test("a blank qualifier cell is not resolved, and keeps its empty value", () => 
   });
 });
 
-// The reference column is not softened with it. A row that names no skill is the R4 it always
-// was, because moving that error out of the parser would buy nothing: the row draws no edge
-// and the page has said a thing it cannot mean.
-test("a blank reference cell is still an R4 error", () => {
+// The reference column reads a blank cell the same way: nothing to resolve, so the row draws
+// no edge, and a row beside it that does fill the column still does. Whether the column was
+// allowed to be blank at all is the checker's Required rule, not the parser's — a blank cell
+// in a column the schema requires is `lib/checks.mjs`'s "row has no Skill" (see verify/
+// instance-checks.test.mjs), never this R4. A cell that is not blank and still names nothing
+// is R4 as it always was, whatever the column's Required says ("a row whose reference column
+// names nothing is an R4 error", above, and "a Phases row that names no phase…", below).
+test("a blank reference cell draws no edge, and a filled row beside it still does", () => {
   const files = new Map(valid);
   files.set("profiles/mira-halvorsen/mira-halvorsen.md",
     "---\nemail: mira@example.invalid\n---\n\n# Mira Halvorsen\n\n> Backend engineer.\n\n## Skills\n\n" +
-    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Owned it. |\n");
-  assert.throws(() => parseInstance(files, { schemas }), /^Error: R4: "" in .* names no skill/);
+    "| Skill | Level | Evidence |\n| --- | --- | --- |\n|  | Proficient | Nothing to resolve. |\n" +
+    "| Java Programming | Proficient | Owned it. |\n");
+  const { edges } = parseInstance(files, { schemas });
+  const skills = edges.filter((x) => x.via === "Skills.Skill" && x.from === "profiles/mira-halvorsen");
+  assert.deepEqual(skills.map((x) => x.to), ["skills/java-programming"]);
 });
 
 // A process names its phases in a table whose column is declared `ref → phase`, where it used
@@ -860,6 +944,34 @@ test("a Phases row that names no phase is an R4, as any declared reference is", 
     ["phase-schema.md", schema("phase", { location: "processes/<process>/phases/*.md", owner: "process" })],
   ]);
   assert.throws(() => parseInstance(files, { schemas }), /R4: "Specfy"/);
+});
+
+test("a Type cell reading `ref → by <Column> in <Owner>` is a reference whose type is its row's", () => {
+  assert.deepEqual(declarationOf("ref → by Type in Owner"), { form: "ref", target: null, by: "Type", in: "Owner" });
+  assert.deepEqual(declarationOf("`ref → by Type`"), { form: "ref", target: null, by: "Type", in: null });
+  // Every other form keeps the shape it had, so nothing reading `{ form, target }` changes.
+  assert.deepEqual(declarationOf("ref → skill"), { form: "ref", target: "skill" });
+  assert.deepEqual(declarationOf("qualifier → proficiency-level"), { form: "qualifier", target: "proficiency-level" });
+});
+
+test("a schema declaring a `by` column is read, and the vocabulary graph draws no type edge for it", () => {
+  const files = new Map([
+    ["value-schema.md", schema("value")],
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"], ["For", "string"]] } })],
+  ]);
+  const { edges } = parseSchemas(files);
+  assert.deepEqual(edges.filter((e) => e.from === "core/question"), []);
+});
+
+test("constraints name a `by` reference by its columns and no target", () => {
+  const files = new Map([
+    ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"]] } })],
+  ]);
+  const ref = constraintsOf(files).question.references.find((r) => r.via === "Rests on.Entity");
+  assert.equal(ref.target, null);
+  assert.equal(ref.by, "Type");
+  assert.equal(ref.in, "Owner");
+  assert.equal(ref.form, "ref");
 });
 
 // A name of an owned type identifies an entity within its owner (R2), and a reference to one is
@@ -966,3 +1078,333 @@ test("a phase heading that names no track of its own process is an R4 that says 
   files.set("processes/hiring/phases/screen.md", "# Screen\n\n> First.\n\n## Activities\n\n### Docs\n\n1. Read it.\n");
   assert.throws(() => parseInstance(files, { schemas: tracking() }), /R4: "Docs" in .*screen\.md "## Activities" names no track of processes\/hiring/);
 });
+
+// A question's rows name entities of any type, the type read from the row and, where the type
+// is owned, the owner too (R4, R9). The fixtures reuse `valid` and `schemas` above.
+const questionSchemas = new Map([...schemas,
+  ["question-schema.md", schema("question", { tables: { "Rests on": [["Type", "string"], ["Entity", "ref → by Type in Owner"], ["Owner", "string"], ["For", "string"]] } })]]);
+const question = (rows) => ["# Who splits the billing domain?", "", "> Look at the period and the value behind it.", "",
+  ...(rows ? ["## Rests on", "", "| Type | Entity | Owner | For |", "| --- | --- | --- | --- |", ...rows.map((r) => `| ${r.join(" | ")} |`), ""] : [])].join("\n");
+const withQuestion = (rows) => new Map([...valid, ["questions/who-splits-billing.md", question(rows)]]);
+
+test("a row typed by its own cells draws its edge, within the owner it names", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["value", "Craftsmanship", "", "why"],
+    ["`experience`", "Splitting the billing domain", "Mira Halvorsen", "the period"],
+  ]), { schemas: questionSchemas });
+  const drawn = edges.filter((e) => e.via === "Rests on.Entity");
+  assert.deepEqual(drawn.map((e) => e.to).sort(), ["profiles/mira-halvorsen/experiences/2022-beacon-systems", "values/craftsmanship"]);
+  const period = drawn.find((e) => e.to.startsWith("profiles/"));
+  assert.equal(period.from, "questions/who-splits-billing");
+  assert.equal(period.attrs.Owner, "Mira Halvorsen");
+  assert.equal(period.attrs.For, "the period");
+});
+
+test("a `by` reference's type and owner cells reach attrs stripped of the backticks they are written with", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["`experience`", "Splitting the billing domain", "`Mira Halvorsen`", "the period"],
+  ]), { schemas: questionSchemas });
+  const period = edges.find((e) => e.via === "Rests on.Entity");
+  assert.equal(period.attrs.Type, "experience");
+  assert.equal(period.attrs.Owner, "Mira Halvorsen");
+});
+
+test("a question with no Rests on draws nothing and reads", () => {
+  const { entities, edges } = parseInstance(withQuestion(null), { schemas: questionSchemas });
+  assert.ok(entities.some((e) => e.id === "questions/who-splits-billing"));
+  assert.deepEqual(edges.filter((e) => e.from === "questions/who-splits-billing"), []);
+});
+
+test("a type cell naming no type is R4", () => {
+  assert.throws(() => parseInstance(withQuestion([["valu", "Craftsmanship", "", ""]]), { schemas: questionSchemas }), /R4: .*"valu", which no schema declares/);
+});
+
+test("an owned type with no owner cell is R4, naming the owner type", () => {
+  assert.throws(() => parseInstance(withQuestion([["experience", "Splitting the billing domain", "", ""]]), { schemas: questionSchemas }), /R4: .*which a profile owns, and the row names no profile/);
+});
+
+test("an unowned type with an owner cell is R4", () => {
+  assert.throws(() => parseInstance(withQuestion([["value", "Craftsmanship", "Mira Halvorsen", ""]]), { schemas: questionSchemas }), /R4: .*nothing owns/);
+});
+
+test("an owned name is looked for only within the owner the row names", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Tomas Reyes", ""]]);
+  files.set("profiles/tomas-reyes/tomas-reyes.md", "# Tomas Reyes\n\n> Designer.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }), /R4: "Splitting the billing domain" .*names no experience of profiles\/tomas-reyes/);
+});
+
+// A blank Entity cell names nothing even with its Type cell filled: `named` is empty before
+// `resolveBy` is ever called, so the row parses without throwing and draws no edge, while a
+// filled row beside it still draws its own.
+test("a blank Entity cell draws no edge, with its Type cell filled, and a filled row beside it still draws its own", () => {
+  const { edges } = parseInstance(withQuestion([
+    ["value", "", "", ""],
+    ["value", "Craftsmanship", "", "why"],
+  ]), { schemas: questionSchemas });
+  const drawn = edges.filter((e) => e.via === "Rests on.Entity");
+  assert.deepEqual(drawn.map((e) => e.to), ["values/craftsmanship"]);
+});
+
+// `resolveBy`'s rule — what a `by <Column> in <Owner>` row may name, and which one of those a
+// given name is — is exported so a consumer besides the parser (the Obsidian plugin, offering
+// completion for the same rows) reads it rather than copies it. `ownerTypesOf` is the map
+// `parseInstance` already built inline, from the schemas' `**Owner:**` lines (R10); `rowScope`
+// is what a row's own `Type`/`Owner` cells narrow the model down to before any name is chosen;
+// `resolveRow` adds the name.
+test("ownerTypesOf reads the owner map parseInstance derives from the schemas' Owner lines", () => {
+  const owners = ownerTypesOf(questionSchemas);
+  assert.equal(owners.get("experience"), "profile");
+  assert.equal(owners.has("value"), false);
+});
+
+test("rowScope for an unowned type is every entity of it", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const scope = rowScope(entities, schemas, { type: "value", owner: "" });
+  assert.deepEqual(scope.within.map((e) => e.id), ["values/craftsmanship"]);
+});
+
+test("rowScope for an owned type is the owner's own, not another owner's", () => {
+  const files = new Map(valid);
+  files.set("profiles/tomas-reyes/tomas-reyes.md", "# Tomas Reyes\n\n> Designer.\n");
+  files.set("profiles/tomas-reyes/experiences/2023-freelance.md",
+    "---\nstart: 2023-01\norganization: Beacon Systems\n---\n\n# Freelance illustration\n\n> Ongoing.\n");
+  const { entities } = parseInstance(files, { schemas });
+  const scope = rowScope(entities, schemas, { type: "experience", owner: "Mira Halvorsen" });
+  assert.deepEqual(scope.within.map((e) => e.id), ["profiles/mira-halvorsen/experiences/2022-beacon-systems"]);
+});
+
+// `rowScope` and `resolveRow` share one error shape: `{ error, subject }`, `error` the sentence's
+// text and `subject` which of the caller's own values it quotes ("value", the name being
+// resolved, or "owner", the row's own owner cell, for the one case that fails before a name is
+// even looked at) — never text with the value already folded in, so a caller assembles the final
+// sentence the same way whichever function it called.
+test("rowScope's and resolveRow's errors are both { error, subject }, R4's text minus the value and where", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "valu", owner: "" }),
+                    { error: 'is of type "valu", which no schema declares', subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "value", owner: "Mira Halvorsen" }),
+                    { error: 'is a value, which nothing owns, and its row names "Mira Halvorsen" as its owner', subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "" }),
+                    { error: "is a experience, which a profile owns, and the row names no profile", subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "Nobody" }),
+                    { error: "names no profile", subject: "owner" });
+  assert.deepEqual(resolveRow(entities, schemas, { type: "experience", name: "x", owner: "Nobody" }),
+                    { error: "names no profile", subject: "owner" });
+});
+
+// A missing or blank Type cell used to fall into the "which no schema declares" case, reading as
+// `is of type "undefined", which no schema declares` or the same with `""` — the row has no type
+// to complain about, not a wrong one, and gets its own text; a row naming an actually-wrong type
+// (`"valu"`, above) keeps the R4 text it always had.
+test("a row with no type in it fails with its own text, not \"is of type undefined\"", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "", owner: "" }), { error: "has no type in its row", subject: "value" });
+  assert.deepEqual(rowScope(entities, schemas, {}), { error: "has no type in its row", subject: "value" });
+});
+
+test("a blank Type cell reads as R4's new text through the parser too", () => {
+  assert.throws(() => parseInstance(withQuestion([["", "Craftsmanship", "", ""]]), { schemas: questionSchemas }),
+                /R4: "Craftsmanship" .*has no type in its row/);
+});
+
+test("resolveRow resolves the same entity whether entities carry a parser's id or only { type, name, path }", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const byId = resolveRow(entities, schemas, { type: "experience", name: "Splitting the billing domain", owner: "Mira Halvorsen" });
+  assert.equal(byId.entity.id, "profiles/mira-halvorsen/experiences/2022-beacon-systems");
+
+  const pluginEntities = entities.map((e) => ({ type: e.type, name: e.name, path: "model/" + e.path }));
+  const byPath = resolveRow(pluginEntities, schemas, { type: "experience", name: "Splitting the billing domain", owner: "Mira Halvorsen" });
+  assert.deepEqual(byPath.entity, { type: "experience", name: "Splitting the billing domain",
+                                     path: "model/profiles/mira-halvorsen/experiences/2022-beacon-systems.md" });
+});
+
+// An owner named by a plain file — `profiles/ana.md`, no folder of her own beside it — owns
+// nothing: nothing can sit under a file. The path-based scope used to read `dirname("profiles/
+// ana.md")` as `"profiles"`, which is every profile's experiences, not Ana's none, and drew an
+// edge to Mira's experience where the base (id-based) scoping refused with R4. Ana's name still
+// resolves as an owner — she is a profile — she just owns no experiences.
+test("an owner written as a plain file owns nothing, even though its name resolves", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Ana", ""]]);
+  files.set("profiles/ana.md", "# Ana\n\n> Illustrator.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }),
+                /R4: "Splitting the billing domain" .*names no experience of profiles\/ana/);
+});
+
+test("rowScope: a plain-file owner's scope is empty, not every entity under its parent folder", () => {
+  const files = new Map(valid);
+  files.set("profiles/ana.md", "# Ana\n\n> Illustrator.\n");
+  const { entities } = parseInstance(files, { schemas });
+  assert.deepEqual(rowScope(entities, schemas, { type: "experience", owner: "Ana" }), { within: [] });
+});
+
+// A plain file whose own name happens to equal its containing folder's — `profiles/profiles.md`,
+// a profile named "Pro" filed directly under `profiles/` — reads exactly like folder form to the
+// "last two segments match" check alone: the slug read off the filename ("profiles") and the
+// segment before it (also "profiles", the folder itself) coincide, though nothing really sits
+// under `profiles/profiles/`. Where the owner carries an `id` (the parser's own entities do),
+// that id is what the reading is checked against, and a plain file's id never matches its
+// directory candidate, so it is refused the same as any other plain-file owner.
+test("an owner file named after its own folder is not mistaken for folder form", () => {
+  const files = withQuestion([["experience", "Splitting the billing domain", "Pro", ""]]);
+  files.set("profiles/profiles.md", "# Pro\n\n> A profile whose file matches its folder's name.\n");
+  assert.throws(() => parseInstance(files, { schemas: questionSchemas }),
+                /R4: "Splitting the billing domain" .*names no experience of profiles\/profiles/);
+});
+
+// An id-less owner's label in "names no <type> of <owner>" is its owned folder when it is
+// folder-form — the best a caller without an id can offer, and the folder, not the file inside
+// it, is what a reader would expect an owner's own label to be.
+test("an id-less owner's label is its folder, not its own file's path", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const pluginEntities = entities.map((e) => ({ type: e.type, name: e.name, path: "model/" + e.path }));
+  assert.deepEqual(resolveRow(pluginEntities, schemas, { type: "experience", name: "Nonexistent", owner: "Mira Halvorsen" }),
+                    { error: "names no experience of model/profiles/mira-halvorsen", subject: "value" });
+});
+
+// A singular type's own root file (`identity.md`, no folder at all) owns nothing either, for the
+// same reason a plain file does: no folder sits under it.
+test("rowScope: a singular owner has no folder, so it owns nothing", () => {
+  const noteSchemas = new Map([...schemas, ["note-schema.md", schema("note", { owner: "identity" })]]);
+  const entities = [{ type: "identity", name: "Beacon Systems", path: "identity.md" }];
+  assert.deepEqual(rowScope(entities, noteSchemas, { type: "note", owner: "Beacon Systems" }), { within: [] });
+  // The owner label in the follow-up "names no <type> of <owner>" is the owner's own path,
+  // unstripped, for an id-less entity like this one — never a slice-off-the-last-character
+  // garble like "identity.m" (path.lastIndexOf("/") is -1 for a path with no "/" at all, and
+  // slicing to -1 chops one character off the whole string).
+  assert.deepEqual(resolveRow(entities, noteSchemas, { type: "note", name: "Anything", owner: "Beacon Systems" }),
+                    { error: "names no note of identity.md", subject: "value" });
+});
+
+// With `sub` set — every site passes one — the owner label in "names no <type> of <owner>" used
+// to read the owner's sub-prefixed `path` (`model/profiles/mira-halvorsen`), since that was all
+// the path-based scope had; the base read the owner's `id`, never prefixed
+// (`profiles/mira-halvorsen`). The parser's own entities carry an `id`, so the label is read from
+// it again.
+test("with `sub`, the owner label stays the owner's id, not its sub-prefixed path", () => {
+  const files = withQuestion([["experience", "Nonexistent", "Mira Halvorsen", ""]]);
+  assert.throws(() => parseInstance(files, { sub: "model/", schemas: questionSchemas }),
+                /R4: "Nonexistent" in model\/questions\/who-splits-billing\.md .*names no experience of profiles\/mira-halvorsen/);
+});
+
+// Neither `rowScope` nor `resolveRow` caches `schemas` or `entities` between calls: a caller that
+// changes `entities` between two calls — the plugin, editing the same array as someone types —
+// is read correctly on the very next call, and a `within` array is always freshly built, so a
+// caller sorting or otherwise mutating what one call returned cannot reach the next call.
+test("rowScope scans `entities` fresh on every call — a push between calls is seen", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  const before = rowScope(entities, schemas, { type: "value", owner: "" }).within.length;
+  entities.push({ type: "value", name: "Kindness", path: "values/kindness.md" });
+  const after = rowScope(entities, schemas, { type: "value", owner: "" }).within.length;
+  assert.equal(after, before + 1);
+});
+
+test("a returned `within` array is the caller's own — sorting it does not affect the next call", () => {
+  const files = new Map(valid);
+  files.set("values/discipline.md", "# Discipline\n\n> Keep the promise.\n");
+  const { entities } = parseInstance(files, { schemas });
+  const first = rowScope(entities, schemas, { type: "value", owner: "" }).within;
+  first.sort((a, b) => (a.name > b.name ? -1 : 1));
+  const second = rowScope(entities, schemas, { type: "value", owner: "" }).within;
+  assert.deepEqual(second.map((e) => e.name), ["Craftsmanship", "Discipline"]);
+});
+
+const mdFiles = (root) => {
+  const m = new Map();
+  const walk = (d) => { for (const f of fs.readdirSync(d, { withFileTypes: true })) { const p = path.join(d, f.name); if (f.isDirectory()) walk(p); else if (p.endsWith(".md")) m.set(path.relative(root, p).split(path.sep).join("/"), fs.readFileSync(p, "utf8")); } };
+  walk(root);
+  return m;
+};
+
+test("a phase's If not met row draws an edge to its phase with the outcome on it, and a stop row draws none", () => {
+  const here = path.dirname(fileURLToPath(import.meta.url));
+  const inst = parseInstance(mdFiles(path.join(here, "../example/model")), { schemas: exampleSchemas() });
+  // The example's pages carry ids (R18), so an edge names its ends by them; the phases are found
+  // by their address, the path a reader knows them by.
+  const at = (address) => inst.entities.find((e) => e.address === address).id;
+  const from = (address) => inst.edges.filter((x) => x.from === at(address) && x.via === "If not met.Leads to");
+  assert.deepEqual(from("processes/delivery/phases/build").map((x) => [x.to, x.attrs.Outcome]), [[at("processes/delivery/phases/build"), "reworked"]]);
+  assert.deepEqual(from("processes/delivery/phases/release"), []);
+});
+
+test("the export names the core its instance vendors, and null where the core carries no readable manifest", () => {
+  const withManifest = new Map([...schemas, ["manifest.json", JSON.stringify({ version: "0.46.0", shape: 3 })]]);
+  assert.equal(parseInstance(valid, { schemas: withManifest }).core, "0.46.0");
+  assert.equal(parseInstance(valid, { schemas }).core, null);
+  assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", "{ not json"]]) }).core, null);
+  assert.equal(parseInstance(valid, { schemas: new Map([...schemas, ["manifest.json", JSON.stringify({ version: 46 })]]) }).core, null);
+});
+
+// R18: an entity is handed out by the stable id its page carries, and keeps the path it sits at
+// as `address`, which is what ownership and a row's owner scope still read. A page with no id —
+// an instance on a core before R18 — is handed out by its path, as it always was. `files` is the
+// `valid` map every `skills/java-programming` case above reads.
+test("an entity with an id is handed out by it, and keeps its path as address", () => {
+  const files = valid;
+  const id = "01a04c85-bc20-7092-a266-845d81173e9f";
+  const withIdFiles = new Map([...files].map(([p, t]) => [p, p === "skills/java-programming.md" ? t.replace(/^---\n/, `---\nid: ${id}\n`) : t]));
+  const { entities, edges } = parseInstance(withIdFiles, { schemas });
+  const java = entities.find((e) => e.address === "skills/java-programming");
+  assert.equal(java.id, id);
+  assert.ok(edges.some((e) => e.to === id), "an edge to the skill lands on its stable id");
+  assert.ok(!edges.some((e) => e.to === "skills/java-programming"), "no edge still names its path");
+});
+
+test("an entity without an id is handed out by its path, as before", () => {
+  const files = valid;
+  const java = parseInstance(files, { schemas }).entities.find((e) => e.address === "skills/java-programming");
+  assert.equal(java.id, "skills/java-programming");
+});
+
+// The owned-type pair the R5 and rowScope cases above read — Mira's profile and her experience —
+// each carrying an id. Her experience's owner is her stable id, and a row naming her as owner
+// still finds the experience, since the owner's folder is read from its address, not its id.
+test("an owned entity's owner is its owner's stable id, and a row's owner scope still finds it", () => {
+  const profileId = "01a04c85-bc20-7092-a266-000000000001";
+  const experienceId = "01a04c85-bc20-7092-a266-000000000002";
+  const withIds = new Map([...valid].map(([p, t]) => [p,
+    p === "profiles/mira-halvorsen/mira-halvorsen.md" ? t.replace(/^---\n/, `---\nid: ${profileId}\n`)
+    : p === "profiles/mira-halvorsen/experiences/2022-beacon-systems.md" ? t.replace(/^---\n/, `---\nid: ${experienceId}\n`)
+    : t]));
+  const { entities, edges } = parseInstance(withIds, { schemas });
+  const experience = entities.find((e) => e.address === "profiles/mira-halvorsen/experiences/2022-beacon-systems");
+  assert.equal(experience.id, experienceId);
+  assert.equal(experience.owner, profileId);
+  assert.ok(edges.some((e) => e.from === profileId && e.via === "Skills.Skill"), "an edge from the profile leaves from its stable id");
+  assert.ok(edges.some((e) => e.from === experienceId && e.via === "skills"), "an edge from the experience leaves from its stable id");
+  const scope = rowScope(entities, schemas, { type: "experience", owner: "Mira Halvorsen" });
+  assert.deepEqual(scope.within.map((e) => e.id), [experienceId]);
+  const missing = resolveRow(entities, schemas, { type: "experience", owner: "Mira Halvorsen", name: "No such period" });
+  assert.equal(missing.error, "names no experience of profiles/mira-halvorsen");
+});
+
+test("a qualifier resolves into its row's attrs as the stable id of what it names, and the root carries its own", () => {
+  const levelId = "01a04c85-bc20-7092-a266-000000000003";
+  const rootStableId = "01a04c85-bc20-7092-a266-000000000004";
+  const withIds = new Map(valid);
+  withIds.set("proficiency-levels/proficient.md", valid.get("proficiency-levels/proficient.md").replace(/^---\n/, `---\nid: ${levelId}\n`));
+  withIds.set("identity.md", `---\nid: ${rootStableId}\n---\n\n` + valid.get("identity.md"));
+  const { edges, rootId } = parseInstance(withIds, { schemas });
+  const rows = edges.filter((e) => e.via === "Skills.Skill");
+  assert.ok(rows.some((e) => e.attrs.Level === levelId), "a row at Proficient carries the level's stable id");
+  assert.ok(!rows.some((e) => e.attrs.Level === "proficiency-levels/proficient"), "no row still carries the level's path");
+  assert.equal(rootId, rootStableId);
+});
+
+test("no entity carries translations", () => {
+  const { entities } = parseInstance(valid, { schemas });
+  assert.ok(entities.every((e) => !("translations" in e)));
+});
+
+// `## api`, `## faq`, `## how-to` are shaped like a language tag, and a parser that once cut a
+// page's language sections took such a heading for one. Nothing cuts them now; this holds that
+// the parser, and everyone downstream of it, sees such a heading exactly as an editor does.
+test("a tag-shaped heading the instance never declares as translated stays a section, with no localization.md at all", () => {
+  const files = new Map(valid);
+  const [path, text] = [...files].find(([p]) => p.startsWith("skills/"));
+  files.set(path, `${text.trimEnd()}\n\n## api\n\nHow it is called.\n`);
+  const { entities } = parseInstance(files, { schemas });
+  const skill = entities.find((e) => e.path === path);
+  assert.ok(skill.sections.some((s) => s.heading === "api"), skill.sections.map((s) => s.heading).join(", "));
+  assert.ok(!("translations" in skill));
+});
+

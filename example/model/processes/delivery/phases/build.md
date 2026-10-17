@@ -1,4 +1,5 @@
 ---
+id: 01a0a8c7-74d8-774b-ad7c-383aad1f52ec
 source: Local
 owner: Backend Engineer
 executed-by:
@@ -51,4 +52,9 @@ To leave Build, all of these hold:
 - Every review finding is resolved or recorded with a reason.
 - The branch does what the specification said, and nothing else.
 
-Where they cannot be met, the Reviewer decides whether the branch is reworked or abandoned.
+## If not met
+
+| Outcome | Leads to |
+| --- | --- |
+| reworked | Build |
+| abandoned | |

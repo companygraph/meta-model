@@ -1,11 +1,13 @@
-<!-- conventions · v1.26.0 -->
+<!-- conventions · v1.52.0 -->
 Shared conventions of the robertblust, guestgraph and companygraph organizations live in `conventions/`, vendored from robertblust/conventions at the release `conventions.json` names. Read them before writing or committing anything here.
 
 - `conventions/WRITING.md` — how we write: one voice, three registers, English and German.
 - `conventions/WORKING.md` — how we work with git and GitHub.
 - `conventions/REPOSITORIES.md` — the family: what each repository is and what pins what.
-- `conventions/WRITER.md`, `conventions/TRANSLATOR.md`, `conventions/GLOSSARY.md` — the two roles that
-  make a text, and the terms they keep.
+- `conventions/PINS.md` — what a member pins and how the family resync moves it.
+- `conventions/WRITER.md`, `conventions/TRANSLATOR.md`, `conventions/EDITOR.md`,
+  `conventions/BACKREADER.md`, `conventions/GLOSSARY.md`, `conventions/GERMAN.md` — the four roles
+  that make a text, the terms they keep and the German they write.
 
 Everything below this block is this repository's own. `sh conventions/conventions-sync check` says whether the copy matches the release, `sync` brings it to the release the pin names, and `sh conventions/conventions-check` holds this repository's own Markdown to `WRITING.md`, and `sh conventions/conventions-format` to its one form, which `fix` writes. Edit a shared file in robertblust/conventions, never here.
 <!-- end conventions -->
@@ -14,7 +16,7 @@ Everything below this block is this repository's own. `sh conventions/convention
 
 The meta-model for operating a company: core vocabulary, packs, and the conventions that make a graph of Markdown files checkable. What it is and why lives in `docs/superpowers/specs/2026-08-23-companygraph-design.md`. **Read that spec before changing anything here** — it records what was decided and, more usefully, what was rejected and why.
 
-**Status: first release out** — the person cluster in `core/`, `CONVENTIONS.md`, `example/` and `verify/check.mjs`. The roadmap on the organization profile at github.com/companygraph says what comes next; the spec here says why. A phase list copied back into this repository is the drift that rule exists to prevent, so link to it instead.
+**Status:** released and in use by real instances; `core/` lists the types and `packs/` the packs. The roadmap on the organization profile at [github.com/companygraph](https://github.com/companygraph/.github/blob/main/profile/README.md) says what comes next; the specs here say why. A phase list copied back into this repository is the drift that rule exists to prevent, so link to it instead.
 
 ## This is an extraction, not an invention
 
@@ -32,6 +34,8 @@ That is not only confidentiality — it is the design. A meta-model that carries
 
 When writing here, describe the *pattern*. "The multi-person instance keeps a thin file per person" is useful and portable. Naming the company, its file counts or its issue tracker is neither.
 
+New vocabulary, a type for core or a pack, starts with the skill `companygraph-vocabulary` in `.claude/skills/`: it keeps what a private source says in a report under the ignored `dist/`, and brings only its pattern into the spec it ends in.
+
 ## Decisions that are settled
 
 - **Schemas are Markdown, read by agents and by the checker alike.** Not a stage on the way
@@ -47,17 +51,27 @@ When writing here, describe the *pattern*. "The multi-person instance keeps a th
   carries weight before its shape is checked breaks silently. `verify` now fails loudly on
   a schema off the shape or outside the vocabulary, so R16 holds an instance to what its
   schemas declare, and the instance checks read the core the instance vendored. What a
-  script cannot read — a schema's writing rules — stays with the agent pass (R0).
+  script cannot read — what a schema's writing rules say — stays with the agent pass (R0);
+  `verify` holds only how each one opens, and a norm that needs more than one page is a check.
+- **A norm that needs more than one page is a check, not a sentence.** Writing one as a
+  writing rule cost nothing and checked nothing: thirty such rules sat in core until #254
+  moved them out, and the agent pass, reading one page at a time, could not see them. A
+  change that adds such a norm adds the instance check that holds it in the same pull
+  request; a spec that states one and plans no check says why and opens the issue the check
+  is owed under.
 - **Core defines a type; it does not oblige you to populate it.** A company of one has no
   `group`; the type stays in core, unused.
 - **A pack adds vocabulary only some kinds of company need at all** — types that are
   *absent*, not types that are optional.
 - **The repo is `meta-model`; `core` is a folder inside it.** The repo says what the
   project is, folders say how it is divided — and `core/` sits beside `packs/`, so a repo
-  named `core` would hold non-core things.
+  named `core` would hold non-core things. `packs/` holds one folder per pack, released with
+  core under one tag.
 - Resist scaffolding folders the spec has not settled — §10 still lists open questions, and
-  the roadmap adds types one slice at a time. `packs/` does not exist until a pack does.
+  the roadmap adds types one slice at a time.
 
 ## Checks
 
 Two jobs, both required by the ruleset on `main`: `verify`, this repository's own suite, and `conventions`, called from robertblust/conventions at the pinned tag and shown by GitHub as `conventions / conventions`. A third workflow, `instance-check.yml`, is required by nothing here: it is called by an instance, which is why its ref and `version` in package.json are set to the release together before tagging — the checker it runs compares its own version against the instance's pin and refuses when they differ. The prose check leaves out `.superpowers`, tooling scratch, and `docs/superpowers`, whose specs and plans quote the very words it scans for. Core's own rule R14 says what the vocabulary's spelling is; `conventions/WRITING.md` says the same for every word the family writes, and the two agree. Everything else about how to write and how to work with git is in `conventions/`.
+
+The JavaScript in `lib/` and `bin/` is the source and what runs, and its types are JSDoc in the same files. A TypeScript consumer reads the declarations `npm run build` writes from that JSDoc into `types/`, and they are committed, because a consumer takes the package from a tag and builds nothing. So a change to a type is made in the JSDoc, built, and committed with what the build wrote, and a file in `types/` is never edited by hand; `npm run build:check`, which `verify` and `windows` run before their suites, writes the declarations into a temporary folder and fails on one in `types/` that differs or that no module writes. TypeScript and Node's types are devDependencies and nothing else is: they are what that check runs on, no consumer installs them, and `instance-check.yml` installs nothing. Why the types are JSDoc rather than TypeScript source is in `docs/superpowers/specs/2026-09-30-types-from-jsdoc-design.md`.

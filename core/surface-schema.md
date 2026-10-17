@@ -1,3 +1,7 @@
+---
+id: 01a08666-4360-7bac-8ac9-4b7c234e01fc
+---
+
 # Surface Schema
 
 > Required structure for surface files.
@@ -12,6 +16,7 @@ A surface is a place the company publishes from the model. A place is published 
 
 | Field | Required | Type | Description |
 | --- | --- | --- | --- |
+| `id` | Yes | string | What identifies this entity for as long as it exists, in the format `model/identifier.md` declares (R18) |
 | `source` | Yes | ref → source | Where this page's facts are mastered — the H1 of a file in `sources/` |
 | `source-id` | No | string | The identifier this page has in its source — a record key, an entry id. Absent when the source has none, as a repository does not. |
 | `production` | Yes | enum | `built` or `written`. `built` means a script writes the surface and holds its rules; `written` means a person or an agent writes it from this file. |
@@ -27,6 +32,14 @@ A surface is a place the company publishes from the model. A place is published 
 | `## What it shows` | Yes | Bulleted. One item per unit the surface presents, naming the unit and what fills it |
 | `## Projection rules` | No | Bulleted. How the model becomes this surface: what is carried, what is left out and why. Required for a `written` surface, absent for a `built` one. |
 | `## Constraints` | No | Bulleted. What the published result must satisfy, each written so a reader can pass or fail it |
+| `## References` | No | Table. What a reader can open to learn more about the surface; its columns are declared below. |
+
+`## References` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | The kind of document — a platform's published limits, a style guide |
+| `URL` | Yes | string | Where it is |
 
 ## Purpose
 
@@ -38,22 +51,20 @@ A surface is a place the company publishes from the model. For a written surface
   because nothing re-runs a person. A `built` surface carries none and names the repository in
   `built-by`, because the script is the projection and a second copy of a rule is what this
   model exists to end.
-- A surface is named for the page, never for the place that carries it. The place is what a
-  profile's or an identity's `## Also at` lists, and a surface named for it would turn that
-  table's `Where` column from data into references.
+- The H1 names the page, never the place that carries it. The place is what a profile's or an
+  identity's `## Also at` lists, and a surface named for it would turn that table's `Where`
+  column from data into references.
 - A line of `## What it shows` names a unit the surface itself has, in the words the surface
   uses for it, and then what fills it. A reader has to be able to find that unit by that name
   while looking at the surface. It names the unit as the place a rule lands, never what that
   unit currently holds — not a count, not a sample, not its present wording.
-- A projection rule states what the surface does with the model, not what the model contains. A
-  rule that could be read off an entity is a fact restated, and the entity is where it lives.
-- Every omission from a written surface is a rule with a reason. Silence about something the
-  model holds and the surface does not show cannot be told apart from drift, which is the one
-  thing this type is for.
-- A constraint is written as a check: something a reader looking at the published result can
-  pass or fail. "Every unit that can appear alone pairs the name with a role or a domain" can
-  be failed; "the tone is professional" cannot.
-- Where the surface imposes a limit, the constraint names the number and where it was read. A
-  limit quoted from memory is a claim like any other.
-- The file never states what the surface currently shows. That is an observation, true on the
+- Each line of `## Projection rules` states what the surface does with the model, not what the
+  model contains. A rule that could be read off an entity is a fact restated, and the entity is
+  where it lives.
+- Each line of `## Constraints` is written as a check: something a reader looking at the
+  published result can pass or fail. "Every unit that can appear alone pairs the name with a
+  role or a domain" can be failed; "the tone is professional" cannot.
+- `## Constraints` names the number and where it was read wherever the surface imposes a limit.
+  A limit quoted from memory is a claim like any other.
+- The page never states what the surface currently shows. That is an observation, true on the
   day it was written and unfalsifiable here afterwards (R17).

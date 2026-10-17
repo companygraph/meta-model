@@ -4,19 +4,37 @@
 Coverage is the whole point of the second artifact, and it is checkable only because each
 inlined entity keeps its `<!-- entity: <path> -->` marker: Gemini Notebook strips the comment, and
 this script reads the file from disk where it survives. The zip is checkable the same way,
-read straight from the archive with `zipfile`: two of its files, `model/identity.md` and
-`model/vision.md`, are singular entities copied whole and carry no marker, so those are
+read straight from the archive with `zipfile`: the singular entities, one file per singular
+type directly under `model/`, are copied whole and carry no marker, so those are
 claimed by name instead — `model/<basename>` for a `model/*.md` member the marker scan found
 nothing in. A marker count cannot tell that file from one merely missing a marker, or tell a
 literal `<!-- entity: ... -->` used as prose in a reading guide from a real one; comparing
 paths can, because a path either belongs to the model or it does not.
 """
-import json, re, sys, pathlib, zipfile
+import json, re, sys, pathlib, unicodedata, zipfile
 
 ROOT = pathlib.Path(__file__).resolve().parent.parent.parent.parent
 INSTANCE = ROOT.name
+
+def slug(text):
+    text = unicodedata.normalize("NFKD", text).encode("ascii", "ignore").decode("ascii")
+    return re.sub(r"[^a-z0-9]+", "-", text.lower()).strip("-")
+
+def skill_name():
+    """The skill's name as `build.py`'s `skill_name` makes it: the identity's H1, then the folder.
+
+    Made twice rather than imported, because `build.py` runs on import. A name the two made
+    differently leaves this script looking for a zip that is not there, and the export test
+    expects `zip agrees` from an instance whose folder and identity differ.
+    """
+    heading = next((line[2:] for line in (ROOT / "model/identity.md").read_text(
+        encoding="utf-8").splitlines() if line.startswith("# ")), "")
+    who, folder = slug(heading), slug(INSTANCE)
+    return folder if folder == who or folder.startswith(who + "-") else f"{who}-{folder}"
+
+SKILL = skill_name()
 BUNDLE = pathlib.Path(sys.argv[1]) if len(sys.argv) > 1 else ROOT / f"dist/{INSTANCE}-gemini-notebook"
-ZIP = ROOT / f"dist/{INSTANCE}-skill.zip"
+ZIP = ROOT / f"dist/{SKILL}-skill.zip"
 SOURCE_CAP, WORD_CAP = 50, 500_000          # Gemini Notebook, free tier, per notebook and per source
 
 # Two sources carry documents about the model rather than entities of it: the reading guide the
@@ -52,9 +70,9 @@ def bundle_entities(files):
 def zip_entities(zip_path):
     """Every entity the zip carries, read straight from the archive.
 
-    `<instance>/SKILL.md` is the bundle's own front matter, not an entity, and is skipped. Every
+    `<skill>/SKILL.md` is the bundle's own front matter, not an entity, and is skipped. Every
     other `.md` member is scanned for markers the same way a bundle source is; a member that
-    holds none is an entity only when it sits directly under `<instance>/model/` — the singular
+    holds none is an entity only when it sits directly under `<skill>/model/` — the singular
     entities the export copies whole — and its path is `model/<its basename>`, the name
     it would have carried had it kept its marker.
     """
@@ -64,14 +82,14 @@ def zip_entities(zip_path):
             if info.is_dir() or not info.filename.endswith(".md"):
                 continue
             parts = info.filename.split("/")
-            if parts == [INSTANCE, "SKILL.md"]:
+            if parts == [SKILL, "SKILL.md"]:
                 continue
             text = zf.read(info.filename).decode("utf-8")
             matches = [m.group(1) for m in re.finditer(r"<!--\s*entity:\s*(\S+?)\s*-->", text)]
             if matches:
                 for p in matches:
                     seen.setdefault(p, []).append(info.filename)
-            elif len(parts) == 3 and parts[0] == INSTANCE and parts[1] == "model":
+            elif len(parts) == 3 and parts[0] == SKILL and parts[1] == "model":
                 seen.setdefault(f"model/{parts[2]}", []).append(info.filename)
     return seen
 

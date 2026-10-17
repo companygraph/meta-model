@@ -1,4 +1,5 @@
 ---
+id: 01a0c233-ae50-79f4-bba5-989d5353e0e6
 source: Local
 domain: Invoicing
 ---
@@ -20,3 +21,9 @@ domain: Invoicing
 | Customer | one | billed customer |
 | Billing period | one | |
 | Invoice line | one to many | lines |
+
+## References
+
+| What | URL |
+| --- | --- |
+| A standard | https://standards.example.invalid/e-invoicing/core-invoice |

@@ -1,4 +1,5 @@
 ---
+id: 01a08666-4360-706e-bfcc-98887db97e16
 source: Local
 production: written
 url: https://directory.example.invalid/beacon-systems

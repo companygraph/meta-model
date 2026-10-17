@@ -29,14 +29,19 @@ import { readFileSync, existsSync, readdirSync, statSync } from "node:fs";
 import { fileURLToPath } from "node:url";
 import { join, dirname } from "node:path";
 import { execFileSync } from "node:child_process";
-import { TYPES, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
+import { examplePacks, exampleSchemas } from "./example.mjs";
+import { TYPES, PACKS, MODEL, TYPE_VOCABULARY, IMAGE_FILE, sectionsOf, tableOf, tablesOf, blocksOf, instanceChecks } from "../lib/checks.mjs";
 import { parseInstance } from "../lib/instance.mjs";
+import { subjectsOf, writingRulesOf, openingOf } from "../lib/questions.mjs";
 
 const ROOT = join(dirname(fileURLToPath(import.meta.url)), "..");
 const EX = `example/${MODEL}`;
 
 const failures = [];
 export const fail = (msg) => failures.push(msg);
+// What the instance checks note about the example: printed, never counted.
+const notes = [];
+const note = (msg) => notes.push(msg);
 
 export const read = (rel) =>
   existsSync(join(ROOT, rel)) ? readFileSync(join(ROOT, rel), "utf8") : null;
@@ -61,26 +66,52 @@ function filesUnder(...roots) {
 }
 
 
+// Every schema this repository ships, core's and each pack's, with the path it is read from.
+// The shape checks below hold them all alike: a pack schema is written to R9 as a core one is.
+const SCHEMAS = [
+  ...TYPES.map((t) => ({ ...t, path: `core/${t.type}-schema.md` })),
+  ...Object.entries(PACKS).flatMap(([name, types]) => types.map((t) => ({ ...t, path: `packs/${name}/${t.type}-schema.md` }))),
+];
+
 const CHECKS = [
+  {
+    // A pack is released under core's tag, so its manifest carries core's version and nothing else
+    // may tell them apart.
+    name: "a pack is released with core",
+    rule: "R20",
+    run() {
+      const core = JSON.parse(read("core/manifest.json") ?? "{}");
+      for (const name of Object.keys(PACKS)) {
+        const raw = read(`packs/${name}/manifest.json`);
+        if (raw === null) { fail(`packs/${name}/manifest.json is missing`); continue; }
+        const m = JSON.parse(raw);
+        if (m.name !== name) fail(`packs/${name}/manifest.json: name is ${JSON.stringify(m.name)}, and the folder says ${name}`);
+        if (m.version !== core.version) fail(`packs/${name}/manifest.json says ${m.version}, and core/manifest.json ${core.version}; a pack is released with core`);
+      }
+    },
+  },
   {
     name: "schemas exist",
     rule: "R9",
     run() {
-      for (const { type } of TYPES)
-        if (read(`core/${type}-schema.md`) === null)
-          fail(`core/${type}-schema.md is missing`);
+      for (const { path } of SCHEMAS)
+        if (read(path) === null)
+          fail(`${path} is missing`);
     },
   },
   {
     name: "schema fixed shape",
     rule: "R9",
     run() {
-      for (const { type, owner, folder, file } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      for (const { type, owner, folder, file, noun, path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
 
-        const title = type.replace(/(^|-)(\w)/g, (_, d, c) => (d ? " " : "") + c.toUpperCase());
+        // A type's title is its id, word-cased — except where the id is not how the type is
+        // written in prose, which `noun` on the TYPES row says (an abbreviation spelled as it
+        // is read: `kpi` reads "KPI", not "Kpi"). Every row without a `noun` derives exactly as
+        // it always has.
+        const title = noun ?? type.replace(/(^|-)(\w)/g, (_, d, c) => (d ? " " : "") + c.toUpperCase());
         const s = sectionsOf(text);
 
         // The header region — everything before the first "## " heading — must contain,
@@ -88,7 +119,10 @@ const CHECKS = [
         // only, the "**Owner:**" line. Nothing else belongs there but blank lines. This is
         // the one check that validates POSITION; "ownership declared" validates the Owner
         // line's VALUE.
-        const header = (s.get("") ?? "").split("\n");
+        // A schema opens with its id (R9, R18), before the H1; the id check reads the frontmatter,
+        // and the header this check reads in order starts after it.
+        let header = (s.get("") ?? "").split("\n");
+        if (header[0] === "---") header = header.slice(header.indexOf("---", 1) + 1);
         let i = 0;
         const skipBlank = () => {
           while (i < header.length && header[i].trim() === "") i++;
@@ -139,6 +173,15 @@ const CHECKS = [
         const rules = (s.get("Writing rules") ?? "").trim();
         if (rules && !rules.split("\n").some((l) => /^[-*]\s+\S/.test(l)))
           fail(`${path}: "## Writing rules" is not a list`);
+
+        // CONVENTIONS asks each rule to open with its subject, so a reader and the judge can tell
+        // at once whether a page has anything for it to judge. Core and the packs are held to it;
+        // an instance's own schema is not, and the judge asks such a rule of every page.
+        const subjects = subjectsOf(text);
+        writingRulesOf(text).forEach((rule, i) => {
+          if (!openingOf(rule, subjects))
+            fail(`${path}: writing rule r${i + 1} opens with no subject — a declared section, field or column in backticks, "The H1", the tagline or "The page": "${rule.slice(0, 60)}…"`);
+        });
 
         // R9 gives Purpose one paragraph: the sentence someone needs before writing their first
         // entity of the type, not the rationale for the design. Nothing read that rule, and
@@ -322,12 +365,43 @@ const CHECKS = [
     },
   },
   {
+    // R9 has every schema declare `## References`, the table of documents a reader can check a
+    // page against, with What and URL exactly. The declaration is written in each schema rather
+    // than supplied by the parser, because a section the schema states is one every reader sees
+    // there; this check is what keeps those copies from drifting apart. A schema chooses the
+    // section's Required and its description, and nothing else.
+    name: "every schema declares References",
+    rule: "R9",
+    run() {
+      const want = "What | Yes | string; URL | Yes | string";
+      for (const { path } of SCHEMAS) {
+        const text = read(path);
+        if (text === null) continue;
+        const [sections, ...captioned] = blocksOf(sectionsOf(text).get("Sections") ?? "");
+        const row = (sections?.table?.rows ?? []).find(
+          (r) => (r[0] ?? "").replace(/`/g, "").trim() === "## References",
+        );
+        if (!row) {
+          fail(`${path}: declares no \`## References\` — R9 has every schema declare it`);
+          continue;
+        }
+        const columns = captioned.find((b) => b.section === "References")?.table?.rows ?? [];
+        const got = columns
+          .map((r) => r.slice(0, 3).map((c) => (c ?? "").replace(/`/g, "").trim()).join(" | "))
+          .join("; ");
+        if (got !== want)
+          fail(
+            `${path}: \`## References\` declares ${got || "no columns"}; R9 gives it exactly What | Yes | string and URL | Yes | string`,
+          );
+      }
+    },
+  },
+  {
     name: "type vocabulary",
     rule: "R9",
     run() {
-      const known = new Set(TYPES.map((t) => t.type));
-      for (const { type } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      const known = new Set(SCHEMAS.map((t) => t.type));
+      for (const { path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
         // Every typed table: the frontmatter fields, plus the column table of any section
@@ -344,12 +418,9 @@ const CHECKS = [
         // to the list of types, or a schema could group a section under a type nobody defines.
         const s = sectionsOf(text);
         const frontmatter = tableOf((s.get("Frontmatter") ?? "").trim());
-        const typed = [
-          frontmatter,
-          ...blocksOf(s.get("Sections") ?? "")
-            .filter((b) => b.section || b.grouped)
-            .map((b) => b.table),
-        ];
+        const blocks = blocksOf(s.get("Sections") ?? "");
+        const headingTables = new Set(blocks.filter((b) => b.grouped).map((b) => b.table));
+        const typed = [frontmatter, ...blocks.filter((b) => b.section || b.grouped).map((b) => b.table)];
         for (const fm of typed)
           for (const row of fm?.rows ?? []) {
             const declared = (row[2] ?? "").replace(/`/g, "").trim();
@@ -373,14 +444,37 @@ const CHECKS = [
               fail(`${path}: ${row[0]} is "${declared}"; \`array of qualifier\` is not a form — a column holds one value`);
               continue;
             }
+            // R9: a reference whose type is read from its row needs a row, so it is a column of a
+            // column table; the type column it reads is a string or enum column of that same table, an
+            // enum where the schema can list the types a row may name, and the owner column a string.
+            const by = declared.match(/^ref → by (.+?)(?: in (.+))?$/);
+            if (by) {
+              if (fm === frontmatter || headingTables.has(fm)) {
+                fail(`${path}: ${row[0]} is "${declared}"; a reference whose type is read from its row is a column, never a frontmatter field or a heading`);
+                continue;
+              }
+              for (const [name, forms] of /** @type {[string, string[]][]} */ ([[by[1], ["string", "enum"]], ...(by[2] ? [[by[2], ["string"]]] : [])])) {
+                const named = fm.rows.find((r) => (r[0] ?? "").replace(/`/g, "").trim() === name.trim());
+                if (!named || !forms.includes((named[2] ?? "").replace(/`/g, "").trim()))
+                  fail(`${path}: ${row[0]} is "${declared}", and \`${name.trim()}\` is not a ${forms.join(" or ")} column of the same table (R9)`);
+              }
+              // A name with no type cannot resolve, so the type column is required wherever the
+              // reference is.
+              const typeRow = fm.rows.find((r) => (r[0] ?? "").replace(/`/g, "").trim() === by[1].trim());
+              if (typeRow && (row[1] ?? "").replace(/`/g, "").trim() === "Yes" && (typeRow[1] ?? "").replace(/`/g, "").trim() !== "Yes")
+                fail(`${path}: ${row[0]} is required and \`${by[1].trim()}\`, which names its type, is not (R9)`);
+              continue;
+            }
+            if (/→ by /.test(declared)) {
+              fail(`${path}: ${row[0]} is "${declared}"; \`ref → by <Column>\` and \`ref → by <Column> in <Owner>\` are the forms (R9)`);
+              continue;
+            }
             const ref = declared.match(/^(array of )?(ref\??|qualifier) → (.+)$/);
             if (ref) {
               const [, many, form, target] = ref;
               if (many && form === "qualifier") continue;
               if (!known.has(target))
                 fail(`${path}: ${row[0]} points at unknown type "${target}"`);
-              if (target.endsWith("s"))
-                fail(`${path}: ${row[0]} is "${many ?? ""}${form} → ${target}"; a reference names one entity`);
             } else if (!TYPE_VOCABULARY.has(declared)) {
               fail(`${path}: ${row[0]} has type "${declared}", which is outside the vocabulary`);
             }
@@ -392,9 +486,8 @@ const CHECKS = [
     name: "ownership declared",
     rule: "R10",
     run() {
-      const known = new Set(TYPES.map((t) => t.type));
-      for (const { type, owner, folder, file } of TYPES) {
-        const path = `core/${type}-schema.md`;
+      const known = new Set(SCHEMAS.map((t) => t.type));
+      for (const { type, owner, folder, file, path } of SCHEMAS) {
         const text = read(path);
         if (text === null) continue;
         const stated = text.match(/^\*\*Owner:\*\*\s+(\S+)\s*$/m)?.[1];
@@ -414,7 +507,7 @@ const CHECKS = [
         // A singular type is a file in the container (R6, R13): no folder to nest, and
         // nothing can own it, so the two folder-shaped checks below have nothing to read.
         if (file) continue;
-        const ownerFolder = owner && TYPES.find((t) => t.type === owner)?.folder;
+        const ownerFolder = owner && SCHEMAS.find((t) => t.type === owner)?.folder;
         if (ownerFolder && !folder.startsWith(`${ownerFolder}/`))
           fail(
             `TYPES: the folder declared for ${type}, "${folder}", does not nest inside ${ownerFolder}/, which ${path} names as its owner`,
@@ -432,7 +525,16 @@ const CHECKS = [
       }
     },
   },
-    ...instanceChecks({ files: filesUnder(EX, `core`), core: `core`, model: EX, fail }),
+    // The packs the example takes are named once, in example.mjs, so each pack's checks hold it.
+    ...instanceChecks({
+      files: filesUnder(EX, `core`, ...examplePacks.map((p) => p.dir)),
+      core: `core`,
+      model: EX,
+      packs: examplePacks,
+      fail,
+      note,
+      requireSchemaIds: true,
+    }),
   {
     // The tooling spec's §2 release contract, not a CONVENTIONS.md rule: the one file another
     // program reads. `version` must be the tag when there is one, so a tag can never point at
@@ -466,11 +568,83 @@ const CHECKS = [
       };
       if (ahead(m.version, pkg.version))
         fail(`core/manifest.json says ${m.version}, ahead of package.json's ${pkg.version}; core is released with the package or behind it, never before it`);
+      // An instance's workflow calls instance-check.yml at the release its manifest names, and
+      // that file checks the checker out at a ref of its own, since the runner cannot tell it how
+      // the caller spelled the tag. A release whose file still names the one before runs the
+      // older checker, which refuses every instance that took the new pin: v0.45.0 and v0.46.0
+      // shipped that way. So the ref is the package's version, held here before a tag is cut.
+      for (const file of [".github/workflows/instance-check.yml", ".github/workflows/repository-check.yml"]) {
+        const workflow = read(file);
+        if (workflow === null) { fail(`${file} is missing`); continue; }
+        const refs = [...workflow.matchAll(/^\s+ref:\s*(\S+)\s*$/gm)].map((r) => r[1]);
+        if (refs.length !== 1 || refs[0] !== `v${pkg.version}`)
+          fail(`${file} checks the checker out at ${refs.join(", ") || "no ref"}, and package.json says ${pkg.version}; the ref is v${pkg.version}, or every repository on this release runs the one before`);
+      }
       const tags = execFileSync("git", ["tag", "--points-at", "HEAD", "v*"], { cwd: ROOT, encoding: "utf8" })
         .split("\n").filter(Boolean);
       for (const tag of tags)
         if (tag !== `v${pkg.version}`)
           fail(`tag ${tag} sits on HEAD but package.json says ${pkg.version}`);
+    },
+  },
+  {
+    // npm sets a bin's execute bit when it links it, and a release put back under a link already
+    // in node_modules keeps the mode the git dependency's tarball carries, which is git's. Up to
+    // 0.71.0 git had the bins at 100644, so sh could not run them there and the seat hook
+    // skipped its check on every commit in the MCP hosts. Every file under bin/ is recorded 100755.
+    name: "the bins are executable in git",
+    rule: null,
+    run() {
+      // A copy of the tree a test runs this script in has no package.json and no git; the
+      // release check already says the first.
+      const raw = read("package.json");
+      if (raw === null) return;
+      const pkg = JSON.parse(raw);
+      let listed;
+      try {
+        listed = execFileSync("git", ["ls-files", "-s", "--", "bin"], { cwd: ROOT, encoding: "utf8", stdio: ["ignore", "pipe", "pipe"] });
+      } catch (e) {
+        return fail(`git could not list bin/: ${e.message.split("\n")[0]}`);
+      }
+      const modes = new Map(listed.split("\n").filter(Boolean).map((line) => [line.split("\t")[1], line.split(" ")[0]]));
+      const declared = Object.values(pkg.bin ?? {}).map((file) => file.replace(/^\.\//, ""));
+      for (const file of new Set([...declared, ...modes.keys()]))
+        if (modes.get(file) !== "100755")
+          fail(`${file} is ${modes.get(file) ?? "not"} in git's index; record it 100755 (git update-index --chmod=+x ${file}), or npm can leave it a bin sh cannot run`);
+    },
+  },
+  {
+    // Until the family takes the machinery from meta-model, the form has two copies here: the one
+    // conventions-sync vendors for this repository's own Markdown, and form/, which every
+    // repository that takes the tooling is held to. Both run in phase 1, and they agree only while
+    // they read the same rules at the same version, so a difference fails here rather than as two
+    // checks that disagree about one file.
+    name: "the form is the family's form",
+    rule: null,
+    run() {
+      // A configuration that is not there is said as missing, not as rules that differ from {}.
+      const jsonc = (rel) => {
+        const text = read(rel);
+        if (text === null) {
+          fail(`${rel} is missing`);
+          return null;
+        }
+        return JSON.parse(text.split("\n").filter((line) => !line.trim().startsWith("//")).join("\n"));
+      };
+      if (read("form/markdown-rules.cjs") !== read("conventions/markdown-rules.cjs"))
+        fail("form/markdown-rules.cjs is not conventions/markdown-rules.cjs; the form is the family's, rule for rule");
+      const [ours, family] = [jsonc("form/.markdownlint-cli2.jsonc"), jsonc(".markdownlint-cli2.jsonc")];
+      if (ours && family && JSON.stringify(ours.config) !== JSON.stringify(family.config))
+        fail("form/.markdownlint-cli2.jsonc turns on other rules than .markdownlint-cli2.jsonc; the form is the family's, rule for rule");
+      const pkg = JSON.parse(read("package.json") ?? "{}");
+      const version = /export const FORM_VERSION = "([^"]+)"/.exec(read("lib/form.mjs") ?? "")?.[1];
+      if (pkg.devDependencies?.["markdownlint-cli2"] !== version)
+        fail(`package.json takes markdownlint-cli2 ${pkg.devDependencies?.["markdownlint-cli2"]}, and lib/form.mjs pins ${version}; the tests run the version a release runs`);
+      // The family's own form runs the version conventions-format pins, so the two agree only
+      // while that is the version lib/form.mjs pins too.
+      const familyVersion = /^VERSION=(\S+)$/m.exec(read("conventions/conventions-format") ?? "")?.[1];
+      if (familyVersion !== version)
+        fail(`conventions/conventions-format runs markdownlint-cli2 ${familyVersion ?? "at no VERSION"}, and lib/form.mjs pins ${version}; the form is the family's, version for version`);
     },
   },
   {
@@ -487,9 +661,7 @@ const CHECKS = [
       const files = new Map();
       for (const [path, text] of filesUnder(EX))
         if (path.endsWith(".md")) files.set(path.slice(EX.length + 1), text);
-      const schemas = new Map();
-      for (const [path, text] of filesUnder("core"))
-        if (path.endsWith("-schema.md")) schemas.set(path.split("/").pop(), text);
+      const schemas = exampleSchemas();
       try {
         const { entities } = parseInstance(files, { sub: `${EX}/`, schemas });
         if (!entities.length) fail("the example parsed to no entities");
@@ -513,6 +685,11 @@ const CHECKS = [
 ];
 
 for (const check of CHECKS) check.run();
+
+if (notes.length) {
+  console.log("noted:");
+  for (const n of notes) console.log(`  ${n}`);
+}
 
 if (failures.length) {
   console.error(`\n✗ ${failures.length} problem${failures.length > 1 ? "s" : ""}\n`);
