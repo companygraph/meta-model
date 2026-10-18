@@ -21,7 +21,7 @@ const RULE_FM = ["source: Local", "modality: must", "protects:", "  - Craftsmans
 const RISK_FM = ["source: Local", "owner: Reviewer", "threatens:", "  - Invoices are right"];
 const CONTROL_FM = ["source: Local", "kind: preventive", "mode: automated", "mitigates:", "  - An unreviewed change reaches customers", "enforces:", "  - A change is reviewed before it ships"];
 
-const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_FM, controlSections } = {}) => new Map([
+const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_FM, controlSections, more = [] } = {}) => new Map([
   ["meta/core/rule-schema.md", real("rule")],
   ["meta/core/risk-schema.md", real("risk")],
   ["meta/core/control-schema.md", real("control")],
@@ -45,10 +45,20 @@ const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_
   ["model/controls/main-requires-a-review.md", page(control, "Main requires a review",
     "The default branch refuses a merge without an approving review.",
     controlSections ?? [["How it is carried out", ["Prose."]], appliesTo([["process", "Delivery", ""]])])],
+  ...more,
 ]);
 const failuresOf = (opts, ...words) =>
   checkInstance(tree(opts), { core: "meta/core", model: "model" }).failures
     .filter((f) => /\/(rules|risks|controls)\//.test(f) && words.every((w) => f.includes(w)));
+
+// A second control, the one that holds the first one's gap: it mitigates the same risk and
+// enforces the same rule, unless a test hands it other fields.
+const COVER = "An unapproved merge is read before the next release";
+const COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer",
+  "mitigates:", "  - An unreviewed change reaches customers", "enforces:", "  - A change is reviewed before it ships"];
+const cover = (fm = COVER_FM) => ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+  page(fm, COVER, "The merges no second person approved are read before they ship.", [["How it is carried out", ["Prose."]]])];
+const compensated = (...names) => [...CONTROL_FM, "compensated-by:", ...names.map((n) => `  - ${n}`)];
 
 test("a rule, a risk and a control with every required field and section, each naming the others, pass", () => {
   assert.deepEqual(failuresOf(), []);
@@ -124,4 +134,98 @@ test("an enforces naming no rule fails", () => {
 
 test("a control without How it is carried out fails", () => {
   assert.equal(failuresOf({ controlSections: [appliesTo([["process", "Delivery", ""]])] }, "no `## How it is carried out`").length, 1);
+});
+
+test("a control naming another control in compensated-by passes", () => {
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover()] }), []);
+});
+
+test("a compensated-by naming a rule fails as a reference to the wrong type", () => {
+  assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "`compensated-by`", "type rule").length, 1);
+});
+
+test("a control naming itself in compensated-by passes the mechanical checks; the writing rule refuses it", () => {
+  assert.deepEqual(failuresOf({ control: compensated("Main requires a review") }), []);
+});
+
+test("two controls naming each other in compensated-by pass, since each may hold the other's gap", () => {
+  const back = cover([...COVER_FM, "compensated-by:", "  - Main requires a review"]);
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [back] }), []);
+});
+
+const NOTHING_SHARED = "model/controls/main-requires-a-review.md: `compensated-by` names \"An unapproved merge is read before the next release\", which shares no entry of `mitigates` or `enforces` with this control; a control holds the gap of another only toward what that one is for (R16)";
+const BARE_COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer"];
+
+test("a covering control that shares only the rule passes", () => {
+  const fm = [...BARE_COVER_FM, "enforces:", "  - A change is reviewed before it ships"];
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(fm)] }), []);
+});
+
+test("a covering control that shares only the risk passes", () => {
+  const fm = [...BARE_COVER_FM, "mitigates:", "  - An unreviewed change reaches customers"];
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(fm)] }), []);
+});
+
+test("a covering control that shares neither a risk nor a rule fails once, naming both fields", () => {
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(BARE_COVER_FM)] }), [NOTHING_SHARED]);
+});
+
+test("a covering control named twice and sharing nothing fails once", () => {
+  assert.equal(failuresOf({ control: compensated(COVER, COVER), more: [cover(BARE_COVER_FM)] }, "shares no entry").length, 1);
+});
+
+test("a control with neither mitigates nor enforces of its own shares nothing with what it names", () => {
+  const control = [...BARE_COVER_FM, "compensated-by:", `  - ${COVER}`];
+  assert.equal(failuresOf({ control, more: [cover()] }, "shares no entry").length, 1);
+});
+
+test("a compensated-by name that resolves to nothing is R4's alone", () => {
+  const failures = failuresOf({ control: compensated("A merge nobody wrote down") });
+  assert.equal(failures.filter((f) => f.includes("\"A merge nobody wrote down\"")).length, 1);
+  assert.equal(failures.filter((f) => f.includes("shares no entry")).length, 0);
+});
+
+test("a compensated-by naming a rule is R4's alone", () => {
+  assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "shares no entry").length, 0);
+});
+
+test("a page with no H1 is judged by its own fields, not by a name it lacks", () => {
+  const nameless = ["model/controls/nameless.md", ["---", ...compensated(COVER), "---", "", "> A control with no name.", "",
+    "## How it is carried out", "", "Prose.", ""].join("\n")];
+  assert.equal(failuresOf({ more: [cover(), nameless] }, "nameless.md", "shares no entry").length, 0);
+});
+
+test("a vendored core that does not declare compensated-by is not held to it", () => {
+  const files = tree({ control: compensated(COVER), more: [cover(BARE_COVER_FM)] });
+  files.set("meta/core/control-schema.md", real("control").replace(/^\| `compensated-by` .*\n/m, ""));
+  const failures = checkInstance(files, { core: "meta/core", model: "model" }).failures;
+  assert.ok(failures.some((f) => f.includes("`compensated-by` is not declared")));
+  assert.equal(failures.filter((f) => f.includes("shares no entry")).length, 0);
+});
+
+test("a name two controls carry is R2's, and the check does not judge it, whichever sorts first", () => {
+  const twin = (file, fm) => [`model/controls/${file}`, page(fm, COVER, "A second page under the same name.", [["How it is carried out", ["Prose."]]])];
+  for (const file of ["aa-copy.md", "zz-copy.md"])
+    assert.equal(failuresOf({ control: compensated(COVER), more: [cover(), twin(file, BARE_COVER_FM)] }, "shares no entry").length, 0, file);
+});
+
+test("a named control whose frontmatter cannot be read is not judged again by the page naming it", () => {
+  const unreadable = ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+    ["---", ...COVER_FM, "", `# ${COVER}`, "", "> Its frontmatter never closes.", "", "## How it is carried out", "", "Prose.", ""].join("\n")];
+  assert.equal(failuresOf({ control: compensated(COVER), more: [unreadable] }, "shares no entry").length, 0);
+});
+
+test("a control naming itself and answering to nothing fails, as it shares nothing with itself", () => {
+  const control = [...BARE_COVER_FM, "compensated-by:", "  - Main requires a review"];
+  assert.equal(failuresOf({ control }, "shares no entry").length, 1);
+});
+
+test("a risk and a rule of one name are not one entry: the fields are compared each with itself", () => {
+  const same = "Merges go unread";
+  const rule = ["model/rules/merges-go-unread.md", page(["source: Local", "modality: must"], same, "A rule.",
+    [["Why", ["Prose."]], appliesTo([["seat", "Reviewer", ""], ["phase", "Release", "Delivery"]])])];
+  const risk = ["model/risks/merges-go-unread.md", page(RISK_FM, same, "A risk.", [["Cause", ["Prose."]], ["Consequence", ["Prose."]]])];
+  const control = [...BARE_COVER_FM, "mitigates:", `  - ${same}`, "compensated-by:", `  - ${COVER}`];
+  const covering = cover([...BARE_COVER_FM, "enforces:", `  - ${same}`]);
+  assert.equal(failuresOf({ control, more: [rule, risk, covering] }, "shares no entry").length, 1);
 });
