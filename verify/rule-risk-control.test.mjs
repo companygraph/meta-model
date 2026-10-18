@@ -188,3 +188,17 @@ test("a compensated-by name that resolves to nothing is R4's alone", () => {
 test("a compensated-by naming a rule is R4's alone", () => {
   assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "shares no entry").length, 0);
 });
+
+test("a page with no H1 is judged by its own fields, not by a name it lacks", () => {
+  const nameless = ["model/controls/nameless.md", ["---", ...compensated(COVER), "---", "", "> A control with no name.", "",
+    "## How it is carried out", "", "Prose.", ""].join("\n")];
+  assert.equal(failuresOf({ more: [cover(), nameless] }, "nameless.md", "shares no entry").length, 0);
+});
+
+test("a vendored core that does not declare compensated-by is not held to it", () => {
+  const files = tree({ control: compensated(COVER), more: [cover(BARE_COVER_FM)] });
+  files.set("meta/core/control-schema.md", real("control").replace(/^\| `compensated-by` .*\n/m, ""));
+  const failures = checkInstance(files, { core: "meta/core", model: "model" }).failures;
+  assert.ok(failures.some((f) => f.includes("`compensated-by` is not declared")));
+  assert.equal(failures.filter((f) => f.includes("shares no entry")).length, 0);
+});
