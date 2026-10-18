@@ -10,13 +10,13 @@ enforces:
 performed-by: Reviewer
 ---
 
-# An unapproved merge is read before the next release
+# An unapproved merge is read before it ships
 
-> Before a release goes out, every change merged without a second person's approval is read by one.
+> Every change merged without a second person's approval is read by one before it ships.
 
 ## How it is carried out
 
-Before Release, the Reviewer lists the pull requests merged to the default branch without an approving review from someone other than their author, from the repository host's pull request reviews, and reads each against what was asked; a finding holds the release until it is settled.
+In Release, once the branch is merged and before the release is tagged, the Reviewer lists the pull requests merged to the default branch without an approving review from someone other than their author, from the repository host's pull request reviews, and reads each against what was asked; a finding holds the tag until it is settled.
 
 ## Applies to
 

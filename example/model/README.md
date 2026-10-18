@@ -44,7 +44,7 @@ decisions/                       2022-billing-leaves-the-monolith.md
 rules/                           a-change-is-reviewed-before-it-ships.md
 risks/                           an-unreviewed-change-reaches-customers.md
 controls/                        main-requires-a-review.md,
-                                 an-unapproved-merge-is-read-before-the-next-release.md
+                                 an-unapproved-merge-is-read-before-it-ships.md
 data-processors/                 lantern-mail.md
 processing-activities/           invoice-delivery.md
 stored-items/                    theme.md
