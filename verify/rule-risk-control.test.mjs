@@ -152,3 +152,39 @@ test("two controls naming each other in compensated-by pass, since each may hold
   const back = cover([...COVER_FM, "compensated-by:", "  - Main requires a review"]);
   assert.deepEqual(failuresOf({ control: compensated(COVER), more: [back] }), []);
 });
+
+const NOTHING_SHARED = "model/controls/main-requires-a-review.md: `compensated-by` names \"An unapproved merge is read before the next release\", which shares no entry of `mitigates` or `enforces` with this control; a control holds the gap of another only toward what that one is for (R16)";
+const BARE_COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer"];
+
+test("a covering control that shares only the rule passes", () => {
+  const fm = [...BARE_COVER_FM, "enforces:", "  - A change is reviewed before it ships"];
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(fm)] }), []);
+});
+
+test("a covering control that shares only the risk passes", () => {
+  const fm = [...BARE_COVER_FM, "mitigates:", "  - An unreviewed change reaches customers"];
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(fm)] }), []);
+});
+
+test("a covering control that shares neither a risk nor a rule fails once, naming both fields", () => {
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover(BARE_COVER_FM)] }), [NOTHING_SHARED]);
+});
+
+test("a covering control named twice and sharing nothing fails once", () => {
+  assert.equal(failuresOf({ control: compensated(COVER, COVER), more: [cover(BARE_COVER_FM)] }, "shares no entry").length, 1);
+});
+
+test("a control with neither mitigates nor enforces of its own shares nothing with what it names", () => {
+  const control = [...BARE_COVER_FM, "compensated-by:", `  - ${COVER}`];
+  assert.equal(failuresOf({ control, more: [cover()] }, "shares no entry").length, 1);
+});
+
+test("a compensated-by name that resolves to nothing is R4's alone", () => {
+  const failures = failuresOf({ control: compensated("A merge nobody wrote down") });
+  assert.equal(failures.filter((f) => f.includes("\"A merge nobody wrote down\"")).length, 1);
+  assert.equal(failures.filter((f) => f.includes("shares no entry")).length, 0);
+});
+
+test("a compensated-by naming a rule is R4's alone", () => {
+  assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "shares no entry").length, 0);
+});
