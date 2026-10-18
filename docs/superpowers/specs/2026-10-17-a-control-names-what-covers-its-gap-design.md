@@ -4,6 +4,8 @@ A control often has a known gap, and another control holds it. In all three fami
 
 Status: decided by the owner on October 17, 2026, question by question: the field sits on the control with the gap and is named `compensated-by`; the page's prose states the gap and the field carries the name, so the name is written once; and the norm that a covering control answers to what the covered one is for is an instance check, not a writing rule.
 
+Amended by the owner on October 18, 2026, after the pull request's review: the example's new control reads an unapproved merge in Release, once the branch is merged and before the release is tagged, so it holds the change before it ships rather than before the next release, and is named for that; and the failure message says "entry" where this spec first said "risk" and "rule", because the check reads the shared fields from the type's row and names no type.
+
 ## Where this comes from
 
 Anthropic's AI-Native SDLC Playbook, read on October 16, 2026, separates an advisory control from the deterministic one behind it: "The skill makes violations rare and the hook makes them close to impossible." Read against it, the controls of the three instances showed that the split it draws, advisory or blocking, is already stated where it matters: 9 of the 21 controls in companygraph/mental-model, by the specifier's reading, say in their own prose who gets past them, an admin, anyone who gives a reason, `--force`, a commit trailer or an agent under the Owner's account. Those vary too much for an enum and read well as prose.
@@ -55,9 +57,11 @@ A covering control holds a gap only toward what the covered control is for. Whet
 { type: "control", folder: "controls", compensated: { field: "compensated-by", shares: ["mitigates", "enforces"] } },
 ```
 
-`TypeEntry` gains the property in its JSDoc, and `types/` is built from it and committed. The check cites R16. A name in the field that resolves to nothing is R4's finding, and this check skips it. Its failure reads, for a page and a name: `` `compensated-by` names "<name>", which shares no risk in `mitigates` and no rule in `enforces` with this control; a control holds the gap of another only toward what that one is for (R16) ``.
+`TypeEntry` gains the property in its JSDoc, and `types/` is built from it and committed. The check cites R16. A name in the field that resolves to nothing is R4's finding, and this check skips it. Its failure reads, for a page and a name: `` `compensated-by` names "<name>", which shares no entry of `mitigates` or `enforces` with this control; a control holds the gap of another only toward what that one is for (R16) ``. The shared fields are compared each with itself: a page's `mitigates` against the named control's `mitigates`, its `enforces` against the named control's `enforces`.
 
-A control naming itself shares everything with itself and passes the check; the writing rule refuses it. Two controls naming each other pass too, on purpose: two controls can each hold the other's gap, and an acyclic check would refuse that.
+Three cases are another check's, and this one does not read them. A vendored core whose schema does not declare the field reports the field as undeclared, and the check holds no page to it. A name two pages of the type carry is R2's finding, and which of them is meant cannot be told. A named control whose frontmatter cannot be read is already reported for every field it lacks.
+
+A control naming itself shares with itself whatever it answers to, and passes the check wherever it answers to anything; the writing rule refuses it. Two controls naming each other pass too, on purpose: two controls can each hold the other's gap, and an acyclic check would refuse that.
 
 The September 30 spec says "Every arrow runs from the more specific page to the more general, and none runs back" and "Each relation once, on the more specific side". A control's `compensated-by` runs between two pages of one type, neither more specific than the other, and it is written on the side whose gap it is, once. The September 30 spec's paragraph on each relation gains one sentence saying so and naming this spec.
 
@@ -65,13 +69,13 @@ The September 30 spec says "Every arrow runs from the more specific page to the 
 
 The example instance gets the edge, so the checks and the MCP server's tests see it.
 
-"Main requires a review" gains, in `## How it is carried out`, the sentence that a repository admin can merge past the protection, which then holds nothing for that change, and `compensated-by: An unapproved merge is read before the next release`.
+"Main requires a review" gains, in `## How it is carried out`, the sentence that a repository admin can merge past the protection, which then holds nothing for that change, and `compensated-by: An unapproved merge is read before it ships`.
 
-A new control, "An unapproved merge is read before the next release":
+A new control, "An unapproved merge is read before it ships":
 
 - `kind: detective`, `mode: manual`, `performed-by: Reviewer`.
 - `mitigates: An unreviewed change reaches customers` and `enforces: A change is reviewed before it ships`, the risk and the rule "Main requires a review" names, so it shares both.
-- `## How it is carried out`: before Release, the Reviewer lists the pull requests merged to the default branch without an approving review from someone other than their author, from the repository host's pull request reviews, and reads each against what was asked.
+- `## How it is carried out`: in Release, once the branch is merged and before the release is tagged, the Reviewer lists the pull requests merged to the default branch without an approving review from someone other than their author, from the repository host's pull request reviews, and reads each against what was asked; a finding holds the tag until it is settled. Release merges and tags in one activity, so the read sits between the two, and a merge an admin pushed past the protection is read before it reaches customers.
 - `## Applies to`: the Release phase of Delivery.
 
 Its name carries no stem of "review" on purpose. mcp-server's search test fixes the words-mode name tier for "Reviewer" to one control, one KPI, one rule and one seat; a second control whose name stems to "review" would turn that suite red when it re-pins this release, and the family resync would hold everything downstream of it.
