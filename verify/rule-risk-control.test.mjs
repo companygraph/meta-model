@@ -202,3 +202,30 @@ test("a vendored core that does not declare compensated-by is not held to it", (
   assert.ok(failures.some((f) => f.includes("`compensated-by` is not declared")));
   assert.equal(failures.filter((f) => f.includes("shares no entry")).length, 0);
 });
+
+test("a name two controls carry is R2's, and the check does not judge it, whichever sorts first", () => {
+  const twin = (file, fm) => [`model/controls/${file}`, page(fm, COVER, "A second page under the same name.", [["How it is carried out", ["Prose."]]])];
+  for (const file of ["aa-copy.md", "zz-copy.md"])
+    assert.equal(failuresOf({ control: compensated(COVER), more: [cover(), twin(file, BARE_COVER_FM)] }, "shares no entry").length, 0, file);
+});
+
+test("a named control whose frontmatter cannot be read is not judged again by the page naming it", () => {
+  const unreadable = ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+    ["---", ...COVER_FM, "", `# ${COVER}`, "", "> Its frontmatter never closes.", "", "## How it is carried out", "", "Prose.", ""].join("\n")];
+  assert.equal(failuresOf({ control: compensated(COVER), more: [unreadable] }, "shares no entry").length, 0);
+});
+
+test("a control naming itself and answering to nothing fails, as it shares nothing with itself", () => {
+  const control = [...BARE_COVER_FM, "compensated-by:", "  - Main requires a review"];
+  assert.equal(failuresOf({ control }, "shares no entry").length, 1);
+});
+
+test("a risk and a rule of one name are not one entry: the fields are compared each with itself", () => {
+  const same = "Merges go unread";
+  const rule = ["model/rules/merges-go-unread.md", page(["source: Local", "modality: must"], same, "A rule.",
+    [["Why", ["Prose."]], appliesTo([["seat", "Reviewer", ""], ["phase", "Release", "Delivery"]])])];
+  const risk = ["model/risks/merges-go-unread.md", page(RISK_FM, same, "A risk.", [["Cause", ["Prose."]], ["Consequence", ["Prose."]]])];
+  const control = [...BARE_COVER_FM, "mitigates:", `  - ${same}`, "compensated-by:", `  - ${COVER}`];
+  const covering = cover([...BARE_COVER_FM, "enforces:", `  - ${same}`]);
+  assert.equal(failuresOf({ control, more: [rule, risk, covering] }, "shares no entry").length, 1);
+});
