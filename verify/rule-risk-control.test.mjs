@@ -21,7 +21,7 @@ const RULE_FM = ["source: Local", "modality: must", "protects:", "  - Craftsmans
 const RISK_FM = ["source: Local", "owner: Reviewer", "threatens:", "  - Invoices are right"];
 const CONTROL_FM = ["source: Local", "kind: preventive", "mode: automated", "mitigates:", "  - An unreviewed change reaches customers", "enforces:", "  - A change is reviewed before it ships"];
 
-const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_FM, controlSections } = {}) => new Map([
+const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_FM, controlSections, more = [] } = {}) => new Map([
   ["meta/core/rule-schema.md", real("rule")],
   ["meta/core/risk-schema.md", real("risk")],
   ["meta/core/control-schema.md", real("control")],
@@ -45,10 +45,20 @@ const tree = ({ rule = RULE_FM, ruleSections, risk = RISK_FM, control = CONTROL_
   ["model/controls/main-requires-a-review.md", page(control, "Main requires a review",
     "The default branch refuses a merge without an approving review.",
     controlSections ?? [["How it is carried out", ["Prose."]], appliesTo([["process", "Delivery", ""]])])],
+  ...more,
 ]);
 const failuresOf = (opts, ...words) =>
   checkInstance(tree(opts), { core: "meta/core", model: "model" }).failures
     .filter((f) => /\/(rules|risks|controls)\//.test(f) && words.every((w) => f.includes(w)));
+
+// A second control, the one that holds the first one's gap: it mitigates the same risk and
+// enforces the same rule, unless a test hands it other fields.
+const COVER = "An unapproved merge is read before the next release";
+const COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer",
+  "mitigates:", "  - An unreviewed change reaches customers", "enforces:", "  - A change is reviewed before it ships"];
+const cover = (fm = COVER_FM) => ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+  page(fm, COVER, "The merges no second person approved are read before they ship.", [["How it is carried out", ["Prose."]]])];
+const compensated = (...names) => [...CONTROL_FM, "compensated-by:", ...names.map((n) => `  - ${n}`)];
 
 test("a rule, a risk and a control with every required field and section, each naming the others, pass", () => {
   assert.deepEqual(failuresOf(), []);
@@ -124,4 +134,21 @@ test("an enforces naming no rule fails", () => {
 
 test("a control without How it is carried out fails", () => {
   assert.equal(failuresOf({ controlSections: [appliesTo([["process", "Delivery", ""]])] }, "no `## How it is carried out`").length, 1);
+});
+
+test("a control naming another control in compensated-by passes", () => {
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [cover()] }), []);
+});
+
+test("a compensated-by naming a rule fails as a reference to the wrong type", () => {
+  assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "`compensated-by`", "type rule").length, 1);
+});
+
+test("a control naming itself in compensated-by passes the mechanical checks; the writing rule refuses it", () => {
+  assert.deepEqual(failuresOf({ control: compensated("Main requires a review") }), []);
+});
+
+test("two controls naming each other in compensated-by pass, since each may hold the other's gap", () => {
+  const back = cover([...COVER_FM, "compensated-by:", "  - Main requires a review"]);
+  assert.deepEqual(failuresOf({ control: compensated(COVER), more: [back] }), []);
 });

@@ -24,6 +24,7 @@ Nothing owns a control and a control owns nothing: it reaches across the process
 | `mitigates` | No | array of ref → risk | The risks it makes less likely or less harmful, each the H1 of a file in `risks/` |
 | `enforces` | No | array of ref → rule | The rules it holds a change or an action to, each the H1 of a file in `rules/` |
 | `performed-by` | No | ref → seat | The seat that carries it out, for a manual control, the H1 of a file in `seats/` |
+| `compensated-by` | No | array of ref → control | The controls that hold a gap this one is known to leave, each the H1 of a file in `controls/`. Absent where no other control holds one. |
 
 ## Sections
 
@@ -52,7 +53,7 @@ Nothing owns a control and a control owns nothing: it reaches across the process
 
 ## Purpose
 
-A control is what the company does, or has a machine do, so that a risk is less likely or less harmful, or a rule is kept (ISO 31000: a measure that maintains or modifies risk; COSO's control activities). It answers "what actually stops this, finds it, or repairs it, and is it a machine or a person?" The control is the entity: a gate's criteria and a check's code stay where they are, and the control says in prose how it is carried out and points at the file that does it. How well it works is measured, where the company measures it, by a KPI that names it in `assesses`, never by a number on this page.
+A control is what the company does, or has a machine do, so that a risk is less likely or less harmful, or a rule is kept (ISO 31000: a measure that maintains or modifies risk; COSO's control activities). Where another control holds a gap this one is known to leave, the page says what it lets through and names that control in `compensated-by`. It answers "what actually stops this, finds it, or repairs it, and is it a machine or a person?" The control is the entity: a gate's criteria and a check's code stay where they are, and the control says in prose how it is carried out and points at the file that does it. How well it works is measured, where the company measures it, by a KPI that names it in `assesses`, never by a number on this page.
 
 ## Writing rules
 
@@ -61,4 +62,6 @@ A control is what the company does, or has a machine do, so that a risk is less 
 - `## Applies to`, on a control that is a phase's gate, names that phase, and the gate's criteria stay the phase's bullets.
 - `mode` decides `performed-by`: a manual control names a seat there, never a person, and an automated control names none.
 - An `## Applies to` row names a seat, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
+- `compensated-by` names a control only where `## How it is carried out` says which gap of this control the named control is to hold, and that sentence does not repeat the name the field holds.
+- `compensated-by` never names the control itself.
 - The page writes names and prose in American English (R14).
