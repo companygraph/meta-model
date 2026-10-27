@@ -98,7 +98,7 @@ A use case is all the ways of using a system to achieve one goal for one actor (
 - `Condition`, in `## Extensions`, is something the system can detect, not something an actor feels.
 - `## Minimal guarantees` hold however the use case ends, an extension that gives up included, and `## Success guarantees` only when the goal is reached.
 - `Action` names an aggregate, an invariant or an event, where a step needs one, in words: they are another pack's types, and the page draws no edge to them.
-- The page holds no priority, status, release or date, since each moves, and a References row says where they are kept. `realization` is the one value on the page that moves, and `## Evidence` is what shows it.
+- `realization` is the one value on the page that moves, and `## Evidence` is what shows it.
 - `## Realization` and `## Evidence` stand only on a page that names a `realization`.
 - `URL`, in `## Evidence`, is a permalink at a commit, never a branch.
 - The page writes names and prose in American English (R14).

@@ -51,7 +51,7 @@ The payer's bookkeeping asks for the invoice of a closed billing period.
 
 ## Realization
 
-Every step of the main success scenario runs, and so does extension 1a: a payer whose billing period is still open is told when it closes. Extension 3a is not built, so a copy of an invoice with a credit note against it does not yet name the credit note beside it.
+Every step of the main success scenario runs, step 1 as far as Find an invoice does, which names no realization of its own. Extension 1a runs too: a payer whose billing period is still open is told when it closes. Extension 3a is not built, so a copy of an invoice with a credit note against it does not yet name the credit note beside it.
 
 ## Evidence
 

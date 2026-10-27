@@ -48,5 +48,5 @@ A level answers "how far is this realized, and what shows it?" for whoever relie
 
 - `## What it means` says what a page at this level has realized, what moves a page into the level and out of it, and what a reader may rely on while it is there.
 - `evidence` is the least a page at this level must show.
-- The H1 names how far a page at the level is realized, `Built`, `Verified`, and never a verdict on the work.
+- The H1 names how far a page at the level is realized, `Main scenario runs`, `Runs end to end`, and never a verdict on the work.
 - The page writes names and prose in American English (R14).

@@ -11,4 +11,4 @@ evidence: verifies
 
 ## What it means
 
-A use case Runs end to end when every step of its main success scenario and every extension is built, and at least one test or recorded run walks the scenario and observes what its success guarantees promise. A page enters the level when the last extension is built and an `## Evidence` row shows `verifies`, and moves down to Main scenario runs when an extension is removed or the test no longer walks the scenario. While a use case Runs end to end, a reader may rely on every way it can go, as its page tells them.
+A use case Runs end to end when every step of its main success scenario and every extension is built, and at least one test or recorded run walks the scenario and observes what its success guarantees promise. A page enters the level when the last of the two is in place, every extension built and an `## Evidence` row that shows `verifies`, and moves down to Main scenario runs when an extension is removed or the test no longer walks the scenario. While a use case Runs end to end, a reader may rely on every way it can go, as its page tells them.
