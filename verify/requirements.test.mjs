@@ -15,31 +15,45 @@ const bare = (type, location) => [...head(type, location), "## Frontmatter", "",
 const PACKS = [{ name: "requirements", dir: "meta/requirements" }];
 const U = "model/use-cases";
 const R = "model/requirements";
+const RL = "model/requirement-realizations";
+const UL = "model/use-case-realizations";
 const list = (field, names) => names.length ? `${field}:\n${names.map((n) => `  - ${n}`).join("\n")}` : "";
 const page = (h1, tagline) => `# ${h1}\n\n> ${tagline}\n`;
 const table = (cols, rows) => `| ${cols.join(" | ")} |\n| ${cols.map(() => "---").join(" | ")} |\n${rows.map((r) => `| ${r.join(" | ")} |`).join("\n")}\n`;
 const bullets = (items) => `${items.map((i) => `- ${i}`).join("\n")}\n`;
-const useCase = ({ level, scope, actor, features = [], includes = [], h1, tagline, stakeholders, steps, extensions = [], minimal, success }) => [
+const useCase = ({ level, scope, actor, features = [], includes = [], realization, realized, evidence, h1, tagline, stakeholders, steps, extensions = [], minimal, success }) => [
   "---", "source: Local", `level: ${level}`, ...(scope ? [`scope: ${scope}`] : []), `primary-actor: ${actor}`,
   ...(features.length ? [list("features", features)] : []), ...(includes.length ? [list("includes", includes)] : []),
+  ...(realization ? [`realization: ${realization}`] : []),
   "---", "", `# ${h1}`, "", `> ${tagline}`, "",
   "## Stakeholders and interests", "", table(["Stakeholder", "Interest"], stakeholders),
   "## Main success scenario", "", table(["Step", "Actor", "Action"], steps),
   ...(extensions.length ? ["## Extensions", "", table(["Step", "Condition", "Handling"], extensions)] : []),
   "## Minimal guarantees", "", bullets(minimal),
   "## Success guarantees", "", bullets(success),
+  ...(realized ? ["## Realization", "", realized, ""] : []),
+  ...(evidence ? ["## Evidence", "", table(["What", "Shows", "URL"], evidence)] : []),
 ].join("\n");
-const requirement = ({ kind, modality, follows = [], h1, statement, applies }) => [
+const level = ({ h1, rank, evidence }) => [
+  "---", "source: Local", `rank: ${rank}`, `evidence: ${evidence}`, "---", "", `# ${h1}`, "", `> ${h1}.`, "",
+  "## What it means", "", "A page at this level has reached it, and a reader may rely on what its evidence shows.", "",
+].join("\n");
+const requirement = ({ kind, modality, follows = [], h1, statement, applies, realization, realized, evidence }) => [
   "---", "source: Local", `kind: ${kind}`, `modality: ${modality}`, ...(follows.length ? [list("follows", follows)] : []),
+  ...(realization ? [`realization: ${realization}`] : []),
   "---", "", `# ${h1}`, "", `> ${statement}`, "",
   "## Why", "", "A guest who waits for an answer leaves before it comes.", "",
   "## Fit criterion", "", "Over a week of bookings, the answer a guest sees is measured from their confirming to its showing.", "",
   "## Applies to", "", table(["Type", "Entity"], applies),
+  ...(realized ? ["## Realization", "", realized, ""] : []),
+  ...(evidence ? ["## Evidence", "", table(["What", "Shows", "URL"], evidence)] : []),
 ].join("\n");
 
 const tree = (change = (m) => m) => change(new Map([
   ["meta/requirements/use-case-schema.md", pack("use-case")],
   ["meta/requirements/requirement-schema.md", pack("requirement")],
+  ["meta/requirements/requirement-realization-schema.md", pack("requirement-realization")],
+  ["meta/requirements/use-case-realization-schema.md", pack("use-case-realization")],
   ["meta/core/source-schema.md", bare("source", "model/sources/*.md")],
   ["meta/core/feature-schema.md", bare("feature", "model/features/*.md")],
   ["meta/core/product-schema.md", bare("product", "model/products/*.md")],
@@ -60,6 +74,8 @@ const tree = (change = (m) => m) => change(new Map([
   })],
   [`${U}/book-a-table.md`, useCase({
     level: "user goal", scope: "system", actor: "Guest", features: ["Table booking"], includes: ["Find a free table"],
+    realization: "Runs end to end", realized: "The main scenario and both extensions run against the booking app.",
+    evidence: [["Run of the booking scenario", "verifies", "https://example.org/booking/blob/0a1b2c3/test/book.test.js"]],
     h1: "Book a table", tagline: "A guest books a table for a time and leaves with a confirmation.",
     stakeholders: [["Guest", "A confirmed table, and no booking they did not ask for"], ["Host", "A booking that names the guest, the time and the party size"]],
     steps: [["1", "Guest", "Asks for a table for a party size and a time"], ["2", "Booking system", "Finds a free table, as Find a free table says"], ["3", "Guest", "Confirms the table"], ["4", "Booking system", "Confirms the booking to the guest"]],
@@ -72,7 +88,14 @@ const tree = (change = (m) => m) => change(new Map([
     steps: [["1", "Booking system", "Reads the tables free at the time asked for the party size"]],
     minimal: ["Nothing is booked."], success: ["The guest sees the free tables."],
   })],
+  [`${RL}/verified.md`, level({ h1: "Verified", rank: 30, evidence: "verifies" })],
+  [`${RL}/built.md`, level({ h1: "Built", rank: 20, evidence: "satisfies" })],
+  [`${RL}/not-started.md`, level({ h1: "Not started", rank: 10, evidence: "none" })],
+  [`${UL}/runs-end-to-end.md`, level({ h1: "Runs end to end", rank: 20, evidence: "verifies" })],
+  [`${UL}/not-started.md`, level({ h1: "Not started", rank: 10, evidence: "none" })],
   [`${R}/booking-confirmed-within-two-seconds.md`, requirement({
+    realization: "Verified", realized: "The confirmation is timed against the fit criterion over a week of bookings.",
+    evidence: [["Timing test of the booking confirmation", "verifies", "https://example.org/booking/blob/0a1b2c3/test/confirm.test.js"]],
     kind: "quality", modality: "must", h1: "Booking confirmed within two seconds",
     statement: "A guest who confirms a table sees the booking confirmed within two seconds.",
     applies: [["use-case", "Book a table"], ["product", "Booking App"]],
@@ -249,4 +272,45 @@ test("a blank Step in the main scenario is the required-column check's alone, an
   const f = failures(tree(edit(`${U}/book-a-table.md`, "| 3 | Guest | Confirms", "|  | Guest | Confirms")));
   assert.equal(only(f, "begins with no Step").length, 0, f.join("\n"));
   assert.equal(only(f, "has no Step").length, 1, f.join("\n"));
+});
+
+const RQ = `${R}/booking-confirmed-within-two-seconds.md`;
+const BK = `${U}/book-a-table.md`;
+
+test("a requirement and a use case realized to a level pass", () => {
+  assert.deepEqual(failures(tree()), []);
+});
+
+test("a realization naming no level fails once, by R4", () => {
+  const f = failures(tree(edit(RQ, "realization: Verified", "realization: Shipped")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R4\)/);
+});
+
+test("a Shows off its tokens fails once, by R8", () => {
+  const f = failures(tree(edit(RQ, "| verifies |", "| tests |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R8\)/);
+});
+
+test("an evidence level off its tokens fails once, by R8", () => {
+  const f = failures(tree(edit(`${RL}/verified.md`, "evidence: verifies", "evidence: tested")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /\(R8\)/);
+});
+
+test("two levels sharing a rank fail", () => {
+  const f = failures(tree(edit(`${RL}/built.md`, "rank: 20", "rank: 30")));
+  assert.equal(only(f, "share rank").length, 1, f.join("\n"));
+});
+
+test("a page that names no realization and carries neither section passes", () => {
+  const f = failures(tree((m) => {
+    edit(RQ, "realization: Verified\n", "")(m);
+    edit(RQ, /## Realization[\s\S]*$/, "")(m);
+    edit(BK, "realization: Runs end to end\n", "")(m);
+    edit(BK, /## Realization[\s\S]*$/, "")(m);
+    return m;
+  }));
+  assert.deepEqual(f, []);
 });
