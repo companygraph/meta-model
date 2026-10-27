@@ -287,6 +287,13 @@ test("a realization naming no level fails once, by R4", () => {
   assert.match(f[0], /\(R4\)/);
 });
 
+test("a realization naming no level and no ## Realization fails twice, by R4 and by the missing section", () => {
+  const f = failures(tree((m) => { edit(RQ, "realization: Verified", "realization: Shipped")(m); edit(RQ, /## Realization\n\n.*\n\n/, "")(m); return m; }));
+  assert.equal(f.length, 2, f.join("\n"));
+  assert.equal(f.filter((x) => /\(R4\)/.test(x)).length, 1, f.join("\n"));
+  assert.equal(f.filter((x) => /: names a `realization` and has no ## Realization; a realized page says what is realized and what is missing \(R16\)$/.test(x)).length, 1, f.join("\n"));
+});
+
 test("a Shows off its tokens fails once, by R8", () => {
   const f = failures(tree(edit(RQ, "| verifies |", "| tests |")));
   assert.equal(f.length, 1, f.join("\n"));
@@ -316,7 +323,6 @@ test("a page that names no realization and carries neither section passes", () =
 });
 
 const dropEvidence = edit(RQ, /## Evidence[\s\S]*$/, "");
-const row = (shows) => `| Timing test of the booking confirmation | ${shows} | https://example.org/booking/blob/0a1b2c3/test/confirm.test.js |`;
 
 test("a page at a satisfies level with no evidence row fails once", () => {
   const f = failures(tree((m) => { edit(RQ, "realization: Verified", "realization: Built")(m); return dropEvidence(m); }));

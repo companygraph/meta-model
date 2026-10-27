@@ -11,4 +11,4 @@ evidence: none
 
 ## What it means
 
-A requirement is Not started when no code meets it, and its page needs no `## Evidence`. A page enters the level when the requirement is written and leaves it when the first row of evidence is added. While a requirement is Not started, a reader may not rely on the product meeting it.
+A requirement is Not started when no code meets it, and its page needs no `## Evidence`. A page enters the level when the requirement is written and leaves it when code that meets the requirement is built and a row that satisfies it is added. While a requirement is Not started, a reader may not rely on the product meeting it.

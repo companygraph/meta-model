@@ -77,5 +77,5 @@ A requirement is one statement of what a product must do or be, written so that 
 - The page holds no priority, status, release or date, since each moves, and a References row says where they are kept. `realization` is the one value on the page that moves, and `## Evidence` is what shows it.
 - `## Realization` and `## Evidence` stand only on a page that names a `realization`.
 - `URL`, in `## Evidence`, is a permalink at a commit, never a branch.
-- `## Evidence` holds the test that verifies the requirement, and `## References` holds the documents it was drawn from.
+- `## Evidence`, on a page that names a `realization`, holds the test that verifies it, and `## References` holds the documents the requirement was drawn from.
 - The page writes names and prose in American English (R14).

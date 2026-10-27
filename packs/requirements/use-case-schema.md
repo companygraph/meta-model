@@ -71,7 +71,7 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 | Column | Required | Type | Description |
 | --- | --- | --- | --- |
 | `What` | Yes | string | What the row is: a file, a test, a recorded run |
-| `Shows` | Yes | enum | `satisfies` or `verifies`. The row builds the use case, or it observes what the scenario and guarantees observes (SysML). |
+| `Shows` | Yes | enum | `satisfies` or `verifies`. The row builds the use case, or it observes what the scenario and guarantees observe (SysML). |
 | `URL` | Yes | string | Where it is, a permalink at the commit it was seen at |
 
 `## References` is a table with these columns:

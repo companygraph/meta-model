@@ -42,11 +42,11 @@ The set is the instance's own. Which levels a company tells apart, whether it se
 
 ## Purpose
 
-A level answers "how far is this realized, and what shows it?" for whoever relies on the product meeting a use case, measured against its scenario, extensions and guarantees. It isn't a status, and how far the specification answers the use case is derived from the decisions and questions that name it. A page names the level it has reached, so what each level licenses a reader to rely on is written once here rather than guessed from a word.
+A level answers "how far is this realized, and what shows it?" for whoever relies on the product meeting a use case, measured against its scenario, extensions and guarantees. It is not a status, and how far the specification answers the use case is derived from the decisions and questions that name it. A page names the level it has reached, so what each level licenses a reader to rely on is written once here rather than guessed from a word.
 
 ## Writing rules
 
 - `## What it means` says what a page at this level has realized, what moves a page into the level and out of it, and what a reader may rely on while it is there.
-- `evidence` is the least a page at this level must show, and a level above another asks at least what the one below asks.
-- The H1 names how far the page is realized, `Built`, `Verified`, and never a verdict on the work.
+- `evidence` is the least a page at this level must show.
+- The H1 names how far a page at the level is realized, `Built`, `Verified`, and never a verdict on the work.
 - The page writes names and prose in American English (R14).
