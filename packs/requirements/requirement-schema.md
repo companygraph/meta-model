@@ -22,6 +22,7 @@ A requirement owns nothing and nothing owns it, so it is a file. What it is abou
 | `kind` | Yes | enum | `functional`, `quality` or `constraint`. A result or behavior a function of the product provides; a quality concern no functional requirement covers, how fast, how safe, how available; or a limit on the solution beyond what the other two need (IREB CPRE glossary). |
 | `modality` | Yes | enum | `must`, `should` or `may`. Binding; binding unless a reason to depart is understood and stated; or permitted (RFC 2119). |
 | `follows` | No | array of ref → rule | The company's rules this requirement carries into the product, each the H1 of a file in `rules/` |
+| `realization` | No | ref → requirement-realization | How far the requirement is realized, the H1 of a file in `requirement-realizations/` |
 
 ## Sections
 
@@ -32,7 +33,9 @@ A requirement owns nothing and nothing owns it, so it is a file. What it is abou
 | `## Why` | Yes | The need behind the statement, in a paragraph |
 | `## Fit criterion` | Yes | How anyone can tell the requirement is met, measured where it can be (Volere) |
 | `## Applies to` | Yes | Table. The features, products and use cases the requirement is about, at least one; its columns are declared below. |
-| `## References` | No | Table. The specification it was drawn from, the standard behind it, the test that proves it; its columns are declared below. |
+| `## Realization` | No | What is realized and what is missing, measured against `## Fit criterion` |
+| `## Evidence` | No | Table. What satisfies or verifies the realization, each at the commit it was seen at; its columns are declared below. |
+| `## References` | No | Table. The specification it was drawn from, the standard behind it; its columns are declared below. |
 
 `## Applies to` is a table with these columns:
 
@@ -40,6 +43,14 @@ A requirement owns nothing and nothing owns it, so it is a file. What it is abou
 | --- | --- | --- | --- |
 | `Type` | Yes | enum | `feature`, `product` or `use-case`. The type of the entity this row names, as its schema is named. |
 | `Entity` | Yes | ref → by Type | The feature, product or use case, by its canonical name |
+
+`## Evidence` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | What the row is: a file, a test, a recorded run |
+| `Shows` | Yes | enum | `satisfies` or `verifies`. The row builds the requirement, or it observes what the fit criterion observes (SysML). |
+| `URL` | Yes | string | Where it is, a permalink at the commit it was seen at |
 
 `## References` is a table with these columns:
 
@@ -63,5 +74,8 @@ A requirement is one statement of what a product must do or be, written so that 
 - `follows` names a rule only where the requirement exists because of it.
 - `## Why` says the need, not the solution.
 - `source-id`, on a page drawn from a specification, is the label the specification gives it, so a test that cites the label still finds the page.
-- The page holds no priority, status, release or date; each moves, and a References row says where they are kept.
+- The page holds no priority, status, release or date, since each moves, and a References row says where they are kept. `realization` is the one value on the page that moves, and `## Evidence` is what shows it.
+- `## Realization` and `## Evidence` stand only on a page that names a `realization`.
+- `URL`, in `## Evidence`, is a permalink at a commit, never a branch.
+- `## Evidence`, on a page that names a `realization`, holds the test that verifies it, and `## References` holds the documents the requirement was drawn from.
 - The page writes names and prose in American English (R14).

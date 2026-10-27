@@ -24,6 +24,7 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 | `primary-actor` | Yes | ref? → seat | Whoever has the goal: the H1 of a file in `seats/` where the company has the seat, otherwise the actor's name, which stays a string |
 | `features` | No | array of ref → feature | The features the use case asks something of, each the H1 of a file in `features/` |
 | `includes` | No | array of ref → use-case | The subordinate use cases its steps call, each the H1 of another file in `use-cases/` (UML include) |
+| `realization` | No | ref → use-case-realization | How far the use case is realized, the H1 of a file in `use-case-realizations/` |
 
 ## Sections
 
@@ -38,6 +39,8 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 | `## Extensions` | No | Table. Each condition under which a step goes another way, and what happens then; its columns are declared below. |
 | `## Minimal guarantees` | Yes | Bulleted. What holds for every stakeholder however the use case ends, one item each |
 | `## Success guarantees` | Yes | Bulleted. What holds when the goal is reached, one item each |
+| `## Realization` | No | What is realized and what is missing, measured against its scenario, extensions and guarantees |
+| `## Evidence` | No | Table. What satisfies or verifies the realization, each at the commit it was seen at; its columns are declared below. |
 | `## References` | No | Table. What a reader can open to learn more about the use case; its columns are declared below. |
 
 `## Stakeholders and interests` is a table with these columns:
@@ -63,6 +66,14 @@ A use case owns nothing and nothing owns it, so it is a file. One use case may b
 | `Condition` | Yes | string | What the system can detect that sends the step another way |
 | `Handling` | Yes | string | What happens then, and where the scenario goes on |
 
+`## Evidence` is a table with these columns:
+
+| Column | Required | Type | Description |
+| --- | --- | --- | --- |
+| `What` | Yes | string | What the row is: a file, a test, a recorded run |
+| `Shows` | Yes | enum | `satisfies` or `verifies`. The row builds the use case, or it observes what the scenario and guarantees observe (SysML). |
+| `URL` | Yes | string | Where it is, a permalink at the commit it was seen at |
+
 `## References` is a table with these columns:
 
 | Column | Required | Type | Description |
@@ -87,4 +98,7 @@ A use case is all the ways of using a system to achieve one goal for one actor (
 - `Condition`, in `## Extensions`, is something the system can detect, not something an actor feels.
 - `## Minimal guarantees` hold however the use case ends, an extension that gives up included, and `## Success guarantees` only when the goal is reached.
 - `Action` names an aggregate, an invariant or an event, where a step needs one, in words: they are another pack's types, and the page draws no edge to them.
+- `realization` is the one value on the page that moves, and `## Evidence` is what shows it.
+- `## Realization` and `## Evidence` stand only on a page that names a `realization`.
+- `URL`, in `## Evidence`, is a permalink at a commit, never a branch.
 - The page writes names and prose in American English (R14).
