@@ -373,3 +373,13 @@ test("an Evidence table with other columns is not read as evidence", () => {
   assert.ok(f.some((x) => /Shows/.test(x)), f.join("\n"));
   assert.equal(only(f, "no ## Evidence row").length, 0, f.join("\n"));
 });
+
+test("an Evidence section of prose alone counts as no rows", () => {
+  const prose = (level) => (m) => { edit(RQ, "realization: Verified", `realization: ${level}`)(m); return edit(RQ, /## Evidence[\s\S]*$/, "## Evidence\n\nNone yet.\n")(m); };
+  const a = failures(tree(prose("Built")));
+  assert.equal(a.length, 1, a.join("\n"));
+  assert.match(a[0], /^model\/requirements\/booking-confirmed-within-two-seconds\.md: `realization` names "Built", whose `evidence` is `satisfies`, and ## Evidence has no row; a page shows what its level asks \(R16\)$/);
+  const b = failures(tree(prose("Verified")));
+  assert.equal(b.length, 1, b.join("\n"));
+  assert.match(b[0], /^model\/requirements\/booking-confirmed-within-two-seconds\.md: `realization` names "Verified", whose `evidence` is `verifies`, and no ## Evidence row's `Shows` is `verifies`; a page shows what its level asks \(R16\)$/);
+});
