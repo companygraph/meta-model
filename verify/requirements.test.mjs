@@ -314,3 +314,62 @@ test("a page that names no realization and carries neither section passes", () =
   }));
   assert.deepEqual(f, []);
 });
+
+const dropEvidence = edit(RQ, /## Evidence[\s\S]*$/, "");
+const row = (shows) => `| Timing test of the booking confirmation | ${shows} | https://example.org/booking/blob/0a1b2c3/test/confirm.test.js |`;
+
+test("a page at a satisfies level with no evidence row fails once", () => {
+  const f = failures(tree((m) => { edit(RQ, "realization: Verified", "realization: Built")(m); return dropEvidence(m); }));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/requirements\/booking-confirmed-within-two-seconds\.md: `realization` names "Built", whose `evidence` is `satisfies`, and ## Evidence has no row; a page shows what its level asks \(R16\)$/);
+});
+
+test("a page at a verifies level whose rows only satisfy fails once", () => {
+  const f = failures(tree(edit(RQ, "| verifies |", "| satisfies |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /: `realization` names "Verified", whose `evidence` is `verifies`, and no ## Evidence row's `Shows` is `verifies`; a page shows what its level asks \(R16\)$/);
+});
+
+test("a page that names a realization and says nothing of it fails once", () => {
+  const f = failures(tree(edit(RQ, /## Realization\n\n.*\n\n/, "")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /: names a `realization` and has no ## Realization; a realized page says what is realized and what is missing \(R16\)$/);
+});
+
+test("evidence on a page that names no realization fails once", () => {
+  const a = failures(tree(edit(RQ, "realization: Verified\n", "")));
+  assert.equal(a.length, 1, a.join("\n"));
+  assert.match(a[0], /: has ## Evidence and names no `realization`; the sections belong to a realization \(R16\)$/);
+  const b = failures(tree((m) => { edit(RQ, "realization: Verified\n", "")(m); return dropEvidence(m); }));
+  assert.equal(b.length, 1, b.join("\n"));
+  assert.match(b[0], /: has ## Realization and names no `realization`; the sections belong to a realization \(R16\)$/);
+});
+
+test("a satisfies level is met by a verifying row, and a none level may list rows", () => {
+  assert.deepEqual(failures(tree(edit(RQ, "realization: Verified", "realization: Built"))), []);
+  assert.deepEqual(failures(tree(edit(RQ, "realization: Verified", "realization: Not started"))), []);
+});
+
+test("a use case is held as a requirement is", () => {
+  const f = failures(tree(edit(BK, "| verifies |", "| satisfies |")));
+  assert.equal(f.length, 1, f.join("\n"));
+  assert.match(f[0], /^model\/use-cases\/book-a-table\.md: `realization` names "Runs end to end", whose `evidence` is `verifies`, and no ## Evidence row's `Shows` is `verifies`; a page shows what its level asks \(R16\)$/);
+});
+
+test("a fault another check owns is not judged again", () => {
+  const a = failures(tree(edit(RQ, "realization: Verified", "realization: Shipped")));
+  assert.equal(a.length, 1, a.join("\n"));
+  assert.match(a[0], /\(R4\)$/);
+  const b = failures(tree(edit(RQ, "| verifies |", "| tests |")));
+  assert.equal(b.length, 1, b.join("\n"));
+  assert.match(b[0], /\(R8\)$/);
+  const c = failures(tree(edit(`${RL}/verified.md`, "evidence: verifies\n", "")));
+  assert.equal(c.length, 1, c.join("\n"));
+  assert.match(c[0], /verified\.md: no `evidence`, which requirement-realization-schema\.md requires — one of `none`, `satisfies`, `verifies`$/);
+});
+
+test("an Evidence table with other columns is not read as evidence", () => {
+  const f = failures(tree(edit(RQ, "| What | Shows | URL |", "| What | Kind | URL |")));
+  assert.ok(f.some((x) => /Shows/.test(x)), f.join("\n"));
+  assert.equal(only(f, "no ## Evidence row").length, 0, f.join("\n"));
+});
