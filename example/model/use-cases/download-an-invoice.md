@@ -8,6 +8,7 @@ features:
   - Invoice download
 includes:
   - Find an invoice
+realization: Main scenario runs
 ---
 
 # Download an invoice
@@ -47,3 +48,14 @@ The payer's bookkeeping asks for the invoice of a closed billing period.
 ## Success guarantees
 
 - The payer holds a copy that matches what the Invoice Page showed on the day the invoice was issued.
+
+## Realization
+
+Every step of the main success scenario runs, and so does extension 1a: a payer whose billing period is still open is told when it closes. Extension 3a is not built, so a copy of an invoice with a credit note against it does not yet name the credit note beside it.
+
+## Evidence
+
+| What | Shows | URL |
+| --- | --- | --- |
+| Download of an issued invoice | satisfies | https://example.org/invoice-page/blob/8c41d07/src/download.ts |
+| Test that walks the main success scenario | verifies | https://example.org/invoice-page/blob/8c41d07/test/download.test.ts |

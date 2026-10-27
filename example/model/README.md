@@ -26,6 +26,7 @@ services/                        invoice-feed.md
 use-cases/                       download-an-invoice.md, find-an-invoice.md
 requirements/                    a-copy-is-the-invoice-as-issued.md
 requirement-realizations/        verified.md, built.md, not-started.md
+use-case-realizations/           runs-end-to-end.md, main-scenario-runs.md, not-started.md
 seats/                           backend-engineer.md, reviewer.md
 products/                        billing-console.md, invoice-page.md, usage-api.md
 product-kinds/                   application.md, page.md, api.md
