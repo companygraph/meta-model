@@ -110,7 +110,7 @@ Writing rules. A control names at least one risk it mitigates or one rule it enf
 
 **A page's own "never" stays.** Core's roles, phases and processes already refuse things in `## What it never does`, and values name how they get broken. A rule does not replace them; it takes what reaches across them and is restated on several, which is the duplication #196 names.
 
-**Each relation once, on the more specific side.** The control enforces the rule and mitigates the risk; the rule is motivated by the risk; the risk threatens the objective. A rule with a `checked-by` beside a control's `enforces` would say one thing in two places.
+**Each relation once, on the more specific side.** The control enforces the rule and mitigates the risk; the rule is motivated by the risk; the risk threatens the objective. A rule with a `checked-by` beside a control's `enforces` would say one thing in two places. A control's `compensated-by`, from the spec of October 17, 2026, `2026-10-17-a-control-names-what-covers-its-gap-design.md`, runs between two controls, neither more specific than the other, and is written once, on the side whose gap it is.
 
 **No ratings.** Every standard rates a risk, and every rating moves. A rating on the page is a number nobody updates and the first moving value core would hold.
 

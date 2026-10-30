@@ -225,6 +225,13 @@ export type TypeEntry = {
         field: string;
     };
     /**
+     * A list field naming entities of the page's own type, each of which shares at least one value with the page in one of the list fields `shares`: a control holds another's gap only toward a risk or a rule both answer to. A name that resolves to nothing is R4's and is not read.
+     */
+    compensated?: {
+        field: string;
+        shares: string[];
+    };
+    /**
      * The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
      */
     replaced?: {
@@ -331,6 +338,7 @@ export type Check = {
  * @property {{ section: string, by: string, column: string }} [samePer] A table whose rows sharing a value in `by` carry one value in `column`, an enum column: a value outside its tokens is R8's, and a blank one the required-column check's, and neither is compared.
  * @property {{ by: string, field: string, least: number }} [gathers] An entity named by at least `least` entities of the type `by` in their `field`, unless the instance holds fewer than `least` of them.
  * @property {{ section: string, by: string, field: string }} [binds] An entity whose table `section` names more than one distinct entity, has no rows, or is named by an entity of the type `by` in its `field`.
+ * @property {{ field: string, shares: string[] }} [compensated] A list field naming entities of the page's own type, each of which shares at least one value with the page in one of the list fields `shares`: a control holds another's gap only toward a risk or a rule both answer to. A name that resolves to nothing is R4's and is not read.
  * @property {{ field: string, status: string }} [replaced] The entities another names in `field` all carry one value in `status`, and not the value most entities outside them carry.
  * @property {{ when: { field: string, is: string }, field: string, requires: string, section: string, column: string }} [claims] What a page whose `when.field` is `when.is` claims: each entity its `field` names lists in its own `requires` what the page's `section` table names in `column`, and one it does not name is noted as a gap.
  * @property {{ when: { field: string, is: string }, of: string, fields: string[], section: string, column: string, url: string }} [restates] What a page whose `when.field` is `when.is` repeats of the singular type `of`: each of `fields` equal to its, and each URL of the `section` table's `column` equal to its `url` or one of its own rows, is noted.
