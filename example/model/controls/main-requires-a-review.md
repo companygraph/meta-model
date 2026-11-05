@@ -7,6 +7,8 @@ mitigates:
   - An unreviewed change reaches customers
 enforces:
   - A change is reviewed before it ships
+compensated-by:
+  - An unapproved merge is read before it ships
 ---
 
 # Main requires a review
@@ -15,7 +17,7 @@ enforces:
 
 ## How it is carried out
 
-A branch protection rule on the default branch requires one approving review before any pull request merges, and dismisses an approval when new commits are pushed after it.
+A branch protection rule on the default branch requires one approving review before any pull request merges, and dismisses an approval when new commits are pushed after it. A repository admin can merge past the protection, and for that change the protection holds nothing until the merge is read after it lands.
 
 ## Applies to
 
