@@ -12,6 +12,8 @@
 
 This plan covers meta-model only. The release, and each instance taking the field, follow in work of their own.
 
+The tasks below are as they were planned, and two of their facts moved after review, both recorded in the spec's amendments: the example's control is "An unapproved merge is read before it ships", at `example/model/controls/an-unapproved-merge-is-read-before-it-ships.md`, read in Release between the merge and the tag; and a control naming itself in `compensated-by` is a finding of the check, not a writing rule, so the schema carries one writing rule and not two.
+
 ## Global Constraints
 
 - Work in the worktree `/Users/rob/git/companygraph/meta-model-a-control-names-what-covers-its-gap`, branch `a-control-names-what-covers-its-gap`. Before any `node`, `npm` or `gh` command: `export PATH="/opt/homebrew/bin:$PATH"`.

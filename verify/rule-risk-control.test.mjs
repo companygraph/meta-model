@@ -53,10 +53,10 @@ const failuresOf = (opts, ...words) =>
 
 // A second control, the one that holds the first one's gap: it mitigates the same risk and
 // enforces the same rule, unless a test hands it other fields.
-const COVER = "An unapproved merge is read before the next release";
+const COVER = "An unapproved merge is read before it ships";
 const COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer",
   "mitigates:", "  - An unreviewed change reaches customers", "enforces:", "  - A change is reviewed before it ships"];
-const cover = (fm = COVER_FM) => ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+const cover = (fm = COVER_FM) => ["model/controls/an-unapproved-merge-is-read-before-it-ships.md",
   page(fm, COVER, "The merges no second person approved are read before they ship.", [["How it is carried out", ["Prose."]]])];
 const compensated = (...names) => [...CONTROL_FM, "compensated-by:", ...names.map((n) => `  - ${n}`)];
 
@@ -155,7 +155,7 @@ test("two controls naming each other in compensated-by pass, since each may hold
   assert.deepEqual(failuresOf({ control: compensated(COVER), more: [back] }), []);
 });
 
-const NOTHING_SHARED = "model/controls/main-requires-a-review.md: `compensated-by` names \"An unapproved merge is read before the next release\", which shares no entry of `mitigates` or `enforces` with this control; a control holds the gap of another only toward what that one is for (R16)";
+const NOTHING_SHARED = "model/controls/main-requires-a-review.md: `compensated-by` names \"An unapproved merge is read before it ships\", which shares no entry of `mitigates` or `enforces` with this control; a control holds the gap of another only toward what that one is for (R16)";
 const BARE_COVER_FM = ["source: Local", "kind: detective", "mode: manual", "performed-by: Reviewer"];
 
 test("a covering control that shares only the rule passes", () => {
@@ -212,7 +212,7 @@ test("a name two controls carry is R2's, and the check does not judge it, whiche
 });
 
 test("a named control whose frontmatter cannot be read is not judged again by the page naming it", () => {
-  const unreadable = ["model/controls/an-unapproved-merge-is-read-before-the-next-release.md",
+  const unreadable = ["model/controls/an-unapproved-merge-is-read-before-it-ships.md",
     ["---", ...COVER_FM, "", `# ${COVER}`, "", "> Its frontmatter never closes.", "", "## How it is carried out", "", "Prose.", ""].join("\n")];
   assert.equal(failuresOf({ control: compensated(COVER), more: [unreadable] }, "shares no entry").length, 0);
 });
