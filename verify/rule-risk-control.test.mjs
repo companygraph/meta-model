@@ -144,8 +144,10 @@ test("a compensated-by naming a rule fails as a reference to the wrong type", ()
   assert.equal(failuresOf({ control: compensated("A change is reviewed before it ships") }, "`compensated-by`", "type rule").length, 1);
 });
 
-test("a control naming itself in compensated-by passes the mechanical checks; the writing rule refuses it", () => {
-  assert.deepEqual(failuresOf({ control: compensated("Main requires a review") }), []);
+const NAMES_ITSELF = "model/controls/main-requires-a-review.md: `compensated-by` names this control itself; a control never holds its own gap (R16)";
+
+test("a control naming itself in compensated-by fails once, since a control never holds its own gap", () => {
+  assert.deepEqual(failuresOf({ control: compensated("Main requires a review") }), [NAMES_ITSELF]);
 });
 
 test("two controls naming each other in compensated-by pass, since each may hold the other's gap", () => {
@@ -215,9 +217,9 @@ test("a named control whose frontmatter cannot be read is not judged again by th
   assert.equal(failuresOf({ control: compensated(COVER), more: [unreadable] }, "shares no entry").length, 0);
 });
 
-test("a control naming itself and answering to nothing fails, as it shares nothing with itself", () => {
+test("a control naming itself and answering to nothing fails once, for the self-name and not for sharing nothing", () => {
   const control = [...BARE_COVER_FM, "compensated-by:", "  - Main requires a review"];
-  assert.equal(failuresOf({ control }, "shares no entry").length, 1);
+  assert.deepEqual(failuresOf({ control }, "`compensated-by`"), [NAMES_ITSELF]);
 });
 
 test("a risk and a rule of one name are not one entry: the fields are compared each with itself", () => {

@@ -6,6 +6,8 @@ Status: decided by the owner on October 17, 2026, question by question: the fiel
 
 Amended by the owner on October 18, 2026, after the pull request's review: the example's new control reads an unapproved merge in Release, once the branch is merged and before the release is tagged, so it holds the change before it ships rather than before the next release, and is named for that; and the failure message says "entry" where this spec first said "risk" and "rule", because the check reads the shared fields from the type's row and names no type.
 
+Amended by the owner on November 5, 2026, after a second review of the pull request: a control naming itself in `compensated-by` is the check's finding and not a writing rule's. The checker already holds a system's `## Connects to` to the same norm, and a norm a script can read is a check, so the sentence came out of the schema and the check refuses the self-name once, before it reads what the page shares.
+
 ## Where this comes from
 
 Anthropic's AI-Native SDLC Playbook, read on October 16, 2026, separates an advisory control from the deterministic one behind it: "The skill makes violations rare and the hook makes them close to impossible." Read against it, the controls of the three instances showed that the split it draws, advisory or blocking, is already stated where it matters: 9 of the 21 controls in companygraph/mental-model, by the specifier's reading, say in their own prose who gets past them, an admin, anyone who gives a reason, `--force`, a commit trailer or an agent under the Owner's account. Those vary too much for an enum and read well as prose.
@@ -40,12 +42,11 @@ NIST's definition asks that the compensating control give "equivalent or compara
 
 ## Writing rules
 
-Two rules join the control schema's writing rules, each judged from one page:
+One rule joins the control schema's writing rules, judged from one page:
 
 - `compensated-by` names a control only where `## How it is carried out` says which gap of this control the named control is to hold, and that sentence does not repeat the name the field holds.
-- `compensated-by` never names the control itself.
 
-The first leaves every other name in the prose alone: an instance that writes "the pull request and the checks are what Main takes a change only through a green, current pull request holds" names a control for a reason of its own, and keeps it. Whether the named control really holds the gap is the person's who approves the change; the share of objective is the check's.
+It leaves every other name in the prose alone: an instance that writes "the pull request and the checks are what Main takes a change only through a green, current pull request holds" names a control for a reason of its own, and keeps it. Whether the named control really holds the gap is the person's who approves the change; the share of objective is the check's.
 
 ## The check
 
@@ -61,7 +62,7 @@ A covering control holds a gap only toward what the covered control is for. Whet
 
 Three cases are another check's, and this one does not read them. A vendored core whose schema does not declare the field reports the field as undeclared, and the check holds no page to it. A name two pages of the type carry is R2's finding, and which of them is meant cannot be told. A named control whose frontmatter cannot be read is already reported for every field it lacks.
 
-A control naming itself shares with itself whatever it answers to, and passes the check wherever it answers to anything; the writing rule refuses it. Two controls naming each other pass too, on purpose: two controls can each hold the other's gap, and an acyclic check would refuse that.
+A control naming itself fails once, whatever it answers to, with `` `compensated-by` names this control itself; a control never holds its own gap (R16) ``, and the check does not go on to read what the page shares with itself. Two controls naming each other pass, on purpose: two controls can each hold the other's gap, and an acyclic check would refuse that.
 
 The September 30 spec says "Every arrow runs from the more specific page to the more general, and none runs back" and "Each relation once, on the more specific side". A control's `compensated-by` runs between two pages of one type, neither more specific than the other, and it is written on the side whose gap it is, once. The September 30 spec's paragraph on each relation gains one sentence saying so and naming this spec.
 
@@ -92,7 +93,7 @@ Each instance takes the field after the owner's resync carries this release to i
 
 ## Release
 
-The next minor of core and of the package. The field is optional and the check reads only pages that carry it, which no instance has before it takes this release, so nothing an instance holds breaks and taking it asks for a re-sync and nothing else. The notes name the field, the check and the two writing rules.
+The next minor of core and of the package. The field is optional and the check reads only pages that carry it, which no instance has before it takes this release, so nothing an instance holds breaks and taking it asks for a re-sync and nothing else. The notes name the field, the check and the writing rule.
 
 ## Tests
 
@@ -101,10 +102,10 @@ In `verify/rule-risk-control.test.mjs`, beside the existing control tests:
 - A control whose `compensated-by` names another control sharing a rule passes; one sharing only a risk passes.
 - A control whose `compensated-by` names a control sharing neither fails once, with the check's message.
 - A name in `compensated-by` that is a rule's H1, not a control's, fails R4 and not the new check.
-- A control naming itself passes the mechanical checks; the writing rule refuses it.
+- A control naming itself fails once, with the self-name message, whether or not it answers to anything.
 - Two controls naming each other pass.
 
-The example passes every instance check, `verify` holds the changed schema to its shape, the two writing rules open as the judge reads them, `npm run build:check` passes with the rebuilt `types/`, and every suite passes.
+The example passes every instance check, `verify` holds the changed schema to its shape, the writing rule opens as the judge reads it, `npm run build:check` passes with the rebuilt `types/`, and every suite passes.
 
 ## Not part of this
 

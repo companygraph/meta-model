@@ -63,5 +63,4 @@ A control is what the company does, or has a machine do, so that a risk is less 
 - `mode` decides `performed-by`: a manual control names a seat there, never a person, and an automated control names none.
 - An `## Applies to` row names a seat, a process or a phase; the grammar reads any type in the Type column, so this is the agent pass's to hold.
 - `compensated-by` names a control only where `## How it is carried out` says which gap of this control the named control is to hold, and that sentence does not repeat the name the field holds.
-- `compensated-by` never names the control itself.
 - The page writes names and prose in American English (R14).
