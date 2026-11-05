@@ -387,6 +387,25 @@ test("the menu asks before it adds to a folder that holds files, and a no writes
   assert.deepEqual(fs.readdirSync(root), ["notes.md"]);
 });
 
+// The folder a person ran it from is the likeliest answer, so Enter takes it, and the prompt names
+// it because "this folder" says nothing to someone who has lost track of where the shell is.
+test("the menu names the current folder at its folder question, and Enter takes it", () => {
+  const root = temp();
+  const said = run(["menu"], { input: "1\n\nAcme\n\nn\n", stdio: "pipe", cwd: root });
+  assert.match(said, new RegExp(`Which folder\\?.*Enter for .*${path.basename(root)}`));
+  assert.match(said, /files written into/);
+  const { failures } = checkInstance(filesOf(root), { core: "meta/core", model: "model" });
+  assert.deepEqual(failures, []);
+  assert.match(run(["menu"], { input: "2\n\n", stdio: "pipe", cwd: root }), new RegExp(`Which folder\\?.*Enter for .*${path.basename(root)}`));
+});
+
+test("the menu asks before it adds to the current folder too, when Enter took one that holds files", () => {
+  const root = temp();
+  fs.writeFileSync(path.join(root, "notes.md"), "# Notes\n");
+  assert.match(run(["menu"], { input: "1\n\nn\n", stdio: "pipe", cwd: root }), /It holds files already/);
+  assert.deepEqual(fs.readdirSync(root), ["notes.md"]);
+});
+
 test("the menu shows an upgrade before it runs one, and a pick it does not have is refused", () => {
   const root = temp();
   run(["init", root, "--name", "Acme", "--agent", "claude"]);

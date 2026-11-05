@@ -1217,18 +1217,16 @@ const yes = (answer) => /^y(es)?$/i.test(answer);
  */
 const prompt = (question, hint) => `${accent("›")} ${bold(question)}${hint ? ` ${dim(`(${hint})`)}` : ""} `;
 
-// A folder asked for, with `.` taken on Enter where there is a fallback and none asked for where a
-// folder must be named.
+// A folder asked for, with the current one taken on Enter, since that is where a person runs this
+// from. The prompt names it, because "this folder" says nothing to someone who has lost track of
+// where the shell is.
 /**
  * @param {string} question
- * @param {string} [fallback]
+ * @param {string} [note]
  * @returns {Promise<string>}
  */
-async function folder(question, fallback) {
-  const answer = typed(await ask(prompt(question, fallback ? "Enter for this folder" : "a path; it is made if it is missing")));
-  if (answer) return answer;
-  if (fallback) return fallback;
-  throw new Error("no folder was given; nothing was done.");
+async function folder(question, note) {
+  return typed(await ask(prompt(question, `Enter for ${shown(".")}${note ? `; ${note}` : ""}`))) || ".";
 }
 
 // Refused is 3, not 1, so a hook can tell a refusal from a checker that could not run — offline,
@@ -1515,7 +1513,7 @@ async function menu() {
   /** @type {[string, string, () => Promise<number>][]} */
   const entries = [
     ["Make a model", "a new instance in a folder, or beside the files already in one", async () => {
-      const root = await folder("Which folder?");
+      const root = await folder("Which folder?", "a path is made if it is missing");
       const args = [root];
       if (existsSync(root) && statSync(root).isDirectory() && readdirSync(root).some((entry) => entry !== ".git")) {
         if (!yes(await ask(prompt("It holds files already. Add the model beside them?", "y/N")))) return 0;
@@ -1533,28 +1531,28 @@ async function menu() {
       }
       return 0;
     }],
-    ["Check a model", "the mechanical checks, as its CI runs them", async () => check([await folder("Which folder?", ".")])],
+    ["Check a model", "the mechanical checks, as its CI runs them", async () => check([await folder("Which folder?")])],
     [`Move a model to ${PACKAGE.version}`, "its vendored core, skills, manifest and workflow tag together", async () => {
-      const root = await folder("Which folder?", ".");
+      const root = await folder("Which folder?");
       if ((await upgrade([root, "--dry-run"])) !== "planned") return 0;
       if (yes(await ask(prompt("Go ahead?", "y/N")))) await upgrade([root]);
       return 0;
     }],
     ["Obsidian", "make an instance a vault: the plugins, the graph, the panes, and Obsidian itself", async () => {
-      await obsidian([await folder("Which vault?", ".")]);
+      await obsidian([await folder("Which vault?")]);
       return 0;
     }],
     ["Report by seat", "the history's commits, by the seat that made them", async () => {
-      const root = await folder("Which model?", ".");
+      const root = await folder("Which model?");
       return seats([root]);
     }],
     ["Hold a repository", "a site or service with no model: the form check, and the workflow or hooks the chosen gate writes", async () => {
-      const root = await folder("Which folder?", ".");
+      const root = await folder("Which folder?");
       const gate = (await ask(prompt(GATE_QUESTION, "github"))) || "github";
       adopt([root, "--gate", gate]);
       return 0;
     }],
-    ["Report pins", "which of a repository's pins are behind; nothing moves", async () => pins([await folder("Which folder?", ".")])],
+    ["Report pins", "which of a repository's pins are behind; nothing moves", async () => pins([await folder("Which folder?")])],
   ];
   const width = Math.max(...entries.map(([label]) => label.length), "Quit".length);
   if (SCREEN) {
