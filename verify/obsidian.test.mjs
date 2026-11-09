@@ -233,11 +233,11 @@ const registry = (...paths) => JSON.stringify({ vaults: Object.fromEntries(paths
 
 test("a vault is known where Obsidian's own list names its folder, at the list's place per platform", () => {
   const home = "/Users/rob";
-  const files = new Map([["/Users/rob/Library/Application Support/obsidian/obsidian.json", registry("/Users/rob/Desktop/cv-yileny")]]);
+  const files = new Map([["/Users/rob/Library/Application Support/obsidian/obsidian.json", registry("/Users/rob/Desktop/vault-sample")]]);
   const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p) };
-  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: home }, ...fsOf }), true);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-sample", { platform: "darwin", env: { HOME: home }, ...fsOf }), true);
   assert.equal(knownVault("/Users/rob/Desktop/vault-trial", { platform: "darwin", env: { HOME: home }, ...fsOf }), false);
-  assert.equal(knownVault("/Users/rob/Desktop/cv-yileny", { platform: "darwin", env: { HOME: "/Users/other" }, ...fsOf }), false);
+  assert.equal(knownVault("/Users/rob/Desktop/vault-sample", { platform: "darwin", env: { HOME: "/Users/other" }, ...fsOf }), false);
 });
 
 test("the list is read from APPDATA on Windows and from .config or the Flatpak's config on Linux, and a broken list means not known", () => {
@@ -256,13 +256,13 @@ test("the list is read from APPDATA on Windows and from .config or the Flatpak's
 // which the command decides; this writes what it is told to.
 test("registering a vault adds one entry to Obsidian's list and keeps the rest, or makes the list", () => {
   const listPath = "/Users/rob/Library/Application Support/obsidian/obsidian.json";
-  const files = new Map([[listPath, registry("/Users/rob/Desktop/cv-yileny")]]);
+  const files = new Map([[listPath, registry("/Users/rob/Desktop/vault-sample")]]);
   const written = [];
   const fsOf = { exists: (p) => files.has(p), read: (p) => files.get(p), write: (p, text) => { files.set(p, text); written.push(p); } };
   const options = { platform: "darwin", env: { HOME: "/Users/rob" }, ...fsOf };
   registerVault("/Users/rob/Desktop/vault-trial", options);
   const { vaults } = JSON.parse(files.get(listPath));
-  assert.deepEqual(Object.values(vaults).map((v) => v.path).sort(), ["/Users/rob/Desktop/cv-yileny", "/Users/rob/Desktop/vault-trial"]);
+  assert.deepEqual(Object.values(vaults).map((v) => v.path).sort(), ["/Users/rob/Desktop/vault-sample", "/Users/rob/Desktop/vault-trial"]);
   for (const id of Object.keys(vaults)) assert.match(id, /^[0-9a-f]{16}$/);
   assert.equal(knownVault("/Users/rob/Desktop/vault-trial", options), true);
   registerVault("/Users/rob/Desktop/vault-trial", options);
