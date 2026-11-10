@@ -12,3 +12,5 @@ __pycache__
 
 # What a skill writes for the operator alone: companygraph-vocabulary's research report quotes private sources.
 dist
+# A tool's local settings can hold a secret; conventions-sync keeps the lines below.
+**/.claude/settings.local.json
