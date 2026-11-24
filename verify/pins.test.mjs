@@ -26,6 +26,17 @@ test("a tag pin at the newest is current, and one before it is behind and names 
   assert.deepEqual(lines.map((l) => [l.status, l.newest ?? null]), [["current", "v0.68.0"], ["behind", "v1.10.0"]]);
 });
 
+test("a family package pinned by its npm version is read as the tag v<version>, and only where pins.json declares it", () => {
+  const declared = { pins: [{ kind: "npm-version", file: "package.json", repo: "acme/design" }] };
+  const texts = { "package.json": JSON.stringify({ dependencies: { "@acme/design": "1.2.0", "@types/node": "22.20.5" } }) };
+  const { lines, failed } = pinReport({ declared, texts, remote });
+  assert.deepEqual(lines.map((l) => [l.status, l.kind, l.repo, l.pinned, l.newest ?? null]), [["behind", "npm-version", "acme/design", ["v1.2.0"], "v1.10.0"]]);
+  assert.equal(failed, false);
+  const ranged = { "package.json": JSON.stringify({ dependencies: { "@acme/design": "^1.10.0" } }) };
+  assert.equal(pinReport({ declared, texts: ranged, remote }).lines[0].status, "missing");
+  assert.deepEqual(discover("package.json", texts["package.json"]), []);
+});
+
 test("a commit pin is current when it is the upstream's HEAD, short or long, and behind when HEAD moved", () => {
   const declared = { pins: [{ kind: "source-commit", file: "source.json", repo: "acme/model" }] };
   const at = (commit) => pinReport({ declared, texts: { "source.json": JSON.stringify({ repo: "acme/model", commit }) }, remote }).lines[0];
