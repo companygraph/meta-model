@@ -97,9 +97,9 @@ test("a missing or blank locale is said to be missing, and an invalid one is not
   assert.equal(localizationOf(PAGE("locale: German\n")).missing, undefined);
 });
 
-test("companygraph-meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
+test("@companygraph/meta-model/localization resolves by the package's own name, the way a consumer imports it", () => {
   const script = `
-    import { localizationOf } from "companygraph-meta-model/localization";
+    import { localizationOf } from "@companygraph/meta-model/localization";
     const read = localizationOf("---\\nid: x\\nlocale: en-US\\n---\\n\\n# Language\\n");
     if (read.locale !== "en-US") throw new Error("did not resolve to lib/localization.mjs's own localizationOf");
     process.stdout.write("ok");

@@ -95,9 +95,9 @@ test("uuidv7 takes any byte array of at least ten bytes, and a plain Uint8Array 
   assert.equal(fromUint8Array, fromBuffer);
 });
 
-test("companygraph-meta-model/ids resolves by the package's own name, the way a consumer imports it", () => {
+test("@companygraph/meta-model/ids resolves by the package's own name, the way a consumer imports it", () => {
   const script = `
-    import { UUIDV7, uuidv7 } from "companygraph-meta-model/ids";
+    import { UUIDV7, uuidv7 } from "@companygraph/meta-model/ids";
     if (!UUIDV7.test(uuidv7())) throw new Error("uuidv7() did not pass its own UUIDV7 pattern");
     process.stdout.write("ok");
   `;
