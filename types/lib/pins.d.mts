@@ -1,4 +1,9 @@
 /**
+ * The package a family repository publishes to npm, named after the repository it is released from.
+ * @param {string} repo
+ */
+export declare const packageOf: (repo: string) => string;
+/**
  * How each kind reads the value its line pins, and whether that value is a tag or a commit.
  * @type {Record<string, { byTag: boolean; read: (text: string, repo: string) => string[] }>}
  */
@@ -9,7 +14,9 @@ export declare const KINDS: Record<string, {
 export declare const FAMILY_KINDS: Set<string>;
 export declare const SCANNED: string[];
 /**
- * The pins a file holds, whether or not pins.json declares them.
+ * The pins a file holds, whether or not pins.json declares them. An `npm-version` pin is read only
+ * where pins.json declares it and is never found here: every scoped package with an exact version
+ * reads as one, `@types/node` too, and nothing outside the family says which are pins.
  * @param {string} file
  * @param {string} text
  * @returns {{ kind: string; file: string; repo: string }[]}
