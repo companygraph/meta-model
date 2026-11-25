@@ -231,7 +231,7 @@ test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manif
       { cwd: dir, encoding: "utf8", env });
     assert.equal(result.status, 0, result.stderr);
     const argv = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
-    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `@companygraph/meta-model@${manifest.tooling}`, "companygraph"]);
+    assert.deepEqual(argv.slice(0, 4), ["--yes", "--package", `@companygraph/meta-model@${manifest.tooling}`, "companygraph"]);
     const commitsAt = argv.indexOf("commits");
     assert.notEqual(commitsAt, -1);
     assert.equal(fs.realpathSync.native(argv[commitsAt + 1]), fs.realpathSync.native(dir));
