@@ -20,7 +20,7 @@
     "agents"
   ],
   "bin": {
-    "companygraph": "./bin/companygraph.mjs"
+    "companygraph": "bin/companygraph.mjs"
   },
   "exports": {
     "./ids": {

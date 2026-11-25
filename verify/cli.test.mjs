@@ -231,7 +231,7 @@ test("the hook's npx branch, with COMPANYGRAPH_CLI unset, asks npx for the manif
       { cwd: dir, encoding: "utf8", env });
     assert.equal(result.status, 0, result.stderr);
     const argv = fs.readFileSync(record, "utf8").split("\n").filter(Boolean);
-    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `github:companygraph/meta-model#v${manifest.tooling}`, "companygraph"]);
+    assert.deepEqual(argv.slice(0, 5), ["--yes", "--prefer-offline", "--package", `@companygraph/meta-model@${manifest.tooling}`, "companygraph"]);
     const commitsAt = argv.indexOf("commits");
     assert.notEqual(commitsAt, -1);
     assert.equal(fs.realpathSync.native(argv[commitsAt + 1]), fs.realpathSync.native(dir));
@@ -1021,7 +1021,7 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   const manifest = JSON.parse(fs.readFileSync(path.join(root, ".companygraph/manifest.json"), "utf8"));
   for (const file of ["companygraph-validate/SKILL.md", "companygraph-export/build.py", "companygraph-surface/facts.py"])
     assert.equal(manifest.files[`.claude/skills/${file}`], sha256(fs.readFileSync(path.join(root, ".claude/skills", file), "utf8")));
-  assert.match(said, /npx github:companygraph\/meta-model#v\d+\.\d+\.\d+ check/);
+  assert.match(said, /npx @companygraph\/meta-model@\d+\.\d+\.\d+ check/);
   assert.match(said, /Python 3/);
   assert.match(said, /-company, -consent and -judge/);
   const agents = fs.readFileSync(path.join(root, "AGENTS.md"), "utf8");
@@ -1029,7 +1029,7 @@ test("init writes the skills, hashed into the manifest like the core, and tells 
   assert.ok(agents.includes("`companygraph-consent`"), "AGENTS.md names the consent skill");
   assert.ok(agents.includes("`companygraph-judge`"), "AGENTS.md names the judge skill");
   assert.ok(agents.includes("`judge/known.md`"), "AGENTS.md names the file of known flags");
-  assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx github:companygraph/meta-model#v<tooling> check"));
+  assert.ok(fs.readFileSync(path.join(root, "AGENTS.md"), "utf8").includes("npx @companygraph/meta-model@<tooling> check"));
 });
 
 test("the judge skill writes its report and reading to dist/judge/, the reading as findings with a fix each", () => {
