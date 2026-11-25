@@ -488,8 +488,8 @@ async function init(argv, { menu = false } = {}) {
   console.log(`  the model is empty but for its README files, its source and its singular entities`);
   sayGate(root, gate, /** @type {Map<string, string>} */ (plan.writes));
   if (menu) return;
-  console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" whenever it changes`);
-  console.log(`  and "npx github:companygraph/meta-model#v${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
+  console.log(`  run "npx @companygraph/meta-model@${PACKAGE.version} check ${root}" whenever it changes`);
+  console.log(`  and "npx @companygraph/meta-model@${PACKAGE.version} obsidian ${root}" to write it in Obsidian`);
 }
 
 // After the roles moved to seats, the instance's own files that still say roles. Which files are
@@ -977,7 +977,7 @@ function adopt(argv) {
   console.log(`  its Markdown is held to the one form, leaving out dist/; list more paths under "exclude" in .companygraph/manifest.json`);
   if (gate !== "none") console.log(`  the seat hook is written; with no model here it has no seats to judge commits against, so it lets every commit through`);
   sayGate(root, gate, /** @type {Map<string, string>} */ (plan.writes));
-  console.log(`  run "npx github:companygraph/meta-model#v${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
+  console.log(`  run "npx @companygraph/meta-model@${PACKAGE.version} check ${root}" for the form, and "… pins ${root}" for the pins`);
 }
 
 // The manifest at a folder for a command that answers with an exit code, where one that is not

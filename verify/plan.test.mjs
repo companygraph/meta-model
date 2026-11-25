@@ -658,7 +658,7 @@ test("init writes into the manifest that the form check leaves out dist and the 
 
 test("init writes a pins.json that declares the instance's own core-release pin, with its move", () => {
   const pins = JSON.parse(initPlan(ask).writes.get("pins.json"));
-  assert.deepEqual(pins, { pins: [{ kind: "core-release", file: ".companygraph/manifest.json", repo: "companygraph/meta-model", move: "npx --yes 'github:companygraph/meta-model#v{version}' upgrade" }] });
+  assert.deepEqual(pins, { pins: [{ kind: "core-release", file: ".companygraph/manifest.json", repo: "companygraph/meta-model", move: "npx --yes @companygraph/meta-model@{version} upgrade" }] });
 });
 
 test("--here leaves a pins.json already there alone, since a repository's pins are its own", () => {
@@ -816,10 +816,21 @@ test("an edited gate hook stops the move by name, and --force removes it and say
   assert.deepEqual(forced.removes, [PRE, MERGE]);
 });
 
-// The text v0.83.0 wrote, by its hash, so the past text cannot drift from what that release shipped.
-test("the past gate hook is v0.83.0's text exactly, and differs from this release's", () => {
+// The texts v0.83.0 and v0.84.0 to v0.98.0 wrote, by their hashes, so a past text cannot drift
+// from what those releases shipped.
+test("the past gate hooks are v0.83.0's and v0.98.0's texts exactly, and differ from this release's", () => {
   assert.equal(hashOf(PAST_GATE_HOOKS[0]), "sha256:82bdd114235da35807af71eb0c17cc1f26106de9feb8b8589a96ee441663497b");
+  assert.equal(hashOf(PAST_GATE_HOOKS[1]), "sha256:83978672cd834321d46e3ed692f65c9f47ce3b2718bbe3da58fc035df5a27bf9");
   assert.ok(!PAST_GATE_HOOKS.includes(GATE_HOOK));
+});
+
+test("a gate hook that fetched the tooling from a git tag is brought to the one that takes it from npm", () => {
+  const past = gatePlan({ from: "git", to: "git", workflow: WF, hasWorkflow: false, held: heldOf([[SEAT, HOOK], [PRE, PAST_GATE_HOOKS[1]], [MERGE, MERGE_HOOK]]) });
+  assert.deepEqual([...past.writes], [[PRE, GATE_HOOK]]);
+  assert.deepEqual(past.refreshed, [PRE]);
+  assert.match(GATE_HOOK, /--package "@companygraph\/meta-model@\$tooling"/);
+  assert.doesNotMatch(GATE_HOOK, /github:/);
+  assert.doesNotMatch(HOOK, /github:/);
 });
 
 test("a gate hook in a past release's text is the tooling's, so a move removes it without --force", () => {

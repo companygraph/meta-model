@@ -13,7 +13,7 @@ The R0 agent pass. R0 has two halves and this skill runs both: the mechanical ha
    asks for, `units` the folder the vendored core sits in, and `core.version` the release of the
    rules the rest of the pass is held to. Report the core version.
 2. Run the mechanical checks from the instance root, at the release the manifest names:
-   `npx github:companygraph/meta-model#v<tooling> check`. It covers every rule it names in its
+   `npx @companygraph/meta-model@<tooling> check`. It covers every rule it names in its
    own output: the shape of every schema, the files under `model/`, frontmatter, references,
    tables, owned folders, ids against `model/identifier.md` (R18) and the vendored files
    against the manifest's hashes. Do not repeat
